@@ -390,13 +390,11 @@ app.post("/api/sii/rescatar-rcv", async (req, res) => {
 
         // If no certificate was provided, notify clearly without false positive
         if (!certificadoB64) {
-          const quotaStr = rcvQuota ? `${rcvQuota.uso}/${rcvQuota.maximo} consultas disponibles` : 'Plan activo';
           return res.json({
             success: false,
             needsCertificate: true,
             source: 'SIMPLE_API',
-            quotas,
-            error: `Conexión con SimpleAPI.cl validada con éxito (${quotaStr} para RUT ${companyRut}).\n\n` +
+            error: `Conexión con SimpleAPI.cl para RUT ${companyRut}.\n\n` +
                    `⚠️ Para rescatar las Compras y Ventas oficiales directamente del portal del SII a través de SimpleAPI, ` +
                    `se requiere adjuntar el archivo de Firma Digital (.pfx / .p12) del Representante Legal y su clave.\n\n` +
                    `Puedes cargarlo en '3. CARGA RCV/BH' > '⚙ Configurar API Key / Certificado', o bien utilizar la Opción 2 para cargar directamente los archivos CSV oficiales descargados del SII.`
@@ -409,7 +407,6 @@ app.post("/api/sii/rescatar-rcv", async (req, res) => {
           source: 'SIMPLE_API',
           documentsCount: docs.length,
           documents: docs,
-          quotas,
           message: docs.length > 0 
             ? `Se rescataron exitosamente ${docs.length} documentos desde el SII vía SimpleAPI.`
             : `Conexión con SimpleAPI.cl completada para el RUT ${companyRut} (${mesLabel}). No se encontraron nuevos documentos en el Registro de Compras y Ventas del SII para este período.`

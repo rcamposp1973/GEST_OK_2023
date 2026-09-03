@@ -184,6 +184,39 @@ export async function fetchRcvDirectSimpleApi(params: FetchRcvParams): Promise<F
             period: `${yearNum}-${formattedMonth}`
           });
         }
+
+        // B: Resúmenes de Ventas (Boletas Electrónicas Tipo 39 o 41 del mes)
+        const resumenesVentas = dataVentas?.ventas?.resumenes || dataVentas?.resumenes || dataVentas?.ventas?.resumen || [];
+        for (const resItem of resumenesVentas) {
+          const tipoDte = Number(resItem.tipoDte || resItem.tipoDTE || 0);
+          const totalDocs = Number(resItem.totalDocumentos || resItem.totalDocs || resItem.cantidadDocumentos || 0);
+          const montoTotal = Number(resItem.montoTotal || resItem.total || 0);
+          if (totalDocs > 0 || montoTotal > 0) {
+            const hasIndividualDocs = detalleVentas.some((d: any) => Number(d.tipoDTE || d.tipoDte) === tipoDte);
+            if (!hasIndividualDocs) {
+              const montoNeto = Number(resItem.montoNeto || resItem.neto || 0);
+              const montoIva = Number(resItem.ivaRecuperable ?? resItem.montoIva ?? resItem.iva ?? 0);
+              const montoExento = Number(resItem.montoExento || resItem.exento || 0);
+              docs.push({
+                tipoRegistro: 'Venta',
+                tipoDocumento: String(tipoDte || '39'),
+                tipoDoc: String(tipoDte || '39'),
+                nombreTipoDoc: resItem.tipoDteString || (tipoDte === 39 ? 'Boleta Electrónica (Resumen Mensual)' : tipoDte === 41 ? 'Boleta Exenta Electrónica' : 'Resumen DTE'),
+                folio: `RESUMEN-${totalDocs}DOCS`,
+                rutEmisor: cleanCompanyRut,
+                razonSocialEmisor: companyName || 'EMPRESA EMISORA',
+                rutReceptor: '66.666.666-6',
+                razonSocialReceptor: `Clientes Varios (${totalDocs} Boletas)`,
+                fechaEmision: `${yearNum}-${formattedMonth}-28`,
+                montoNeto,
+                montoIva,
+                montoExento,
+                montoTotal,
+                period: `${yearNum}-${formattedMonth}`
+              });
+            }
+          }
+        }
       } else {
         const errTxt = await ventasRes.text();
         apiErrors.push(`Ventas (${ventasRes.status}): ${errTxt.slice(0, 150)}`);

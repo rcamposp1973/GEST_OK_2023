@@ -73,33 +73,11 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
     const effectiveApiKey = (apiKey || '5511-W960-6395-2355-3470').trim();
 
-    // 1. Validar conexión a Gateway SimpleAPI
-    try {
-      const subRes = await fetch("https://api.simpleapi.cl/api/Suscripcion/servicios", {
-        method: "GET",
-        headers: {
-          "Authorization": effectiveApiKey
-        }
-      });
-
-      if (!subRes.ok) {
-        res.statusCode = 401;
-        res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({
-          success: false,
-          error: `API Key del Gateway SII no válida o expirada (HTTP ${subRes.status}). Contacte al Administrador del Sistema.`
-        }));
-        return;
-      }
-    } catch (gwErr: any) {
-      console.warn("Gateway check error:", gwErr);
-    }
-
     const cleanCertB64 = (certificadoB64 || '').replace(/^data:[^;]+;base64,/, '').trim();
     const certPass = (claveCertificadoDigital || claveRepresentante || '').trim();
     const formattedMonth = String(month === 'ALL' ? '01' : month).padStart(2, '0');
 
-    // 2. Si no tiene certificado digital, avisar claramente
+    // 1. Si no tiene certificado digital, avisar claramente
     if (!cleanCertB64 || !certPass) {
       res.statusCode = 200;
       res.setHeader('Content-Type', 'application/json');
@@ -111,7 +89,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       return;
     }
 
-    // 3. Ejecutar rescate oficial RCV
+    // 2. Ejecutar rescate oficial RCV directamente contra SimpleAPI
     let docs: any[] = [];
     const ambienteNum = (body.ambiente === 'SANDBOX' || body.ambiente === 'Certificación' || body.ambiente === 0) ? 0 : 1;
     const headers = { 'Authorization': effectiveApiKey };

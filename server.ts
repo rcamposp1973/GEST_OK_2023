@@ -165,39 +165,6 @@ app.post("/api/sii/rescatar-rcv", async (req, res) => {
         : cleanRepRutRaw;
 
       try {
-        // Step A: Validate subscription & API key with SimpleAPI
-        const subRes = await fetch("https://api.simpleapi.cl/api/v1/Suscripcion/status", {
-          method: "GET",
-          headers: {
-            "Authorization": effectiveApiKey
-          }
-        });
-
-        if (!subRes.ok) {
-          return res.status(401).json({
-            success: false,
-            error: `API Key del Gateway SII no válida o expirada (HTTP ${subRes.status}). Contacte al Administrador del Sistema.`
-          });
-        }
-
-        const quotas = await subRes.json();
-        const rcvQuota = Array.isArray(quotas) ? quotas.find((q: any) => q.servicio === 'RCV') : null;
-
-        // Step B: Authenticate to obtain token if needed
-        let token = '';
-        try {
-          const authRes = await fetch("https://api.simpleapi.cl/api/Auth/token", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ apikey: (apiKey || '').trim() })
-          });
-          if (authRes.ok) {
-            token = await authRes.text();
-          }
-        } catch (tokErr) {
-          console.warn("Could not generate bearer token for SimpleAPI:", tokErr);
-        }
-
         // Step C: Check if Certificate & Password are provided to query SII RCV scraper
         let docs: any[] = [];
         const formattedMonth = String(month === 'ALL' ? '01' : month).padStart(2, '0');

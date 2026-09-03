@@ -31,6 +31,7 @@ import VoucherLineDistributionModal from './VoucherLineDistributionModal';
 import { useProcess } from '../context/ProcessContext';
 import { validateVoucherLine, isCustomAnalysisRequired, sanitizeVoucherLine, sanitizeVoucherLines } from '../utils/voucherValidation';
 import { getLatestOpenPeriod } from '../utils/periodUtils';
+import { fetchRcvFromSii } from '../utils/siiRcvClient';
 
 interface CompanyAccountingDashboardProps {
   studyId: string;
@@ -1365,53 +1366,22 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
         return;
       }
 
-      const response = await fetch('/api/sii/rescatar-rcv', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          companyRut: company.rut,
-          companyName: company.name,
-          year: parseInt(yearStr, 10),
-          month: monthStr,
-          rutRepresentante: repRut,
-          claveRepresentante: repClave,
-          claveCertificadoDigital: certClave,
-          certificadoB64: certB64,
-          apiKey: apiKey,
-          provider: 'SIMPLE_API',
-          ambiente: dteConfig.ambiente || 'Producción'
-        })
+      const data = await fetchRcvFromSii({
+        companyRut: company.rut,
+        companyName: company.name,
+        year: parseInt(yearStr, 10),
+        month: monthStr,
+        tipo: 'ALL',
+        rutRepresentante: repRut,
+        claveRepresentante: repClave,
+        claveCertificadoDigital: certClave,
+        certificadoB64: certB64,
+        apiKey: apiKey,
+        provider: 'SIMPLE_API',
+        ambiente: dteConfig.ambiente || 'Producción'
       });
 
-      let data: any = {};
-      const contentType = response.headers.get('content-type') || '';
-      if (contentType.includes('application/json')) {
-        data = await response.json();
-      } else {
-        const rawText = await response.text();
-        if (response.status === 405) {
-          data = {
-            success: false,
-            isStaticHostingNotice: true,
-            error: `El servidor web de producción (HTTP 405) no tiene habilitado el proxy hacia el backend Node.js para peticiones POST en /api.\n\n` +
-                   `Para sincronizar directamente vía API en tu dominio (app.pulsocontable.cl), asegúrate de que Nginx o el servidor web redirija las rutas /api/* al puerto de Node.js.\n\n` +
-                   `Mientras tanto, puedes cargar tus datos de inmediato utilizando el botón "📥 Cargar CSV/TXT Manual".`
-          };
-        } else if (rawText.includes('Starting Server') || rawText.includes('color-scheme: light dark')) {
-          data = {
-            success: false,
-            error: 'El servidor del sistema se estaba inicializando o reconectando. Por favor, espere unos segundos y vuelva a presionar "Sincronizar con SII".'
-          };
-        } else {
-          const cleanMsg = rawText.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300);
-          data = {
-            success: false,
-            error: `Respuesta del servidor no válida (HTTP ${response.status}): ${cleanMsg || response.statusText}`
-          };
-        }
-      }
-
-      if (!response.ok || !data.success) {
+      if (!data.success) {
         if (data.needsCertificate) {
           alert(`⚠️ Certificado Digital Requerido para Sincronización Automática:\n\n${data.error}\n\nPara consultar automáticamente vía API del SII, la empresa debe tener configurado su Certificado Digital (.pfx).\n\nAlternativamente, puede cargar directamente los archivos oficiales descargados del portal del SII usando el botón "📥 Cargar CSV/TXT Manual".`);
           return;

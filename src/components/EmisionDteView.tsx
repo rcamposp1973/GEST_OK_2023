@@ -4,6 +4,7 @@ import { collection, getDocs, addDoc, updateDoc, doc, setDoc, deleteDoc } from '
 import { Company, Auxiliary, ChartOfAccount, DTEDocument, DTEConfig, DTEDocumentItem, Voucher, VoucherLine, RCVDocument } from '../types';
 import { sanitizeVoucherLines } from '../utils/voucherValidation';
 import { generateDteXml, downloadDteXml, simulateSiiConnectionTest, SiiConnectionDiagnostic } from '../utils/siiDteGenerator';
+import { fetchRcvFromSii } from '../utils/siiRcvClient';
 
 interface EmisionDteViewProps {
   studyId: string;
@@ -138,51 +139,29 @@ export default function EmisionDteView({
         }
       }
 
-      // CALL REAL BACKEND API ROUTE /api/sii/rescatar-rcv
-      const response = await fetch('/api/sii/rescatar-rcv', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          companyRut: company.rut,
-          year: yearToSync,
-          claveSii: config.claveEmpresaSii || config.claveRepLegalSii || company.dteConfig?.claveEmpresaSii || company.dteConfig?.claveRepLegalSii,
-          rutRepresentante: config.rutRepresentante || company.legalRepRut,
-          claveRepresentante: config.claveRepLegalSii || company.dteConfig?.claveRepLegalSii,
-          claveCertificadoDigital: config.claveCertificadoDigital || company.dteConfig?.claveCertificadoDigital || '',
-          siiApiUrl: apiUrl,
-          provider: chosenProvider,
-          apiKey: apiKeyVal,
-        })
+      // CALL RESILIENT RCV RESCUE (Backend + Direct Client Fallback)
+      const resData = await fetchRcvFromSii({
+        companyRut: company.rut,
+        companyName: company.name,
+        year: yearToSync,
+        month: 'ALL',
+        tipo: 'ALL',
+        rutRepresentante: config.rutRepresentante || company.legalRepRut,
+        claveRepresentante: config.claveRepLegalSii || company.dteConfig?.claveRepLegalSii,
+        claveCertificadoDigital: config.claveCertificadoDigital || company.dteConfig?.claveCertificadoDigital || '',
+        certificadoB64: config.certificadoB64 || company.dteConfig?.certificadoB64 || '',
+        apiKey: apiKeyVal,
+        provider: chosenProvider,
+        ambiente: config.ambiente || 'Producción'
       });
 
-      let resData: any = {};
-      const contentType = response.headers.get('content-type') || '';
-      if (contentType.includes('application/json')) {
-        resData = await response.json();
-      } else {
-        const rawText = await response.text();
-        if (response.status === 405) {
-          resData = {
-            success: false,
-            error: `El servidor web de producción (HTTP 405) no tiene configurado el proxy inverso para peticiones POST en /api.\n\n` +
-                   `Para sincronizar directamente vía API en tu dominio (app.pulsocontable.cl), asegúrate de que el servidor web (Nginx/Apache) redirija las rutas /api/* al servicio Node.js.`
-          };
-        } else {
-          const cleanMsg = rawText.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300);
-          resData = {
-            success: false,
-            error: `Respuesta de servidor no válida (HTTP ${response.status}): ${cleanMsg || response.statusText}`
-          };
-        }
-      }
-
-      if (!response.ok || !resData.success) {
+      if (!resData.success) {
         const errorMsg = resData.error || 'No se pudo autenticar con el portal del SII o la API del proveedor.';
         alert(
           `⚠️ SINCRONIZACIÓN AUTOMÁTICA SII / RCV:\n\n` +
           `${errorMsg}\n\n` +
           `----------------------------------------\n` +
-          `📌 PARA OBTENERNOS TUS DATOS 100% REALES HOY MISMO:\n\n` +
+          `📌 PARA OBTENER TUS DATOS 100% REALES:\n\n` +
           `1. Si posees una API Key de integración (SimpleAPI, OpenFactura, LibreDTE):\n` +
           `   Inscríbela en la pestaña "Credenciales & Firma Digital" de la empresa.\n\n` +
           `2. Si descargas tu RCV oficial de sii.cl:\n` +

@@ -1,0 +1,83 @@
+{
+  "entities": {
+    "study": {
+      "title": "Study",
+      "description": "Estudio contable",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "adminId": { "type": "string" }
+      },
+      "required": ["name", "adminId"]
+    },
+    "user": {
+      "title": "User",
+      "description": "Usuario del sistema",
+      "type": "object",
+      "properties": {
+        "studyId": { "type": "string" },
+        "role": { "type": "string" }
+      },
+      "required": ["studyId", "role"]
+    },
+    "company": {
+      "title": "Company",
+      "description": "Empresa del cliente",
+      "type": "object",
+      "properties": {
+        "studyId": { "type": "string" },
+        "name": { "type": "string" }
+      },
+      "required": ["studyId", "name"]
+    },
+    "auditLog": {
+      "title": "AuditLog",
+      "description": "Registro global de eventos y bitácora de auditoría",
+      "type": "object",
+      "properties": {
+        "timestamp": { "type": "string" },
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "action": { "type": "string" },
+        "module": { "type": "string" },
+        "details": { "type": "string" }
+      },
+      "required": ["timestamp", "userId", "userEmail", "action", "module", "details"]
+    },
+    "systemConfig": {
+      "title": "SystemConfig",
+      "description": "Configuraciones globales del sistema y promociones",
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "headline": { "type": "string" },
+        "badgeText": { "type": "string" },
+        "whatsappNumber": { "type": "string" },
+        "whatsappCustomMessage": { "type": "string" }
+      },
+      "required": ["enabled"]
+    }
+  },
+  "firestore": {
+    "/studies/{studyId}": {
+      "schema": "study",
+      "description": "Estudios contables"
+    },
+    "/users/{userId}": {
+      "schema": "user",
+      "description": "Usuarios del sistema"
+    },
+    "/companies/{companyId}": {
+      "schema": "company",
+      "description": "Empresas clientes"
+    },
+    "/auditLogs/{auditLogId}": {
+      "schema": "auditLog",
+      "description": "Eventos globales de auditoría y bitácora"
+    },
+    "/system_config/{configId}": {
+      "schema": "systemConfig",
+      "description": "Parámetros globales de landing y configuración de promociones"
+    }
+  }
+}

@@ -190,6 +190,12 @@ export default function EmisionDteView({
 
       const newFetchedDocs: DTEDocument[] = [];
 
+      // Read current Auxiliaries to auto-register new suppliers and customers
+      const currentAuxSnap = await getDocs(collection(companyRef, 'auxiliaries'));
+      const currentAuxs = currentAuxSnap.docs.map(d => ({ id: d.id, ...d.data() } as Auxiliary));
+      const cleanCompRut = (company.rut || '').replace(/[^0-9kK]/g, '').toUpperCase();
+      let newAuxCount = 0;
+
       for (const d of realDocs) {
         const dteDoc: DTEDocument = {
           id: d.id || `SII-REAL-${d.tipoDoc}-${d.folio}`,
@@ -232,6 +238,44 @@ export default function EmisionDteView({
         };
 
         newFetchedDocs.push(dteDoc);
+
+        // Auto-create Auxiliary if new
+        const docTipoReg = d.tipoRegistro || 'Venta';
+        let targetRut = '';
+        let targetName = '';
+        let targetRole: 'Deudor' | 'Acreedor' = 'Acreedor';
+
+        if (docTipoReg === 'Compra' || docTipoReg === 'Honorarios') {
+          targetRut = (d.rutEmisor || '').trim();
+          targetName = (d.razonSocialEmisor || '').trim();
+          targetRole = 'Acreedor';
+        } else {
+          targetRut = (d.rutReceptor || '').trim();
+          targetName = (d.razonSocialReceptor || '').trim();
+          targetRole = 'Deudor';
+        }
+
+        const cleanTargetRut = targetRut.replace(/[^0-9kK]/g, '').toUpperCase();
+        const isGenericRut = ['666666666', '111111111', '555555555', '777777777', '888888888', '999999999'].includes(cleanTargetRut);
+
+        if (cleanTargetRut && cleanTargetRut.length >= 7 && cleanTargetRut !== cleanCompRut && !isGenericRut) {
+          const existingAux = currentAuxs.find(a => (a.rut || '').replace(/[^0-9kK]/g, '').toUpperCase() === cleanTargetRut);
+          if (!existingAux) {
+            const newAuxData: Omit<Auxiliary, 'id'> = {
+              rut: targetRut,
+              name: targetName || (targetRole === 'Deudor' ? 'CLIENTE DTE' : 'PROVEEDOR DTE'),
+              role: targetRole,
+              estado: 'Activo',
+              defaultDebtorAccountIds: [],
+              defaultCreditorAccountIds: [],
+              creationMode: 'IMPORTACION_RCV',
+              createdAt: new Date().toISOString(),
+            };
+            const auxRef = await addDoc(collection(companyRef, 'auxiliaries'), newAuxData);
+            currentAuxs.push({ id: auxRef.id, ...newAuxData });
+            newAuxCount++;
+          }
+        }
 
         // Save DTE to Firestore
         const dRef = doc(companyRef, 'dteDocuments', dteDoc.id);

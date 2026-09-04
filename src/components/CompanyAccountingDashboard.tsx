@@ -1405,12 +1405,18 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
         })
       );
 
+      // Read current Auxiliaries to auto-register new suppliers and customers
+      const currentAuxSnap = await getDocs(collection(companyRef, 'auxiliaries'));
+      const currentAuxs = currentAuxSnap.docs.map(d => ({ id: d.id, ...d.data() } as Auxiliary));
+
       let loadedCount = 0;
       let duplicateCount = 0;
+      let newAuxCount = 0;
 
       const userUid = auth.currentUser?.uid || 'import-api-sii';
       const userEmail = auth.currentUser?.email || '';
       const nowIso = new Date().toISOString();
+      const cleanCompRut = (company.rut || '').replace(/[^0-9kK]/g, '').toUpperCase();
 
       for (const item of fetchedDocs) {
         const itemRut = (item.rutEmisor || item.rut || '11.111.111-1').trim();
@@ -1424,11 +1430,60 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
         }
 
         const docPeriod = item.period || selectedRcvPeriod;
+        const tipoReg = item.tipoRegistro || (['33', '34', '52', '56'].includes(itemTipoDoc) ? 'Compra' : ['BH', 'BHR'].includes(itemTipoDoc) ? 'Honorarios' : 'Venta');
         
+        // --- AUTO-REGISTRO DE NUEVOS AUXILIARES (PROVEEDORES / CLIENTES / PRESTADORES) ---
+        let targetRut = '';
+        let targetName = '';
+        let targetRole: 'Deudor' | 'Acreedor' = 'Acreedor';
+
+        if (tipoReg === 'Compra' || tipoReg === 'Honorarios' || tipoReg === 'Honorario') {
+          targetRut = (item.rutEmisor || item.rut || '').trim();
+          targetName = (item.razonSocialEmisor || item.razonSocial || item.nombrePrestador || '').trim();
+          targetRole = 'Acreedor';
+        } else if (tipoReg === 'Venta') {
+          targetRut = (item.rutReceptor || item.rutCliente || '').trim();
+          targetName = (item.razonSocialReceptor || item.razonSocial || item.razonSocialCliente || '').trim();
+          targetRole = 'Deudor';
+        }
+
+        const cleanTargetRut = targetRut.replace(/[^0-9kK]/g, '').toUpperCase();
+        const isGenericRut = ['666666666', '111111111', '555555555', '777777777', '888888888', '999999999'].includes(cleanTargetRut);
+
+        if (cleanTargetRut && cleanTargetRut.length >= 7 && cleanTargetRut !== cleanCompRut && !isGenericRut) {
+          const existingAux = currentAuxs.find(a => (a.rut || '').replace(/[^0-9kK]/g, '').toUpperCase() === cleanTargetRut);
+          if (!existingAux) {
+            const newAuxData: Omit<Auxiliary, 'id'> = {
+              rut: targetRut,
+              name: targetName || (targetRole === 'Deudor' ? 'CLIENTE DTE' : 'PROVEEDOR DTE'),
+              role: targetRole,
+              estado: 'Activo',
+              defaultDebtorAccountIds: [],
+              defaultCreditorAccountIds: [],
+              createdBy: userUid,
+              createdByUserEmail: userEmail,
+              creationMode: 'IMPORTACION_RCV',
+              createdAt: nowIso,
+              lastModifiedBy: userUid,
+              lastModifiedAt: nowIso
+            };
+            const auxRef = await addDoc(collection(companyRef, 'auxiliaries'), newAuxData);
+            currentAuxs.push({ id: auxRef.id, ...newAuxData });
+            newAuxCount++;
+          } else if (existingAux.role !== targetRole && existingAux.role !== 'Ambos') {
+            await setDoc(doc(companyRef, 'auxiliaries', existingAux.id), {
+              role: 'Ambos',
+              lastModifiedBy: userUid,
+              lastModifiedAt: nowIso
+            }, { merge: true });
+            existingAux.role = 'Ambos';
+          }
+        }
+
         const cleanRcv: RCVDocument = {
           id: `RCV_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
           period: docPeriod,
-          tipoRegistro: item.tipoRegistro || (['33', '34', '52', '56'].includes(itemTipoDoc) ? 'Compra' : itemTipoDoc === 'BHR' ? 'Honorarios' : 'Venta'),
+          tipoRegistro: tipoReg,
           tipoDocumento: itemTipoDoc,
           tipoDoc: itemTipoDoc,
           nombreTipoDoc: item.nombreTipoDoc || (itemTipoDoc === '33' ? 'Factura Electrónica' : itemTipoDoc === '34' ? 'Factura Exenta' : itemTipoDoc === '39' ? 'Boleta Electrónica' : itemTipoDoc === '61' ? 'Nota de Crédito' : 'Documento DTE'),
@@ -1464,6 +1519,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
         `✅ ¡Rescate RCV vía API SII Exitoso!\n\n` +
         `• Período rescatado: ${selectedRcvPeriod}\n` +
         `• Nuevos documentos guardados en Firestore: ${loadedCount}\n` +
+        `• Nuevos auxiliares (Proveedores/Clientes) creados en el Maestro: ${newAuxCount}\n` +
         `• Duplicados ya existentes omitidos: ${duplicateCount}\n` +
         (data.message ? `\nDetalle: ${data.message}\n` : '') +
         `\n• Conexión: ${data.source || 'SimpleAPI.cl'}`

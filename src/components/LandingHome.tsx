@@ -30,6 +30,7 @@ import {
 import { APP_VERSION } from '../constants/version';
 import { db } from '../lib/firebase';
 import { collection, addDoc } from 'firebase/firestore';
+import PublicLandingAiAssistant from './PublicLandingAiAssistant';
 
 interface LandingHomeProps {
   onGoToLogin: () => void;
@@ -558,6 +559,9 @@ export default function LandingHome({ onGoToLogin }: LandingHomeProps) {
 
         </div>
       </footer>
+
+      {/* Asistente Virtual de IA para Visitantes (Público / Captador de Leads) */}
+      <PublicLandingAiAssistant />
 
     </div>
   );

@@ -28,6 +28,7 @@ import AuxiliaryModal from './AuxiliaryModal';
 import PeriodsGrid from './PeriodsGrid';
 import TablasAnalisisMasterView from './TablasAnalisisMasterView';
 import VoucherLineDistributionModal from './VoucherLineDistributionModal';
+import InternalCompanyAccountingCopilot from './InternalCompanyAccountingCopilot';
 import { useProcess } from '../context/ProcessContext';
 import { validateVoucherLine, isCustomAnalysisRequired, sanitizeVoucherLine, sanitizeVoucherLines } from '../utils/voucherValidation';
 import { getLatestOpenPeriod } from '../utils/periodUtils';
@@ -6193,6 +6194,20 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
         fiscalYears={fiscalYears}
         onDataImported={async () => {
           await fetchData();
+        }}
+      />
+
+      {/* COPILOTO CONTABLE INTELIGENTE (MULTI-TENANT EMPRESA ACTUAL) */}
+      <InternalCompanyAccountingCopilot
+        studyId={studyId}
+        company={company}
+        accounts={accounts}
+        vouchers={vouchers}
+        rcvDocuments={rcvDocuments}
+        auxiliaries={auxiliaries}
+        fiscalYears={fiscalYears}
+        onNavigateTab={(tab) => {
+          setActiveTab(tab as any);
         }}
       />
     </div>

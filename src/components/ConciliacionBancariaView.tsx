@@ -31,6 +31,7 @@ import {
 import { ImportCSVModal, ManualMatchModal, QuickVoucherModal } from './BankReconciliationModals';
 import AutoRutMatchModal from './AutoRutMatchModal';
 import BankCartolaSmartImportModal from './BankCartolaSmartImportModal';
+import PendingItemsReportModal from './PendingItemsReportModal';
 import { parseChileanNumber } from '../utils/bankCartolaParser';
 
 interface ConciliacionBancariaViewProps {
@@ -99,6 +100,7 @@ export default function ConciliacionBancariaView({
   const [showImportModal, setShowImportModal] = useState<boolean>(false);
   const [showSmartImportModal, setShowSmartImportModal] = useState<boolean>(false);
   const [showAutoRutModal, setShowAutoRutModal] = useState<boolean>(false);
+  const [showPendingReportModal, setShowPendingReportModal] = useState<boolean>(false);
   const [pastedCSV, setPastedCSV] = useState<string>('');
   const [importInitialBalance, setImportInitialBalance] = useState<number>(0);
 
@@ -1311,6 +1313,15 @@ export default function ConciliacionBancariaView({
           </button>
 
           <button
+            onClick={() => setShowPendingReportModal(true)}
+            className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center gap-1.5 border border-slate-700"
+            title="Ver reporte oficial de partidas pendientes de conciliación bancaria"
+          >
+            <span>📑</span>
+            <span>Partidas Pendientes</span>
+          </button>
+
+          <button
             onClick={async () => {
               await persistReconciliation(selectedPeriod, statementLines, bankInitialBalanceInput, bankFinalBalanceInput);
               alert('💾 Conciliación bancaria verificada y sincronizada en Firestore.');
@@ -2016,6 +2027,20 @@ export default function ConciliacionBancariaView({
           await persistReconciliation(selectedPeriod, updatedLines, bankInitialBalanceInput, bankFinalBalanceInput);
         }}
         onVouchersUpdated={onVouchersUpdated}
+      />
+
+      <PendingItemsReportModal
+        isOpen={showPendingReportModal}
+        onClose={() => setShowPendingReportModal(false)}
+        company={company}
+        bankAccount={selectedBankAccount}
+        period={selectedPeriod}
+        bankFinalBalance={bankFinalBalanceInput}
+        bookFinalBalance={bookFinalBalance}
+        unmatchedCharges={statementLines.filter(l => l.matchedStatus !== 'Conciliado' && (l.charge || 0) > 0)}
+        unmatchedDeposits={statementLines.filter(l => l.matchedStatus !== 'Conciliado' && (l.deposit || 0) > 0)}
+        outstandingChecks={allBankVouchers.filter(bv => !bv.isMatchedInCurrent && !bv.isMatchedInOther && (bv.credit || 0) > 0)}
+        depositsInTransit={allBankVouchers.filter(bv => !bv.isMatchedInCurrent && !bv.isMatchedInOther && (bv.debit || 0) > 0)}
       />
     </div>
   );

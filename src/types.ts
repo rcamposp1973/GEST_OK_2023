@@ -180,6 +180,8 @@ export interface Company {
   assignedAccountantIds?: string[];
   assignedAccountantEmails?: string[];
   customAccountColumns?: string[]; // Lista de nombres de columnas de análisis adicionales (ej: ['REQUIERE SUCURSAL', 'REQUIERE ZONA'])
+  regimenTributario?: string;
+  tasaPpm?: number;
 }
 
 export interface Assignment {
@@ -212,6 +214,8 @@ export interface ChartOfAccount {
   requiereDifCambio?: boolean; // REQUIERE DIF. CAMBIO (SI/NO)
   blce8Columnas?: 'ACTIVO' | 'PASIVO' | 'PERDIDA' | 'GANANCIA' | 'Activo' | 'Pasivo' | 'Pérdida' | 'Ganancia' | string; // BLCE 8 COLUM
   codigoIFRS?: string; // IFRS (ej: 1101, 1103)
+  rubroBalance?: string; // Rubro Balance General / Clasificación IFRS Activo/Pasivo/Patrimonio (ej: Activo Corriente - Efectivo y Equivalentes)
+  rubroResultado?: string; // Rubro Estado de Resultados IFRS (ej: Ingresos de Actividades Ordinarias, Costo de Ventas)
 
   bankInstitution?: string; // Banco (ej. Banco de Chile, Santander, BCI, etc.)
   bankAccountNumber?: string; // N° Cuenta Corriente / Vista
@@ -759,6 +763,47 @@ export interface MarketingPromoConfig {
   buttonColor?: string; // e.g. "#25D366" or "emerald"
   updatedAt?: string;
   updatedBy?: string;
+}
+
+// Control de Hojas Timbradas y Folios Autorizados por el SII
+export interface SiiFolioAuthorization {
+  id: string;
+  companyId: string;
+  resolutionNumber: string; // N° Resolución Timbraje SII
+  resolutionDate: string; // Fecha Resolución
+  startFolio: number; // Folio Inicial Autorizado (ej: 1)
+  endFolio: number; // Folio Final Autorizado (ej: 1000)
+  totalFolios: number; // Cantidad total
+  currentFolio: number; // Próximo Folio Disponible a Utilizar
+  status: 'Activa' | 'Agotada' | 'Anulada';
+  observations?: string;
+  createdAt: string;
+  createdBy?: string;
+  updatedAt?: string;
+}
+
+// Historial / Registro de Consumo de Folios por Libro Oficial Impreso
+export interface FolioUsageLog {
+  id: string;
+  companyId: string;
+  studyId?: string;
+  authorizationId?: string;
+  resolutionNumber?: string;
+  bookType: 'Libro Diario' | 'Libro Mayor' | 'Balance 8 Columnas' | 'Balance IFRS' | 'Estado de Resultados' | 'Libro Inventarios y Balances' | 'RLI / Capital Propio' | 'DDJJ 1847' | string;
+  bookTitle?: string;
+  exerciseYear?: number;
+  periodLabel?: string;
+  period?: string;
+  startFolio: number;
+  endFolio: number;
+  pagesCount?: number;
+  totalFoliosUsed?: number;
+  printedAt: string;
+  printedBy?: string;
+  printedByUserEmail?: string;
+  electronicFileHash?: string;
+  status?: string;
+  notes?: string;
 }
 
 

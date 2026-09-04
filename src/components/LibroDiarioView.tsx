@@ -1,8 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { Company, Voucher, ChartOfAccount, FiscalPeriodYear } from '../types';
 import { generateSIIReportPDF } from '../utils/pdfGenerator';
+import { printAndLogOfficialBook } from '../utils/folioService';
 
 interface LibroDiarioViewProps {
+  studyId?: string;
   company: Company;
   vouchers: Voucher[];
   accounts: ChartOfAccount[];
@@ -12,6 +14,7 @@ interface LibroDiarioViewProps {
 }
 
 export default function LibroDiarioView({
+  studyId,
   company,
   vouchers,
   accounts,
@@ -29,6 +32,7 @@ export default function LibroDiarioView({
   const [statusFilter, setStatusFilter] = useState<'Valido' | 'Todos' | 'Anulado'>('Valido');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [viewMode, setViewMode] = useState<'compact' | 'detailed'>('detailed');
+  const [isPrintingOfficial, setIsPrintingOfficial] = useState<boolean>(false);
 
   // Build list of unique periods available in vouchers
   const availablePeriods = useMemo(() => {
@@ -206,6 +210,76 @@ export default function LibroDiarioView({
     window.print();
   };
 
+  const handlePrintOfficialBook = async () => {
+    if (filteredVouchers.length === 0) {
+      alert('No hay asientos contables para emitir el Libro Diario Oficial.');
+      return;
+    }
+    
+    setIsPrintingOfficial(true);
+    try {
+      const columns = ['N° Asiento', 'Fecha', 'Tipo', 'Cód. Cuenta', 'Nombre Cuenta', 'Glosa / Ref', 'Debe', 'Haber'];
+      const data: string[][] = [];
+      
+      const accountMap = new Map<string, string>();
+      accounts.forEach(a => accountMap.set(a.code, a.name));
+
+      filteredVouchers.forEach(v => {
+        if (v.lines && v.lines.length > 0) {
+          v.lines.forEach((l, idx) => {
+            const accName = accountMap.get(l.accountCode) || l.accountName || '';
+            const glossText = l.gloss || v.gloss || '';
+            data.push([
+              idx === 0 ? v.voucherNumber.toString() : '',
+              idx === 0 ? v.date : '',
+              idx === 0 ? v.type : '',
+              l.accountCode || '',
+              accName,
+              glossText,
+              (Number(l.debit) || 0).toLocaleString('es-CL'),
+              (Number(l.credit) || 0).toLocaleString('es-CL')
+            ]);
+          });
+        } else {
+          data.push([
+            v.voucherNumber.toString(),
+            v.date,
+            v.type,
+            '-',
+            '-',
+            v.gloss || '',
+            (v.totalDebit || 0).toLocaleString('es-CL'),
+            (v.totalCredit || 0).toLocaleString('es-CL')
+          ]);
+        }
+      });
+
+      const effectiveStudyId = studyId || 'default-study';
+      const result = await printAndLogOfficialBook(effectiveStudyId, company, {
+        bookType: 'LIBRO_DIARIO',
+        title: 'LIBRO DIARIO OFICIAL',
+        subtitle: `Período: ${periodFilter !== 'Todos' ? periodFilter : 'General / Anual'} - Formato Oficial SII (Res. Hojas Sueltas)`,
+        columns,
+        data,
+        orientation: 'portrait',
+        userNotes: `Emisión oficial con folios timbrados de ${filteredVouchers.length} asientos contables.`
+      });
+
+      alert(
+        `✅ Libro Diario Oficial Emitido con Éxito\n\n` +
+        `• Folios SII Utilizados: N° ${result.startFolio} al N° ${result.endFolio} (${result.pagesCount} página${result.pagesCount > 1 ? 's' : ''})\n` +
+        `• Resolución SII: N° ${result.resolutionNumber} del ${result.resolutionDate}\n` +
+        `• Formato: Crystal Reports Oficial con Van / Vienen y Timbraje Autorizado.\n` +
+        `• El consumo de folios ha sido registrado en el Control de Folios SII.`
+      );
+    } catch (err: any) {
+      console.error("Error generating official book:", err);
+      alert('Error al generar Libro Diario Oficial: ' + (err.message || err));
+    } finally {
+      setIsPrintingOfficial(false);
+    }
+  };
+
   const handleDownloadSIIReport = () => {
     if (filteredVouchers.length === 0) {
       alert('No hay asientos contables para generar el informe.');
@@ -241,6 +315,15 @@ export default function LibroDiarioView({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={handlePrintOfficialBook}
+            disabled={isPrintingOfficial}
+            className="px-3 py-1.5 bg-indigo-700 hover:bg-indigo-800 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors shadow-2xs disabled:opacity-50"
+            title="Emisión oficial con numeración correlativa de folios timbrados por el SII"
+          >
+            <span>🖨️</span>
+            <span>{isPrintingOfficial ? 'Emitiendo Folios...' : 'Libro Diario Oficial (Folios SII)'}</span>
+          </button>
           <button
             onClick={handleDownloadSIIReport}
             className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors shadow-2xs"

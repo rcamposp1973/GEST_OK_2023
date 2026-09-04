@@ -29,6 +29,7 @@ import PeriodsGrid from './PeriodsGrid';
 import TablasAnalisisMasterView from './TablasAnalisisMasterView';
 import VoucherLineDistributionModal from './VoucherLineDistributionModal';
 import InternalCompanyAccountingCopilot from './InternalCompanyAccountingCopilot';
+import SiiFolioControlView from './SiiFolioControlView';
 import { useProcess } from '../context/ProcessContext';
 import { validateVoucherLine, isCustomAnalysisRequired, sanitizeVoucherLine, sanitizeVoucherLines } from '../utils/voucherValidation';
 import { getLatestOpenPeriod } from '../utils/periodUtils';
@@ -49,7 +50,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
   const { withProcess } = useProcess();
   type RibbonGroup = 'FINANZAS' | 'TESORERIA' | 'IMPORTACIONES' | 'IMPUESTOS' | 'INDICADORES' | 'CONFIGURACIONES';
   const [activeRibbonGroup, setActiveRibbonGroup] = useState<RibbonGroup>('FINANZAS');
-  const [activeTab, setActiveTab] = useState<'accounts' | 'auxiliaries' | 'periods' | 'rcv' | 'exchange' | 'rcvParams' | 'f29Codes' | 'vouchers' | 'libroDiario' | 'libroMayor' | 'balance8' | 'balanceIFRS' | 'analisisAuxiliares' | 'analisisCuentas' | 'estadoResultados' | 'indicadoresFinancieros' | 'flujoDeCaja' | 'nominasPago' | 'cobranza' | 'conciliacionBancaria' | 'cargaMasiva' | 'formulario29' | 'plantillasCarga' | 'emisionDte' | 'tablasAnalisis'>('vouchers');
+  const [activeTab, setActiveTab] = useState<'accounts' | 'auxiliaries' | 'periods' | 'rcv' | 'exchange' | 'rcvParams' | 'f29Codes' | 'vouchers' | 'libroDiario' | 'libroMayor' | 'balance8' | 'balanceIFRS' | 'analisisAuxiliares' | 'analisisCuentas' | 'estadoResultados' | 'indicadoresFinancieros' | 'flujoDeCaja' | 'nominasPago' | 'cobranza' | 'conciliacionBancaria' | 'cargaMasiva' | 'formulario29' | 'plantillasCarga' | 'emisionDte' | 'tablasAnalisis' | 'controlFolios'>('vouchers');
   const [auxSubTab, setAuxSubTab] = useState<'deudores' | 'acreedores'>('deudores');
   const [showExchangeBar, setShowExchangeBar] = useState<boolean>(true);
   const [rcvFilterType, setRcvFilterType] = useState<'Todos' | 'Compra' | 'Venta' | 'Honorarios'>('Compra');
@@ -3338,6 +3339,16 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
                     <span>⚖️ Balance 8 Columnas (Tributario)</span>
                   </button>
                   <button
+                    onClick={() => setActiveTab('controlFolios')}
+                    className={`px-3 py-1.5 text-xs rounded font-semibold flex items-center gap-1.5 transition-colors whitespace-nowrap flex-shrink-0 ${
+                      activeTab === 'controlFolios'
+                        ? 'bg-slate-800 text-white shadow-2xs'
+                        : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200'
+                    }`}
+                  >
+                    <span>🖨️ Timbraje y Folios SII</span>
+                  </button>
+                  <button
                     onClick={() => setActiveTab('tablasAnalisis')}
                     className={`px-3 py-1.5 text-xs rounded font-semibold flex items-center gap-1.5 transition-colors whitespace-nowrap flex-shrink-0 ${
                       activeTab === 'tablasAnalisis'
@@ -3606,6 +3617,16 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
                     }`}
                   >
                     <span>📈 Indicadores Económicos (UF, USD, UTM, IPC)</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('controlFolios')}
+                    className={`px-3 py-1.5 text-xs rounded font-semibold flex items-center gap-1.5 transition-colors whitespace-nowrap flex-shrink-0 ${
+                      activeTab === 'controlFolios'
+                        ? 'bg-slate-800 text-white shadow-2xs'
+                        : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200'
+                    }`}
+                  >
+                    <span>🖨️ Autorizaciones de Folios SII</span>
                   </button>
                 </>
               )}
@@ -5941,6 +5962,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
       {/* TAB: LIBRO DIARIO */}
       {activeTab === 'libroDiario' && (
         <LibroDiarioView
+          studyId={studyId}
           company={company}
           vouchers={vouchers}
           accounts={accounts}
@@ -5951,6 +5973,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
       {/* TAB: LIBRO MAYOR */}
       {activeTab === 'libroMayor' && (
         <LibroMayorView
+          studyId={studyId}
           company={company}
           vouchers={vouchers}
           accounts={accounts}
@@ -5961,6 +5984,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
       {/* TAB: BALANCE DE 8 COLUMNAS */}
       {activeTab === 'balance8' && (
         <Balance8ColumnasView
+          studyId={studyId}
           company={company}
           vouchers={vouchers}
           accounts={accounts}
@@ -6156,6 +6180,15 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
           products={products}
           customAnalysisItems={customAnalysisItems}
           onRefreshData={fetchData}
+        />
+      )}
+
+      {/* TAB: CONTROL DE FOLIOS Y TIMBRAJE SII */}
+      {activeTab === 'controlFolios' && (
+        <SiiFolioControlView
+          studyId={studyId}
+          company={company}
+          isReadOnly={isAnalyst}
         />
       )}
 

@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { db } from '../lib/firebase';
+import { collection, getDocs } from 'firebase/firestore';
 import { 
   Sparkles, 
   Send, 
@@ -15,9 +17,18 @@ import {
   BookOpen,
   CheckCircle2,
   AlertCircle,
-  HelpCircle
+  HelpCircle,
+  Scale,
+  DollarSign,
+  Landmark,
+  Percent,
+  Layers,
+  FileSpreadsheet,
+  BrainCircuit,
+  Lock
 } from 'lucide-react';
 import { Company, ChartOfAccount, Voucher, RCVDocument, Auxiliary, FiscalPeriodYear } from '../types';
+import { CopilotKnowledgeItem } from './JuniorAITrainingCenter';
 
 interface InternalCopilotProps {
   studyId: string;
@@ -55,21 +66,50 @@ export default function InternalCompanyAccountingCopilot({
   const [isOpen, setIsOpen] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [trainedKnowledge, setTrainedKnowledge] = useState<CopilotKnowledgeItem[]>([]);
+  const [showKnowledgeModal, setShowKnowledgeModal] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Historial de conversación inicial contextualizado estrictamente a esta empresa
+  // Load trained knowledge (Global + Isolated for this company)
+  useEffect(() => {
+    const loadKnowledge = async () => {
+      try {
+        const list: CopilotKnowledgeItem[] = [];
+        // 1. Global
+        const globalSnap = await getDocs(collection(db, 'system_junior_knowledge'));
+        globalSnap.docs.forEach(d => {
+          list.push({ id: d.id, ...d.data() } as CopilotKnowledgeItem);
+        });
+
+        // 2. Company Isolated
+        if (studyId && company?.id) {
+          const compSnap = await getDocs(collection(db, 'studies', studyId, 'companies', company.id, 'copilotCompanyKnowledge'));
+          compSnap.docs.forEach(d => {
+            list.push({ id: d.id, ...d.data() } as CopilotKnowledgeItem);
+          });
+        }
+        setTrainedKnowledge(list.filter(k => k.isActive !== false));
+      } catch (e) {
+        console.error("Error loading Junior trained knowledge:", e);
+      }
+    };
+    loadKnowledge();
+  }, [studyId, company?.id]);
+
+  // Historial de conversación inicial de "Junior"
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'init-1',
       sender: 'ai',
-      text: `Hola, soy tu Copiloto Contable para **${company.name}** (RUT: ${company.rut}).\n\nEstoy conectado exclusivamente a los libros, comprobantes, RCV y plan de cuentas de esta empresa. ¿En qué tarea contable o análisis puedo asistirte hoy?`,
+      text: `👋 ¡Hola! Soy **Junior**, tu Asistente y Copiloto Contable para **${company.name}** (RUT: ${company.rut}).\n\nEstoy especializado en **Normativa Tributaria Chilena (LIR, IVA, F29, Regímenes 14A/14D3/14D8)** y **Contabilidad Financiera IFRS (NIC 1, NIC 2, NIC 16, Margen Operacional, Partida Doble)**.\n\nPuedo auditar tus libros, simular cálculos, sugerir asientos contables, revisar partidas de conciliación bancaria y guiarte en el sistema. ¿En qué te ayudo hoy?`,
       time: 'Ahora',
       suggestions: [
-        'Resumen del RCV y Compras del mes',
-        'Buscar facturas de un proveedor',
-        'Revisar cuadratura del Balance',
-        'Sugerir cuenta contable para un gasto',
-        '¿Cuánto IVA Débito y Crédito tenemos?'
+        'Resumen de IVA y Formulario 29',
+        'Analizar Margen Operacional IFRS',
+        'Simular cálculo de Boleta de Honorarios',
+        'Proponer asiento contable',
+        'Auditar cuadratura del Balance y Libro Diario',
+        '¿Cómo conciliar partidas bancarias pendientes?'
       ]
     }
   ]);
@@ -80,12 +120,154 @@ export default function InternalCompanyAccountingCopilot({
     }
   }, [isOpen, messages]);
 
-  // Motor de Inteligencia y Análisis Contable Multi-Tenant (Estricto contexto de la empresa actual)
+  // Motor de Inteligencia y Razonamiento Contable, Tributario e IFRS (Junior)
   const processAccountingQuery = (rawQuery: string): { response: string; suggestions?: string[]; actionLink?: { tab: string; label: string } } => {
     const q = rawQuery.toLowerCase().trim();
 
-    // 1. Resumen de IVA / RCV / F29
-    if (q.includes('iva') || q.includes('f29') || q.includes('debito') || q.includes('débito') || q.includes('credito') || q.includes('crédito') || q.includes('rcv')) {
+    // 0. Búsqueda de Directivas de Entrenamiento Dinámico (Específicas de Empresa y Globales)
+    const matchingCompanyRules = trainedKnowledge.filter(k => 
+      k.scope === 'COMPANY' && 
+      k.companyId === company.id &&
+      k.isActive &&
+      (k.keywords.some(kw => q.includes(kw.toLowerCase())) || q.includes(k.title.toLowerCase()))
+    );
+
+    const matchingGlobalRules = trainedKnowledge.filter(k => 
+      k.scope === 'GLOBAL' && 
+      k.isActive &&
+      (k.keywords.some(kw => q.includes(kw.toLowerCase())) || q.includes(k.title.toLowerCase()))
+    );
+
+    // Si hay una directiva específica para esta empresa, se le da máxima prioridad
+    if (matchingCompanyRules.length > 0) {
+      const topRule = matchingCompanyRules[0];
+      let ruleResponse = `🏢 **Criterio Contable Exclusivo para ${company.name}:**\n\n` +
+        `• **${topRule.title}:**\n` +
+        `${topRule.directiveContent}\n\n`;
+
+      if (topRule.recommendedEntries) {
+        ruleResponse += `💡 **Asiento Contable Sugerido:**\n` +
+          `${topRule.recommendedEntries}\n\n`;
+      }
+
+      ruleResponse += `🔒 *Nota: Esta regla está aprendida y aislada únicamente para ${company.name}.*`;
+
+      return {
+        response: ruleResponse,
+        suggestions: ['Proponer otro asiento', 'Ver Comprobantes', 'Auditar Balance'],
+        actionLink: { tab: 'vouchers', label: 'Ver Comprobantes' }
+      };
+    }
+
+    // 1. Simulación o Consulta de Boleta de Honorarios / Retención 14.5%
+    if (q.includes('honorario') || q.includes('bhr') || q.includes('retencion') || q.includes('retención') || q.includes('14.5') || q.includes('boleta de honorario')) {
+      const matchNum = q.match(/\d+([.,]\d+)?/g);
+      let exampleBruto = 1000000;
+      if (matchNum && matchNum.length > 0) {
+        const parsed = parseInt(matchNum[0].replace(/\D/g, ''), 10);
+        if (parsed > 1000) exampleBruto = parsed;
+      }
+
+      const tasaRet = 0.145; // 14.5% Ley 21.133
+      const retencion = Math.round(exampleBruto * tasaRet);
+      const liquido = exampleBruto - retencion;
+
+      // Cálculo inverso (de líquido a bruto)
+      const brutoDesdeLiquido = Math.round(exampleBruto / (1 - tasaRet));
+      const retDesdeLiquido = brutoDesdeLiquido - exampleBruto;
+
+      return {
+        response: `📋 **Simulador y Normativa de Boletas de Honorarios (Segunda Categoría - Chile):**\n\n` +
+          `• **Tasa de Retención Vigente:** **14.5%** (Ley N° 21.133 para cobertura de seguridad social).\n` +
+          `• **Código Formulario 29:** Línea 57, Código [151] (Retención Impuesto 2da Categoría).\n\n` +
+          `💰 **Simulación con $ ${exampleBruto.toLocaleString('es-CL')}:**\n` +
+          `  - **Si el valor ingresado es BRUTO:**\n` +
+          `    • Honorario Bruto: $ ${exampleBruto.toLocaleString('es-CL')}\n` +
+          `    • Retención 14.5% (a pagar en F29): **$ ${retencion.toLocaleString('es-CL')}**\n` +
+          `    • Líquido a Pagar al Prestador: **$ ${liquido.toLocaleString('es-CL')}**\n\n` +
+          `  - **Si el valor ingresado es LÍQUIDO (Pacto Líquido):**\n` +
+          `    • Honorario Bruto Requerido: **$ ${brutoDesdeLiquido.toLocaleString('es-CL')}**\n` +
+          `    • Retención 14.5%: $ ${retDesdeLiquido.toLocaleString('es-CL')}\n` +
+          `    • Líquido Efectivo: $ ${exampleBruto.toLocaleString('es-CL')}\n\n` +
+          `💡 **Propuesta de Asiento Contable:**\n` +
+          `  - [4201002] Gastos por Honorarios Profesionales (Debe): $ ${exampleBruto.toLocaleString('es-CL')}\n` +
+          `  - [2103003] Retenciones de Impuesto 2da Cat. F29 (Haber): $ ${retencion.toLocaleString('es-CL')}\n` +
+          `  - [2101002] Honorarios por Pagar (Haber): $ ${liquido.toLocaleString('es-CL')}`,
+        suggestions: ['Ver Honorarios en RCV', 'Ver Formulario 29', 'Proponer otro asiento contable'],
+        actionLink: { tab: 'rcv', label: 'Ver Registro de Honorarios' }
+      };
+    }
+
+    // 2. Margen Operacional y Contabilidad Financiera IFRS (NIC 1, NIC 2)
+    if (q.includes('margen') || q.includes('ifrs') || q.includes('estado de resultados') || q.includes('ingresos operacionales') || q.includes('costo de venta') || q.includes('bruto')) {
+      // Calcular datos reales de la empresa
+      const validVouchers = vouchers.filter(v => v.status !== 'Anulado');
+      let totalVentasIngresos = 0;
+      let totalCostosVenta = 0;
+      let totalGastosAdmin = 0;
+
+      validVouchers.forEach(v => {
+        (v.lines || []).forEach(l => {
+          const code = (l.accountCode || '').trim();
+          const debit = Number(l.debit) || 0;
+          const credit = Number(l.credit) || 0;
+
+          if (code.startsWith('3') || code.startsWith('31')) {
+            totalVentasIngresos += (credit - debit);
+          } else if (code.startsWith('41') || code.startsWith('4.1')) {
+            totalCostosVenta += (debit - credit);
+          } else if (code.startsWith('42') || code.startsWith('4.2') || code.startsWith('4')) {
+            totalGastosAdmin += (debit - credit);
+          }
+        });
+      });
+
+      const margenOperacionalBruto = totalVentasIngresos - totalCostosVenta;
+      const porcentajeMargen = totalVentasIngresos > 0 ? ((margenOperacionalBruto / totalVentasIngresos) * 100).toFixed(1) : '0.0';
+      const ebitda = margenOperacionalBruto - totalGastosAdmin;
+
+      return {
+        response: `🏛️ **Estructura Financiera IFRS / NIIF para ${company.name}:**\n\n` +
+          `Conforme a la **NIC 1 (Presentación de Estados Financieros)** y **NIC 2 (Inventarios)**, el Estado de Resultados por Función se estructura en cascada:\n\n` +
+          `1️⃣ **Ingresos de Actividades Ordinarias (Cuentas 31xxxxx):** $ ${totalVentasIngresos.toLocaleString('es-CL')}\n` +
+          `2️⃣ **Menos Costo de Ventas / Explotación (Cuentas 41xxxxx):** $ ${totalCostosVenta.toLocaleString('es-CL')}\n` +
+          `────────────────────────────────────────────\n` +
+          `💎 **MARGEN OPERACIONAL (Ganancia Bruta):** **$ ${margenOperacionalBruto.toLocaleString('es-CL')}** (${porcentajeMargen}% sobre ventas)\n` +
+          `3️⃣ **Menos Gastos de Administración y Ventas (42xxxxx):** $ ${totalGastosAdmin.toLocaleString('es-CL')}\n` +
+          `────────────────────────────────────────────\n` +
+          `📈 **Resultado Operacional (EBIT / Operativo):** **$ ${ebitda.toLocaleString('es-CL')}**\n\n` +
+          `📌 **Principio de Partida Doble:** En el Balance Clasificado IFRS, siempre se valida que:\n` +
+          `**ACTIVO (Corriente + No Corriente) = PASIVO (Corriente + No Corriente) + PATRIMONIO NETO**`,
+        suggestions: ['Ver Estado de Resultados IFRS', 'Ver Balance Clasificado IFRS', 'Revisar Balance 8 Columnas'],
+        actionLink: { tab: 'estadoResultados', label: 'Abrir Estado de Resultados IFRS' }
+      };
+    }
+
+    // 3. Regímenes Tributarios Chilenos (14A, 14D3, 14D8) y Capital Propio Tributario
+    if (q.includes('regimen') || q.includes('régimen') || q.includes('14a') || q.includes('14 d') || q.includes('14d') || q.includes('propyme') || q.includes('cpt') || q.includes('rli')) {
+      const reg = company.regimenTributario || 'ProPyme General (Art. 14 D N° 3)';
+      return {
+        response: `⚖️ **Normativa Tributaria Chilena - Regímenes Ley de la Renta (LIR):**\n\n` +
+          `🏢 **Régimen de ${company.name}:** **${reg}**\n\n` +
+          `📌 **Resumen de los Principales Regímenes en Chile:**\n\n` +
+          `• **1. Régimen ProPyme General (Art. 14 D N° 3):**\n` +
+          `  - Tasa Impuesto 1ra Categoría: 25% (o tasa reducida transitoria).\n` +
+          `  - Base Imponible simplificada: Ingresos percibidos menos gastos pagados.\n` +
+          `  - Crédito de los socios: 100% computable contra IGC / IA.\n` +
+          `  - Contabilidad completa con opción de simplificada.\n\n` +
+          `• **2. Régimen ProPyme Transparente (Art. 14 D N° 8):**\n` +
+          `  - La empresa está **exenta** de Impuesto de Primera Categoría (0%).\n` +
+          `  - El resultado tributario se atribuye directamente a los socios en el mismo año.\n\n` +
+          `• **3. Régimen General Semi-Integrado (Art. 14 A):**\n` +
+          `  - Tasa Impuesto 1ra Categoría: 27% sobre RLI con contabilidad completa.\n` +
+          `  - Crédito de los socios: 65% (restitución del 35%).\n\n` +
+          `¿Deseas simular la tasa de PPM o consultar el cálculo de RLI / CPT?`,
+        suggestions: ['Simular tasa de PPM', 'Ver Formulario 29', 'Ver Plan de Cuentas']
+      };
+    }
+
+    // 4. IVA, F29, Débito, Crédito, Remanente y PPM
+    if (q.includes('iva') || q.includes('f29') || q.includes('debito') || q.includes('débito') || q.includes('credito') || q.includes('crédito') || q.includes('ppm') || q.includes('impuesto')) {
       const totalVentas = rcvDocuments.filter(d => d.tipoRegistro === 'Venta');
       const totalCompras = rcvDocuments.filter(d => d.tipoRegistro === 'Compra');
       const totalHonorarios = rcvDocuments.filter(d => d.tipoRegistro === 'Honorarios');
@@ -97,59 +279,82 @@ export default function InternalCompanyAccountingCopilot({
       const retencionHonorarios = totalHonorarios.reduce((acc, curr) => acc + (Number(curr.montoRetencion || curr.montoIva) || 0), 0);
 
       const diffIva = sumDebito - sumCredito;
+      const ppmTasa = company.tasaPpm || 0.25; // 0.25% default ProPyme
+      const ppmEstimado = Math.round(sumNetoVentas * (ppmTasa / 100));
 
-      let analysisText = `📊 **Resumen Tributario e IVA para ${company.name}:**\n\n`;
-      analysisText += `• **Ventas Registradas:** ${totalVentas.length} documentos (Neto: $ ${sumNetoVentas.toLocaleString('es-CL')})\n`;
-      analysisText += `• **Débito Fiscal (IVA Ventas):** $ ${sumDebito.toLocaleString('es-CL')}\n`;
-      analysisText += `• **Compras Registradas:** ${totalCompras.length} documentos (Neto: $ ${sumNetoCompras.toLocaleString('es-CL')})\n`;
-      analysisText += `• **Crédito Fiscal (IVA Compras):** $ ${sumCredito.toLocaleString('es-CL')}\n`;
-      
+      let analysisText = `📊 **Liquidación y Auditoría Tributaria F29 para ${company.name}:**\n\n`;
+      analysisText += `• **Ventas Facturadas:** ${totalVentas.length} docs | Base Neta: $ ${sumNetoVentas.toLocaleString('es-CL')}\n`;
+      analysisText += `• **Débito Fiscal IVA (19%):** $ ${sumDebito.toLocaleString('es-CL')} (Línea 14 / Cód. 142)\n`;
+      analysisText += `• **Compras con Crédito:** ${totalCompras.length} docs | Base Neta: $ ${sumNetoCompras.toLocaleString('es-CL')}\n`;
+      analysisText += `• **Crédito Fiscal IVA (19%):** $ ${sumCredito.toLocaleString('es-CL')} (Línea 23 / Cód. 520)\n`;
+
       if (totalHonorarios.length > 0) {
-        analysisText += `• **Boletas de Honorarios:** ${totalHonorarios.length} boletas (Retención estimada: $ ${retencionHonorarios.toLocaleString('es-CL')})\n`;
+        analysisText += `• **Retención Honorarios (14.5%):** $ ${retencionHonorarios.toLocaleString('es-CL')} (${totalHonorarios.length} boletas / Cód. 151)\n`;
       }
 
-      analysisText += `\n📌 **Posición Estimada de IVA:** `;
+      analysisText += `• **PPM Obligatorio Estimado (${ppmTasa}%):** $ ${ppmEstimado.toLocaleString('es-CL')} (Cód. 062/115)\n\n`;
+
+      analysisText += `📌 **Resultado Neto Estimado:** `;
       if (diffIva > 0) {
-        analysisText += `Impuesto Determinado a Pagar de **$ ${diffIva.toLocaleString('es-CL')}** (antes de PPM y retenciones).`;
+        const totalPagar = diffIva + retencionHonorarios + ppmEstimado;
+        analysisText += `Impuesto Determinado IVA a Pagar de **$ ${diffIva.toLocaleString('es-CL')}**.\n` +
+          `Total a Pagar en Formulario 29 (con PPM y retenciones): **$ ${totalPagar.toLocaleString('es-CL')}**.`;
       } else if (diffIva < 0) {
-        analysisText += `Remanente de Crédito Fiscal a favor de **$ ${Math.abs(diffIva).toLocaleString('es-CL')}**.`;
+        const remanente = Math.abs(diffIva);
+        analysisText += `**Remanente de Crédito Fiscal** a favor para el mes siguiente de **$ ${remanente.toLocaleString('es-CL')}** (Art. 28 DL 825).`;
       } else {
         analysisText += `IVA en equilibrio ($ 0).`;
       }
 
       return {
         response: analysisText,
-        suggestions: ['Ir al Formulario 29', 'Ver Registro Compras y Ventas', 'Revisar cuadratura del Balance'],
+        suggestions: ['Ir al Formulario 29 Oficial', 'Ver Compras y Ventas RCV', 'Revisar Balance IFRS'],
         actionLink: { tab: 'formulario29', label: 'Abrir Formulario 29 (F29)' }
       };
     }
 
-    // 2. Búsqueda de facturas / documentos
-    if (q.includes('factura') || q.includes('proveedor') || q.includes('buscar') || q.includes('documento')) {
-      const matchDocs = rcvDocuments.slice(0, 5);
-      if (rcvDocuments.length === 0) {
-        return {
-          response: `Actualmente no hay documentos cargados en el Registro de Compras y Ventas de **${company.name}**. Puedes importar compras y ventas sincronizando directamente con el SII o cargando el archivo Excel oficial.`,
-          suggestions: ['Sincronizar con SII', 'Ver Plan de Cuentas'],
-          actionLink: { tab: 'rcv', label: 'Ir al Registro Compras y Ventas' }
-        };
-      }
-
-      let docList = `🔍 **Últimos documentos registrados en ${company.name} (${rcvDocuments.length} totales):**\n\n`;
-      matchDocs.forEach((d) => {
-        const contraparte = d.tipoRegistro === 'Venta' ? (d.razonSocialReceptor || d.rutReceptor) : (d.razonSocialEmisor || d.rutEmisor);
-        docList += `• **${d.nombreTipoDoc || d.tipoRegistro} Folio #${d.folio}**: ${contraparte || 'Sin Razón'} | Total: $ ${(Number(d.montoTotal) || 0).toLocaleString('es-CL')}\n`;
-      });
-
+    // 5. Conciliación Bancaria y Partidas Pendientes
+    if (q.includes('concilia') || q.includes('cartola') || q.includes('banco') || q.includes('partidas pendientes') || q.includes('cheque en transito') || q.includes('regulariza')) {
       return {
-        response: docList,
-        suggestions: ['Ver todas las compras y ventas', '¿Cómo está el IVA del mes?', 'Buscar en el Libro Diario'],
-        actionLink: { tab: 'rcv', label: 'Ver Registro Completo RCV' }
+        response: `🏦 **Asistencia para Conciliación Bancaria y Partidas Pendientes:**\n\n` +
+          `Para asegurar la cuadratura perfecta entre la **Cartola Bancaria** y el **Libro Mayor de Banco**:\n\n` +
+          `1️⃣ **Partidas Pendientes del Banco (Cartola no contabilizada):**\n` +
+          `   • Cargos bancarios / comisiones (ej: Mantención de cuenta cta 4301001).\n` +
+          `   • Abonos o transferencias directas de clientes sin comprobante de ingreso.\n` +
+          `   *Solución:* Puedes crear el voucher con un solo clic mediante el botón "⚡ Asiento Rápido".\n\n` +
+          `2️⃣ **Partidas Pendientes del Libro Mayor (Contabilidad en tránsito):**\n` +
+          `   • Cheques girados y no cobrados por proveedores.\n` +
+          `   • Depósitos contabilizados al cierre aún no acreditados en la cartola.\n\n` +
+          `📑 **Nuevo Reporte Disponible:** En la pestaña de Conciliación Bancaria puedes abrir el **Reporte Oficial de Partidas Pendientes** para imprimirlo o exportarlo a Excel.`,
+        suggestions: ['Ir a Conciliación Bancaria', 'Ver Libro Mayor de Banco', 'Revisar Vouchers'],
+        actionLink: { tab: 'conciliacionBancaria', label: 'Abrir Conciliación Bancaria' }
       };
     }
 
-    // 3. Revisión de cuadratura / Balance / Asientos
-    if (q.includes('balance') || q.includes('cuadratura') || q.includes('diario') || q.includes('asientos') || q.includes('comprobantes')) {
+    // 6. Asistente y Propuesta de Asientos Contables con formato de 7 dígitos
+    if (q.includes('asiento') || q.includes('proponer') || q.includes('contabilizar') || q.includes('como registro') || q.includes('gasto') || q.includes('compra')) {
+      return {
+        response: `✍️ **Generador de Asientos Contables Sugeridos (Estructura Estándar 7 Dígitos):**\n\n` +
+          `Ejemplos frecuentes según el Plan de Cuentas de **${company.name}**:\n\n` +
+          `🛒 **1. Compra de Mercadería / Existencias con Factura Afecta:**\n` +
+          `   • [1103001] Mercaderías (Activo) ─────────── Debe $ 1.000.000\n` +
+          `   • [1104001] IVA Crédito Fiscal (Activo) ──── Debe $ 190.000\n` +
+          `   • [2101001] Proveedores Nacionales (Pasivo) ─ Haber $ 1.190.000\n\n` +
+          `💼 **2. Venta de Servicios / Mercaderías:**\n` +
+          `   • [1102001] Clientes Nacionales (Activo) ──── Debe $ 1.190.000\n` +
+          `   • [3101001] Ventas de Bienes/Servicios (Ingreso) ── Haber $ 1.000.000\n` +
+          `   • [2103001] IVA Débito Fiscal (Pasivo) ────── Haber $ 190.000\n\n` +
+          `🏢 **3. Pago de Arriendo / Servicios:**\n` +
+          `   • [4202001] Gastos de Arriendo (Resultado Pérdida) ── Debe $ 500.000\n` +
+          `   • [1101002] Banco Cta Cte (Activo) ──────────── Haber $ 500.000\n\n` +
+          `¿Necesitas que te arme el asiento para una operación particular? Indícame el monto y el concepto.`,
+        suggestions: ['Crear nuevo Comprobante', 'Ver Plan de Cuentas', 'Ver Libro Diario'],
+        actionLink: { tab: 'vouchers', label: 'Ir a Creación de Comprobantes' }
+      };
+    }
+
+    // 7. Auditoría de cuadratura / Balance / Asientos
+    if (q.includes('balance') || q.includes('cuadratura') || q.includes('diario') || q.includes('comprobantes')) {
       let totalDebe = 0;
       let totalHaber = 0;
       let descuadradosCount = 0;
@@ -165,60 +370,52 @@ export default function InternalCompanyAccountingCopilot({
       });
 
       const diferencia = Math.abs(totalDebe - totalHaber);
-      let balanceReport = `📋 **Auditoría de Comprobantes y Balance para ${company.name}:**\n\n`;
+      let balanceReport = `📋 **Auditoría de Comprobantes y Partida Doble para ${company.name}:**\n\n`;
       balanceReport += `• **Comprobantes Totales:** ${vouchers.length} asientos ingresados.\n`;
-      balanceReport += `• **Sumas del Libro Diario:**\n`;
+      balanceReport += `• **Sumas Acumuladas del Libro Diario:**\n`;
       balanceReport += `  - Total Debe: $ ${totalDebe.toLocaleString('es-CL')}\n`;
       balanceReport += `  - Total Haber: $ ${totalHaber.toLocaleString('es-CL')}\n`;
 
       if (descuadradosCount === 0 && diferencia === 0) {
-        balanceReport += `\n✅ **Estado:** ¡Cuadratura perfecta! El Libro Diario y Balance están 100% balanceados (Diferencia: $ 0).`;
+        balanceReport += `\n✅ **Estado:** ¡Cuadratura perfecta! El Libro Diario y Balance cumplen rigurosamente el principio de Partida Doble (Diferencia: $ 0).`;
       } else {
         balanceReport += `\n⚠️ **Atención:** Se detectaron ${descuadradosCount} comprobantes con descuadre. Diferencia total: $ ${diferencia.toLocaleString('es-CL')}.`;
       }
 
       return {
         response: balanceReport,
-        suggestions: ['Ver Balance de 8 Columnas', 'Ver Libro Diario', 'Revisar Plan de Cuentas'],
+        suggestions: ['Ver Balance de 8 Columnas', 'Ver Balance Clasificado IFRS', 'Ver Libro Diario'],
         actionLink: { tab: 'balance8', label: 'Abrir Balance de 8 Columnas' }
       };
     }
 
-    // 4. Sugerencia de contabilizaciones / Plan de Cuentas
-    if (q.includes('sugier') || q.includes('contabiliz') || q.includes('cuenta') || q.includes('gasto') || q.includes('asiento') || q.includes('clasificar')) {
+    // 8. Timbraje, Hojas Sueltas y Folios Oficiales SII
+    if (q.includes('folio') || q.includes('timbraje') || q.includes('hojas sueltas') || q.includes('libro oficial') || q.includes('resolucion sii') || q.includes('crystal')) {
       return {
-        response: `💡 **Guía de Clasificación Contable para ${company.name}:**\n\n` +
-          `• **Gastos Operacionales Comunes:**\n` +
-          `  - *Arriendos:* Cuenta de Resultado Pérdida "Arriendos y Gastos Comunes".\n` +
-          `  - *Servicios Básicos (Luz, Agua, Internet):* Cuenta "Servicios Básicos".\n` +
-          `  - *Honorarios Profesionales:* Cuenta "Gastos por Honorarios" con retención 14.5% al Haber.\n` +
-          `  - *Compras de Mercadería:* Cuenta de Activo "Mercaderías" o Costo de Ventas.\n\n` +
-          `• **Cuentas disponibles en esta empresa:** Tienes ${accounts.length} cuentas configuradas en tu Plan de Cuentas.\n` +
-          `¿Deseas buscar una cuenta específica por código o nombre?`,
-        suggestions: ['Ver Plan de Cuentas', 'Crear nuevo Comprobante', 'Revisar Auxiliares'],
-        actionLink: { tab: 'accounts', label: 'Ver Plan de Cuentas de la Empresa' }
+        response: `🖨️ **Control de Folios Oficiales y Timbraje SII (Hojas Sueltas):**\n\n` +
+          `Bajo la normativa del Servicio de Impuestos Internos (Res. Ex. N° 80 / 85 del SII y Código Tributario Art. 17):\n\n` +
+          `• **Autorizaciones de Hojas Sueltas:** Toda empresa que imprime libros contables mediante sistemas computacionales debe contar con una Resolución de Timbraje de Hojas Sueltas con rango de folios autorizados.\n` +
+          `• **Correlatividad y Trazabilidad:** Al emitir el **Libro Diario**, **Libro Mayor** o **Balance de 8 Columnas**, el sistema numera correlativamente cada página (ej. Folio N° 000101 al 000120) e incluye el membrete legal con la Resolución SII.\n` +
+          `• **Control de Saldos:** Cada impresión descuenta automáticamente los folios disponibles en la bodega de la empresa para evitar reutilización o saltos de numeración.\n` +
+          `• **Diseño Crystal Reports:** Las hojas oficiales incluyen las marcas reglamentarias de *"VAN / VIENEN"* entre páginas y los recuadros de firma para el Contador General y el Representante Legal.`,
+        suggestions: ['Ir a Control de Folios SII', 'Emitir Libro Diario Oficial', 'Emitir Balance Oficial'],
+        actionLink: { tab: 'controlFolios', label: 'Abrir Control de Folios y Timbraje SII' }
       };
     }
 
-    // 5. Auxiliares / Clientes / Proveedores
-    if (q.includes('auxiliar') || q.includes('cliente') || q.includes('proveedor') || q.includes('deudor') || q.includes('acreedor')) {
-      return {
-        response: `👥 **Maestro de Auxiliares de ${company.name}:**\n\n` +
-          `Actualmente la empresa cuenta con **${auxiliaries.length} auxiliares registrados** (clientes, proveedores y honorarios).\n` +
-          `Cada auxiliar mantiene su propio historial de documentos, pagos y saldo pendiente para análisis de cuentas por cobrar o por pagar.`,
-        suggestions: ['Ver Auxiliares Deudores y Acreedores', 'Revisar compras RCV', 'Ver Libro Mayor'],
-        actionLink: { tab: 'auxiliaries', label: 'Ir al Módulo de Auxiliares' }
-      };
-    }
-
-    // 6. Consulta genérica o saludo
+    // 9. Respuesta genérica
     return {
-      response: `Estoy listo para ayudarte con la contabilidad de **${company.name}**.\n\nPuedo analizar el RCV, calcular la posición de IVA para el F29, auditar la cuadratura de tus asientos en el Libro Diario o sugerirte cuentas para contabilizar cualquier gasto.`,
+      response: `Soy **Junior**, tu asistente contable para **${company.name}**.\n\nPuedo ayudarte con:\n` +
+        `• **Tributaria Chilena:** Cálculo de F29, IVA, retención honorarios 14.5%, PPM y regímenes 14A/14D3.\n` +
+        `• **Contabilidad IFRS:** Margen Operacional, Balance Clasificado, NIC 1, NIC 2, NIC 16 y Ecuación Patrimonial.\n` +
+        `• **Operación Diaria:** Auditoría de cuadratura, partidas pendientes de conciliación bancaria y propuesta de asientos.\n` +
+        `• **Libros Oficiales SII:** Emisión de Libro Diario, Mayor y Balance con timbraje de folios y formato Crystal Reports.`,
       suggestions: [
-        'Resumen del RCV y Compras del mes',
-        'Revisar cuadratura del Balance',
-        '¿Cuánto IVA Débito y Crédito tenemos?',
-        'Sugerir cuenta contable para un gasto'
+        'Resumen de IVA y Formulario 29',
+        'Analizar Margen Operacional IFRS',
+        'Simular cálculo de Boleta de Honorarios',
+        'Auditar cuadratura del Balance',
+        'Ver Control de Folios y Timbraje SII'
       ]
     };
   };
@@ -252,53 +449,53 @@ export default function InternalCompanyAccountingCopilot({
       };
 
       setMessages(prev => [...prev, aiMsg]);
-    }, 600);
+    }, 500);
   };
 
   return (
     <>
-      {/* Botón flotante dentro de la empresa */}
+      {/* Botón flotante de Junior en la empresa */}
       <div className="fixed bottom-6 right-6 z-40">
         {!isOpen && (
           <button
             onClick={() => setIsOpen(true)}
-            className="flex items-center gap-2.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-700 text-white px-4 py-3 rounded-full shadow-xl shadow-emerald-900/30 hover:shadow-emerald-600/40 hover:scale-105 transition-all duration-200 border border-emerald-400/40 group"
-            title={`Copiloto Contable de ${company.name}`}
+            className="flex items-center gap-2.5 bg-gradient-to-r from-emerald-600 via-teal-700 to-indigo-800 text-white px-4 py-3 rounded-full shadow-xl shadow-emerald-950/40 hover:shadow-emerald-600/50 hover:scale-105 transition-all duration-200 border border-emerald-400/40 group"
+            title={`Junior - Asistente Contable de ${company.name}`}
           >
             <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
               <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
             </div>
             <div className="text-left pr-1">
               <div className="text-xs font-bold leading-tight flex items-center gap-1.5">
-                <span>Copiloto Contable</span>
-                <span className="text-[10px] px-1.5 py-0.2 bg-emerald-500/30 text-emerald-100 rounded font-medium">IA Activa</span>
+                <span>Junior</span>
+                <span className="text-[10px] px-1.5 py-0.2 bg-emerald-500/30 text-emerald-100 rounded font-medium">Copiloto IA</span>
               </div>
               <div className="text-[11px] text-emerald-100/90 truncate max-w-[140px]">{company.name}</div>
             </div>
           </button>
         )}
 
-        {/* Ventana de Chat Flotante del Copiloto */}
+        {/* Ventana de Chat de Junior */}
         {isOpen && (
-          <div className="w-[380px] sm:w-[420px] h-[580px] max-h-[85vh] bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-200 font-sans z-50">
+          <div className="w-[380px] sm:w-[440px] h-[600px] max-h-[85vh] bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-200 font-sans z-50">
             
-            {/* Header del Copiloto */}
-            <div className="bg-gradient-to-r from-emerald-900 via-slate-900 to-indigo-950 p-3.5 border-b border-slate-800 flex items-center justify-between">
+            {/* Header de Junior */}
+            <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-indigo-950 p-3.5 border-b border-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className="relative">
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-md">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 via-teal-600 to-indigo-600 flex items-center justify-center text-white shadow-md">
                     <Sparkles className="w-5 h-5 text-amber-300" />
                   </div>
                   <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 border-2 border-slate-900 rounded-full"></span>
                 </div>
                 <div>
                   <div className="text-sm font-bold text-white flex items-center gap-1.5">
-                    <span>Copiloto Contable IA</span>
+                    <span>Junior</span>
                     <span className="text-[10px] font-semibold text-emerald-300 bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-500/40">
-                      Privado
+                      Asistente IFRS & Tributario
                     </span>
                   </div>
-                  <p className="text-[11px] text-emerald-300/90 font-medium truncate max-w-[220px]">
+                  <p className="text-[11px] text-emerald-300/90 font-medium truncate max-w-[230px]">
                     🏢 {company.name} ({company.rut})
                   </p>
                 </div>
@@ -322,10 +519,20 @@ export default function InternalCompanyAccountingCopilot({
               </div>
             </div>
 
-            {/* Banner de Aislamiento de Datos Multi-Tenant */}
-            <div className="bg-emerald-950/40 border-b border-emerald-900/40 px-3 py-1.5 flex items-center gap-2 text-[11px] text-emerald-300">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-              <span>Aislamiento estricto: Solo analiza datos contables de esta empresa.</span>
+            {/* Banner de Especialidad y Aislamiento */}
+            <div className="bg-emerald-950/50 border-b border-emerald-900/40 px-3 py-1.5 flex items-center justify-between text-[11px] text-emerald-300">
+              <div className="flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span>Memoria aislada exclusiva para {company.name}</span>
+              </div>
+              <button
+                onClick={() => setShowKnowledgeModal(true)}
+                className="text-[10px] text-emerald-300 hover:text-white bg-emerald-900/60 hover:bg-emerald-800 px-2 py-0.5 rounded border border-emerald-500/40 flex items-center gap-1 transition-colors"
+                title="Ver directivas y entrenamiento activo"
+              >
+                <BrainCircuit className="w-3 h-3 text-amber-300" />
+                <span>{trainedKnowledge.length} Reglas</span>
+              </button>
             </div>
 
             {/* Mensajes */}
@@ -336,7 +543,7 @@ export default function InternalCompanyAccountingCopilot({
                   className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}
                 >
                   <div
-                    className={`max-w-[90%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed whitespace-pre-line ${
+                    className={`max-w-[92%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed whitespace-pre-line ${
                       msg.sender === 'user'
                         ? 'bg-indigo-600 text-white rounded-br-none shadow-sm'
                         : 'bg-slate-800 text-slate-200 border border-slate-700/80 rounded-bl-none shadow-sm'
@@ -346,7 +553,7 @@ export default function InternalCompanyAccountingCopilot({
                   </div>
                   <span className="text-[10px] text-slate-500 mt-1 px-1">{msg.time}</span>
 
-                  {/* Enlace de acción rápida a pestaña contable */}
+                  {/* Botón de acción rápida a módulo contable */}
                   {msg.actionLink && onNavigateTab && (
                     <div className="mt-2">
                       <button
@@ -386,7 +593,7 @@ export default function InternalCompanyAccountingCopilot({
                     <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce [animation-delay:0.2s]"></span>
                     <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce [animation-delay:0.4s]"></span>
                   </div>
-                  <span className="text-[11px] text-emerald-300">Consultando libros y analizando datos...</span>
+                  <span className="text-[11px] text-emerald-300">Junior analizando normativa y datos contables...</span>
                 </div>
               )}
 
@@ -406,14 +613,14 @@ export default function InternalCompanyAccountingCopilot({
                   type="text"
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
-                  placeholder={`Pregúntale al copiloto sobre ${company.name}...`}
+                  placeholder={`Pregúntale a Junior sobre tributaria, IFRS o asientos...`}
                   className="flex-1 bg-slate-950 border border-slate-700 focus:border-emerald-500 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 />
                 <button
                   type="submit"
                   disabled={!inputMessage.trim()}
                   className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:hover:bg-emerald-600 text-white p-2 rounded-xl transition-colors shrink-0"
-                  aria-label="Enviar al copiloto"
+                  aria-label="Enviar a Junior"
                 >
                   <Send className="w-4 h-4" />
                 </button>
@@ -423,6 +630,77 @@ export default function InternalCompanyAccountingCopilot({
           </div>
         )}
       </div>
+
+      {/* Modal: Directivas de Entrenamiento Activas */}
+      {showKnowledgeModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-xl w-full p-5 text-white shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <BrainCircuit className="w-5 h-5 text-amber-400" />
+                <h3 className="font-bold text-sm uppercase text-white">
+                  Base de Conocimiento y Entrenamiento de Junior
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowKnowledgeModal(false)}
+                className="text-slate-400 hover:text-white font-bold p-1"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1 text-xs">
+              <p className="text-slate-400 text-[11px]">
+                Directivas activas configuradas por el Administrador. Las reglas específicas de <strong>{company.name}</strong> tienen prioridad y se encuentran aisladas.
+              </p>
+
+              {trainedKnowledge.map((item) => (
+                <div
+                  key={item.id}
+                  className={`p-3 rounded-xl border ${
+                    item.scope === 'COMPANY'
+                      ? 'bg-emerald-950/40 border-emerald-700/60'
+                      : 'bg-slate-800/80 border-slate-700'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="font-bold text-slate-100 text-xs">{item.title}</span>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
+                      item.scope === 'COMPANY' ? 'bg-emerald-500 text-slate-950' : 'bg-indigo-900 text-indigo-200'
+                    }`}>
+                      {item.scope === 'COMPANY' ? 'Aislado Empresa' : 'Global'}
+                    </span>
+                  </div>
+                  <p className="text-slate-300 text-[11px] leading-relaxed mb-2 font-sans">
+                    {item.directiveContent}
+                  </p>
+                  {item.recommendedEntries && (
+                    <div className="p-2 bg-slate-950/60 rounded border border-slate-800 text-[10px] font-mono text-amber-300">
+                      👉 {item.recommendedEntries}
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {trainedKnowledge.length === 0 && (
+                <div className="text-center py-8 text-slate-500 text-xs">
+                  No hay directivas de entrenamiento adicionales cargadas. Junior opera con sus reglas predeterminadas de LIR, IVA y NIC 1.
+                </div>
+              )}
+            </div>
+
+            <div className="border-t border-slate-800 pt-3 flex justify-end">
+              <button
+                onClick={() => setShowKnowledgeModal(false)}
+                className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs"
+              >
+                Entendido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

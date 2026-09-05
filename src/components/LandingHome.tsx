@@ -146,7 +146,7 @@ export default function LandingHome({ onGoToLogin }: LandingHomeProps) {
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 hidden sm:block">
-                Software Contable Multi-Estudio y Gestión Pyme Chile
+                Contabilidad y Gestión &bull; De la Contabilidad a la Gestión Estratégica
               </p>
             </div>
           </div>

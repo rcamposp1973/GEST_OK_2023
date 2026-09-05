@@ -3,8 +3,8 @@ import {
   MessageCircle, 
   X, 
   Send, 
-  Sparkles, 
   CheckCircle2, 
+  BadgeCheck,
   User, 
   Phone, 
   Mail, 
@@ -15,6 +15,7 @@ import {
   HelpCircle,
   Clock
 } from 'lucide-react';
+import { AnimatedOkLogo } from './AnimatedOkLogo';
 import { db } from '../lib/firebase';
 import { collection, addDoc } from 'firebase/firestore';
 
@@ -283,12 +284,10 @@ export default function PublicLandingAiAssistant() {
           <button
             onClick={() => setIsOpen(true)}
             className="group relative flex items-center gap-3 bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-800 text-white px-4 py-3 rounded-full shadow-xl shadow-indigo-900/30 hover:shadow-indigo-600/40 hover:scale-105 transition-all duration-300 border border-indigo-400/40"
-            aria-label="Abrir Asistente Virtual de Pulso Contable"
+            aria-label="Abrir Asistente Virtual Gest_OK"
           >
             <div className="relative flex items-center justify-center">
-              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
-              </div>
+              <AnimatedOkLogo size="sm" />
               <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 border-2 border-slate-900 rounded-full"></span>
             </div>
             
@@ -316,9 +315,7 @@ export default function PublicLandingAiAssistant() {
             <div className="bg-gradient-to-r from-indigo-900 via-slate-900 to-slate-900 p-3.5 border-b border-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className="relative">
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center text-white shadow-md">
-                    <Sparkles className="w-5 h-5 text-amber-300" />
-                  </div>
+                  <AnimatedOkLogo size="md" />
                   <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-slate-900 rounded-full"></span>
                 </div>
                 <div>
@@ -461,9 +458,7 @@ export default function PublicLandingAiAssistant() {
             </button>
 
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
-                <Sparkles className="w-5 h-5" />
-              </div>
+              <AnimatedOkLogo size="md" />
               <div>
                 <h3 className="text-base font-bold text-white">Solicitar Información & Demo</h3>
                 <p className="text-xs text-slate-400">Te contactaremos para enviarte una propuesta a la medida</p>

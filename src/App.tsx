@@ -598,7 +598,7 @@ function Dashboard() {
       </main>
 
       <footer className="bg-white border-t border-slate-200 px-4 py-2 text-[10px] text-slate-400 text-center">
-        Gest_OK {APP_VERSION} - Build 20260903 | Sistema de Gestión Contable y Tributaria
+        Gest_OK {APP_VERSION} | Contabilidad y Gestión
       </footer>
 
       {/* Modal de Indicadores Económicos Oficiales Global */}

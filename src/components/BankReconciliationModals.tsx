@@ -434,9 +434,27 @@ export function QuickVoucherModal({
   const [docSearch, setDocSearch] = useState<string>('');
   const [validationError, setValidationError] = useState<string | null>(null);
 
+  // Ordenar Centros de Costo e Ítems de Gasto alfabéticamente por código
+  const sortedCostCenters = useMemo(() => {
+    return [...costCenters].sort((a, b) => (a.code || '').localeCompare(b.code || '', undefined, { numeric: true }));
+  }, [costCenters]);
+
+  const sortedExpenseItems = useMemo(() => {
+    return [...expenseItems].sort((a, b) => (a.code || '').localeCompare(b.code || '', undefined, { numeric: true }));
+  }, [expenseItems]);
+
   // Auto-detect Auxiliary from Bank line description or match against master auxiliaries
+  // IMPORTANTE: SOLO se detecta y muestra si la cuenta seleccionada tiene marcado el casillero auxiliar en el Plan de Cuentas
   useEffect(() => {
     if (!quickVoucherLine) return;
+    
+    // Si la cuenta no está seleccionada o NO requiere auxiliar en el plan de cuentas, se limpia y no se auto-asigna
+    if (!selectedAccount || !selectedAccount.requiereAuxiliarRUT) {
+      setSelectedAuxiliaryRut('');
+      setSelectedAuxiliaryName('');
+      return;
+    }
+
     const desc = quickVoucherLine.description || '';
     
     // Check if description has RUT string (e.g. 76.123.456-7 or 76123456-7)
@@ -446,7 +464,7 @@ export function QuickVoucherModal({
       setSelectedAuxiliaryRut(cleanRut);
       const foundAux = auxiliaries.find(a => (a.rut || '').replace(/\./g, '').toUpperCase() === cleanRut.replace(/\./g, '').toUpperCase());
       if (foundAux) {
-        setSelectedAuxiliaryName(foundAux.name || '');
+        setSelectedAuxiliaryName((foundAux.name || '').toUpperCase());
       }
       return;
     }
@@ -458,18 +476,19 @@ export function QuickVoucherModal({
         return nameUpper.length > 3 && desc.toUpperCase().includes(nameUpper);
       });
       if (match) {
-        setSelectedAuxiliaryRut(match.rut || '');
-        setSelectedAuxiliaryName(match.name || '');
+        setSelectedAuxiliaryRut((match.rut || '').toUpperCase());
+        setSelectedAuxiliaryName((match.name || '').toUpperCase());
       }
     }
-  }, [quickVoucherLine, auxiliaries]);
+  }, [quickVoucherLine, auxiliaries, selectedAccount]);
 
   // Sync selected auxiliary name when RUT changes
   const handleRutChange = (rut: string) => {
-    setSelectedAuxiliaryRut(rut);
-    const aux = auxiliaries.find(a => (a.rut || '').trim().toUpperCase() === (rut || '').trim().toUpperCase());
+    const cleanRut = (rut || '').toUpperCase();
+    setSelectedAuxiliaryRut(cleanRut);
+    const aux = auxiliaries.find(a => (a.rut || '').trim().toUpperCase() === cleanRut.trim());
     if (aux) {
-      setSelectedAuxiliaryName(aux.name || '');
+      setSelectedAuxiliaryName((aux.name || '').toUpperCase());
     }
   };
 
@@ -779,16 +798,16 @@ export function QuickVoucherModal({
       return;
     }
 
-    // Check if new Auxiliary needs to be saved to master list
+    // Check if new Auxiliary needs to be saved to master list (SOLO si la cuenta requiere auxiliar)
     let newAuxToSave: Auxiliary | undefined;
-    if (selectedAuxiliaryRut.trim()) {
+    if (selectedAccount.requiereAuxiliarRUT && selectedAuxiliaryRut.trim()) {
       const cleanRut = selectedAuxiliaryRut.trim().toUpperCase();
       const existing = auxiliaries.find(a => a.rut.replace(/\./g, '').toUpperCase() === cleanRut.replace(/\./g, '').toUpperCase());
       if (!existing) {
         newAuxToSave = {
           id: `aux_${Date.now()}`,
-          rut: selectedAuxiliaryRut.trim(),
-          name: selectedAuxiliaryName.trim() || selectedAuxiliaryRut.trim(),
+          rut: cleanRut,
+          name: (selectedAuxiliaryName.trim() || cleanRut).toUpperCase(),
           role: isAP ? 'Acreedor' : 'Deudor',
           estado: 'Activo'
         };
@@ -797,7 +816,7 @@ export function QuickVoucherModal({
 
     // Construct Voucher Lines
     const lines: VoucherLine[] = [];
-    const defaultGloss = quickGloss.trim() || quickVoucherLine.description;
+    const defaultGloss = (quickGloss.trim() || quickVoucherLine.description).toUpperCase();
 
     // Line 1: Bank Account Line
     if (isCharge) {
@@ -809,8 +828,8 @@ export function QuickVoucherModal({
         accountName: selectedBankAccount.name,
         debit: 0,
         credit: bankAmount,
-        documentRef: quickVoucherLine.documentNumber || 'BANCO',
-        bankDocRef: quickVoucherLine.documentNumber || 'BANCO',
+        documentRef: (quickVoucherLine.documentNumber || 'BANCO').toUpperCase(),
+        bankDocRef: (quickVoucherLine.documentNumber || 'BANCO').toUpperCase(),
         gloss: defaultGloss
       });
     } else {
@@ -822,8 +841,8 @@ export function QuickVoucherModal({
         accountName: selectedBankAccount.name,
         debit: bankAmount,
         credit: 0,
-        documentRef: quickVoucherLine.documentNumber || 'BANCO',
-        bankDocRef: quickVoucherLine.documentNumber || 'BANCO',
+        documentRef: (quickVoucherLine.documentNumber || 'BANCO').toUpperCase(),
+        bankDocRef: (quickVoucherLine.documentNumber || 'BANCO').toUpperCase(),
         gloss: defaultGloss
       });
     }
@@ -837,8 +856,8 @@ export function QuickVoucherModal({
         if (amt <= 0) return;
 
         const docRefValue = docItem ? docItem.docNumber : documentRef;
-        const auxRutValue = docItem ? docItem.auxiliaryRut : selectedAuxiliaryRut;
-        const auxNameValue = docItem ? docItem.auxiliaryName : selectedAuxiliaryName;
+        const auxRutValue = selectedAccount.requiereAuxiliarRUT ? (docItem ? docItem.auxiliaryRut : selectedAuxiliaryRut) : undefined;
+        const auxNameValue = selectedAccount.requiereAuxiliarRUT ? (docItem ? docItem.auxiliaryName : selectedAuxiliaryName) : undefined;
 
         lines.push({
           id: `line_counter_${index + 1}`,
@@ -847,16 +866,16 @@ export function QuickVoucherModal({
           accountName: selectedAccount.name,
           debit: isCharge ? amt : 0,
           credit: isCharge ? 0 : amt,
-          auxiliaryRut: auxRutValue,
-          auxiliaryName: auxNameValue,
-          documentRef: docRefValue,
+          auxiliaryRut: auxRutValue ? auxRutValue.toUpperCase() : undefined,
+          auxiliaryName: auxNameValue ? auxNameValue.toUpperCase() : undefined,
+          documentRef: docRefValue ? docRefValue.toUpperCase() : undefined,
           dueDate: docItem?.dueDate || dueDate || undefined,
-          costCenter: costCenter || undefined,
-          expenseItem: expenseItem || undefined,
-          project: project || undefined,
-          product: product || undefined,
+          costCenter: costCenter ? costCenter.toUpperCase() : undefined,
+          expenseItem: expenseItem ? expenseItem.toUpperCase() : undefined,
+          project: project ? project.toUpperCase() : undefined,
+          product: product ? product.toUpperCase() : undefined,
           customAnalyses: Object.keys(customAnalyses).length > 0 ? customAnalyses : undefined,
-          gloss: `Pago ${docItem?.docType || 'Doc'} N° ${docRefValue} - ${defaultGloss}`
+          gloss: `Pago ${docItem?.docType || 'Doc'} N° ${docRefValue} - ${defaultGloss}`.toUpperCase()
         });
       });
     } else {
@@ -868,12 +887,12 @@ export function QuickVoucherModal({
         accountName: selectedAccount.name,
         debit: isCharge ? bankAmount : 0,
         credit: isCharge ? 0 : bankAmount,
-        auxiliaryRut: selectedAuxiliaryRut || undefined,
-        auxiliaryName: selectedAuxiliaryName || undefined,
-        documentRef: documentRef || quickVoucherLine.documentNumber || 'S/N',
+        auxiliaryRut: selectedAccount.requiereAuxiliarRUT && selectedAuxiliaryRut ? selectedAuxiliaryRut.toUpperCase() : undefined,
+        auxiliaryName: selectedAccount.requiereAuxiliarRUT && selectedAuxiliaryName ? selectedAuxiliaryName.toUpperCase() : undefined,
+        documentRef: (documentRef || quickVoucherLine.documentNumber || 'S/N').toUpperCase(),
         dueDate: dueDate || undefined,
-        costCenter: costCenter || undefined,
-        expenseItem: expenseItem || undefined,
+        costCenter: costCenter ? costCenter.toUpperCase() : undefined,
+        expenseItem: expenseItem ? expenseItem.toUpperCase() : undefined,
         project: project || undefined,
         product: product || undefined,
         customAnalyses: Object.keys(customAnalyses).length > 0 ? customAnalyses : undefined,
@@ -965,9 +984,15 @@ export function QuickVoucherModal({
               <select
                 value={quickExpenseAccountId}
                 onChange={(e) => {
-                  setQuickExpenseAccountId(e.target.value);
+                  const newAccId = e.target.value;
+                  setQuickExpenseAccountId(newAccId);
                   setValidationError(null);
                   setSelectedDocIds({});
+                  const acc = accounts.find(a => a.id === newAccId);
+                  if (!acc || !acc.requiereAuxiliarRUT) {
+                    setSelectedAuxiliaryRut('');
+                    setSelectedAuxiliaryName('');
+                  }
                 }}
                 className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 font-medium text-xs focus:ring-2 focus:ring-indigo-500"
               >
@@ -1202,67 +1227,69 @@ export function QuickVoucherModal({
               </h5>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                {/* 1. Auxiliar RUT & Nombre */}
-                <div>
-                  <label className="font-bold text-slate-800 block mb-1">
-                    👤 Auxiliar (RUT y Razón Social):
-                    {selectedAccount.requiereAuxiliarRUT && <span className="text-rose-600 font-bold ml-1">* (Obligatorio)</span>}
-                  </label>
-                  {auxiliaries.length > 0 ? (
-                    <div className="space-y-1.5">
-                      <select
-                        value={selectedAuxiliaryRut}
-                        onChange={(e) => handleRutChange(e.target.value)}
-                        className={`border p-2 w-full rounded-lg text-xs ${
-                          selectedAccount.requiereAuxiliarRUT && !selectedAuxiliaryRut ? 'border-rose-400 bg-rose-50/40' : 'border-slate-300 bg-white'
-                        }`}
-                      >
-                        <option value="">-- Seleccionar Auxiliar Existente --</option>
-                        {auxiliaries.map(aux => (
-                          <option key={aux.id || aux.rut} value={aux.rut}>
-                            {aux.rut} - {aux.name} ({aux.role})
-                          </option>
-                        ))}
-                      </select>
+                {/* 1. Auxiliar RUT & Nombre - SOLO si la cuenta seleccionada tiene marcado el casillero auxiliar en el Plan de Cuentas */}
+                {selectedAccount.requiereAuxiliarRUT && (
+                  <div>
+                    <label className="font-bold text-slate-800 block mb-1">
+                      👤 Auxiliar (RUT y Razón Social):
+                      <span className="text-rose-600 font-bold ml-1">* (Obligatorio según Plan de Cuentas)</span>
+                    </label>
+                    {auxiliaries.length > 0 ? (
+                      <div className="space-y-1.5">
+                        <select
+                          value={selectedAuxiliaryRut}
+                          onChange={(e) => handleRutChange(e.target.value)}
+                          className={`border p-2 w-full rounded-lg text-xs ${
+                            !selectedAuxiliaryRut ? 'border-rose-400 bg-rose-50/40' : 'border-slate-300 bg-white'
+                          }`}
+                        >
+                          <option value="">-- Seleccionar Auxiliar Existente --</option>
+                          {auxiliaries.map(aux => (
+                            <option key={aux.id || aux.rut} value={aux.rut}>
+                              {aux.rut} - {aux.name} ({aux.role})
+                            </option>
+                          ))}
+                        </select>
 
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <input
+                            type="text"
+                            placeholder="RUT Ej. 76.123.456-7"
+                            value={selectedAuxiliaryRut}
+                            onChange={(e) => setSelectedAuxiliaryRut(e.target.value.toUpperCase())}
+                            className="border border-slate-300 p-1.5 rounded text-xs bg-white font-mono uppercase"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Razón Social / Nombre"
+                            value={selectedAuxiliaryName}
+                            onChange={(e) => setSelectedAuxiliaryName(e.target.value.toUpperCase())}
+                            className="border border-slate-300 p-1.5 rounded text-xs bg-white uppercase"
+                          />
+                        </div>
+                      </div>
+                    ) : (
                       <div className="grid grid-cols-2 gap-1.5">
                         <input
                           type="text"
                           placeholder="RUT Ej. 76.123.456-7"
                           value={selectedAuxiliaryRut}
-                          onChange={(e) => setSelectedAuxiliaryRut(e.target.value)}
-                          className="border border-slate-300 p-1.5 rounded text-xs bg-white font-mono"
+                          onChange={(e) => setSelectedAuxiliaryRut(e.target.value.toUpperCase())}
+                          className={`border p-2 w-full rounded-lg font-mono uppercase ${
+                            !selectedAuxiliaryRut ? 'border-rose-400 bg-rose-50/40' : 'border-slate-300 bg-white'
+                          }`}
                         />
                         <input
                           type="text"
                           placeholder="Razón Social / Nombre"
                           value={selectedAuxiliaryName}
-                          onChange={(e) => setSelectedAuxiliaryName(e.target.value)}
-                          className="border border-slate-300 p-1.5 rounded text-xs bg-white"
+                          onChange={(e) => setSelectedAuxiliaryName(e.target.value.toUpperCase())}
+                          className="border border-slate-300 p-2 w-full rounded-lg bg-white uppercase"
                         />
                       </div>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-1.5">
-                      <input
-                        type="text"
-                        placeholder="RUT Ej. 76.123.456-7"
-                        value={selectedAuxiliaryRut}
-                        onChange={(e) => setSelectedAuxiliaryRut(e.target.value)}
-                        className={`border p-2 w-full rounded-lg font-mono ${
-                          selectedAccount.requiereAuxiliarRUT && !selectedAuxiliaryRut ? 'border-rose-400 bg-rose-50/40' : 'border-slate-300 bg-white'
-                        }`}
-                      />
-                      <input
-                        type="text"
-                        placeholder="Razón Social / Nombre"
-                        value={selectedAuxiliaryName}
-                        onChange={(e) => setSelectedAuxiliaryName(e.target.value)}
-                        className="border border-slate-300 p-2 w-full rounded-lg bg-white"
-                      />
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
+                )}
 
                 {/* 2. N° Documento de Referencia */}
                 <div>
@@ -1274,8 +1301,8 @@ export function QuickVoucherModal({
                     type="text"
                     placeholder="Ej. Factura N° 1024, Folio 55, Préstamo 101"
                     value={documentRef}
-                    onChange={(e) => setDocumentRef(e.target.value)}
-                    className={`border p-2 w-full rounded-lg text-xs ${
+                    onChange={(e) => setDocumentRef(e.target.value.toUpperCase())}
+                    className={`border p-2 w-full rounded-lg text-xs uppercase ${
                       selectedAccount.requiereDocumento && Object.keys(selectedDocIds).length === 0 && !documentRef ? 'border-rose-400 bg-rose-50/40' : 'border-slate-300 bg-white'
                     }`}
                   />
@@ -1297,22 +1324,22 @@ export function QuickVoucherModal({
                   />
                 </div>
 
-                {/* 4. Centro de Costos */}
+                {/* 4. Centro de Costos (Ordenados Alfabéticamente por Código) */}
                 <div>
                   <label className="font-bold text-slate-800 block mb-1">
                     🏢 Centro de Costos:
                     {selectedAccount.requiereCentroCosto && <span className="text-rose-600 font-bold ml-1">* (Obligatorio)</span>}
                   </label>
-                  {costCenters.length > 0 ? (
+                  {sortedCostCenters.length > 0 ? (
                     <select
                       value={costCenter}
-                      onChange={(e) => setCostCenter(e.target.value)}
-                      className={`border p-2 w-full rounded-lg text-xs ${
+                      onChange={(e) => setCostCenter(e.target.value.toUpperCase())}
+                      className={`border p-2 w-full rounded-lg text-xs uppercase ${
                         selectedAccount.requiereCentroCosto && !costCenter ? 'border-rose-400 bg-rose-50/40' : 'border-slate-300 bg-white'
                       }`}
                     >
                       <option value="">-- Seleccionar Centro de Costo --</option>
-                      {costCenters.map(cc => (
+                      {sortedCostCenters.map(cc => (
                         <option key={cc.id} value={cc.code}>
                           {cc.code} - {cc.name}
                         </option>
@@ -1323,30 +1350,30 @@ export function QuickVoucherModal({
                       type="text"
                       placeholder="Ej. ADMINISTRACION, VENTAS"
                       value={costCenter}
-                      onChange={(e) => setCostCenter(e.target.value)}
-                      className={`border p-2 w-full rounded-lg text-xs ${
+                      onChange={(e) => setCostCenter(e.target.value.toUpperCase())}
+                      className={`border p-2 w-full rounded-lg text-xs uppercase ${
                         selectedAccount.requiereCentroCosto && !costCenter ? 'border-rose-400 bg-rose-50/40' : 'border-slate-300 bg-white'
                       }`}
                     />
                   )}
                 </div>
 
-                {/* 5. Ítem de Gasto */}
+                {/* 5. Ítem de Gasto (Ordenados Alfabéticamente por Código) */}
                 <div>
                   <label className="font-bold text-slate-800 block mb-1">
                     🏷️ Ítem de Gasto:
                     {selectedAccount.requiereItemGasto && <span className="text-rose-600 font-bold ml-1">* (Obligatorio)</span>}
                   </label>
-                  {expenseItems.length > 0 ? (
+                  {sortedExpenseItems.length > 0 ? (
                     <select
                       value={expenseItem}
-                      onChange={(e) => setExpenseItem(e.target.value)}
-                      className={`border p-2 w-full rounded-lg text-xs ${
+                      onChange={(e) => setExpenseItem(e.target.value.toUpperCase())}
+                      className={`border p-2 w-full rounded-lg text-xs uppercase ${
                         selectedAccount.requiereItemGasto && !expenseItem ? 'border-rose-400 bg-rose-50/40' : 'border-slate-300 bg-white'
                       }`}
                     >
                       <option value="">-- Seleccionar Ítem Gasto --</option>
-                      {expenseItems.map(item => (
+                      {sortedExpenseItems.map(item => (
                         <option key={item.id} value={item.code}>
                           {item.code} - {item.name}
                         </option>
@@ -1357,8 +1384,8 @@ export function QuickVoucherModal({
                       type="text"
                       placeholder="Ej. COMBUSTIBLES, ARRIENDOS"
                       value={expenseItem}
-                      onChange={(e) => setExpenseItem(e.target.value)}
-                      className={`border p-2 w-full rounded-lg text-xs ${
+                      onChange={(e) => setExpenseItem(e.target.value.toUpperCase())}
+                      className={`border p-2 w-full rounded-lg text-xs uppercase ${
                         selectedAccount.requiereItemGasto && !expenseItem ? 'border-rose-400 bg-rose-50/40' : 'border-slate-300 bg-white'
                       }`}
                     />

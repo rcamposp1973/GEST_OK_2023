@@ -327,7 +327,7 @@ export default function Login({ onBackToLanding }: LoginProps) {
           </div>
           <div className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">PLATAFORMA CORPORATIVA</div>
           <h1 className="text-xl font-bold tracking-tight text-white mt-1">Gest_OK</h1>
-          <p className="text-slate-400 text-xs mt-1 font-normal">Sistema Contable y Gestión Multi-Estudio Chile</p>
+          <p className="text-slate-400 text-xs mt-1 font-normal">Contabilidad y Gestión &bull; Impulsa la gestión de tus clientes</p>
         </div>
 
         <div className="p-6">

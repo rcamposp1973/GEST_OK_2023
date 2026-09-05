@@ -131,9 +131,18 @@ export default function AuxiliaryModal({
 
   const hasRequiredAnalysis = requiresCC || requiresItem || requiresProj || requiresProd;
 
+  // Ordenar Centros de Costo e Ítems de Gasto alfabéticamente por código
+  const sortedCostCenters = useMemo(() => {
+    return [...costCenters].sort((a, b) => (a.code || '').localeCompare(b.code || '', undefined, { numeric: true }));
+  }, [costCenters]);
+
+  const sortedExpenseItems = useMemo(() => {
+    return [...expenseItems].sort((a, b) => (a.code || '').localeCompare(b.code || '', undefined, { numeric: true }));
+  }, [expenseItems]);
+
   // RUT Formatter
   const handleRutChange = (val: string) => {
-    setRut(val);
+    setRut(val.toUpperCase());
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -149,21 +158,21 @@ export default function AuxiliaryModal({
       setSaving(true);
       setErrorMessage('');
       await onSave({
-        rut: rut.trim(),
-        name: name.trim(),
+        rut: rut.trim().toUpperCase(),
+        name: name.trim().toUpperCase(),
         role,
-        email: email.trim(),
-        phone: phone.trim(),
-        banco: banco.trim(),
+        email: email.trim().toLowerCase(),
+        phone: phone.trim().toUpperCase(),
+        banco: banco.trim().toUpperCase(),
         tipoCuenta: tipoCuenta || undefined,
-        numeroCuenta: numeroCuenta.trim(),
+        numeroCuenta: numeroCuenta.trim().toUpperCase(),
         defaultDebtorAccountId: defaultDebtorAccountId || undefined,
         defaultCreditorAccountId: defaultCreditorAccountId || undefined,
         defaultExpenseOrIncomeAccountId: defaultExpenseOrIncomeAccountId || undefined,
-        defaultCostCenter: defaultCostCenter || undefined,
-        defaultExpenseItem: defaultExpenseItem || undefined,
-        defaultProject: defaultProject || undefined,
-        defaultProduct: defaultProduct || undefined,
+        defaultCostCenter: defaultCostCenter ? defaultCostCenter.toUpperCase() : undefined,
+        defaultExpenseItem: defaultExpenseItem ? defaultExpenseItem.toUpperCase() : undefined,
+        defaultProject: defaultProject ? defaultProject.toUpperCase() : undefined,
+        defaultProduct: defaultProduct ? defaultProduct.toUpperCase() : undefined,
         defaultCustomAnalyses
       });
       onClose();
@@ -245,11 +254,11 @@ export default function AuxiliaryModal({
                 <input
                   type="text"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Ej. Comercializadora e Inversiones SpA"
+                  onChange={(e) => setName(e.target.value.toUpperCase())}
+                  placeholder="Ej. COMERCIALIZADORA E INVERSIONES SPA"
                   required
                   disabled={isReadOnly}
-                  className="w-full px-3 py-2 text-xs font-medium bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                  className="w-full px-3 py-2 text-xs font-medium bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none uppercase"
                 />
               </div>
             </div>
@@ -480,7 +489,7 @@ export default function AuxiliaryModal({
                   }`}
                 >
                   <option value="">-- Seleccionar Centro de Costo --</option>
-                  {costCenters.map(cc => (
+                  {sortedCostCenters.map(cc => (
                     <option key={cc.id} value={cc.code || cc.name}>
                       [{cc.code}] {cc.name}
                     </option>
@@ -507,7 +516,7 @@ export default function AuxiliaryModal({
                   }`}
                 >
                   <option value="">-- Seleccionar Ítem de Gasto --</option>
-                  {expenseItems.map(item => (
+                  {sortedExpenseItems.map(item => (
                     <option key={item.id} value={item.code || item.name}>
                       [{item.code}] {item.name}
                     </option>

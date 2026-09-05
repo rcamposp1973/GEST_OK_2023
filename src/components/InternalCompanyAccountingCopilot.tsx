@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../lib/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import { 
-  Sparkles, 
   Send, 
   X, 
   Minimize2, 
@@ -25,8 +24,12 @@ import {
   Layers,
   FileSpreadsheet,
   BrainCircuit,
-  Lock
+  Lock,
+  Globe2,
+  PieChart,
+  Lightbulb
 } from 'lucide-react';
+import { AnimatedOkLogo } from './AnimatedOkLogo';
 import { Company, ChartOfAccount, Voucher, RCVDocument, Auxiliary, FiscalPeriodYear } from '../types';
 import { CopilotKnowledgeItem } from './JuniorAITrainingCenter';
 
@@ -159,7 +162,70 @@ export default function InternalCompanyAccountingCopilot({
       };
     }
 
-    // 1. Simulación o Consulta de Boleta de Honorarios / Retención 14.5%
+    // 1. GESTIÓN Y FINANZAS PARA CLIENTES: DE LA CONTABILIDAD A LA GESTIÓN (Estratégico)
+    if (q.includes('gestion') || q.includes('gestión') || q.includes('informe') || q.includes('gerencia') || q.includes('directorio') || q.includes('centro de costo') || q.includes('centros de costo') || q.includes('rentabilidad') || q.includes('reporte gerencial') || q.includes('aperturar')) {
+      return {
+        response: `📊 **De la Contabilidad Tradicional a la Gestión Estratégica (Valor para el Cliente):**\n\n` +
+          `Para que el estudio contable entregue asesoría de alto impacto a la gerencia de **${company.name}**:\n\n` +
+          `💡 **1. Apertura de Cuentas de Costos en Centros de Costo e Ítems de Gasto:**\n` +
+          `   • No acumules los desembolsos en una sola cuenta genérica de gasto o costo.\n` +
+          `   • **Recomendación de Junior:** Al contabilizar, asocia obligatoriamente cada línea de costo a un **Centro de Costo** (ej. *Administración, Ventas, Sucursal 1, Obra Central*) y a un **Ítem de Gasto** (ej. *Arriendos, Combustibles, Mantención*).\n` +
+          `   • *Resultado:* Podrás emitir el **Estado de Resultados por Centro de Costo**, revelando qué área genera ganancias y cuál está destruyendo margen.\n\n` +
+          `📜 **2. Respaldo Tributario Clave: Revisa la Circular N° 53 de 2020 del SII:**\n` +
+          `   • En esta circular, el SII modernizó el concepto de **Gasto Deducible (Art. 31 LIR)**: ya no exige que el gasto sea 'estrictamente inevitable', sino que tenga **aptitud para generar renta** en el ejercicio o a futuro.\n` +
+          `   • La imputación rigurosa por centro de costo sirve como **prueba fehaciente ante el SII** de la correlación económica y necesidad del gasto.\n\n` +
+          `📈 **3. Indicadores Financieros de Gestión que Debes Presentar a tu Cliente:**\n` +
+          `   • **Margen de Contribución:** (Ventas - Costos Variables) / Ventas.\n` +
+          `   • **EBITDA:** Resultado Operativo antes de intereses, impuestos, depreciaciones y amortizaciones.\n` +
+          `   • **Ciclo de Conversión de Efectivo:** Días Calle de Clientes (DSO) vs Días de Crédito de Proveedores (DPO).\n\n` +
+          `¿Deseas que auditemos qué cuentas de gasto carecen actualmente de Centro de Costo asignado en el Plan de Cuentas?`,
+        suggestions: ['Auditar Plan de Cuentas', 'Ver Tablas de Centros de Costo', 'Consultar Circular 53 SII', 'Ver Estado de Resultados IFRS'],
+        actionLink: { tab: 'tablasAnalisis', label: 'Gestionar Centros de Costo' }
+      };
+    }
+
+    // 2. LEGISLACIÓN TRIBUTARIA CHILENA: CIRCULARES Y RESOLUCIONES SII (Art. 31, 21, 14A/D3/D8)
+    if (q.includes('circular') || q.includes('circulares') || q.includes('art 31') || q.includes('art. 31') || q.includes('gasto aceptado') || q.includes('gasto rechazado') || q.includes('art 21') || q.includes('art. 21') || q.includes('sii') || q.includes('oficio')) {
+      return {
+        response: `⚖️ **Jurisprudencia y Criterios Oficiales del SII para ${company.name}:**\n\n` +
+          `📘 **1. Circular N° 53 del SII (2020) - Gastos Aceptados (Art. 31 LIR):**\n` +
+          `   • Sustituye el criterio rígido de 'necesidad estricta' por el de **'aptitud para generar rentas'**.\n` +
+          `   • **Gastos Admisibles:** Gastos de desarrollo de nuevos proyectos (incluso si no prosperan), asesorías legales/financieras/contables, indemnizaciones comerciales, fidelización y publicidad.\n` +
+          `   • **Requisitos Copulativos:** 1) Aptitud generadora, 2) Pagado o adeudado en el ejercicio, 3) Documentación fehaciente (no basta la mera factura, se requiere orden de compra, informes o entregables), 4) Corresponder al giro.\n\n` +
+          `🚫 **2. Gastos Rechazados (Art. 21 LIR):**\n` +
+          `   • **Inciso 1° (40% de Tasa Única a Nivel de Empresa):** Gastos de la empresa que no califican como aceptados y no beneficien directamente a los socios (ej. multas fiscales, intereses penales, faltantes no acreditados).\n` +
+          `   • **Inciso 3° (Atribuibles a Socios o Accionistas):** Tributan en el IGC del socio + un **recargo del 10%** (ej. automóviles de uso personal, retiros encubiertos, gastos familiares pagados por la empresa).\n\n` +
+          `📑 **Otras Circulares Fundamentales:**\n` +
+          `   • **Circular N° 62/2020:** Tributación ProPyme General (14 D3 - Base flujo de caja) y ProPyme Transparente (14 D8 - 0% IDPC).\n` +
+          `   • **Circular N° 73/2020:** Régimen Semi-Integrado 14 A (Tasa 27% y restitución del 35% del crédito).\n` +
+          `   • **Circular N° 48/2022:** IVA a todos los servicios (Ley 21.420) y exención estricta para Sociedades de Profesionales.\n` +
+          `   • **Circular N° 10/2024 (Res. 108):** Obligación de entidades financieras de reportar cuentas con más de 50 transferencias bancarias de distintos emisores en un mes.`,
+        suggestions: ['Consultar Tributación Internacional', 'Ver Plan de Cuentas', 'Auditar F29 e Impuestos'],
+        actionLink: { tab: 'chartOfAccounts', label: 'Revisar Atributos en Plan de Cuentas' }
+      };
+    }
+
+    // 3. TRIBUTACIÓN INTERNACIONAL, CONVENIOS DE DOBLE IMPOSICIÓN (CDI) & PRECIOS DE TRANSFERENCIA
+    if (q.includes('internacional') || q.includes('exterior') || q.includes('cdi') || q.includes('convenio') || q.includes('doble imposicion') || q.includes('doble imposición') || q.includes('transferencia') || q.includes('transfer pricing') || q.includes('art 59') || q.includes('art. 59') || q.includes('art 41') || q.includes('art. 41') || q.includes('impuesto adicional') || q.includes('wht')) {
+      return {
+        response: `🌍 **Tributación Internacional y Convenios (CDI) para ${company.name}:**\n\n` +
+          `📜 **1. Convenios para Evitar la Doble Imposición (Red CDI de Chile):**\n` +
+          `   • Chile cuenta con más de **36 convenios bilaterales vigentes** bajo el modelo OCDE/ONU (incluyendo el nuevo tratado con **EE.UU. vigente desde 2024**, España, Canadá, Reino Unido, Brasil, etc.).\n` +
+          `   • **Art. 7 (Beneficios Empresariales):** Las utilidades obtenidas por una empresa extranjera solo pueden gravarse en Chile si realiza su actividad a través de un **Establecimiento Permanente (EP)** en el país. Si no hay EP, la retención en Chile puede reducirse al **0%**, acreditando residencia con el correspondiente *Tax Residence Certificate*.\n\n` +
+          `💸 **2. Impuesto Adicional y Retenciones por Servicios del Exterior (Art. 59 LIR):**\n` +
+          `   • **Regla General:** Retención del **35%** sobre remesas o pagos al exterior por servicios prestados en Chile o en el extranjero.\n` +
+          `   • **Asesorías Técnicas y Servicios Profesionales:** Tasa reducida del **15%** (o 20% si el prestador está constituido en una jurisdicción con régimen fiscal preferencial / paraíso fiscal según Art. 41 H).\n` +
+          `   • **Licencias de Software y Soporte:** Tasa del 15% o exención según tratado CDI.\n\n` +
+          `📊 **3. Precios de Transferencia (Art. 41 E LIR):**\n` +
+          `   • Toda transacción transfronteriza entre partes relacionadas debe respetar el **Principio de Plena Competencia (Arm's Length)**.\n` +
+          `   • **Métodos OCDE Reconocidos:** Precio Comparable No Controlado (CUP), Costo Adicionado, Precio de Reventa, Margen Neto Transaccional (TNMM) y División de Utilidades.\n` +
+          `   • **Declaraciones Juradas Obligatorias:** F1907 (Precios de Transferencia), F1937 (Reporte País por País) y Estudio Técnico Local / Master File.\n\n` +
+          `🔒 **4. Normas Anti-Elusión Internacional:** Art. 41 F (Exceso de Endeudamiento con deuda relacionada) y Art. 41 G (Régimen de Transparencia de Rentas Pasivas en el Exterior - CFC Rules).`,
+        suggestions: ['Consultar Circulares SII', 'De Contabilidad a Gestión', 'Ver Retenciones F29']
+      };
+    }
+
+    // 4. Simulación o Consulta de Boleta de Honorarios / Retención 14.5%
     if (q.includes('honorario') || q.includes('bhr') || q.includes('retencion') || q.includes('retención') || q.includes('14.5') || q.includes('boleta de honorario')) {
       const matchNum = q.match(/\d+([.,]\d+)?/g);
       let exampleBruto = 1000000;
@@ -460,11 +526,9 @@ export default function InternalCompanyAccountingCopilot({
           <button
             onClick={() => setIsOpen(true)}
             className="flex items-center gap-2.5 bg-gradient-to-r from-emerald-600 via-teal-700 to-indigo-800 text-white px-4 py-3 rounded-full shadow-xl shadow-emerald-950/40 hover:shadow-emerald-600/50 hover:scale-105 transition-all duration-200 border border-emerald-400/40 group"
-            title={`Junior - Asistente Contable de ${company.name}`}
+            title={`Junior - Asistente Contable y de Gestión para ${company.name}`}
           >
-            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
-            </div>
+            <AnimatedOkLogo size="sm" />
             <div className="text-left pr-1">
               <div className="text-xs font-bold leading-tight flex items-center gap-1.5">
                 <span>Junior</span>
@@ -483,16 +547,14 @@ export default function InternalCompanyAccountingCopilot({
             <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-indigo-950 p-3.5 border-b border-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className="relative">
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 via-teal-600 to-indigo-600 flex items-center justify-center text-white shadow-md">
-                    <Sparkles className="w-5 h-5 text-amber-300" />
-                  </div>
+                  <AnimatedOkLogo size="md" />
                   <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 border-2 border-slate-900 rounded-full"></span>
                 </div>
                 <div>
                   <div className="text-sm font-bold text-white flex items-center gap-1.5">
                     <span>Junior</span>
                     <span className="text-[10px] font-semibold text-emerald-300 bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-500/40">
-                      Asistente IFRS & Tributario
+                      IFRS, Tributario & Gestión
                     </span>
                   </div>
                   <p className="text-[11px] text-emerald-300/90 font-medium truncate max-w-[230px]">
@@ -517,6 +579,22 @@ export default function InternalCompanyAccountingCopilot({
                   <X className="w-4 h-4" />
                 </button>
               </div>
+            </div>
+
+            {/* Banner Proactivo Activo (No Invasivo): Apoyo Tributario y de Gestión */}
+            <div className="bg-emerald-950/90 border-b border-emerald-800/40 px-3.5 py-2 text-[11px] text-emerald-200 flex items-center justify-between gap-2 shadow-inner">
+              <div className="flex items-center gap-2 overflow-hidden">
+                <Lightbulb className="w-3.5 h-3.5 text-amber-300 shrink-0 animate-pulse" />
+                <span className="truncate">
+                  <strong>Tip de Gestión:</strong> Imputa Centros de Costo en cuentas de resultado (Circular SII N° 53/2020)
+                </span>
+              </div>
+              <button
+                onClick={() => handleSend('¿Cómo usar Centros de Costo para entregar informes de gestión a clientes según Circular 53 del SII?')}
+                className="shrink-0 text-[10px] bg-emerald-700 hover:bg-emerald-600 text-white font-bold px-2 py-0.5 rounded transition shadow-xs"
+              >
+                Ver Guía
+              </button>
             </div>
 
             {/* Banner de Especialidad y Aislamiento */}
@@ -600,8 +678,40 @@ export default function InternalCompanyAccountingCopilot({
               <div ref={messagesEndRef} />
             </div>
 
+            {/* Píldoras Rápidas de Temas Especializados */}
+            <div className="px-2.5 pt-2 pb-1 bg-slate-900 border-t border-slate-800 flex gap-1.5 overflow-x-auto">
+              <button
+                type="button"
+                onClick={() => handleSend('¿Cómo usar Centros de Costo para entregar informes de gestión a clientes según Circular 53 del SII?')}
+                className="whitespace-nowrap text-[10px] bg-slate-800 hover:bg-emerald-950 text-emerald-300 hover:text-emerald-100 border border-slate-700 hover:border-emerald-500/50 px-2 py-1 rounded-full transition flex items-center gap-1 shrink-0"
+              >
+                📊 De Contabilidad a Gestión
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSend('¿Cuáles son las Circulares clave del SII sobre gastos aceptados (Art. 31 y 21 LIR)?')}
+                className="whitespace-nowrap text-[10px] bg-slate-800 hover:bg-emerald-950 text-emerald-300 hover:text-emerald-100 border border-slate-700 hover:border-emerald-500/50 px-2 py-1 rounded-full transition flex items-center gap-1 shrink-0"
+              >
+                📘 Circulares SII (Art. 31)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSend('¿Cómo operan los Convenios de Doble Imposición (CDI) y Precios de Transferencia en Chile?')}
+                className="whitespace-nowrap text-[10px] bg-slate-800 hover:bg-emerald-950 text-emerald-300 hover:text-emerald-100 border border-slate-700 hover:border-emerald-500/50 px-2 py-1 rounded-full transition flex items-center gap-1 shrink-0"
+              >
+                🌍 Tributación Internacional
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSend('Analizar Margen Operacional IFRS')}
+                className="whitespace-nowrap text-[10px] bg-slate-800 hover:bg-emerald-950 text-emerald-300 hover:text-emerald-100 border border-slate-700 hover:border-emerald-500/50 px-2 py-1 rounded-full transition flex items-center gap-1 shrink-0"
+              >
+                📐 Margen IFRS
+              </button>
+            </div>
+
             {/* Input del Chat */}
-            <div className="p-2.5 bg-slate-900 border-t border-slate-800">
+            <div className="p-2.5 bg-slate-900 border-t border-slate-800/80">
               <form
                 onSubmit={(e) => {
                   e.preventDefault();

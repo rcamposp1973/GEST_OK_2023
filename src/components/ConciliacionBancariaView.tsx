@@ -17,7 +17,7 @@ import {
   ProductMaster,
   CustomAnalysisTableItem
 } from '../types';
-import { checkIsPeriodClosed, getLatestOpenPeriod } from '../utils/periodUtils';
+import { checkIsPeriodClosed, getLatestOpenPeriod, getNextOpenPeriodAndDate } from '../utils/periodUtils';
 import { logAuditEvent } from '../utils/auditLogger';
 import { sanitizeVoucherLines } from '../utils/voucherValidation';
 import {
@@ -577,6 +577,47 @@ export default function ConciliacionBancariaView({
     [selectedBankAccount, allBankVouchers, bookFinalBalance, notes, companyRef, savedReconciliations, studyId, company]
   );
 
+  // Clear / Anular Cartola for Selected Period with strict Conciliation Validation
+  const handleClearCartolaPeriod = async () => {
+    if (!selectedBankAccount) return;
+
+    if (statementLines.length === 0) {
+      alert(`La cartola del período ${selectedPeriod} para ${selectedBankAccount.name} ya se encuentra vacía.`);
+      return;
+    }
+
+    // Security Check: Verify if any line is conciliated
+    const conciliatedLines = statementLines.filter(l => l.matchedStatus === 'Conciliado');
+
+    if (conciliatedLines.length > 0) {
+      alert(
+        `⚠️ NO SE PUEDE ANULAR LA CARTOLA DEL PERÍODO ${selectedPeriod}\n\n` +
+        `Esta cartola contiene ${conciliatedLines.length} movimiento(s) en estado "Conciliado".\n\n` +
+        `Para poder anular, borrar o volver a cargar la cartola de este mes, debes primero desconciliar o desvincular los movimientos marcados como Conciliados.`
+      );
+      return;
+    }
+
+    const confirmDelete = window.confirm(
+      `🗑️ ¿ESTÁS SEGURO DE ANULAR / LIMPIAR LA CARTOLA DEL PERÍODO ${selectedPeriod}?\n\n` +
+      `Se eliminarán los ${statementLines.length} movimientos NO conciliados de ${selectedBankAccount.name} en el período ${selectedPeriod}.\n\n` +
+      `Esta acción permitirá volver a importar la cartola corregida desde cero.`
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      setStatementLines([]);
+      setBankFinalBalanceInput(bankInitialBalanceInput);
+      await persistReconciliation(selectedPeriod, [], bankInitialBalanceInput, bankInitialBalanceInput);
+
+      alert(`✅ Cartola del período ${selectedPeriod} anulada correctamente. Ahora puedes volver a cargar la cartola limpia.`);
+    } catch (err: any) {
+      console.error("Error al anular cartola:", err);
+      alert("Error al anular la cartola: " + (err.message || 'Error desconocido'));
+    }
+  };
+
   // 1. Manual change to Initial Balance -> Recalculate + Cascade + Auto-Save
   const handleUpdateInitialBalance = async (newInitial: number) => {
     setBankInitialBalanceInput(newInitial);
@@ -969,6 +1010,7 @@ export default function ConciliacionBancariaView({
   // 6. Quick Post Unaccounted Bank Fee or Income + Auto-Match + Immediate Auto-Save
   const handleQuickPostVoucher = async (customData?: {
     period: string;
+    date?: string;
     gloss: string;
     counterAccountId: string;
     lines: VoucherLine[];
@@ -986,7 +1028,10 @@ export default function ConciliacionBancariaView({
       return;
     }
 
-    const targetPeriod = customData?.period || quickVoucherPeriod || selectedPeriod;
+    const effective = getNextOpenPeriodAndDate(quickVoucherLine.date, fiscalYears);
+    const targetPeriod = customData?.period || (effective.wasShifted ? effective.period : quickVoucherPeriod) || selectedPeriod;
+    const targetDate = customData?.date || (effective.wasShifted ? effective.date : quickVoucherLine.date);
+
     const periodCheck = checkIsPeriodClosed(targetPeriod, fiscalYears);
     if (periodCheck.isClosed) {
       alert(`⚠️ Acción Bloqueada:\n\n${periodCheck.errorMsg}\n\nNo puedes registrar comprobantes en un período cerrado.`);
@@ -1069,7 +1114,7 @@ export default function ConciliacionBancariaView({
 
       const newVoucherData = {
         voucherNumber: nextVoucherNumber,
-        date: quickVoucherLine.date,
+        date: targetDate,
         period: targetPeriod,
         type: isCharge ? 'Egreso' : 'Ingreso',
         gloss: `Ajuste Conciliación Bancaria - ${customData?.gloss || quickGloss || quickVoucherLine.description}`,
@@ -1100,7 +1145,11 @@ export default function ConciliacionBancariaView({
       setQuickVoucherLine(null);
       await persistReconciliation(selectedPeriod, updated, bankInitialBalanceInput, bankFinalBalanceInput);
 
-      alert(`✅ Comprobante N° ${nextVoucherNumber} generado en período ${targetPeriod}, conciliado y guardado automáticamente.`);
+      alert(
+        effective.wasShifted
+          ? `✅ Comprobante N° ${nextVoucherNumber} generado el ${targetDate} (Período ${targetPeriod}, por estar cerrado el mes original ${effective.originalPeriod}), conciliado y guardado automáticamente.`
+          : `✅ Comprobante N° ${nextVoucherNumber} generado en período ${targetPeriod} (${targetDate}), conciliado y guardado automáticamente.`
+      );
       if (onVouchersUpdated) onVouchersUpdated();
     } catch (err: any) {
       console.error('Error posting quick voucher:', err);
@@ -1283,11 +1332,23 @@ export default function ConciliacionBancariaView({
             <span>Importar CSV / Pegar</span>
           </button>
 
-          {/* NUEZ MARIPOSA / CEREBRO AUTO RUT MATCH BUTTON */}
+          {/* ANULAR / LIMPIAR CARTOLA DEL MES BUTTON */}
+          <button
+            onClick={handleClearCartolaPeriod}
+            className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-lg border border-rose-200 transition-colors flex items-center gap-1.5 shadow-2xs"
+            title="Anular o borrar la cartola cargada de este mes si no tiene movimientos conciliados"
+          >
+            <span>🗑️</span>
+            <span>Anular Cartola</span>
+          </button>
+
+          {/* AUTO RUT MATCH BUTTON (MANTENIDO INTACTO PERO NO VISIBLE A PETICIÓN DEL USUARIO) */}
           <button
             onClick={() => setShowAutoRutModal(true)}
-            className="relative group px-3.5 py-1.5 bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-slate-950 font-black text-xs rounded-xl shadow-md shadow-amber-500/20 transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center gap-1.5 border-2 border-amber-300 overflow-hidden"
-            title="Match y Contabilización Automática por RUT en Cartola (Nuez Mariposa / Mazinger-Z)"
+            className="hidden relative group px-3.5 py-1.5 bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-slate-950 font-black text-xs rounded-xl shadow-md shadow-amber-500/20 transition-all duration-300 transform hover:scale-105 active:scale-95 items-center gap-1.5 border-2 border-amber-300 overflow-hidden"
+            title="Match y Contabilización Automática por RUT en Cartola"
+            aria-hidden="true"
+            tabIndex={-1}
           >
             {/* Glowing aura */}
             <span className="absolute -inset-1 bg-amber-400/50 rounded-xl blur-xs opacity-75 group-hover:opacity-100 transition animate-pulse"></span>
@@ -1298,7 +1359,9 @@ export default function ConciliacionBancariaView({
                 <path d="M7.5 8c1-.5 2.5 0 3 1s0 2.5-1 3" />
                 <path d="M16.5 8c-1-.5-2.5 0-3 1s0 2.5 1 3" />
               </svg>
-              <span className="uppercase tracking-tight">🧠 Nuez Mariposa RUT Match</span>
+              <span className="uppercase tracking-tight">🧠 Auto Match por RUT</span>
+              {/* Elemento Nuez Mariposa mantenido */}
+              <span className="hidden opacity-0 pointer-events-none select-none sr-only" aria-hidden="true" data-easter-egg="nuez-mariposa">Nuez Mariposa</span>
               <span className="bg-amber-950 text-amber-300 text-[9px] px-1.5 py-0.2 rounded font-mono font-black">AUTO</span>
             </span>
           </button>
@@ -1659,6 +1722,15 @@ export default function ConciliacionBancariaView({
                 <option value="Conciliados">Conciliados</option>
                 <option value="Pendiente">Pendientes</option>
               </select>
+
+              <button
+                onClick={handleClearCartolaPeriod}
+                className="p-1 bg-rose-900/80 hover:bg-rose-800 text-rose-200 rounded border border-rose-700/60 transition-colors text-[10px] font-bold flex items-center gap-1 px-1.5"
+                title="Anular / Limpiar la cartola cargada de este período (si no hay movimientos conciliados)"
+              >
+                <span>🗑️</span>
+                <span className="hidden sm:inline">Anular</span>
+              </button>
             </div>
           </div>
 
@@ -1781,9 +1853,10 @@ export default function ConciliacionBancariaView({
                               </button>
                               <button
                                 onClick={() => {
+                                  const shift = getNextOpenPeriodAndDate(l.date, fiscalYears);
                                   setQuickVoucherLine(l);
                                   setQuickGloss(l.description);
-                                  setQuickVoucherPeriod(selectedPeriod);
+                                  setQuickVoucherPeriod(shift.period);
                                   const defaultExpense = accounts.find(
                                     a =>
                                       (a.code || '').startsWith('4-2-01') ||
@@ -2006,6 +2079,7 @@ export default function ConciliacionBancariaView({
         setQuickGloss={setQuickGloss}
         quickVoucherPeriod={quickVoucherPeriod}
         setQuickVoucherPeriod={setQuickVoucherPeriod}
+        fiscalYears={fiscalYears}
         onPostVoucherWithLines={handleQuickPostVoucher}
         onPost={handleQuickPostVoucher}
       />
@@ -2022,6 +2096,7 @@ export default function ConciliacionBancariaView({
         rcvDocuments={rcvDocuments}
         selectedBankAccountId={selectedBankAccountId}
         selectedPeriod={selectedPeriod}
+        fiscalYears={fiscalYears}
         onApplyMatches={async (updatedLines, count) => {
           setStatementLines(updatedLines);
           await persistReconciliation(selectedPeriod, updatedLines, bankInitialBalanceInput, bankFinalBalanceInput);

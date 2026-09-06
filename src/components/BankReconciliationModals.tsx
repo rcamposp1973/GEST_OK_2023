@@ -10,8 +10,10 @@ import {
   ExpenseItemMaster,
   ProjectMaster,
   ProductMaster,
-  CustomAnalysisTableItem
+  CustomAnalysisTableItem,
+  FiscalPeriodYear
 } from '../types';
+import { getNextOpenPeriodAndDate, checkIsPeriodClosed } from '../utils/periodUtils';
 
 interface ImportCSVModalProps {
   isOpen: boolean;
@@ -360,8 +362,10 @@ export interface QuickVoucherModalProps {
   setQuickGloss: (val: string) => void;
   quickVoucherPeriod: string;
   setQuickVoucherPeriod: (val: string) => void;
+  fiscalYears?: FiscalPeriodYear[];
   onPostVoucherWithLines: (voucherData: {
     period: string;
+    date?: string;
     gloss: string;
     counterAccountId: string;
     lines: VoucherLine[];
@@ -390,6 +394,7 @@ export function QuickVoucherModal({
   setQuickGloss,
   quickVoucherPeriod,
   setQuickVoucherPeriod,
+  fiscalYears = [],
   onPostVoucherWithLines,
   onPost
 }: QuickVoucherModalProps) {
@@ -397,6 +402,24 @@ export function QuickVoucherModal({
 
   const isCharge = quickVoucherLine.charge > 0;
   const bankAmount = isCharge ? quickVoucherLine.charge : quickVoucherLine.deposit;
+
+  // Compute automatic date shift if original period is closed
+  const effectiveShiftInfo = useMemo(() => {
+    if (!quickVoucherLine) return null;
+    return getNextOpenPeriodAndDate(quickVoucherLine.date, fiscalYears);
+  }, [quickVoucherLine, fiscalYears]);
+
+  const [voucherDate, setVoucherDate] = useState<string>(
+    effectiveShiftInfo?.date || quickVoucherLine?.date || ''
+  );
+
+  useEffect(() => {
+    if (quickVoucherLine) {
+      const shift = getNextOpenPeriodAndDate(quickVoucherLine.date, fiscalYears);
+      setVoucherDate(shift.date);
+      setQuickVoucherPeriod(shift.period);
+    }
+  }, [quickVoucherLine, fiscalYears, setQuickVoucherPeriod]);
 
   // Selected account detail
   const selectedAccount = useMemo(() => {
@@ -900,9 +923,17 @@ export function QuickVoucherModal({
       });
     }
 
+    // Period closing validation
+    const pCheck = checkIsPeriodClosed(quickVoucherPeriod, fiscalYears);
+    if (pCheck.isClosed) {
+      setValidationError(`⚠️ Acción Bloqueada:\n\n${pCheck.errorMsg}\n\nNo puedes registrar comprobantes en un período cerrado.`);
+      return;
+    }
+
     if (onPostVoucherWithLines) {
       await onPostVoucherWithLines({
         period: quickVoucherPeriod,
+        date: voucherDate || effectiveShiftInfo?.date || quickVoucherLine.date,
         gloss: defaultGloss,
         counterAccountId: selectedAccount.id,
         lines,
@@ -935,6 +966,22 @@ export function QuickVoucherModal({
         </div>
 
         <div className="p-5 overflow-y-auto space-y-5 flex-1 text-xs">
+          {/* Notification banner if original bank statement period is closed */}
+          {effectiveShiftInfo?.wasShifted && (
+            <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl flex items-start gap-2.5 text-amber-900 text-xs shadow-2xs">
+              <span className="text-base leading-none">🔒</span>
+              <div className="space-y-0.5">
+                <div className="font-bold text-amber-950 flex items-center gap-1.5">
+                  <span>Período de Cartola ({effectiveShiftInfo.originalPeriod}) Cerrado Contablemente</span>
+                  <span className="bg-amber-200 text-amber-900 font-mono text-[10px] px-1.5 py-0.2 rounded font-bold">Imputación Automática</span>
+                </div>
+                <p className="text-[11px] text-amber-800 leading-relaxed">
+                  El movimiento bancario original es del <strong>{effectiveShiftInfo.originalDate}</strong> ({effectiveShiftInfo.originalPeriod}), el cual se encuentra cerrado contablemente. Conforme a las normas contables, el registro contable se imputa automáticamente al <strong>día 1 del siguiente mes abierto: {effectiveShiftInfo.date} (Período {effectiveShiftInfo.period})</strong>.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Bank Movement Card */}
           <div className="bg-gradient-to-r from-slate-50 to-indigo-50/40 p-3.5 rounded-xl border border-indigo-100 flex flex-wrap justify-between items-center gap-3">
             <div className="space-y-1">
@@ -948,7 +995,7 @@ export function QuickVoucherModal({
                 <span className="font-bold">Glosa Banco:</span> {quickVoucherLine.description}
               </div>
               <div className="text-slate-500 text-[11px]">
-                <span className="font-bold">Fecha Movimiento:</span> {quickVoucherLine.date} |{' '}
+                <span className="font-bold">Fecha Movimiento Cartola:</span> {quickVoucherLine.date} |{' '}
                 <span className="font-bold">N° Transf / Folio:</span> {quickVoucherLine.documentNumber || 'S/N'}
               </div>
             </div>
@@ -964,16 +1011,40 @@ export function QuickVoucherModal({
           </div>
 
           {/* Account & Period Selection */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
             <div>
               <label className="block font-bold text-slate-800 mb-1">
-                📅 Período Contable Imputación:
+                📅 Período Imputación:
               </label>
               <input
                 type="month"
                 value={quickVoucherPeriod}
-                onChange={(e) => setQuickVoucherPeriod(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setQuickVoucherPeriod(val);
+                  if (voucherDate && !voucherDate.startsWith(val)) {
+                    setVoucherDate(`${val}-01`);
+                  }
+                }}
                 className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 font-bold text-xs focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-800 mb-1">
+                📆 Fecha Asiento:
+              </label>
+              <input
+                type="date"
+                value={voucherDate}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setVoucherDate(val);
+                  if (val) {
+                    setQuickVoucherPeriod(val.substring(0, 7));
+                  }
+                }}
+                className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 font-bold text-xs focus:ring-2 focus:ring-indigo-500 font-mono"
               />
             </div>
 

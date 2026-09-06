@@ -184,6 +184,17 @@ export default function PeriodsGrid({
         </div>
       </div>
 
+      {/* REGLA FISCAL SECUENCIAL INFORMATIVA */}
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 flex items-start gap-2.5 shadow-2xs">
+        <span className="text-base leading-none">🔒</span>
+        <div className="space-y-0.5">
+          <span className="font-bold text-amber-950">Regla Fiscal de Cierre Secuencial Obligatorio:</span>
+          <p className="text-[11px] text-amber-800 leading-relaxed">
+            Al cerrar un período mensual, <strong>todos los meses anteriores quedan obligatoriamente cerrados</strong> (ningún mes anterior a un mes cerrado puede permanecer abierto). Los meses cerrados no admiten nuevos asientos, modificaciones ni importaciones de cartola bancaria. Si se contabiliza desde la cartola de un mes cerrado, el sistema imputa automáticamente el asiento al <strong>día 1 del siguiente mes abierto</strong>.
+          </p>
+        </div>
+      </div>
+
       {/* GRILLA ESTILO EXCEL */}
       <div className="bg-white rounded-xl border border-slate-300 shadow-sm overflow-hidden">
         <div className="overflow-x-auto max-h-[600px]">

@@ -8,11 +8,13 @@ import {
   VoucherLine,
   Auxiliary,
   RCVDocument,
-  Company
+  Company,
+  FiscalPeriodYear
 } from '../types';
 import { extractRutFromGloss, areRutsEqual, ExtractedRutInfo } from '../utils/rutMatcher';
 import { sanitizeForFirestore } from '../utils/bankReconciliationUtils';
 import { logAuditEvent } from '../utils/auditLogger';
+import { getNextOpenPeriodAndDate, checkIsPeriodClosed } from '../utils/periodUtils';
 
 export interface AutoRutMatchModalProps {
   isOpen: boolean;
@@ -26,6 +28,7 @@ export interface AutoRutMatchModalProps {
   rcvDocuments?: RCVDocument[];
   selectedBankAccountId: string;
   selectedPeriod: string;
+  fiscalYears?: FiscalPeriodYear[];
   onApplyMatches: (
     updatedStatementLines: BankStatementLine[],
     createdVouchersCount: number
@@ -63,6 +66,7 @@ export default function AutoRutMatchModal({
   rcvDocuments = [],
   selectedBankAccountId,
   selectedPeriod,
+  fiscalYears = [],
   onApplyMatches,
   onVouchersUpdated
 }: AutoRutMatchModalProps) {
@@ -324,13 +328,16 @@ export default function AutoRutMatchModal({
 
         const lines: VoucherLine[] = isAbono ? [bankLine, auxLine] : [auxLine, bankLine];
 
-        const currentPeriodStr = selectedPeriod || item.line.date.slice(0, 7);
+        // Ensure date and period respect closed fiscal months (shift to 1st of next open month if closed)
+        const shiftInfo = getNextOpenPeriodAndDate(item.line.date, fiscalYears);
+        const effectiveDate = shiftInfo.date;
+        const effectivePeriod = shiftInfo.period;
 
         // Create Voucher Record in Firestore with correct sequential voucherNumber
         const voucherData: Omit<Voucher, 'id'> = {
           voucherNumber: nextVoucherNum,
-          date: item.line.date,
-          period: currentPeriodStr,
+          date: effectiveDate,
+          period: effectivePeriod,
           type: voucherType,
           status: 'Valido',
           gloss: glossText,
@@ -356,7 +363,7 @@ export default function AutoRutMatchModal({
             matchedStatus: 'Conciliado',
             matchedVoucherId: voucherRef.id,
             matchedVoucherNumber: nextVoucherNum,
-            matchedVoucherPeriod: currentPeriodStr
+            matchedVoucherPeriod: effectivePeriod
           };
         }
       }

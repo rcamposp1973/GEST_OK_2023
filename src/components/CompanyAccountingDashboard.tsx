@@ -32,7 +32,7 @@ import InternalCompanyAccountingCopilot from './InternalCompanyAccountingCopilot
 import SiiFolioControlView from './SiiFolioControlView';
 import { useProcess } from '../context/ProcessContext';
 import { validateVoucherLine, isCustomAnalysisRequired, sanitizeVoucherLine, sanitizeVoucherLines } from '../utils/voucherValidation';
-import { getLatestOpenPeriod } from '../utils/periodUtils';
+import { getLatestOpenPeriod, checkIsPeriodClosed as checkIsPeriodClosedUtil, getNextOpenPeriodAndDate } from '../utils/periodUtils';
 import { fetchRcvFromSii } from '../utils/siiRcvClient';
 
 interface CompanyAccountingDashboardProps {
@@ -810,35 +810,9 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
     return isNegative ? -Math.abs(num) : num;
   };
 
-  // Helper to check if a specific period (YYYY-MM or from YYYY-MM-DD) is CERRADO
+  // Helper to check if a specific period (YYYY-MM or from YYYY-MM-DD) is CERRADO with strict sequential cascade
   const checkIsPeriodClosed = (dateOrPeriod: string): { isClosed: boolean; periodStr: string; errorMsg: string } => {
-    if (!dateOrPeriod) {
-      return { isClosed: false, periodStr: '', errorMsg: '' };
-    }
-    const clean = dateOrPeriod.trim().substring(0, 7); // e.g. "2026-08"
-    const parts = clean.split('-');
-    if (parts.length < 2) {
-      return { isClosed: false, periodStr: clean, errorMsg: '' };
-    }
-    const yearStr = parts[0];
-    const monthNum = parseInt(parts[1], 10);
-    if (isNaN(monthNum) || monthNum < 1 || monthNum > 12) {
-      return { isClosed: false, periodStr: clean, errorMsg: '' };
-    }
-
-    const fy = fiscalYears.find(f => f.id === yearStr);
-    const monthStatus = fy?.months?.[monthNum];
-
-    // If explicitly 'Cerrado', or if no record exists and it's not the current active open month
-    const isClosed = monthStatus === 'Cerrado';
-    const monthNames = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-    const monthName = monthNames[monthNum] || `Mes ${monthNum}`;
-
-    return {
-      isClosed,
-      periodStr: clean,
-      errorMsg: `🔒 Período Contable Bloqueado: El período ${monthName} ${yearStr} (${clean}) se encuentra CERRADO. No está permitido guardar, modificar, importar o contabilizar comprobantes en un período cerrado.`
-    };
+    return checkIsPeriodClosedUtil(dateOrPeriod, fiscalYears);
   };
 
   // Format Chilean DTE Document Type with official SII Code & Description
@@ -3054,7 +3028,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
     if (!existing) {
       const defaultMonths: { [m: number]: 'Abierto' | 'Cerrado' } = {};
       for (let i = 1; i <= 12; i++) {
-        defaultMonths[i] = i === 1 ? 'Abierto' : 'Cerrado';
+        defaultMonths[i] = 'Abierto';
       }
       const newFy: FiscalPeriodYear = {
         id: fyId,
@@ -3075,28 +3049,159 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
     const fy = fiscalYears.find(f => f.id === fyId);
     if (!fy) return;
 
-    const newStatus = currentStatus === 'Abierto' ? 'Cerrado' : 'Abierto';
-    const updatedMonths = { ...fy.months, [monthNum]: newStatus };
+    const monthNames = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    const monthName = monthNames[monthNum] || `Mes ${monthNum}`;
 
-    try {
-      await updateDoc(doc(companyRef, 'fiscalPeriods', fyId), { months: updatedMonths });
+    if (currentStatus === 'Abierto') {
+      // User wants to CLOSE monthNum
+      // Rule: "los meses cerrados no deben permitir que meses anteriores esten abiertos,
+      // me explico, si junio está cerrado, enero-febrero-marzo-abril-mayo deben estar obligatoriamente cerrados,
+      // esto implica que ninguno de esos meses (cerrados) pueden admitir registros ni procesos"
+      const confirmMsg = monthNum > 1
+        ? `¿Confirmas el CIERRE del período ${monthName} ${year}?\n\n⚠️ Por normativa contable, al cerrar este período quedarán obligatoriamente CERRADOS todos los meses anteriores (Enero a ${monthNames[monthNum - 1]} ${year} y años previos).\n\nNingún período cerrado admitirá nuevos comprobantes, importaciones de cartolas/RCV ni modificaciones.`
+        : `¿Confirmas el CIERRE del período Enero ${year}?\n\n⚠️ Este período quedará cerrado y bloqueado para nuevos comprobantes, cartolas y procesos.`;
 
-      // Audit Log
-      logAuditEvent({
-        userId: auth.currentUser?.uid || 'anon',
-        userEmail: auth.currentUser?.email || '',
-        studyId,
-        companyId: company.id,
-        action: 'MODIFICAR',
-        module: 'PERIODOS_FISCALES',
-        details: `Cambio de estado período ${year}-${String(monthNum).padStart(2, '0')} a "${newStatus}" en ${company.name}`,
-        metadata: { year, month: monthNum, status: newStatus }
-      });
+      if (!window.confirm(confirmMsg)) return;
 
-      await fetchData();
-    } catch (err: any) {
-      console.error("Error updating period:", err);
-      alert('Error al actualizar período: ' + err.message);
+      try {
+        // 1. Close months 1..monthNum in current year
+        const updatedMonths = { ...fy.months };
+        for (let m = 1; m <= monthNum; m++) {
+          updatedMonths[m] = 'Cerrado';
+        }
+        await updateDoc(doc(companyRef, 'fiscalPeriods', fyId), { months: updatedMonths });
+
+        // 2. Cascade close all prior fiscal years if any month was open
+        for (const otherFy of fiscalYears) {
+          const oYear = parseInt(otherFy.id || String(otherFy.year), 10);
+          if (oYear < year && otherFy.months) {
+            const oMonths = { ...otherFy.months };
+            let hasOpen = false;
+            for (let m = 1; m <= 12; m++) {
+              if (oMonths[m] === 'Abierto') {
+                oMonths[m] = 'Cerrado';
+                hasOpen = true;
+              }
+            }
+            if (hasOpen) {
+              await updateDoc(doc(companyRef, 'fiscalPeriods', otherFy.id), { months: oMonths });
+            }
+          }
+        }
+
+        // Audit Log
+        logAuditEvent({
+          userId: auth.currentUser?.uid || 'anon',
+          userEmail: auth.currentUser?.email || '',
+          studyId,
+          companyId: company.id,
+          action: 'MODIFICAR',
+          module: 'PERIODOS_FISCALES',
+          details: `Cierre contable acumulativo hasta ${monthName} ${year} (meses 1 a ${monthNum} cerrados) en ${company.name}`,
+          metadata: { year, month: monthNum, status: 'Cerrado' }
+        });
+
+        await fetchData();
+        alert(`🔒 Período ${monthName} ${year} y todos sus meses anteriores han quedado cerrados exitosamente.`);
+      } catch (err: any) {
+        console.error("Error updating period:", err);
+        alert('Error al actualizar período: ' + err.message);
+      }
+    } else {
+      // User wants to OPEN monthNum
+      // Rule: cannot have an open month if any subsequent month is closed.
+      // E.g. if June is closed, you cannot open March without reopening April, May, June.
+      const targetPeriodCode = `${year}-${String(monthNum).padStart(2, '0')}`;
+      const laterClosedPeriods: { year: number; month: number; code: string; name: string }[] = [];
+
+      for (const f of fiscalYears) {
+        const y = parseInt(f.id || String(f.year), 10);
+        if (!f.months) continue;
+        for (let m = 1; m <= 12; m++) {
+          const pCode = `${y}-${String(m).padStart(2, '0')}`;
+          if (f.months[m] === 'Cerrado' && pCode > targetPeriodCode) {
+            laterClosedPeriods.push({
+              year: y,
+              month: m,
+              code: pCode,
+              name: `${monthNames[m]} ${y}`
+            });
+          }
+        }
+      }
+
+      if (laterClosedPeriods.length > 0) {
+        const maxLater = laterClosedPeriods[laterClosedPeriods.length - 1];
+        const confirmCascade = window.confirm(
+          `⚠️ Restricción Contable de Períodos Cerrados:\n\n` +
+          `No es posible tener abierto ${monthName} ${year} mientras existan períodos posteriores cerrados (hasta ${maxLater.name}).\n\n` +
+          `Conforme a las normas contables, los meses anteriores a un mes cerrado deben permanecer obligatoriamente cerrados.\n\n` +
+          `¿Deseas reabrir en cadena desde ${monthName} ${year} hasta ${maxLater.name}?`
+        );
+        if (!confirmCascade) return;
+
+        try {
+          // Reopen this year from monthNum to 12
+          const updatedMonths = { ...fy.months };
+          for (let m = monthNum; m <= 12; m++) {
+            updatedMonths[m] = 'Abierto';
+          }
+          await updateDoc(doc(companyRef, 'fiscalPeriods', fyId), { months: updatedMonths });
+
+          // Reopen subsequent years up to maxLater.year
+          for (const f of fiscalYears) {
+            const y = parseInt(f.id || String(f.year), 10);
+            if (y > year && f.months) {
+              const fMonths = { ...f.months };
+              for (let m = 1; m <= 12; m++) {
+                if (y < maxLater.year || (y === maxLater.year && m <= maxLater.month)) {
+                  fMonths[m] = 'Abierto';
+                }
+              }
+              await updateDoc(doc(companyRef, 'fiscalPeriods', f.id), { months: fMonths });
+            }
+          }
+
+          logAuditEvent({
+            userId: auth.currentUser?.uid || 'anon',
+            userEmail: auth.currentUser?.email || '',
+            studyId,
+            companyId: company.id,
+            action: 'MODIFICAR',
+            module: 'PERIODOS_FISCALES',
+            details: `Reapertura en cadena desde ${monthName} ${year} hasta ${maxLater.name} en ${company.name}`,
+            metadata: { year, month: monthNum, status: 'Abierto' }
+          });
+
+          await fetchData();
+          alert(`🔓 Períodos reabiertos exitosamente desde ${monthName} ${year} hasta ${maxLater.name}.`);
+        } catch (err: any) {
+          console.error("Error reopening periods:", err);
+          alert('Error al reabrir períodos: ' + err.message);
+        }
+      } else {
+        // No later closed months: direct reopen
+        try {
+          const updatedMonths = { ...fy.months, [monthNum]: 'Abierto' };
+          await updateDoc(doc(companyRef, 'fiscalPeriods', fyId), { months: updatedMonths });
+
+          logAuditEvent({
+            userId: auth.currentUser?.uid || 'anon',
+            userEmail: auth.currentUser?.email || '',
+            studyId,
+            companyId: company.id,
+            action: 'MODIFICAR',
+            module: 'PERIODOS_FISCALES',
+            details: `Reapertura del período ${monthName} ${year} en ${company.name}`,
+            metadata: { year, month: monthNum, status: 'Abierto' }
+          });
+
+          await fetchData();
+        } catch (err: any) {
+          console.error("Error updating period:", err);
+          alert('Error al actualizar período: ' + err.message);
+        }
+      }
     }
   };
 

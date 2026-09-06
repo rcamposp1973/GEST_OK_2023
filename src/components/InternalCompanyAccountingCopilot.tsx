@@ -104,15 +104,15 @@ export default function InternalCompanyAccountingCopilot({
     {
       id: 'init-1',
       sender: 'ai',
-      text: `👋 ¡Hola! Soy **Junior**, tu Asistente y Copiloto Contable para **${company.name}** (RUT: ${company.rut}).\n\nEstoy especializado en **Normativa Tributaria Chilena (LIR, IVA, F29, Regímenes 14A/14D3/14D8)** y **Contabilidad Financiera IFRS (NIC 1, NIC 2, NIC 16, Margen Operacional, Partida Doble)**.\n\nPuedo auditar tus libros, simular cálculos, sugerir asientos contables, revisar partidas de conciliación bancaria y guiarte en el sistema. ¿En qué te ayudo hoy?`,
+      text: `👋 ¡Hola! Soy **Junior**, tu Asistente y Copiloto Contable para **${company.name}** (RUT: ${company.rut}).\n\nEstoy especializado en **Conciliación Bancaria, Facturas Pendientes por RUT, Normativa Tributaria Chilena (LIR, IVA, F29)** e **IFRS (NIC 1, NIC 2, NIC 16, Partida Doble)**.\n\nPuedo ayudarte a **buscar facturas pendientes de un RUT**, auditar tus libros, guiarte para anular cartolas y conciliar tu banco. ¿En qué te ayudo hoy?`,
       time: 'Ahora',
       suggestions: [
+        'Buscar facturas pendientes por RUT',
+        '¿Cómo conciliar y anular cartolas?',
         'Resumen de IVA y Formulario 29',
         'Analizar Margen Operacional IFRS',
         'Simular cálculo de Boleta de Honorarios',
-        'Proponer asiento contable',
-        'Auditar cuadratura del Balance y Libro Diario',
-        '¿Cómo conciliar partidas bancarias pendientes?'
+        'Proponer asiento contable'
       ]
     }
   ]);
@@ -159,6 +159,99 @@ export default function InternalCompanyAccountingCopilot({
         response: ruleResponse,
         suggestions: ['Proponer otro asiento', 'Ver Comprobantes', 'Auditar Balance'],
         actionLink: { tab: 'vouchers', label: 'Ver Comprobantes' }
+      };
+    }
+
+    // 0.1 BÚSQUEDA DE FACTURAS PENDIENTES POR RUT Y ASISTENCIA EN CONCILIACIÓN BANCARIA (JUNIOR)
+    if (
+      q.includes('rut') || 
+      q.includes('factura') || 
+      q.includes('facturas') || 
+      q.includes('pendiente') || 
+      q.includes('pendientes') || 
+      q.includes('conciliar') || 
+      q.includes('conciliacion') || 
+      q.includes('conciliación') ||
+      q.includes('proveedor') ||
+      q.includes('dte')
+    ) {
+      const cleanRutMatch = q.match(/(\d{1,2}\.?\d{3}\.?\d{3}[-kK0-9]|\d{7,8}[-kK0-9]?)/g);
+      const searchRutClean = cleanRutMatch ? cleanRutMatch[0].replace(/[^0-9kK]/g, '').toLowerCase() : '';
+
+      const amountMatches = q.match(/\$?\s*(\d{1,3}(\.\d{3})+|\d{4,})/g);
+      const searchAmount = amountMatches ? parseInt(amountMatches[0].replace(/\D/g, ''), 10) : null;
+
+      // Filter DTEs in RCV
+      const matchingDocs = rcvDocuments.filter(doc => {
+        const docRutEmisor = (doc.rutEmisor || '').replace(/[^0-9kK]/g, '').toLowerCase();
+        const docRutReceptor = (doc.rutReceptor || '').replace(/[^0-9kK]/g, '').toLowerCase();
+        const docRazonSocial = (doc.razonSocialEmisor || doc.razonSocialReceptor || '').toLowerCase();
+        const docFolio = String(doc.folio || '');
+
+        if (searchRutClean && (docRutEmisor.includes(searchRutClean) || docRutReceptor.includes(searchRutClean))) {
+          return true;
+        }
+        if (searchAmount && Math.abs(doc.montoTotal - searchAmount) < 5) {
+          return true;
+        }
+        if (q.includes(docRazonSocial) && docRazonSocial.length > 3) {
+          return true;
+        }
+        if (q.includes(docFolio) && docFolio.length > 1) {
+          return true;
+        }
+        return false;
+      });
+
+      // Filter pending auxiliaries matching RUT
+      const matchingAux = auxiliaries.filter(aux => {
+        const auxRutClean = (aux.rut || '').replace(/[^0-9kK]/g, '').toLowerCase();
+        return searchRutClean && auxRutClean.includes(searchRutClean);
+      });
+
+      let responseText = `🔍 **Asistente de Conciliación y Búsqueda de DTEs por Junior:**\n\n`;
+
+      if (searchRutClean) {
+        responseText += `🎯 **Criterio de Búsqueda de RUT:** \`${cleanRutMatch ? cleanRutMatch[0] : searchRutClean}\`\n\n`;
+      } else if (searchAmount) {
+        responseText += `💵 **Criterio de Búsqueda por Monto:** $ ${searchAmount.toLocaleString('es-CL')}\n\n`;
+      } else {
+        responseText += `📋 **Análisis de Documentos Pendientes de Conciliación:**\n\n`;
+      }
+
+      if (matchingDocs.length > 0) {
+        responseText += `📄 **Facturas y DTEs Encontrados en RCV (${matchingDocs.length}):**\n`;
+        matchingDocs.slice(0, 8).forEach(d => {
+          const codeStr = String(d.tipoDoc || d.tipoDocumento || '');
+          const tipo = codeStr === '33' ? 'Factura Electrónica' : codeStr === '34' ? 'Factura Exenta' : codeStr === '61' ? 'Nota de Crédito' : `DTE ${codeStr}`;
+          const rutDisplay = d.rutEmisor || d.rutReceptor || 'N/A';
+          const nameDisplay = d.razonSocialEmisor || d.razonSocialReceptor || 'Proveedor / Cliente';
+          responseText += `  • **${tipo} N° ${d.folio}** | Fecha: ${d.fechaEmision} | RUT: **${rutDisplay}** (${nameDisplay}) | Total: **$ ${d.montoTotal.toLocaleString('es-CL')}**\n`;
+        });
+        if (matchingDocs.length > 8) {
+          responseText += `  *...y ${matchingDocs.length - 8} documentos adicionales encontrados en el RCV de ${company.name}.*\n`;
+        }
+        responseText += `\n💡 **Recomendación de Junior para Conciliar:**\n`;
+        responseText += `Para vincularlos con la cartola bancaria, entra a **Conciliación Bancaria** y utiliza **⚡ Match Automático Multimes** o concilia manualmente seleccionando el movimiento.\n`;
+      } else if (matchingAux.length > 0) {
+        responseText += `🏢 **Auxiliar Registrado:** ${matchingAux[0].name} (RUT: ${matchingAux[0].rut})\n\n`;
+        responseText += `Se detectó la entidad en el maestro de auxiliares. Puedes revisar los movimientos en el Libro Diario o Libro Auxiliar de Proveedores/Clientes.\n`;
+      } else {
+        responseText += `⚠️ No se encontraron DTEs en el RCV que coincidan con la búsqueda de RUT/monto en los registros actuales de **${company.name}**.\n\n`;
+        responseText += `💡 **Pasos recomendados por Junior:**\n`;
+        responseText += `1️⃣ Confirma si las facturas del período fueron importadas en el **Registro de Compras y Ventas (RCV)**.\n`;
+        responseText += `2️⃣ Ve al módulo **Conciliación Bancaria** y utiliza **⚡ Match Automático Multimes** para cruzar la cartola del banco con las facturas pendientes.\n`;
+        responseText += `3️⃣ Si deseas borrar o volver a cargar una cartola sin movimientos conciliados, utiliza el botón **🗑️ Anular Cartola**.\n`;
+      }
+
+      return {
+        response: responseText,
+        suggestions: [
+          'Ir a Conciliación Bancaria',
+          'Ver RCV Compras y Ventas',
+          'Buscar otra factura por RUT'
+        ],
+        actionLink: { tab: 'conciliacion', label: 'Abrir Conciliación Bancaria' }
       };
     }
 

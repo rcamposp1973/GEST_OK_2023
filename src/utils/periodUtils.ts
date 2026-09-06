@@ -1,9 +1,46 @@
 import { FiscalPeriodYear } from '../types';
 
+/**
+ * Devuelve el período cerrado más avanzado / reciente en la contabilidad (ej: "2026-06").
+ * Regla: "los meses cerrados no deben permitir que meses anteriores estén abiertos;
+ * si junio está cerrado, enero-febrero-marzo-abril-mayo deben estar obligatoriamente cerrados".
+ */
+export function getLatestClosedPeriod(fiscalYears: FiscalPeriodYear[] = []): string | null {
+  if (!fiscalYears || fiscalYears.length === 0) return null;
+
+  let maxClosed: string | null = null;
+
+  for (const fy of fiscalYears) {
+    const yStr = String(fy.id || fy.year);
+    if (!yStr || !fy.months) continue;
+
+    // Detectar si el año tiene la plantilla por defecto antigua donde mes 1 era 'Abierto' y 2..12 'Cerrado'
+    const isOldBuggyDefault =
+      fy.months[1] === 'Abierto' &&
+      [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].every(m => fy.months[m] === 'Cerrado');
+
+    if (isOldBuggyDefault) {
+      // En dicha plantilla no hubo un cierre real hecho por el usuario
+      continue;
+    }
+
+    for (let m = 1; m <= 12; m++) {
+      if (fy.months[m] === 'Cerrado') {
+        const pCode = `${yStr}-${String(m).padStart(2, '0')}`;
+        if (!maxClosed || pCode > maxClosed) {
+          maxClosed = pCode;
+        }
+      }
+    }
+  }
+
+  return maxClosed;
+}
+
 export function checkIsPeriodClosed(
   dateOrPeriod: string,
   fiscalYears: FiscalPeriodYear[] = []
-): { isClosed: boolean; periodStr: string; errorMsg: string } {
+): { isClosed: boolean; periodStr: string; errorMsg: string; latestClosedPeriod?: string | null } {
   if (!dateOrPeriod) {
     return { isClosed: false, periodStr: '', errorMsg: '' };
   }
@@ -19,29 +56,130 @@ export function checkIsPeriodClosed(
   }
 
   const fy = fiscalYears.find(f => f.id === yearStr);
-  const monthStatus = fy?.months?.[monthNum];
+  const isOldBuggyDefault = fy && fy.months && fy.months[1] === 'Abierto' &&
+    [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].every(m => fy.months[m] === 'Cerrado');
 
-  const isClosed = monthStatus === 'Cerrado';
+  const explicitStatus = isOldBuggyDefault ? 'Abierto' : fy?.months?.[monthNum];
+
+  // Regla contable estricta: "los meses cerrados no deben permitir que meses anteriores esten abiertos.
+  // Si junio está cerrado, enero-febrero-marzo-abril-mayo deben estar obligatoriamente cerrados".
+  const latestClosed = getLatestClosedPeriod(fiscalYears);
+  const isClosedBySequence = latestClosed !== null && clean <= latestClosed;
+  const isClosed = explicitStatus === 'Cerrado' || isClosedBySequence;
+
   const monthNames = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
   const monthName = monthNames[monthNum] || `Mes ${monthNum}`;
+
+  let reason = `El período ${monthName} ${yearStr} (${clean}) se encuentra CERRADO.`;
+  if (explicitStatus !== 'Cerrado' && isClosedBySequence && latestClosed) {
+    const [lcYear, lcMonth] = latestClosed.split('-');
+    const lcMonthName = monthNames[parseInt(lcMonth, 10)] || lcMonth;
+    reason = `El período ${monthName} ${yearStr} (${clean}) se encuentra cerrado porque el período posterior ${lcMonthName} ${lcYear} ya fue cerrado (los meses anteriores a un mes cerrado deben estar obligatoriamente cerrados).`;
+  }
 
   return {
     isClosed,
     periodStr: clean,
-    errorMsg: `🔒 Período Contable Bloqueado: El período ${monthName} ${yearStr} (${clean}) se encuentra CERRADO. No está permitido modificar, anular o eliminar registros en un período cerrado.`
+    latestClosedPeriod: latestClosed,
+    errorMsg: `🔒 Período Contable Bloqueado: ${reason} No está permitido ingresar comprobantes, importar cartolas ni realizar modificaciones o procesos en períodos cerrados.`
   };
 }
 
 /**
- * Returns the latest open accounting/fiscal period (e.g. "2026-01").
- * Iterates descending through fiscal years and months to find the most recent open period in the system.
- * Never jumps to the current living calendar month.
+ * Cuando se contabiliza desde la cartola bancaria:
+ * "si o si, el registro debe hacerse con fecha y periodo de la cartola, salvo que el mes se encuentre
+ * 'cerrado', de ser asi, el registro debe hacerse el día 1 del siguiente mes abierto."
+ */
+export function getNextOpenPeriodAndDate(
+  cartolaDate: string,
+  fiscalYears: FiscalPeriodYear[] = []
+): {
+  period: string;
+  date: string;
+  wasShifted: boolean;
+  originalPeriod: string;
+  originalDate: string;
+  explanation?: string;
+} {
+  if (!cartolaDate) {
+    const now = new Date();
+    const curP = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    return {
+      period: curP,
+      date: `${curP}-01`,
+      wasShifted: false,
+      originalPeriod: curP,
+      originalDate: `${curP}-01`
+    };
+  }
+
+  const cleanDate = cartolaDate.trim().substring(0, 10);
+  const originalPeriod = cleanDate.substring(0, 7);
+
+  const check = checkIsPeriodClosed(originalPeriod, fiscalYears);
+
+  // Si el mes de la cartola está ABIERTO, se respeta fecha y período exactos de la cartola
+  if (!check.isClosed) {
+    return {
+      period: originalPeriod,
+      date: cleanDate,
+      wasShifted: false,
+      originalPeriod,
+      originalDate: cleanDate
+    };
+  }
+
+  // Si el mes está CERRADO: Se busca el primer mes abierto cronológicamente posterior
+  const [yStr, mStr] = originalPeriod.split('-');
+  let curYear = parseInt(yStr, 10);
+  let curMonth = parseInt(mStr, 10);
+
+  let targetPeriod = '';
+  // Avanzar mes a mes hasta encontrar el primer mes abierto (máximo 60 meses)
+  for (let step = 0; step < 60; step++) {
+    curMonth++;
+    if (curMonth > 12) {
+      curMonth = 1;
+      curYear++;
+    }
+    const candidatePeriod = `${curYear}-${String(curMonth).padStart(2, '0')}`;
+    const candidateCheck = checkIsPeriodClosed(candidatePeriod, fiscalYears);
+    if (!candidateCheck.isClosed) {
+      targetPeriod = candidatePeriod;
+      break;
+    }
+  }
+
+  if (!targetPeriod) {
+    targetPeriod = `${curYear}-${String(curMonth).padStart(2, '0')}`;
+  }
+
+  const targetDate = `${targetPeriod}-01`;
+  const monthNames = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  const origMNum = parseInt(mStr, 10);
+  const origMonthName = monthNames[origMNum] || originalPeriod;
+
+  return {
+    period: targetPeriod,
+    date: targetDate,
+    wasShifted: true,
+    originalPeriod,
+    originalDate: cleanDate,
+    explanation: `El mes de la cartola (${origMonthName} ${yStr}) se encuentra cerrado. Por normativa contable, el registro se realiza automáticamente el día 1 del siguiente mes abierto (${targetDate}, período ${targetPeriod}).`
+  };
+}
+
+/**
+ * Returns the active open accounting/fiscal period (e.g. "2026-07").
+ * Never returns a closed period.
  */
 export function getLatestOpenPeriod(
   fiscalYears: FiscalPeriodYear[] = [],
   fallbackPeriods?: string[]
 ): string {
-  // 1. First priority: Find the highest year and highest month explicitly marked as 'Abierto'
+  const latestClosed = getLatestClosedPeriod(fiscalYears);
+
+  // 1. First priority: Search open periods in fiscalYears that are strictly NOT closed
   if (fiscalYears && fiscalYears.length > 0) {
     const sortedYears = [...fiscalYears].sort((a, b) => {
       const yA = Number(a.id || a.year) || 0;
@@ -53,45 +191,44 @@ export function getLatestOpenPeriod(
       const y = Number(fy.id || fy.year);
       if (!y || !fy.months) continue;
 
-      // Find the highest month in this year that is marked 'Abierto'
-      const openMonths = Object.entries(fy.months)
-        .filter(([m, status]) => status === 'Abierto' && parseInt(m, 10) >= 1 && parseInt(m, 10) <= 12)
-        .map(([m]) => parseInt(m, 10))
-        .sort((a, b) => b - a);
-
-      if (openMonths.length > 0) {
-        return `${y}-${String(openMonths[0]).padStart(2, '0')}`;
+      for (let m = 12; m >= 1; m--) {
+        const pCode = `${y}-${String(m).padStart(2, '0')}`;
+        const check = checkIsPeriodClosed(pCode, fiscalYears);
+        if (!check.isClosed) {
+          return pCode;
+        }
       }
     }
   }
 
-  // 2. Second priority: If no month is explicitly 'Abierto' or fiscalYears is empty, check fallback periods
+  // 2. If all configured periods are closed, the next open period is the month immediately following latestClosed
+  if (latestClosed) {
+    const [yStr, mStr] = latestClosed.split('-');
+    let y = parseInt(yStr, 10);
+    let m = parseInt(mStr, 10) + 1;
+    if (m > 12) {
+      m = 1;
+      y++;
+    }
+    return `${y}-${String(m).padStart(2, '0')}`;
+  }
+
+  // 3. Check fallback periods
   if (fallbackPeriods && fallbackPeriods.length > 0) {
     const valid = fallbackPeriods
       .filter(p => p && /^\d{4}-\d{2}$/.test(p))
       .sort()
       .reverse();
-    if (valid.length > 0) {
-      return valid[0];
+    for (const vp of valid) {
+      if (!checkIsPeriodClosed(vp, fiscalYears).isClosed) {
+        return vp;
+      }
     }
   }
 
-  // 3. Third priority: Check localStorage for last active period
-  try {
-    const saved = localStorage.getItem('gest_ok_last_open_period');
-    if (saved && /^\d{4}-\d{2}$/.test(saved)) {
-      return saved;
-    }
-  } catch {
-    // Ignore storage exceptions
-  }
-
-  // 4. Fallback default: Most recent completed month or 2026-01
+  // 4. Default: current month
   const now = new Date();
-  const prevMonth = now.getMonth(); // 0-indexed (0 = Jan)
-  if (prevMonth === 0) {
-    return `${now.getFullYear() - 1}-12`;
-  }
-  return `${now.getFullYear()}-${String(prevMonth).padStart(2, '0')}`;
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
+
 

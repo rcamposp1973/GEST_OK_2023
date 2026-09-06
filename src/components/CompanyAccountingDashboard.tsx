@@ -203,7 +203,8 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
     try {
       const saved = localStorage.getItem(`gest_ok_last_period_${company.id}`) || localStorage.getItem('gest_ok_last_open_period');
       if (saved && /^\d{4}-\d{2}$/.test(saved)) {
-        return parseInt(saved.split('-')[0], 10);
+        const y = parseInt(saved.split('-')[0], 10);
+        if (y <= 2026) return y;
       }
     } catch {}
     return 2026;
@@ -213,7 +214,8 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
     try {
       const saved = localStorage.getItem(`gest_ok_last_period_${company.id}`) || localStorage.getItem('gest_ok_last_open_period');
       if (saved && /^\d{4}-\d{2}$/.test(saved)) {
-        return saved;
+        const y = parseInt(saved.split('-')[0], 10);
+        if (y <= 2026) return saved;
       }
     } catch {}
     return '2026-01';
@@ -534,11 +536,11 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
       const fySnap = await getDocs(collection(companyRef, 'fiscalPeriods'));
       const loadedFys = fySnap.docs.map(d => ({ ...d.data(), id: d.id } as FiscalPeriodYear));
       setFiscalYears(loadedFys);
-      const latestOpenPeriod = getLatestOpenPeriod(loadedFys);
+      const latestOpenPeriod = getLatestOpenPeriod(loadedFys, 2026);
       if (latestOpenPeriod) {
         setSelectedRcvPeriod(latestOpenPeriod);
         const y = parseInt(latestOpenPeriod.split('-')[0], 10);
-        if (y) setSelectedYear(y);
+        if (y && y <= 2026) setSelectedYear(y);
       }
 
       const rcvSnap = await getDocs(collection(companyRef, 'rcvDocuments'));
@@ -3109,98 +3111,29 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
       }
     } else {
       // User wants to OPEN monthNum
-      // Rule: cannot have an open month if any subsequent month is closed.
-      // E.g. if June is closed, you cannot open March without reopening April, May, June.
-      const targetPeriodCode = `${year}-${String(monthNum).padStart(2, '0')}`;
-      const laterClosedPeriods: { year: number; month: number; code: string; name: string }[] = [];
+      const confirmMsg = `¿Confirmas la APERTURA del período ${monthName} ${year}?\n\nAl abrir este período quedará habilitado para el registro de comprobantes contables, centralización RCV y conciliación bancaria.`;
+      if (!window.confirm(confirmMsg)) return;
 
-      for (const f of fiscalYears) {
-        const y = parseInt(f.id || String(f.year), 10);
-        if (!f.months) continue;
-        for (let m = 1; m <= 12; m++) {
-          const pCode = `${y}-${String(m).padStart(2, '0')}`;
-          if (f.months[m] === 'Cerrado' && pCode > targetPeriodCode) {
-            laterClosedPeriods.push({
-              year: y,
-              month: m,
-              code: pCode,
-              name: `${monthNames[m]} ${y}`
-            });
-          }
-        }
-      }
+      try {
+        const updatedMonths = { ...fy.months, [monthNum]: 'Abierto' };
+        await updateDoc(doc(companyRef, 'fiscalPeriods', fyId), { months: updatedMonths });
 
-      if (laterClosedPeriods.length > 0) {
-        const maxLater = laterClosedPeriods[laterClosedPeriods.length - 1];
-        const confirmCascade = window.confirm(
-          `⚠️ Restricción Contable de Períodos Cerrados:\n\n` +
-          `No es posible tener abierto ${monthName} ${year} mientras existan períodos posteriores cerrados (hasta ${maxLater.name}).\n\n` +
-          `Conforme a las normas contables, los meses anteriores a un mes cerrado deben permanecer obligatoriamente cerrados.\n\n` +
-          `¿Deseas reabrir en cadena desde ${monthName} ${year} hasta ${maxLater.name}?`
-        );
-        if (!confirmCascade) return;
+        logAuditEvent({
+          userId: auth.currentUser?.uid || 'anon',
+          userEmail: auth.currentUser?.email || '',
+          studyId,
+          companyId: company.id,
+          action: 'MODIFICAR',
+          module: 'PERIODOS_FISCALES',
+          details: `Apertura del período ${monthName} ${year} en ${company.name}`,
+          metadata: { year, month: monthNum, status: 'Abierto' }
+        });
 
-        try {
-          // Reopen this year from monthNum to 12
-          const updatedMonths = { ...fy.months };
-          for (let m = monthNum; m <= 12; m++) {
-            updatedMonths[m] = 'Abierto';
-          }
-          await updateDoc(doc(companyRef, 'fiscalPeriods', fyId), { months: updatedMonths });
-
-          // Reopen subsequent years up to maxLater.year
-          for (const f of fiscalYears) {
-            const y = parseInt(f.id || String(f.year), 10);
-            if (y > year && f.months) {
-              const fMonths = { ...f.months };
-              for (let m = 1; m <= 12; m++) {
-                if (y < maxLater.year || (y === maxLater.year && m <= maxLater.month)) {
-                  fMonths[m] = 'Abierto';
-                }
-              }
-              await updateDoc(doc(companyRef, 'fiscalPeriods', f.id), { months: fMonths });
-            }
-          }
-
-          logAuditEvent({
-            userId: auth.currentUser?.uid || 'anon',
-            userEmail: auth.currentUser?.email || '',
-            studyId,
-            companyId: company.id,
-            action: 'MODIFICAR',
-            module: 'PERIODOS_FISCALES',
-            details: `Reapertura en cadena desde ${monthName} ${year} hasta ${maxLater.name} en ${company.name}`,
-            metadata: { year, month: monthNum, status: 'Abierto' }
-          });
-
-          await fetchData();
-          alert(`🔓 Períodos reabiertos exitosamente desde ${monthName} ${year} hasta ${maxLater.name}.`);
-        } catch (err: any) {
-          console.error("Error reopening periods:", err);
-          alert('Error al reabrir períodos: ' + err.message);
-        }
-      } else {
-        // No later closed months: direct reopen
-        try {
-          const updatedMonths = { ...fy.months, [monthNum]: 'Abierto' };
-          await updateDoc(doc(companyRef, 'fiscalPeriods', fyId), { months: updatedMonths });
-
-          logAuditEvent({
-            userId: auth.currentUser?.uid || 'anon',
-            userEmail: auth.currentUser?.email || '',
-            studyId,
-            companyId: company.id,
-            action: 'MODIFICAR',
-            module: 'PERIODOS_FISCALES',
-            details: `Reapertura del período ${monthName} ${year} en ${company.name}`,
-            metadata: { year, month: monthNum, status: 'Abierto' }
-          });
-
-          await fetchData();
-        } catch (err: any) {
-          console.error("Error updating period:", err);
-          alert('Error al actualizar período: ' + err.message);
-        }
+        await fetchData();
+        alert(`🔓 Período ${monthName} ${year} ha quedado ABIERTO exitosamente.`);
+      } catch (err: any) {
+        console.error("Error updating period:", err);
+        alert('Error al actualizar período: ' + err.message);
       }
     }
   };
@@ -3251,7 +3184,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
                 }}
                 className="font-bold text-slate-800 font-mono bg-white border border-slate-300 rounded px-1.5 py-0.5 text-xs focus:ring-1 focus:ring-indigo-500"
               >
-                {[2026, 2025, 2024, 2023, 2022, 2021, 2020].map(y => (
+                {[2028, 2027, 2026, 2025, 2024, 2023, 2022, 2021, 2020].map(y => (
                   <option key={y} value={y}>{y}</option>
                 ))}
               </select>

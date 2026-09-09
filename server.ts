@@ -1,6 +1,7 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
+import { GoogleGenAI } from "@google/genai";
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
@@ -640,6 +641,42 @@ app.post("/api/sii/rescatar-rcv", async (req, res) => {
       success: false,
       error: `Error interno de servidor durante la sincronización RCV: ${err.message || String(err)}`
     });
+  }
+});
+
+// ==========================================
+// API CUADERNOS INTELIGENTES CON IA (GEMINI)
+// ==========================================
+app.post("/api/notebook-ai", async (req, res) => {
+  try {
+    const { prompt, companyContext, notesContext } = req.body;
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ success: false, error: "GEMINI_API_KEY no está configurada en el servidor." });
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
+    const fullPrompt = `Eres el Copiloto Experto en Auditoría Tributaria, Contabilidad IFRS y Gestión Financiera de GEST_OK para Chile.
+Contexto de la Empresa:
+${JSON.stringify(companyContext || {})}
+
+Notas y Cuaderno Actual:
+${notesContext || 'Sin notas previas.'}
+
+Pregunta o Solicitud del Usuario:
+${prompt}
+
+Responde de forma profesional, precisa, con terminología contable chilena (SII, F29, RCV, IFRS, Balance 8 Columnas) y proporciona un análisis claro.`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: fullPrompt,
+    });
+
+    return res.json({ success: true, text: response.text });
+  } catch (err: any) {
+    console.error("Error in /api/notebook-ai:", err);
+    return res.status(500).json({ success: false, error: err.message || String(err) });
   }
 });
 

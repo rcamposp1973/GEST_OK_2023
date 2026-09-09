@@ -11,7 +11,8 @@ import {
   FolderTree,
   Eye,
   EyeOff,
-  Layers
+  Layers,
+  ShieldCheck
 } from 'lucide-react';
 
 interface BalanceIFRSViewProps {
@@ -19,6 +20,7 @@ interface BalanceIFRSViewProps {
   vouchers: Voucher[];
   accounts: ChartOfAccount[];
   fiscalYears: FiscalPeriodYear[];
+  onOpenAuditor?: () => void;
 }
 
 interface IFRSAccountLine {
@@ -42,7 +44,8 @@ export default function BalanceIFRSView({
   company,
   vouchers,
   accounts,
-  fiscalYears
+  fiscalYears,
+  onOpenAuditor
 }: BalanceIFRSViewProps) {
   const [periodFilter, setPeriodFilter] = useState<string>('Todos');
   const [dateFrom, setDateFrom] = useState<string>('');
@@ -542,6 +545,16 @@ export default function BalanceIFRSView({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          {onOpenAuditor && (
+            <button
+              onClick={onOpenAuditor}
+              className="px-3 py-1.5 bg-indigo-900 hover:bg-indigo-950 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors shadow-2xs border border-indigo-700"
+              title="Auditar Balance Clasificado IFRS y emitir Dictamen Oficial"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-indigo-300" />
+              <span>Auditar Estados Financieros</span>
+            </button>
+          )}
           <button
             onClick={() => setShowAccountDetails(!showAccountDetails)}
             className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg border border-slate-300 flex items-center gap-1.5 transition-colors shadow-2xs"

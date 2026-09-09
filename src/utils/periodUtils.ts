@@ -129,13 +129,13 @@ export function getNextOpenPeriodAndDate(
 
 /**
  * Devuelve el período de trabajo activo más conveniente.
- * Prioriza el año operativo (por defecto 2026), buscando el mes abierto activo.
+ * Prioriza el año operativo (por defecto 2024), buscando el mes abierto activo.
  */
 export function getLatestOpenPeriod(
   fiscalYears: FiscalPeriodYear[] = [],
-  preferredYear: number = 2026
+  preferredYear: number = 2024
 ): string {
-  // 1. Buscar en el año preferido (ej. 2026)
+  // 1. Buscar en el año preferido (ej. 2024)
   const prefFy = fiscalYears.find(f => Number(f.id || f.year) === preferredYear);
   if (prefFy && prefFy.months) {
     // Buscar los meses abiertos en orden ascendente (el primer mes abierto o el más activo)
@@ -157,7 +157,40 @@ export function getLatestOpenPeriod(
     }
   }
 
-  return `${preferredYear}-01`;
+  return `${preferredYear}-09`;
+}
+
+/**
+ * Devuelve el período inmediatamente siguiente (ej: "2024-09" -> "2024-10", "2024-12" -> "2025-01")
+ */
+export function getNextPeriodStr(periodStr: string): string {
+  if (!periodStr || !periodStr.includes('-')) return '2024-09';
+  const [y, m] = periodStr.split('-').map(Number);
+  if (!y || !m) return periodStr;
+  if (m === 12) return `${y + 1}-01`;
+  return `${y}-${String(m + 1).padStart(2, '0')}`;
+}
+
+/**
+ * Devuelve el período inmediatamente anterior (ej: "2024-09" -> "2024-08", "2025-01" -> "2024-12")
+ */
+export function getPrevPeriodStr(periodStr: string): string {
+  if (!periodStr || !periodStr.includes('-')) return '2024-08';
+  const [y, m] = periodStr.split('-').map(Number);
+  if (!y || !m) return periodStr;
+  if (m === 1) return `${y - 1}-12`;
+  return `${y}-${String(m - 1).padStart(2, '0')}`;
+}
+
+/**
+ * Devuelve el nombre formateado en español para un período (ej: "2024-09" -> "Septiembre de 2024")
+ */
+export function getPeriodFormattedName(periodStr: string): string {
+  if (!periodStr || !periodStr.includes('-')) return periodStr;
+  const [y, m] = periodStr.split('-').map(Number);
+  const monthNames = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  const mName = monthNames[m] || `Mes ${m}`;
+  return `${mName} de ${y}`;
 }
 
 

@@ -70,7 +70,10 @@ export default function PeriodsGrid({
     const monthsData = currentFy?.months || {};
 
     return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(mNum => {
-      const status: 'Abierto' | 'Cerrado' = monthsData[mNum] === 'Cerrado' ? 'Cerrado' : 'Abierto';
+      // Por defecto en nuevo año solo mes 1 (Enero) abierto, resto cerrado salvo definición explícita
+      const status: 'Abierto' | 'Cerrado' = monthsData[mNum] !== undefined
+        ? monthsData[mNum]
+        : (mNum === 1 ? 'Abierto' : 'Cerrado');
       const periodCode = `${selectedYear}-${String(mNum).padStart(2, '0')}`;
       const monthName = MONTH_NAMES[mNum] || `Mes ${mNum}`;
 
@@ -195,17 +198,6 @@ export default function PeriodsGrid({
             <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
             <span>Exportar Excel</span>
           </button>
-        </div>
-      </div>
-
-      {/* REGLA FISCAL SECUENCIAL INFORMATIVA */}
-      <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 flex items-start gap-2.5 shadow-2xs">
-        <span className="text-base leading-none">🔒</span>
-        <div className="space-y-0.5">
-          <span className="font-bold text-amber-950">Regla Fiscal de Cierre Secuencial Obligatorio:</span>
-          <p className="text-[11px] text-amber-800 leading-relaxed">
-            Al cerrar un período mensual, <strong>todos los meses anteriores quedan obligatoriamente cerrados</strong> (ningún mes anterior a un mes cerrado puede permanecer abierto). Los meses cerrados no admiten nuevos asientos, modificaciones ni importaciones de cartola bancaria. Si se contabiliza desde la cartola de un mes cerrado, el sistema imputa automáticamente el asiento al <strong>día 1 del siguiente mes abierto</strong>.
-          </p>
         </div>
       </div>
 

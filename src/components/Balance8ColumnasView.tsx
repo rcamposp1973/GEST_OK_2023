@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Company, Voucher, ChartOfAccount, FiscalPeriodYear } from '../types';
 import { printAndLogOfficialBook } from '../utils/folioService';
+import { ShieldCheck } from 'lucide-react';
 
 interface Balance8ColumnasViewProps {
   studyId?: string;
@@ -8,6 +9,7 @@ interface Balance8ColumnasViewProps {
   vouchers: Voucher[];
   accounts: ChartOfAccount[];
   fiscalYears: FiscalPeriodYear[];
+  onOpenAuditor?: () => void;
 }
 
 interface BalanceRow {
@@ -29,7 +31,8 @@ export default function Balance8ColumnasView({
   company,
   vouchers,
   accounts,
-  fiscalYears
+  fiscalYears,
+  onOpenAuditor
 }: Balance8ColumnasViewProps) {
   const [periodFilter, setPeriodFilter] = useState<string>('Todos');
   const [dateFrom, setDateFrom] = useState<string>('');
@@ -535,6 +538,16 @@ export default function Balance8ColumnasView({
             <span>{isFullyBalanced ? '✓ Balance Cuadrado' : '⚠️ Descuadre Detectado'}</span>
           </div>
 
+          {onOpenAuditor && (
+            <button
+              onClick={onOpenAuditor}
+              className="px-3 py-1.5 bg-indigo-900 hover:bg-indigo-950 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors shadow-2xs border border-indigo-700"
+              title="Auditar este Balance de 8 Columnas y emitir Dictamen Oficial"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-indigo-300" />
+              <span>Auditar Estados Financieros</span>
+            </button>
+          )}
           <button
             onClick={handlePrintOfficialBook}
             disabled={isPrintingOfficial}

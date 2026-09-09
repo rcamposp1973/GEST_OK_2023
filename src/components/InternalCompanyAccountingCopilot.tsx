@@ -162,6 +162,36 @@ export default function InternalCompanyAccountingCopilot({
       };
     }
 
+    // 0. NUEZ MARIPOSA: MOTOR DE CRUCE INTELIGENTE DE CARTOLAS Y CONTABILIZACIÓN POR RUT
+    if (q.includes('nuez') || q.includes('nuez mariposa') || q.includes('mariposa') || q.includes('regla de la nuez') || q.includes('cruce de cartola')) {
+      return {
+        response: `🧠 **Motor Inteligente "Nuez Mariposa" (Aprendizaje de Conciliación por RUT):**\n\n` +
+          `Como tu copiloto **Junior**, aplico las siguientes reglas operativas automatizadas para conciliar y contabilizar la cartola bancaria:\n\n` +
+          `📥 **1. Abonos Bancarios (Ingresos):**\n` +
+          `   • Escaneo el RUT de quien deposita desde la glosa bancaria (ej. \`0105559089\` ➔ \`10.555.908-9\`).\n` +
+          `   • Los comparo contra las **Facturas de Clientes pendientes de cobro en el RCV Ventas** y Auxiliar de Clientes.\n` +
+          `   • Propongo el comprobante de **Ingreso** (\`Banco\` al Debe / \`Clientes Nacionales\` al Haber con RUT y Folio).\n\n` +
+          `📤 **2. Cargos Bancarios (Egresos - Proveedores y Honorarios):**\n` +
+          `   • Si el RUT o glosa corresponde a servicios/boletas, cruzo con **Boletas de Honorarios por Pagar** (\`Honorarios por Pagar\` al Debe / \`Banco\` al Haber).\n` +
+          `   • Si corresponde a compras, cruzo con **Facturas de Proveedores por Pagar** (\`Proveedores Nacionales\` al Debe / \`Banco\` al Haber).\n\n` +
+          `📅 **3. Regla Estricta de Fechas y Períodos Contables:**\n` +
+          `   • Se contabiliza en la fecha original de la cartola.\n` +
+          `   • Si el mes está **CERRADO**, la propuesta se traslada automáticamente al **día 01 del siguiente mes abierto** para resguardar los libros tributarios.\n\n` +
+          `⚖️ **4. Tolerancia y Diferencias Menores a $10:**\n` +
+          `   • Si existe una diferencia menor o igual a **$10** (por redondeo de centavos o comisiones), el comprobante queda **pendiente de registro pero debidamente informado** con advertencia visual para tu aprobación.\n\n` +
+          `🧠 **5. Memoria de Aprendizaje:**\n` +
+          `   • Cada vez que apruebas un cruce en La Nuez, **yo memorizo la contraparte y cuenta asignada** en la memoria aislada de **${company.name}** para que en la próxima cartola el match sea 100% automático.\n\n` +
+          `¿Deseas que abramos el módulo de Conciliación Bancaria para ejecutar la Nuez Mariposa?`,
+        suggestions: [
+          'Abrir Nuez Mariposa en Conciliación',
+          'Ver Facturas Pendientes de Clientes',
+          'Ver Boletas de Honorarios Pendientes',
+          'Revisar Períodos Contables'
+        ],
+        actionLink: { tab: 'conciliacion', label: 'Ir a 🧠 Nuez Mariposa' }
+      };
+    }
+
     // 0.1 BÚSQUEDA DE FACTURAS PENDIENTES POR RUT Y ASISTENCIA EN CONCILIACIÓN BANCARIA (JUNIOR)
     if (
       q.includes('rut') || 

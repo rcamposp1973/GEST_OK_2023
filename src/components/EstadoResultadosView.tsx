@@ -14,7 +14,8 @@ import {
   Calendar,
   Sparkles,
   Percent,
-  Calculator
+  Calculator,
+  ShieldCheck
 } from 'lucide-react';
 
 interface EstadoResultadosViewProps {
@@ -22,6 +23,7 @@ interface EstadoResultadosViewProps {
   vouchers: Voucher[];
   accounts: ChartOfAccount[];
   fiscalYears: FiscalPeriodYear[];
+  onOpenAuditor?: () => void;
 }
 
 interface MonthlyAccountItem {
@@ -43,7 +45,8 @@ export default function EstadoResultadosView({
   company,
   vouchers,
   accounts,
-  fiscalYears
+  fiscalYears,
+  onOpenAuditor
 }: EstadoResultadosViewProps) {
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [showZeroBalances, setShowZeroBalances] = useState<boolean>(false);
@@ -130,34 +133,38 @@ export default function EstadoResultadosView({
       });
     });
 
-    // 1. Rubros Padre IFRS para Ingresos (Código 3)
-    const rubroIngresosOperacionales: IFRSParentRubro = { id: '3101', code: '3101000', name: 'Ingresos de Actividades Ordinarias (Ventas de Bienes y Servicios)', monthlyTotals: new Array(12).fill(0), total: 0, accounts: [] };
-    const rubroOtrosIngresosOp: IFRSParentRubro = { id: '3201', code: '3201000', name: 'Otros Ingresos Fuera de la Explotación', monthlyTotals: new Array(12).fill(0), total: 0, accounts: [] };
-    const rubroIngresosFinancieros: IFRSParentRubro = { id: '3301', code: '3301000', name: 'Ingresos Financieros y Reajustes', monthlyTotals: new Array(12).fill(0), total: 0, accounts: [] };
+    // 1. Rubros Padre IFRS para Ingresos (Código 5 ó 3)
+    const rubroIngresosOperacionales: IFRSParentRubro = { id: '5101', code: '5101000', name: '1. Ingresos de Actividades Ordinarias / Explotación (51xxxxx / 31xxxxx)', monthlyTotals: new Array(12).fill(0), total: 0, accounts: [] };
+    const rubroOtrosIngresosOp: IFRSParentRubro = { id: '5201', code: '5201000', name: 'Otros Ingresos Fuera de la Explotación (52xxxxx / 32xxxxx)', monthlyTotals: new Array(12).fill(0), total: 0, accounts: [] };
+    const rubroIngresosFinancieros: IFRSParentRubro = { id: '5301', code: '5301000', name: 'Ingresos Financieros y Reajustes (53xxxxx / 33xxxxx)', monthlyTotals: new Array(12).fill(0), total: 0, accounts: [] };
 
-    // 2. Rubros Padre IFRS para Costos y Gastos (Código 4 / 5)
-    const rubroCostosVentas: IFRSParentRubro = { id: '4101', code: '4101000', name: 'Costos de Ventas / Costo de Explotación Directo', monthlyTotals: new Array(12).fill(0), total: 0, accounts: [] };
-    const rubroGastosRemuneraciones: IFRSParentRubro = { id: '4201', code: '4201000', name: 'Gastos de Personal y Remuneraciones', monthlyTotals: new Array(12).fill(0), total: 0, accounts: [] };
-    const rubroGastosAdministracion: IFRSParentRubro = { id: '4202', code: '4202000', name: 'Gastos Generales de Administración y Operación', monthlyTotals: new Array(12).fill(0), total: 0, accounts: [] };
-    const rubroDepreciacionAmort: IFRSParentRubro = { id: '4203', code: '4203000', name: 'Depreciación y Amortización (NIC 16 / NIC 38)', monthlyTotals: new Array(12).fill(0), total: 0, accounts: [] };
-    const rubroCostosFinancieros: IFRSParentRubro = { id: '4301', code: '4301000', name: 'Costos Financieros e Intereses', monthlyTotals: new Array(12).fill(0), total: 0, accounts: [] };
-    const rubroOtrosGastosNoOp: IFRSParentRubro = { id: '4401', code: '4401000', name: 'Otros Gastos Fuera de la Explotación / Pérdidas No Operacionales', monthlyTotals: new Array(12).fill(0), total: 0, accounts: [] };
-    const rubroImpuestoRenta: IFRSParentRubro = { id: '4501', code: '4501000', name: 'Gasto por Impuesto a las Ganancias (1ra Categoría)', monthlyTotals: new Array(12).fill(0), total: 0, accounts: [] };
+    // 2. Rubros Padre IFRS para Costos y Gastos (Código 4)
+    const rubroCostosVentas: IFRSParentRubro = { id: '4101', code: '4101000', name: '2. Costos de Ventas / Costo de Explotación Directo (41xxxxx)', monthlyTotals: new Array(12).fill(0), total: 0, accounts: [] };
+    const rubroGastosRemuneraciones: IFRSParentRubro = { id: '4201', code: '4201000', name: 'Gastos de Personal y Remuneraciones (4201xxx)', monthlyTotals: new Array(12).fill(0), total: 0, accounts: [] };
+    const rubroGastosAdministracion: IFRSParentRubro = { id: '4202', code: '4202000', name: 'Gastos Generales y de Administración (4202xxx)', monthlyTotals: new Array(12).fill(0), total: 0, accounts: [] };
+    const rubroDepreciacionAmort: IFRSParentRubro = { id: '4203', code: '4203000', name: 'Depreciación y Amortización (4203xxx)', monthlyTotals: new Array(12).fill(0), total: 0, accounts: [] };
+    const rubroCostosFinancieros: IFRSParentRubro = { id: '4301', code: '4301000', name: 'Costos Financieros e Intereses (43xxxxx)', monthlyTotals: new Array(12).fill(0), total: 0, accounts: [] };
+    const rubroOtrosGastosNoOp: IFRSParentRubro = { id: '4401', code: '4401000', name: 'Otros Gastos Fuera de la Explotación (44xxxxx)', monthlyTotals: new Array(12).fill(0), total: 0, accounts: [] };
+    const rubroImpuestoRenta: IFRSParentRubro = { id: '4501', code: '4501000', name: 'Gasto por Impuesto a las Ganancias (45xxxxx)', monthlyTotals: new Array(12).fill(0), total: 0, accounts: [] };
 
     accMatrix.forEach(({ account, monthlyDebit, monthlyCredit }) => {
       const code = (account.code || '').trim();
       const codePrefix = code.charAt(0);
       const normType = (account.type || '').toLowerCase();
+      const blceCol = (account.blce8Columnas || '').toUpperCase();
       const name = (account.name || '').toLowerCase();
 
       const isIncome = 
-        codePrefix === '3' || 
-        (!['1', '2', '4', '5'].includes(codePrefix) && (normType.includes('ingreso') || normType.includes('ganancia') || normType.includes('venta')));
+        blceCol === 'GANANCIA' ||
+        codePrefix === '5' || 
+        (codePrefix === '3' && (normType.includes('ingreso') || normType.includes('ganancia') || code.startsWith('31') || code.startsWith('32') || code.startsWith('33'))) ||
+        (!['1', '2', '4'].includes(codePrefix) && (normType.includes('ingreso') || normType.includes('ganancia') || normType.includes('venta')));
       
       const isExpense = 
+        blceCol === 'PERDIDA' ||
+        blceCol === 'PÉRDIDA' ||
         codePrefix === '4' || 
-        codePrefix === '5' || 
-        (!['1', '2', '3'].includes(codePrefix) && (normType.includes('gasto') || normType.includes('costo') || normType.includes('perdida') || normType.includes('impuesto')));
+        (!['1', '2', '3', '5'].includes(codePrefix) && (normType.includes('gasto') || normType.includes('costo') || normType.includes('perdida') || normType.includes('pérdida') || normType.includes('impuesto')));
 
       if (!isIncome && !isExpense) return;
 
@@ -170,15 +177,16 @@ export default function EstadoResultadosView({
 
         const item: MonthlyAccountItem = { account, months, total };
 
-        if (name.includes('financiero') || name.includes('interes') || name.includes('diferencia de cambio') || code.startsWith('33') || code.startsWith('3.3')) {
+        if (code.startsWith('53') || code.startsWith('5.3') || code.startsWith('33') || code.startsWith('3.3') || name.includes('financiero') || name.includes('interes') || name.includes('diferencia de cambio')) {
           rubroIngresosFinancieros.accounts.push(item);
           rubroIngresosFinancieros.total += total;
           months.forEach((v, idx) => { rubroIngresosFinancieros.monthlyTotals[idx] += v; });
-        } else if (name.includes('otro ingreso') || name.includes('otra ganancia') || name.includes('no operacional') || code.startsWith('32') || code.startsWith('3.2')) {
+        } else if (code.startsWith('52') || code.startsWith('5.2') || code.startsWith('32') || code.startsWith('3.2') || name.includes('fuera de la explotacion') || name.includes('fuera de explotacion') || name.includes('no operacional') || name.includes('otro ingreso') || name.includes('otra ganancia')) {
           rubroOtrosIngresosOp.accounts.push(item);
           rubroOtrosIngresosOp.total += total;
           months.forEach((v, idx) => { rubroOtrosIngresosOp.monthlyTotals[idx] += v; });
         } else {
+          // 51xxxxx o 31xxxxx -> Ingresos de la Explotación / Actividades Ordinarias
           rubroIngresosOperacionales.accounts.push(item);
           rubroIngresosOperacionales.total += total;
           months.forEach((v, idx) => { rubroIngresosOperacionales.monthlyTotals[idx] += v; });
@@ -192,30 +200,30 @@ export default function EstadoResultadosView({
 
         const item: MonthlyAccountItem = { account, months, total };
 
-        if (name.includes('impuesto a la renta') || name.includes('impuesto 1da') || name.includes('impuesto primera') || code.startsWith('45') || code.startsWith('4.5') || code.startsWith('54')) {
+        if (code.startsWith('45') || code.startsWith('4.5') || name.includes('impuesto a la renta') || name.includes('impuesto 1da') || name.includes('impuesto primera')) {
           rubroImpuestoRenta.accounts.push(item);
           rubroImpuestoRenta.total += total;
           months.forEach((v, idx) => { rubroImpuestoRenta.monthlyTotals[idx] += v; });
-        } else if (name.includes('financiero') || name.includes('interes') || name.includes('gasto bancario') || code.startsWith('43') || code.startsWith('4.3')) {
+        } else if (code.startsWith('43') || code.startsWith('4.3') || name.includes('gasto bancario') || name.includes('interes pagado') || (name.includes('financiero') && !name.includes('ingreso'))) {
           rubroCostosFinancieros.accounts.push(item);
           rubroCostosFinancieros.total += total;
           months.forEach((v, idx) => { rubroCostosFinancieros.monthlyTotals[idx] += v; });
-        } else if (name.includes('costo de venta') || name.includes('costo directo') || name.includes('costo explotacion') || name.includes('mercaderia vendida') || code.startsWith('41') || code.startsWith('4.1')) {
-          rubroCostosVentas.accounts.push(item);
-          rubroCostosVentas.total += total;
-          months.forEach((v, idx) => { rubroCostosVentas.monthlyTotals[idx] += v; });
-        } else if (name.includes('depreciaci') || name.includes('amortizaci') || code.startsWith('4203') || code.startsWith('4.2.03')) {
-          rubroDepreciacionAmort.accounts.push(item);
-          rubroDepreciacionAmort.total += total;
-          months.forEach((v, idx) => { rubroDepreciacionAmort.monthlyTotals[idx] += v; });
-        } else if (name.includes('sueldo') || name.includes('remuneraci') || name.includes('honorario') || name.includes('previred') || name.includes('imposicion') || code.startsWith('4201') || code.startsWith('4.2.01')) {
-          rubroGastosRemuneraciones.accounts.push(item);
-          rubroGastosRemuneraciones.total += total;
-          months.forEach((v, idx) => { rubroGastosRemuneraciones.monthlyTotals[idx] += v; });
-        } else if (name.includes('otro gasto') || name.includes('otra perdida') || name.includes('multa') || code.startsWith('44') || code.startsWith('4.4')) {
+        } else if (code.startsWith('44') || code.startsWith('4.4') || name.includes('fuera de explotacion') || name.includes('otro gasto') || name.includes('otra perdida') || name.includes('multa')) {
           rubroOtrosGastosNoOp.accounts.push(item);
           rubroOtrosGastosNoOp.total += total;
           months.forEach((v, idx) => { rubroOtrosGastosNoOp.monthlyTotals[idx] += v; });
+        } else if (code.startsWith('41') || code.startsWith('4.1') || name.includes('costo de venta') || name.includes('costo directo') || name.includes('costo explotacion') || name.includes('mercaderia vendida')) {
+          rubroCostosVentas.accounts.push(item);
+          rubroCostosVentas.total += total;
+          months.forEach((v, idx) => { rubroCostosVentas.monthlyTotals[idx] += v; });
+        } else if (code.startsWith('4203') || code.startsWith('4.2.03') || name.includes('depreciaci') || name.includes('amortizaci')) {
+          rubroDepreciacionAmort.accounts.push(item);
+          rubroDepreciacionAmort.total += total;
+          months.forEach((v, idx) => { rubroDepreciacionAmort.monthlyTotals[idx] += v; });
+        } else if (code.startsWith('4201') || code.startsWith('4.2.01') || name.includes('sueldo') || name.includes('remuneraci') || name.includes('previred') || name.includes('imposicion')) {
+          rubroGastosRemuneraciones.accounts.push(item);
+          rubroGastosRemuneraciones.total += total;
+          months.forEach((v, idx) => { rubroGastosRemuneraciones.monthlyTotals[idx] += v; });
         } else {
           rubroGastosAdministracion.accounts.push(item);
           rubroGastosAdministracion.total += total;
@@ -329,22 +337,27 @@ export default function EstadoResultadosView({
       ['ESTADO DE RESULTADOS POR FUNCIÓN (ESTÁNDAR IFRS / NIIF)', `"${company.name}"`, `RUT: ${company.rut}`, `Año: ${selectedYear}`],
       [''],
       headers,
-      ['1. INGRESOS DE ACTIVIDADES ORDINARIAS (VENTAS)', '3101000', '', ...statementData.monthly.opRevenues.map(v => v.toString()), statementData.totals.opRevenues.toString()],
+      ['1. INGRESOS DE ACTIVIDADES ORDINARIAS / EXPLOTACIÓN (51xxxxx)', '5101000', '', ...statementData.monthly.opRevenues.map(v => v.toString()), statementData.totals.opRevenues.toString()],
       ...statementData.rubros.ingresosOperacionales.accounts.map(a => ['', `"${a.account.code}"`, `"${a.account.name}"`, ...a.months.map(v => v.toString()), a.total.toString()]),
-      ['2. COSTO DE VENTAS / COSTO DE EXPLOTACIÓN', '4101000', '', ...statementData.monthly.costOfSales.map(v => v.toString()), statementData.totals.costOfSales.toString()],
+      ['2. COSTO DE VENTAS / COSTO DE EXPLOTACIÓN (41xxxxx)', '4101000', '', ...statementData.monthly.costOfSales.map(v => v.toString()), statementData.totals.costOfSales.toString()],
       ...statementData.rubros.costosVentas.accounts.map(a => ['', `"${a.account.code}"`, `"${a.account.name}"`, ...a.months.map(v => v.toString()), a.total.toString()]),
       ['(=) MARGEN OPERACIONAL (GANANCIA BRUTA)', '', '', ...statementData.monthly.grossMargin.map(v => v.toString()), statementData.totals.grossMargin.toString()],
-      ['3. GASTOS DE ADMINISTRACIÓN Y VENTAS', '4200000', '', ...statementData.monthly.opExpenses.map(v => v.toString()), statementData.totals.opExpenses.toString()],
-      ...statementData.rubros.gastosRemuneraciones.accounts.map(a => ['  Remuneraciones', `"${a.account.code}"`, `"${a.account.name}"`, ...a.months.map(v => v.toString()), a.total.toString()]),
-      ...statementData.rubros.gastosAdministracion.accounts.map(a => ['  Administración', `"${a.account.code}"`, `"${a.account.name}"`, ...a.months.map(v => v.toString()), a.total.toString()]),
-      ...statementData.rubros.depreciacionAmort.accounts.map(a => ['  Depreciación', `"${a.account.code}"`, `"${a.account.name}"`, ...a.months.map(v => v.toString()), a.total.toString()]),
+      ['3. GASTOS DE ADMINISTRACIÓN Y VENTAS (42xxxxx)', '4200000', '', ...statementData.monthly.opExpenses.map(v => v.toString()), statementData.totals.opExpenses.toString()],
+      ...statementData.rubros.gastosRemuneraciones.accounts.map(a => ['  Remuneraciones (4201xxx)', `"${a.account.code}"`, `"${a.account.name}"`, ...a.months.map(v => v.toString()), a.total.toString()]),
+      ...statementData.rubros.gastosAdministracion.accounts.map(a => ['  Administración (4202xxx)', `"${a.account.code}"`, `"${a.account.name}"`, ...a.months.map(v => v.toString()), a.total.toString()]),
+      ...statementData.rubros.depreciacionAmort.accounts.map(a => ['  Depreciación (4203xxx)', `"${a.account.code}"`, `"${a.account.name}"`, ...a.months.map(v => v.toString()), a.total.toString()]),
       ['(=) RESULTADO OPERACIONAL (EBIT)', '', '', ...statementData.monthly.operatingResult.map(v => v.toString()), statementData.totals.operatingResult.toString()],
-      ['4. INGRESOS FINANCIEROS', '3301000', '', ...statementData.monthly.finInc.map(v => v.toString()), statementData.totals.finInc.toString()],
-      ['5. COSTOS FINANCIEROS', '4301000', '', ...statementData.monthly.finCosts.map(v => v.toString()), statementData.totals.finCosts.toString()],
-      ['6. OTROS INGRESOS', '3201000', '', ...statementData.monthly.otherInc.map(v => v.toString()), statementData.totals.otherInc.toString()],
-      ['7. OTROS GASTOS', '4401000', '', ...statementData.monthly.otherExp.map(v => v.toString()), statementData.totals.otherExp.toString()],
-      ['(=) RESULTADO ANTES DE IMPUESTO', '', '', ...statementData.monthly.profitBeforeTax.map(v => v.toString()), statementData.totals.profitBeforeTax.toString()],
-      ['8. IMPUESTO A LA RENTA (1RA CATEGORÍA)', '4501000', '', ...statementData.monthly.incomeTax.map(v => v.toString()), statementData.totals.incomeTax.toString()],
+      ['4. OTROS INGRESOS FUERA DE LA EXPLOTACIÓN (52xxxxx)', '5201000', '', ...statementData.monthly.otherInc.map(v => v.toString()), statementData.totals.otherInc.toString()],
+      ...statementData.rubros.otrosIngresosOp.accounts.map(a => ['', `"${a.account.code}"`, `"${a.account.name}"`, ...a.months.map(v => v.toString()), a.total.toString()]),
+      ['5. INGRESOS FINANCIEROS Y REAJUSTES (53xxxxx)', '5301000', '', ...statementData.monthly.finInc.map(v => v.toString()), statementData.totals.finInc.toString()],
+      ...statementData.rubros.ingresosFinancieros.accounts.map(a => ['', `"${a.account.code}"`, `"${a.account.name}"`, ...a.months.map(v => v.toString()), a.total.toString()]),
+      ['6. COSTOS FINANCIEROS E INTERESES (43xxxxx)', '4301000', '', ...statementData.monthly.finCosts.map(v => v.toString()), statementData.totals.finCosts.toString()],
+      ...statementData.rubros.costosFinancieros.accounts.map(a => ['', `"${a.account.code}"`, `"${a.account.name}"`, ...a.months.map(v => v.toString()), a.total.toString()]),
+      ['7. OTROS GASTOS FUERA DE LA EXPLOTACIÓN (44xxxxx)', '4401000', '', ...statementData.monthly.otherExp.map(v => v.toString()), statementData.totals.otherExp.toString()],
+      ...statementData.rubros.otrosGastosNoOp.accounts.map(a => ['', `"${a.account.code}"`, `"${a.account.name}"`, ...a.months.map(v => v.toString()), a.total.toString()]),
+      ['(=) RESULTADO ANTES DE IMPUESTO A LAS GANANCIAS', '', '', ...statementData.monthly.profitBeforeTax.map(v => v.toString()), statementData.totals.profitBeforeTax.toString()],
+      ['8. GASTO POR IMPUESTO A LAS GANANCIAS (45xxxxx)', '4501000', '', ...statementData.monthly.incomeTax.map(v => v.toString()), statementData.totals.incomeTax.toString()],
+      ...statementData.rubros.impuestoRenta.accounts.map(a => ['', `"${a.account.code}"`, `"${a.account.name}"`, ...a.months.map(v => v.toString()), a.total.toString()]),
       ['(=) RESULTADO NETO DEL EJERCICIO', '', '', ...statementData.monthly.netIncome.map(v => v.toString()), statementData.totals.netIncome.toString()]
     ];
 
@@ -439,6 +452,16 @@ export default function EstadoResultadosView({
             </button>
           </div>
 
+          {onOpenAuditor && (
+            <button
+              onClick={onOpenAuditor}
+              className="px-3 py-1.5 bg-indigo-900 hover:bg-indigo-950 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors shadow-2xs border border-indigo-700"
+              title="Auditar Estado de Resultados y emitir Dictamen Oficial"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-indigo-300" />
+              <span>Auditar Estados Financieros</span>
+            </button>
+          )}
           <button
             onClick={() => setShowAccountDetails(!showAccountDetails)}
             className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg border border-slate-300 flex items-center gap-1.5 transition-colors shadow-2xs"
@@ -586,7 +609,7 @@ export default function EstadoResultadosView({
             {/* BLOQUE 1: INGRESOS OPERACIONALES */}
             <div>
               <div className="flex justify-between items-center text-xs font-bold text-slate-800 uppercase tracking-wide border-b border-slate-200 pb-1 mb-2">
-                <span>1. Ingresos de Actividades Ordinarias (31xxxxx)</span>
+                <span>1. Ingresos de Actividades Ordinarias / Explotación (51xxxxx / 31xxxxx)</span>
                 <span className="font-mono text-emerald-700">${statementData.totals.opRevenues.toLocaleString('es-CL')}</span>
               </div>
               {renderRubroLine(statementData.rubros.ingresosOperacionales)}
@@ -630,7 +653,7 @@ export default function EstadoResultadosView({
             <div className="bg-slate-100 p-3 rounded-xl flex justify-between items-center border border-slate-300">
               <div>
                 <span className="text-xs font-black uppercase text-slate-800">(=) RESULTADO OPERACIONAL (EBIT)</span>
-                <p className="text-[11px] text-slate-500">Resultado antes de partidas financieras e impuestos</p>
+                <p className="text-[11px] text-slate-500">Resultado antes de partidas no operacionales e impuestos</p>
               </div>
               <div className="font-mono font-black text-base text-slate-900">
                 ${statementData.totals.operatingResult.toLocaleString('es-CL')}
@@ -640,14 +663,15 @@ export default function EstadoResultadosView({
             {/* BLOQUE 4: RESULTADOS FUERA DE EXPLOTACIÓN */}
             <div>
               <div className="flex justify-between items-center text-xs font-bold text-slate-800 uppercase tracking-wide border-b border-slate-200 pb-1 mb-2">
-                <span>4. Resultados Fuera de la Explotación (Financieros y Otros)</span>
+                <span>4. Resultados Fuera de la Explotación (52xxxxx Otros Ingresos, 53xxxxx Financieros y Gastos No Op.)</span>
                 <span className="font-mono text-slate-700">
-                  ${(statementData.totals.finInc - statementData.totals.finCosts + statementData.totals.otherInc - statementData.totals.otherExp).toLocaleString('es-CL')}
+                  ${(statementData.totals.otherInc + statementData.totals.finInc - statementData.totals.finCosts - statementData.totals.otherExp).toLocaleString('es-CL')}
                 </span>
               </div>
+              {/* 52 Otros Ingresos Fuera de la Explotación va primero, después de gastos de administración */}
+              {renderRubroLine(statementData.rubros.otrosIngresosOp)}
               {renderRubroLine(statementData.rubros.ingresosFinancieros)}
               {renderRubroLine(statementData.rubros.costosFinancieros, true)}
-              {renderRubroLine(statementData.rubros.otrosIngresosOp)}
               {renderRubroLine(statementData.rubros.otrosGastosNoOp, true)}
             </div>
 

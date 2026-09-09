@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { FormattedAmountInput } from './FormattedAmountInput';
 import {
   VoucherLine,
   ChartOfAccount,
@@ -459,12 +460,11 @@ export default function VoucherLineDistributionModal({
 
                     {/* Amount Input */}
                     <td className="p-2 text-right">
-                      <input
-                        type="number"
-                        min="0"
-                        value={sub.amount}
-                        onChange={e => handleAmountChange(idx, parseFloat(e.target.value) || 0)}
-                        className="border border-slate-300 p-1.5 w-full rounded text-xs text-right font-mono font-bold text-indigo-900 focus:ring-1 focus:ring-indigo-500"
+                      <FormattedAmountInput
+                        value={sub.amount || 0}
+                        placeholder="0"
+                        onChange={val => handleAmountChange(idx, val)}
+                        className="border border-slate-300 p-1.5 w-full rounded text-xs text-right font-mono font-bold text-indigo-900 focus:ring-1 focus:ring-indigo-500 bg-white"
                       />
                     </td>
 

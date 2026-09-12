@@ -17,11 +17,34 @@ export interface SuperUser {
   createdAt?: string;
 }
 
+export interface StudyModulePermissions {
+  contabilidadBase?: boolean; // Vouchers, Diario, Mayor, Auxiliares, Balance 8 Columnas
+  ifrsAuditoria?: boolean; // Balance IFRS, Estado de Resultados, Dictamen Auditor
+  rcvSii?: boolean; // RCV SII Compras, Ventas, BHR, sincronización
+  formulario29?: boolean; // F29 oficial con códigos SII y propuesta
+  cartolasBancarias?: boolean; // Importación masiva cartolas bancarias Excel/CSV
+  conciliacionBancaria?: boolean; // Conciliación bancaria inteligente
+  tesoreria?: boolean; // Nóminas de pago proveedores, Cobranza
+  kpisIndicadores?: boolean; // Tablero KPIs, Ratios, Flujo de Caja Proyectado
+  comercialInventario?: boolean; // Facturación DTE, Inventario Kardex PMP, Catálogo
+  remuneraciones?: boolean; // Personal, Liquidaciones, Previred, LRD DT
+  visorClientes?: boolean; // Portal / Visor seguro para clientes del estudio
+  copilotoIA?: boolean; // Cuadernos inteligentes y Copiloto IA
+  [key: string]: boolean | undefined;
+}
+
+export type StudySubscriptionStatus = 'Vigente' | 'Solo_Lectura' | 'Suspendido_Pago' | 'Sin_Vigencia';
+
 export interface Plan {
   id: string;
   name: string;
+  code?: string;
+  priceUF?: number | null;
+  priceText?: string;
   maxCompanies: number;
   maxUsers: number;
+  defaultModules?: StudyModulePermissions;
+  features?: string[];
 }
 
 export interface StudyAdmin {
@@ -40,8 +63,15 @@ export interface Study {
   id: string;
   name: string;
   planId?: string;
+  planCode?: string; // PLAN_ENTRADA, PLAN_ESTUDIO_10, PLAN_ESTUDIO_FULL, PLAN_CORPORATIVO, CUSTOM
+  planName?: string;
+  subscriptionStatus?: StudySubscriptionStatus; // Vigente, Solo_Lectura (Gracia), Suspendido_Pago (Bloqueado)
+  paymentNotes?: string;
+  nextBillingDate?: string;
   maxCompanies?: number; // Cantidad límite de empresas permitidas
   maxUsers?: number; // Cantidad límite de usuarios permitidos
+  modules?: StudyModulePermissions; // Matriz de accesos y módulos contratados
+  customAddons?: { [key: string]: boolean }; // Adicionales contratados expresamente
   rut: string;
   address: string;
   phone: string;
@@ -158,6 +188,7 @@ export interface Company {
   id: string;
   studyId: string;
   name: string; // Razón Social
+  razonSocial?: string; // Alias Razón Social
   fantasyName?: string; // Nombre Fantasía
   rut: string; // RUT
   giro?: string; // Giro / Actividad Económica
@@ -172,6 +203,9 @@ export interface Company {
   contactName?: string; // Contacto Operativo Nombre
   contactPhone?: string; // Contacto Operativo Teléfono
   estado?: 'Activo' | 'Inactivo';
+  isEmpresaConstructora?: boolean; // Tratamiento especial constructoras (CEEC Art. 21 DL 910)
+  initialRemanenteUTM?: number; // Remanente inicial de apertura en UTM
+  initialRemanentePesos?: number; // Remanente inicial de apertura en Pesos
   f29CodeSettings?: { [key: string]: boolean };
   f29AccountParams?: F29AccountingParams;
   customF29Codes?: CustomF29Code[];
@@ -183,6 +217,8 @@ export interface Company {
   regimenTributario?: string;
   tasaPpm?: number;
   ppmRateHistory?: { rate: number; effectiveFrom: string }[];
+  modules?: StudyModulePermissions; // Configuración o personalización modular por empresa
+  subscriptionStatus?: 'Vigente' | 'Solo_Lectura' | 'Suspendido_Pago' | 'Activo' | 'Inactivo';
 }
 
 export interface Assignment {
@@ -314,6 +350,7 @@ export interface RCVDocument {
   nombreTipoDoc?: string;
   folio: string;
   fechaEmision: string; // YYYY-MM-DD
+  date?: string; // Compatibilidad YYYY-MM-DD
   fechaVencimiento?: string; // YYYY-MM-DD
   montoNeto: number; // Para Compras/Ventas: Neto afecto. Para Honorarios: Bruto
   montoIva: number; // Para Compras/Ventas: IVA (Débito/Crédito). Para Honorarios: Retención (13.75%/14.5%/15.25%)
@@ -606,6 +643,7 @@ export interface F29DebitoFiscal {
   debitoBoletasEmitidas: number; // Cód 110 / 111
   debitoNotasDebito: number; // Cód 512 / 513
   creditoNotasCreditoEmitidas: number; // Cód 509 / 510
+  ceecCreditoConstructora?: number; // Cód 126 / 128 (-) Crédito Especial Empresas Constructoras Art. 21 DL 910
   totalDebitoFiscal: number; // Cód 538
   ventasExentasTotal: number; // Cód 585 / 142
   docsCount: number;
@@ -1222,7 +1260,11 @@ export interface LandingPricingPlan {
   name: string;
   subtitle?: string;
   price?: string;
+  priceUF?: number | null;
+  priceText?: string;
   billingPeriod?: string;
+  maxCompanies?: number;
+  maxUsers?: number;
   features: string[];
   ctaText?: string;
   highlighted?: boolean;

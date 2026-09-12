@@ -8,6 +8,7 @@ import {
   ProductMaster, 
   CustomAnalysisTableItem 
 } from '../types';
+import { formatRut } from '../utils/rutMatcher';
 import { 
   X, 
   Building2, 
@@ -147,7 +148,7 @@ export default function AuxiliaryModal({
 
   // RUT Formatter
   const handleRutChange = (val: string) => {
-    setRut(val.toUpperCase());
+    setRut(formatRut(val));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -163,7 +164,7 @@ export default function AuxiliaryModal({
       setSaving(true);
       setErrorMessage('');
       await onSave({
-        rut: rut.trim().toUpperCase(),
+        rut: formatRut(rut),
         name: name.trim().toUpperCase(),
         role,
         email: email.trim().toLowerCase(),
@@ -246,7 +247,8 @@ export default function AuxiliaryModal({
                   type="text"
                   value={rut}
                   onChange={(e) => handleRutChange(e.target.value)}
-                  placeholder="Ej. 76123456-7"
+                  onBlur={(e) => setRut(formatRut(e.target.value))}
+                  placeholder="Ej. 76.123.456-7"
                   required
                   disabled={isReadOnly}
                   className="w-full px-3 py-2 text-xs font-mono font-bold border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 focus:bg-white"

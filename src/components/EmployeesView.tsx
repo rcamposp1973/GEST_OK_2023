@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { Employee, ContractType, PensionSystem, HealthSystem, HealthPlanType, ApvType, TramoCargaFamiliar, CostCenterMaster } from '../types';
 import { DEFAULT_AFP_COMMISSIONS } from '../utils/payrollCalculator';
+import { formatRut } from '../utils/rutMatcher';
 
 export function generateChileanEmploymentContract(
   emp: Employee,
@@ -1629,7 +1630,8 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
                       required
                       placeholder="12.345.678-9"
                       value={formData.rut}
-                      onChange={(e) => setFormData({ ...formData, rut: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, rut: formatRut(e.target.value) })}
+                      onBlur={(e) => setFormData({ ...formData, rut: formatRut(e.target.value) })}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                     />
                   </div>

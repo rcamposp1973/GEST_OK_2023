@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Search, X, Check, User, Building2 } from 'lucide-react';
 import { Auxiliary } from '../types';
+import { formatRut, cleanRutString } from '../utils/rutMatcher';
 
 interface SearchableAuxiliarySelectProps {
   auxiliaries: Auxiliary[];
@@ -115,7 +116,7 @@ export function SearchableAuxiliarySelect({
             {valueRut ? (
               <div className="flex items-center gap-1.5 truncate">
                 <span className="font-mono font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded text-[11px] shrink-0">
-                  {valueRut}
+                  {formatRut(valueRut)}
                 </span>
                 <span className="truncate font-medium text-slate-900">
                   {valueName || currentAux?.name || 'Sin Razón Social'}
@@ -193,7 +194,7 @@ export function SearchableAuxiliarySelect({
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
                             <span className="font-mono font-bold text-xs text-indigo-900 bg-indigo-50/80 px-1 rounded">
-                              {aux.rut}
+                              {formatRut(aux.rut)}
                             </span>
                             {aux.role && (
                               <span className="text-[10px] uppercase font-semibold text-slate-500 bg-slate-100 px-1 rounded">
@@ -245,7 +246,8 @@ export function SearchableAuxiliarySelect({
             type="text"
             placeholder="RUT Ej. 76.123.456-7"
             value={valueRut}
-            onChange={(e) => onManualRutChange(e.target.value.toUpperCase())}
+            onChange={(e) => onManualRutChange(formatRut(e.target.value))}
+            onBlur={(e) => onManualRutChange(formatRut(e.target.value))}
             disabled={disabled}
             className={`p-1.5 border rounded-lg text-xs font-mono uppercase transition-colors ${
               disabled

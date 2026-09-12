@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
-import { collection, getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc, setDoc } from 'firebase/firestore';
 import { User, Company, UserRole, Assignment, Study, ChartOfAccount, Voucher, RCVDocument, BankReconciliation, FiscalPeriodYear, DTEConfig } from '../types';
 import CompanyAccountingDashboard from './CompanyAccountingDashboard';
 import ClientExecutiveManagementView from './ClientExecutiveManagementView';
 import { ShieldAlert, Users, Building2, UserCheck, Shield, Key, LogOut, Trash2, RefreshCw, AlertTriangle, CheckCircle2, Lock, Eye, EyeOff, FileText, Upload, Sparkles, Server, Check, ArrowRight, Activity } from 'lucide-react';
 import ChangePasswordModal from './ChangePasswordModal';
 import { isTestStudy, executeTestStudyDataPurge, TestStudyPurgeStats } from '../utils/testStudyPurgeUtils';
+import { formatRut } from '../utils/rutMatcher';
 
 export interface StudyAdminDashboardProps {
   studyId: string;
@@ -443,7 +444,7 @@ export default function StudyAdminDashboard({
     }
     const name = companyFormData.name.trim();
     const fantasyName = companyFormData.fantasyName.trim();
-    const rut = companyFormData.rut.toLowerCase().trim();
+    const rut = formatRut(companyFormData.rut);
     const giro = companyFormData.giro.trim();
     const address = companyFormData.address.trim();
     const comuna = companyFormData.comuna.trim();
@@ -451,7 +452,7 @@ export default function StudyAdminDashboard({
     const phone = companyFormData.phone.trim();
 
     const legalRepName = companyFormData.legalRepName.trim();
-    const legalRepRut = companyFormData.legalRepRut.toLowerCase().trim();
+    const legalRepRut = formatRut(companyFormData.legalRepRut);
     const legalRepEmail = companyFormData.legalRepEmail.trim();
 
     const contactName = companyFormData.contactName.trim();
@@ -484,7 +485,7 @@ export default function StudyAdminDashboard({
     setIsSavingCompany(true);
     try {
       const existingDteConfig = (editingCompany?.dteConfig || {}) as Partial<DTEConfig>;
-      const repRutClean = (companyFormData.rutRepresentanteSii || legalRepRut || rut).trim();
+      const repRutClean = formatRut(companyFormData.rutRepresentanteSii || legalRepRut || rut);
       const repClaveClean = companyFormData.claveRepLegalSii.trim();
       const compClaveClean = companyFormData.claveEmpresaSii.trim();
       const certClaveClean = companyFormData.claveCertificadoDigital.trim();
@@ -547,7 +548,21 @@ export default function StudyAdminDashboard({
           createdAt: new Date()
         });
         targetCompanyId = compRef.id;
-        alert('Empresa registrada exitosamente.');
+
+        // Inicializar todos los períodos contables 2025-2028 CERRADOS por defecto
+        const defaultClosedMonths: { [m: number]: 'Abierto' | 'Cerrado' } = {};
+        for (let m = 1; m <= 12; m++) {
+          defaultClosedMonths[m] = 'Cerrado';
+        }
+        for (const yr of [2025, 2026, 2027, 2028]) {
+          await setDoc(doc(compRef, 'fiscalPeriods', String(yr)), {
+            id: String(yr),
+            year: yr,
+            months: defaultClosedMonths
+          });
+        }
+
+        alert('Empresa registrada exitosamente. Todos los períodos contables 2025-2028 han sido inicializados cerrados por defecto.');
       }
 
       // Synchronize with 'assignments' collection
@@ -1196,7 +1211,8 @@ export default function StudyAdminDashboard({
                           <input
                             name="rut"
                             value={companyFormData.rut}
-                            onChange={(e) => setCompanyFormData(prev => ({ ...prev, rut: e.target.value }))}
+                            onChange={(e) => setCompanyFormData(prev => ({ ...prev, rut: formatRut(e.target.value) }))}
+                            onBlur={(e) => setCompanyFormData(prev => ({ ...prev, rut: formatRut(e.target.value) }))}
                             placeholder="Ej. 76.123.456-7"
                             required
                             className="border border-slate-300 p-2.5 w-full rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono"
@@ -1300,7 +1316,8 @@ export default function StudyAdminDashboard({
                               <input
                                 name="legalRepRut"
                                 value={companyFormData.legalRepRut}
-                                onChange={(e) => setCompanyFormData(prev => ({ ...prev, legalRepRut: e.target.value, rutRepresentanteSii: prev.rutRepresentanteSii || e.target.value }))}
+                                onChange={(e) => setCompanyFormData(prev => ({ ...prev, legalRepRut: formatRut(e.target.value), rutRepresentanteSii: prev.rutRepresentanteSii || formatRut(e.target.value) }))}
+                                onBlur={(e) => setCompanyFormData(prev => ({ ...prev, legalRepRut: formatRut(e.target.value), rutRepresentanteSii: prev.rutRepresentanteSii || formatRut(e.target.value) }))}
                                 placeholder="Ej. 12.345.678-9"
                                 className="border border-slate-300 p-2 w-full rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono bg-white"
                               />
@@ -1398,7 +1415,8 @@ export default function StudyAdminDashboard({
                             <input
                               type="text"
                               value={companyFormData.rutRepresentanteSii || companyFormData.legalRepRut}
-                              onChange={(e) => setCompanyFormData(prev => ({ ...prev, rutRepresentanteSii: e.target.value }))}
+                              onChange={(e) => setCompanyFormData(prev => ({ ...prev, rutRepresentanteSii: formatRut(e.target.value) }))}
+                              onBlur={(e) => setCompanyFormData(prev => ({ ...prev, rutRepresentanteSii: formatRut(e.target.value) }))}
                               placeholder="Ej. 12.345.678-9"
                               className="w-full border border-slate-300 rounded-lg p-2.5 text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                             />

@@ -44,6 +44,7 @@ import { useProcess } from '../context/ProcessContext';
 import { validateVoucherLine, isCustomAnalysisRequired, sanitizeVoucherLine, sanitizeVoucherLines } from '../utils/voucherValidation';
 import { getLatestOpenPeriod, checkIsPeriodClosed as checkIsPeriodClosedUtil, getNextOpenPeriodAndDate } from '../utils/periodUtils';
 import { fetchRcvFromSii } from '../utils/siiRcvClient';
+import { formatRut } from '../utils/rutMatcher';
 import { 
   FileText, BookOpen, Layers, Users, Sliders, Scale, Printer, 
   FolderTree, CreditCard, Receipt, TrendingUp, Landmark, ShoppingCart, 
@@ -766,12 +767,6 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
       const fySnap = await getDocs(collection(companyRef, 'fiscalPeriods'));
       const loadedFys = fySnap.docs.map(d => ({ ...d.data(), id: d.id } as FiscalPeriodYear));
       setFiscalYears(loadedFys);
-      const latestOpenPeriod = getLatestOpenPeriod(loadedFys, 2024);
-      if (latestOpenPeriod) {
-        setSelectedRcvPeriod(latestOpenPeriod);
-        const y = parseInt(latestOpenPeriod.split('-')[0], 10);
-        if (y && y <= 2026) setSelectedYear(y);
-      }
 
       const rcvSnap = await getDocs(collection(companyRef, 'rcvDocuments'));
       
@@ -966,24 +961,6 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
     };
   }, [studyId, company.id]);
 
-  // Sincronización automática del Mes Activo para que siempre apunte a un período abierto válido
-  useEffect(() => {
-    if (fiscalYears.length > 0) {
-      const fy = fiscalYears.find(f => f.id === String(selectedYear));
-      const currParts = selectedRcvPeriod.split('-');
-      const currYear = parseInt(currParts[0], 10);
-      const currMonth = parseInt(currParts[1], 10);
-
-      // Si el mes seleccionado pertenece a otro año, o si está cerrado, auto-seleccionar el mejor mes abierto
-      if (currYear !== selectedYear || (fy && fy.months && fy.months[currMonth] === 'Cerrado')) {
-        const bestMonth = getBestActiveMonthForYear(selectedYear, fiscalYears);
-        if (bestMonth !== selectedRcvPeriod) {
-          setSelectedRcvPeriod(bestMonth);
-        }
-      }
-    }
-  }, [fiscalYears, selectedYear, selectedRcvPeriod]);
-
   const processImportBatch = async (batchDocs: Omit<RCVDocument, 'id'>[]) => {
     try {
       let loaded = 0;
@@ -1119,25 +1096,42 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
 
   // Helper to normalize Chilean date formats (DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD)
   const normalizeChileanDate = (rawDate: string, defaultPeriod: string): { dateStr: string; periodStr: string } => {
+    // Validar defaultPeriod (debe ser formato YYYY-MM en rango 2025-2028)
+    let safeDefaultPeriod = defaultPeriod;
+    const defParts = (defaultPeriod || '').split('-');
+    const defYear = parseInt(defParts[0], 10);
+    const defMonth = parseInt(defParts[1], 10);
+    if (isNaN(defYear) || defYear < 2025 || defYear > 2028 || isNaN(defMonth) || defMonth < 1 || defMonth > 12) {
+      safeDefaultPeriod = '2026-01';
+    }
+
     if (!rawDate || !rawDate.trim()) {
-      return { dateStr: `${defaultPeriod}-15`, periodStr: defaultPeriod };
+      return { dateStr: `${safeDefaultPeriod}-15`, periodStr: safeDefaultPeriod };
     }
     const clean = rawDate.trim().replace(/^["']|["']$/g, '');
     const dmyMatch = clean.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
     if (dmyMatch) {
       const day = dmyMatch[1].padStart(2, '0');
       const month = dmyMatch[2].padStart(2, '0');
-      const year = dmyMatch[3];
-      return { dateStr: `${year}-${month}-${day}`, periodStr: `${year}-${month}` };
+      const year = parseInt(dmyMatch[3], 10);
+      if (year >= 2025 && year <= 2028) {
+        return { dateStr: `${year}-${month}-${day}`, periodStr: `${year}-${month}` };
+      } else {
+        return { dateStr: `${safeDefaultPeriod}-${day}`, periodStr: safeDefaultPeriod };
+      }
     }
     const ymdMatch = clean.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
     if (ymdMatch) {
-      const year = ymdMatch[1];
+      const year = parseInt(ymdMatch[1], 10);
       const month = ymdMatch[2].padStart(2, '0');
       const day = ymdMatch[3].padStart(2, '0');
-      return { dateStr: `${year}-${month}-${day}`, periodStr: `${year}-${month}` };
+      if (year >= 2025 && year <= 2028) {
+        return { dateStr: `${year}-${month}-${day}`, periodStr: `${year}-${month}` };
+      } else {
+        return { dateStr: `${safeDefaultPeriod}-${day}`, periodStr: safeDefaultPeriod };
+      }
     }
-    return { dateStr: clean.length >= 10 ? clean.substring(0, 10) : `${defaultPeriod}-15`, periodStr: defaultPeriod };
+    return { dateStr: `${safeDefaultPeriod}-15`, periodStr: safeDefaultPeriod };
   };
 
   // Parser for official SII CSV / TXT / Excel files with precise column mapping for Ventas, Compras and Honorarios
@@ -1214,26 +1208,58 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
           return;
         }
 
-        // Detect period from introductory metadata rows (e.g. "Informe correspondiente al mes 03 del año 2026")
-        let targetUploadPeriod = selectedRcvPeriod;
+        // 1. Detección de período según archivo (metadatos o nombre)
+        let detectedFromFile: string | null = null;
+
         for (let r = 0; r < Math.min(tableRows.length, 10); r++) {
           const rowText = tableRows[r].join(' ').toLowerCase();
-          const mesAnoMatch = rowText.match(/(?:mes|periodo|per[ií]odo)\s*0?(\d{1,2})\s*(?:del\s*a[ñn]o|de|\/|-)\s*(\d{4})/i) ||
-                              rowText.match(/(?:a[ñn]o|ejercicio)\s*(\d{4})\s*(?:mes|periodo|per[ií]odo)\s*0?(\d{1,2})/i);
+          const mesAnoMatch = rowText.match(/(?:mes|periodo|per[ií]odo)\s*0?(\d{1,2})\s*(?:del\s*a[ñn]o|de|\/|-)\s*(202[5-8])/i) ||
+                              rowText.match(/(?:a[ñn]o|ejercicio)\s*(202[5-8])\s*(?:mes|periodo|per[ií]odo)\s*0?(\d{1,2})/i);
           if (mesAnoMatch) {
             const m = mesAnoMatch[1].length === 4 ? mesAnoMatch[2] : mesAnoMatch[1];
             const y = mesAnoMatch[1].length === 4 ? mesAnoMatch[1] : mesAnoMatch[2];
-            targetUploadPeriod = `${y}-${m.padStart(2, '0')}`;
-            break;
+            const mNum = parseInt(m, 10);
+            const yNum = parseInt(y, 10);
+            if (yNum >= 2025 && yNum <= 2028 && mNum >= 1 && mNum <= 12) {
+              detectedFromFile = `${yNum}-${String(mNum).padStart(2, '0')}`;
+              break;
+            }
           }
         }
 
-        // Fallback: detect period from filename (e.g. file_informeMensualREC_202603.xlsx)
-        if (targetUploadPeriod === selectedRcvPeriod) {
-          const fnMatch = file.name.match(/_?(\d{4})(0[1-9]|1[0-2])/);
+        if (!detectedFromFile) {
+          const fnMatch = file.name.match(/(?:rcv|ventas?|compras?|honorarios?|mes|periodo|f29)?[_\-]?(202[5-8])[-_]?(0[1-9]|1[0-2])(?!\d)/i);
           if (fnMatch) {
-            targetUploadPeriod = `${fnMatch[1]}-${fnMatch[2]}`;
+            const yNum = parseInt(fnMatch[1], 10);
+            const mNum = parseInt(fnMatch[2], 10);
+            if (yNum >= 2025 && yNum <= 2028 && mNum >= 1 && mNum <= 12) {
+              detectedFromFile = `${yNum}-${String(mNum).padStart(2, '0')}`;
+            }
           }
+        }
+
+        // 2. Validación / Pregunta de confirmación si difiere del mes seleccionado en pantalla
+        let targetUploadPeriod = selectedRcvPeriod;
+        if (detectedFromFile && detectedFromFile !== selectedRcvPeriod) {
+          const confirmSwitch = window.confirm(
+            `⚠️ Validación de Período RCV:\n\n` +
+            `El archivo "${file.name}" indica que corresponde al período [${detectedFromFile}].\n` +
+            `En pantalla tienes seleccionado el período [${selectedRcvPeriod}].\n\n` +
+            `¿Deseas cargar este archivo en el período del archivo [${detectedFromFile}]?\n\n` +
+            `• Presiona [Aceptar] para cargar en ${detectedFromFile}.\n` +
+            `• Presiona [Cancelar] para forzar la carga en el período seleccionado en pantalla (${selectedRcvPeriod}).`
+          );
+          if (confirmSwitch) {
+            targetUploadPeriod = detectedFromFile;
+            setSelectedRcvPeriod(detectedFromFile);
+          }
+        }
+
+        // Garantía absoluta de que targetUploadPeriod esté en rango 2025-2028
+        const finalTgtParts = targetUploadPeriod.split('-');
+        const finalTgtYear = parseInt(finalTgtParts[0], 10);
+        if (isNaN(finalTgtYear) || finalTgtYear < 2025 || finalTgtYear > 2028) {
+          targetUploadPeriod = selectedRcvPeriod;
         }
 
         // Find header line with strict, prioritized recognition
@@ -1410,13 +1436,15 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
           }
 
           readCount++;
-          const rutEmisor = cols[headerMap['rut'] ?? 4] || (tipoRegistro === 'Venta' ? '77.777.777-7' : '66.666.666-6');
+          const rawRutEmisor = cols[headerMap['rut'] ?? 4] || (tipoRegistro === 'Venta' ? '77.777.777-7' : '66.666.666-6');
+          const rutEmisor = formatRut(rawRutEmisor);
           const razonSocialEmisor = cols[headerMap['razon'] ?? 5] || (tipoRegistro === 'Venta' ? 'Cliente RCV' : tipoRegistro === 'Honorarios' ? 'Prestador Honorarios' : 'Proveedor SII');
           const rawTipoDoc = (headerMap['tipoDoc'] !== undefined ? cols[headerMap['tipoDoc']] : '') || (tipoRegistro === 'Honorarios' ? 'BHE' : '33');
           const folio = rawFolio.replace(/[^0-9]/g, '') || String(readCount);
           const rawFecha = (headerMap['fecha'] !== undefined ? cols[headerMap['fecha']] : cols[1]) || '';
           
           const { dateStr } = normalizeChileanDate(rawFecha, targetUploadPeriod);
+          // El período tributario y contable de registro SIEMPRE es el período objetivo confirmado de carga
           const periodStr = targetUploadPeriod;
           detectedPeriod = periodStr;
 
@@ -1509,6 +1537,9 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
                 }
               } else if (montoTotal === 0 && (montoNeto > 0 || montoIva > 0 || montoExento > 0)) {
                 montoTotal = montoNeto + montoIva + montoExento;
+              } else if (montoTotal > 0 && montoTotal < (montoNeto + montoIva + montoExento)) {
+                // Franquicia CEEC (Art. 21 D.L. 910 Constructora) u otra retención
+                montoRetencion = (montoNeto + montoIva + montoExento) - montoTotal;
               }
             } else {
               montoIva = 0;
@@ -1530,6 +1561,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
             nombreTipoDoc,
             folio,
             fechaEmision: dateStr,
+            date: dateStr,
             montoNeto,
             montoIva,
             montoExento,
@@ -1652,13 +1684,9 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
           (nulasCount > 0 ? `• Boletas NULAS / ANULADAS excluidas: ${nulasCount}\n` : '') +
           (duplicates > 0 ? `• Documentos duplicados omitidos: ${duplicates}\n` : '') +
           `• Nuevos auxiliares creados: ${newAuxCount}\n` +
-          `• Período fiscal asignado: ${detectedPeriod}`;
+          `• Período fiscal asignado: ${targetUploadPeriod}`;
 
         alert(summaryMsg);
-
-        if (detectedPeriod !== selectedRcvPeriod) {
-          setSelectedRcvPeriod(detectedPeriod);
-        }
 
         await fetchData();
         e.target.value = '';
@@ -3617,10 +3645,23 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
                 const yr = parseInt(e.target.value);
                 setSelectedYear(yr);
                 handleEnsureFiscalYear(yr);
+                const fy = fiscalYears.find(f => f.id === String(yr));
+                if (fy && fy.months) {
+                  let foundOpen = '';
+                  for (let m = 1; m <= 12; m++) {
+                    if (fy.months[m] === 'Abierto') {
+                      foundOpen = `${yr}-${String(m).padStart(2, '0')}`;
+                      break;
+                    }
+                  }
+                  if (foundOpen) {
+                    setSelectedRcvPeriod(foundOpen);
+                  }
+                }
               }}
               className="font-bold text-[#0D253D] font-mono bg-white border border-slate-200 rounded-lg px-2 py-0.5 text-xs focus:ring-2 focus:ring-indigo-500/20 cursor-pointer shadow-2xs"
             >
-              {[2028, 2027, 2026, 2025, 2024, 2023, 2022, 2021, 2020].map(y => (
+              {[2028, 2027, 2026, 2025].map(y => (
                 <option key={y} value={y}>{y}</option>
               ))}
             </select>
@@ -3634,7 +3675,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
                 return (
                   <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold flex items-center gap-1 ${
                     check.isClosed 
-                      ? 'bg-amber-50 text-amber-700 border border-amber-200' 
+                      ? 'bg-rose-50 text-rose-700 border border-rose-200' 
                       : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                   }`}>
                     {check.isClosed ? (
@@ -3656,14 +3697,16 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
               value={selectedRcvPeriod}
               onChange={(e) => {
                 const newPeriod = e.target.value;
+                if (!newPeriod) return;
                 const check = checkIsPeriodClosed(newPeriod);
                 if (check.isClosed) {
-                  alert(`⚠️ Período Cerrado:\n\nEl período ${newPeriod} se encuentra CERRADO en Períodos Fiscales.\n\nPara importar compras/ventas, centralizar o emitir comprobantes en este mes, debes abrirlo primero en 'Configuraciones > Períodos Contables'.`);
+                  alert(`⚠️ Período Cerrado:\n\nEl período ${newPeriod} se encuentra CERRADO.\n\nSolo se permite seleccionar períodos ABIERTOS. Para trabajar en este mes, debes abrirlo primero en 'Configuraciones > Períodos Contables'.`);
+                  return;
                 }
                 setSelectedRcvPeriod(newPeriod);
               }}
               className="font-bold text-[#0D253D] font-mono bg-white border border-slate-200 rounded-lg px-2 py-0.5 text-xs focus:ring-2 focus:ring-indigo-500/20 cursor-pointer shadow-2xs"
-              title="Período de trabajo activo para Carga RCV, Centralización F29 y Comprobantes"
+              title="Período de trabajo activo (Solo permite seleccionar períodos abiertos)"
             >
               {(() => {
                 const currFy = fiscalYears.find(f => f.id === String(selectedYear));
@@ -3672,15 +3715,28 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
                 for (let m = 1; m <= 12; m++) {
                   const mStr = String(m).padStart(2, '0');
                   const periodStr = `${selectedYear}-${mStr}`;
-                  const isOpen = currFy ? currFy.months[m] === 'Abierto' : (m === 1);
+                  const isOpen = currFy ? currFy.months[m] === 'Abierto' : false;
                   monthOptions.push({
                     periodStr,
-                    label: `${monthNames[m]} ${selectedYear} — ${isOpen ? 'Abierto' : 'Cerrado'}`,
+                    label: `${monthNames[m]} ${selectedYear} — ${isOpen ? 'Abierto' : '🔒 Cerrado (Bloqueado)'}`,
                     isOpen
                   });
                 }
+                const hasAnyOpen = monthOptions.some(o => o.isOpen);
+                if (!hasAnyOpen) {
+                  return (
+                    <option value="" disabled>
+                      ⚠️ Sin meses abiertos en {selectedYear} (Abrir en Períodos)
+                    </option>
+                  );
+                }
                 return monthOptions.map((opt) => (
-                  <option key={opt.periodStr} value={opt.periodStr}>
+                  <option 
+                    key={opt.periodStr} 
+                    value={opt.periodStr}
+                    disabled={!opt.isOpen}
+                    className={!opt.isOpen ? 'text-slate-400 bg-slate-100 italic' : 'text-slate-900 font-bold'}
+                  >
                     {opt.label}
                   </option>
                 ));
@@ -4204,14 +4260,11 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
                   onChange={(e) => setHistoricalRatesFilterYear(e.target.value)}
                   className="text-xs bg-white border border-slate-300 rounded-md px-2.5 py-1.5 font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 >
-                  <option value="Todos">Todos los Años (2020-2026)</option>
+                  <option value="Todos">Todos los Años (2025-2028)</option>
+                  <option value="2028">2028</option>
+                  <option value="2027">2027</option>
                   <option value="2026">2026</option>
                   <option value="2025">2025</option>
-                  <option value="2024">2024</option>
-                  <option value="2023">2023</option>
-                  <option value="2022">2022</option>
-                  <option value="2021">2021</option>
-                  <option value="2020">2020</option>
                 </select>
               </div>
 
@@ -5215,13 +5268,11 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
                 onChange={e => setVoucherFilterYear(e.target.value)}
                 className="border border-slate-300 p-2 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 bg-white"
               >
-                <option value="Todos">Todos los Años</option>
+                <option value="Todos">Todos los Años (2025-2028)</option>
                 <option value="2028">2028</option>
                 <option value="2027">2027</option>
                 <option value="2026">2026</option>
                 <option value="2025">2025</option>
-                <option value="2024">2024</option>
-                <option value="2023">2023</option>
               </select>
 
               <select

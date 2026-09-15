@@ -1,7 +1,8 @@
 import { FiscalPeriodYear } from '../types';
 
 export const MIN_SYSTEM_YEAR = 2025;
-export const SYSTEM_AVAILABLE_YEARS = [2028, 2027, 2026, 2025];
+export const MAX_SYSTEM_YEAR = 2027;
+export const SYSTEM_AVAILABLE_YEARS = [2027, 2026, 2025];
 
 const MONTH_NAMES = [
   '', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',

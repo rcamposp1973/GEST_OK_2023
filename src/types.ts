@@ -447,6 +447,8 @@ export type AccountingVoucher = Voucher;
 export interface Voucher {
   id: string;
   voucherNumber: number;
+  companyId?: string;
+  origin?: string;
   date: string; // YYYY-MM-DD
   period: string; // YYYY-MM
   type: 'Ingreso' | 'Egreso' | 'Traspaso';
@@ -480,9 +482,22 @@ export interface AuditLog {
   companyId?: string;
   companyName?: string;
   action: 'LOGIN' | 'LOGOUT' | 'CREAR' | 'MODIFICAR' | 'ELIMINAR' | 'CONTABILIZAR' | 'ANULAR' | 'IMPORTACION_MASIVA' | 'PURGA' | 'EXPORTAR' | 'CREATE' | 'UPDATE';
-  module: 'AUTENTICACION' | 'ESTUDIOS' | 'EMPRESAS' | 'COMPROBANTES' | 'RCV_COMPRAS' | 'RCV_VENTAS' | 'RCV_HONORARIOS' | 'PLAN_CUENTAS' | 'AUXILIARES' | 'PERIODOS_FISCALES' | 'PLANES' | 'SUPER_ADMINS' | 'USUARIOS' | 'DTE' | 'CONCILIACION' | 'F29' | 'PAGOS_COBRANZAS' | 'PARAMETROS_RCV' | 'DEMO_PURGE' | 'MARKETING_PROMO' | 'MARKETING_LANDING' | 'TESTIMONIOS' | 'PLANES_PRECIOS';
+  module: 'AUTENTICACION' | 'ESTUDIOS' | 'EMPRESAS' | 'COMPROBANTES' | 'RCV_COMPRAS' | 'RCV_VENTAS' | 'RCV_HONORARIOS' | 'PLAN_CUENTAS' | 'AUXILIARES' | 'PERIODOS_FISCALES' | 'PLANES' | 'SUPER_ADMINS' | 'USUARIOS' | 'DTE' | 'CONCILIACION' | 'F29' | 'PAGOS_COBRANZAS' | 'PARAMETROS_RCV' | 'DEMO_PURGE' | 'MARKETING_PROMO' | 'MARKETING_LANDING' | 'TESTIMONIOS' | 'PLANES_PRECIOS' | 'INVENTARIOS' | 'BODEGAS' | 'REPORTES_ANALITICOS' | 'PRESUPUESTOS';
   details: string;
   metadata?: { [key: string]: any };
+}
+
+export interface CompanyBudget {
+  id: string; // e.g. "budget_ventas_2025"
+  companyId: string;
+  year: number;
+  type: 'VENTAS' | 'GASTOS';
+  monthlyBudget: { [month: number]: number }; // month 1-12 in CLP
+  annualBudget: number;
+  growthTargetPercent?: number;
+  notes?: string;
+  updatedAt?: string;
+  updatedBy?: string;
 }
 
 export interface RCVAccountingParams {
@@ -851,6 +866,20 @@ export interface FolioUsageLog {
   notes?: string;
 }
 
+export interface Warehouse {
+  id: string;
+  companyId: string;
+  code: string; // e.g. "BOD-01", "BOD-MATRIZ"
+  name: string; // e.g. "Bodega Central - Casa Matriz"
+  address?: string;
+  responsible?: string;
+  phone?: string;
+  isDefault?: boolean;
+  estado: 'Activo' | 'Inactivo';
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface ProductService {
   id: string;
   companyId?: string;
@@ -858,19 +887,25 @@ export interface ProductService {
   name: string;
   type: 'PRODUCT' | 'SERVICE'; // Controla si mueve Kardex/Stock o no
   unitOfMeasure: string; // UN, HRS, GL, KG, M, etc.
+  unit?: string; // Compatibilidad ProductMaster
+  description?: string; // Compatibilidad ProductMaster
   salesPrice: number; // Neto
   purchaseCost: number; // Neto / PMP
   
   // Imputación contable y operativa
   salesAccountId?: string; // Cuenta Ingreso (ej: 410101 Ventas Servicios)
   purchaseAccountId?: string; // Cuenta Gasto/Activo (ej: 510201 Honorarios o 110601 Mercaderías)
+  costOfGoodsAccountId?: string; // Cuenta Costo de Ventas (ej: 610101 Costo de Ventas)
+  inventoryAssetAccountId?: string; // Cuenta Activo Realizable (ej: 110601 Mercaderías en Bodega)
   defaultCostCenterId?: string; // Centro de Costo por defecto
   defaultItemGastoId?: string; // Ítem / Clasificación de Gasto
+  defaultWarehouseId?: string; // Bodega asignada por defecto
   
   // Control de inventario (Solo aplica si type === 'PRODUCT')
   currentStock: number;
   minStock: number;
   allowNegativeStock: boolean;
+  stocksByWarehouse?: { [warehouseId: string]: number }; // Desglose físico por bodega
   
   category?: string;
   barcode?: string;
@@ -919,6 +954,10 @@ export interface CommercialDocument {
   giroContraparte?: string;
   direccionContraparte?: string;
   
+  // Logística y Bodega
+  warehouseId?: string;
+  warehouseName?: string;
+  
   // Detalle de ítems
   items: CommercialItemLine[];
   
@@ -948,12 +987,16 @@ export interface InventoryMovement {
   productName: string;
   date: string;
   type: 'IN' | 'OUT' | 'ADJUSTMENT';
-  movementReason: 'COMPRA' | 'VENTA' | 'GUIA_DESPACHO' | 'MERMA' | 'AJUSTE_INVENTARIO' | 'CONSUMO_INTERNO' | 'DEVOLUCION' | 'APERTURA';
+  movementReason: 'COMPRA' | 'VENTA' | 'GUIA_DESPACHO' | 'MERMA' | 'AJUSTE_INVENTARIO' | 'CONSUMO_INTERNO' | 'DEVOLUCION' | 'APERTURA' | 'TRASPASO_BODEGA';
   quantity: number;
   unitCost: number;
   totalCost: number;
   previousStock: number;
   resultingStock: number;
+  warehouseId?: string;
+  warehouseName?: string;
+  targetWarehouseId?: string;
+  targetWarehouseName?: string;
   voucherId?: string;
   commercialDocId?: string;
   documentNumber?: string;

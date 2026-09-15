@@ -549,12 +549,12 @@ export default function StudyAdminDashboard({
         });
         targetCompanyId = compRef.id;
 
-        // Inicializar todos los períodos contables 2025-2028 CERRADOS por defecto
+        // Inicializar todos los períodos contables 2025-2027 CERRADOS por defecto
         const defaultClosedMonths: { [m: number]: 'Abierto' | 'Cerrado' } = {};
         for (let m = 1; m <= 12; m++) {
           defaultClosedMonths[m] = 'Cerrado';
         }
-        for (const yr of [2025, 2026, 2027, 2028]) {
+        for (const yr of [2025, 2026, 2027]) {
           await setDoc(doc(compRef, 'fiscalPeriods', String(yr)), {
             id: String(yr),
             year: yr,
@@ -562,7 +562,7 @@ export default function StudyAdminDashboard({
           });
         }
 
-        alert('Empresa registrada exitosamente. Todos los períodos contables 2025-2028 han sido inicializados cerrados por defecto.');
+        alert('Empresa registrada exitosamente. Todos los períodos contables 2025-2027 han sido inicializados cerrados por defecto.');
       }
 
       // Synchronize with 'assignments' collection

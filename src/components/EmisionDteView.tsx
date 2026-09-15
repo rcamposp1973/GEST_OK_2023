@@ -1582,7 +1582,6 @@ export default function EmisionDteView({
                       onChange={(e) => setSelectedSyncYear(parseInt(e.target.value, 10))}
                       className="text-xs font-bold text-slate-900 bg-transparent focus:outline-none cursor-pointer"
                     >
-                      <option value={2028}>2028</option>
                       <option value={2027}>2027</option>
                       <option value={2026}>2026 (Año Actual)</option>
                       <option value={2025}>2025 (Histórico)</option>

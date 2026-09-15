@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db, auth } from '../lib/firebase';
 import { collection, getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc, setDoc, onSnapshot } from 'firebase/firestore';
-import { Company, DTEConfig, ChartOfAccount, Auxiliary, ExchangeRate, FiscalPeriodYear, RCVDocument, Voucher, VoucherLine, RCVAccountingParams, BankReconciliation, UserRole, CostCenterMaster, ExpenseItemMaster, NonSiiDocTypeMaster, ProjectMaster, ProductMaster, CustomAnalysisTableItem, CommercialDocument, InventoryMovement, ProductService, Employee, PayrollSlip } from '../types';
+import { Company, DTEConfig, ChartOfAccount, Auxiliary, ExchangeRate, FiscalPeriodYear, RCVDocument, Voucher, VoucherLine, RCVAccountingParams, BankReconciliation, UserRole, CostCenterMaster, ExpenseItemMaster, NonSiiDocTypeMaster, ProjectMaster, ProductMaster, CustomAnalysisTableItem, CommercialDocument, InventoryMovement, ProductService, Employee, PayrollSlip, Warehouse } from '../types';
 import { EmployeesView } from './EmployeesView';
 import { LiquidacionSueldosView } from './LiquidacionSueldosView';
 import { syncOnlineChileanIndicators, generateOfficialChileanIndicators } from '../utils/chileanEconomicIndicators';
@@ -38,6 +38,8 @@ import CompanyNotebooksView from './CompanyNotebooksView';
 import { ProductsServicesView } from './ProductsServicesView';
 import { OperativaComercialView } from './OperativaComercialView';
 import { StockKardexView } from './StockKardexView';
+import { WarehousesView } from './WarehousesView';
+import ReportesAnaliticosView from './ReportesAnaliticosView';
 import { SearchableAuxiliarySelect } from './SearchableAuxiliarySelect';
 import * as XLSX from 'xlsx';
 import { useProcess } from '../context/ProcessContext';
@@ -50,7 +52,8 @@ import {
   FolderTree, CreditCard, Receipt, TrendingUp, Landmark, ShoppingCart, 
   BarChart3, Settings, Calendar, Download, ChevronLeft, ChevronRight, 
   FileSpreadsheet, ArrowLeft, Building2, CheckCircle2, Lock, Unlock,
-  ShieldCheck, Boxes, Package, ArrowRightLeft, ShoppingBag, Calculator, Briefcase, Sparkles
+  ShieldCheck, Boxes, Package, ArrowRightLeft, ShoppingBag, Calculator, Briefcase, Sparkles,
+  Warehouse as WarehouseIcon, Table as TableIcon
 } from 'lucide-react';
 
 
@@ -69,7 +72,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
   const { withProcess } = useProcess();
   type RibbonGroup = 'FINANZAS' | 'OPERACIONES' | 'TESORERIA' | 'PERSONAL' | 'IMPORTACIONES' | 'IMPUESTOS' | 'INDICADORES' | 'CONFIGURACIONES';
   const [activeRibbonGroup, setActiveRibbonGroup] = useState<RibbonGroup>('FINANZAS');
-  const [activeTab, setActiveTab] = useState<'accounts' | 'auxiliaries' | 'periods' | 'rcv' | 'exchange' | 'rcvParams' | 'f29Codes' | 'vouchers' | 'libroDiario' | 'libroMayor' | 'balance8' | 'balanceIFRS' | 'analisisAuxiliares' | 'analisisCuentas' | 'estadoResultados' | 'indicadoresFinancieros' | 'auditorEstadosFinancieros' | 'smartNotebooks' | 'flujoDeCaja' | 'nominasPago' | 'cobranza' | 'conciliacionBancaria' | 'cargaMasiva' | 'formulario29' | 'plantillasCarga' | 'emisionDte' | 'tablasAnalisis' | 'controlFolios' | 'productsServices' | 'operativaComercial' | 'stockKardex' | 'employees' | 'liquidaciones'>('vouchers');
+  const [activeTab, setActiveTab] = useState<'accounts' | 'auxiliaries' | 'periods' | 'rcv' | 'exchange' | 'rcvParams' | 'f29Codes' | 'vouchers' | 'libroDiario' | 'libroMayor' | 'balance8' | 'balanceIFRS' | 'analisisAuxiliares' | 'analisisCuentas' | 'reportesAnaliticos' | 'estadoResultados' | 'indicadoresFinancieros' | 'auditorEstadosFinancieros' | 'smartNotebooks' | 'flujoDeCaja' | 'nominasPago' | 'cobranza' | 'conciliacionBancaria' | 'cargaMasiva' | 'formulario29' | 'plantillasCarga' | 'emisionDte' | 'tablasAnalisis' | 'controlFolios' | 'productsServices' | 'operativaComercial' | 'stockKardex' | 'warehouses' | 'employees' | 'liquidaciones'>('vouchers');
   const [auxSubTab, setAuxSubTab] = useState<'deudores' | 'acreedores'>('deudores');
   const [employeeSubTab, setEmployeeSubTab] = useState<'employees' | 'contracts' | 'attendance' | 'advances' | 'severance' | 'certificates'>('employees');
   const [payrollTab, setPayrollTab] = useState<'NOMINA' | 'LIQUIDACION_INDIVIDUAL' | 'LRD_DT' | 'PREVIRED' | 'PARAMETROS' | 'CONCEPTOS' | 'RELIQUIDACIONES'>('NOMINA');
@@ -141,7 +144,8 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
   const [expenseItems, setExpenseItems] = useState<ExpenseItemMaster[]>([]);
   const [nonSiiDocTypes, setNonSiiDocTypes] = useState<NonSiiDocTypeMaster[]>([]);
   const [projects, setProjects] = useState<ProjectMaster[]>([]);
-  const [products, setProducts] = useState<ProductMaster[]>([]);
+  const [products, setProducts] = useState<ProductService[]>([]);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [commercialDocuments, setCommercialDocuments] = useState<CommercialDocument[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [payrollSlips, setPayrollSlips] = useState<PayrollSlip[]>([]);
@@ -312,15 +316,22 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
         };
         await addDoc(collection(companyRef, 'inventoryMovements'), movPayload);
 
-        // Actualizar maestro de productos con nuevo stock y costo PMP
+        // Actualizar maestro de productos con nuevo stock, desglose por bodega y costo PMP
         if (mov.productId) {
           const productRef = doc(companyRef, 'products', mov.productId);
           const productSnap = await getDoc(productRef);
           if (productSnap.exists()) {
             const currentData = productSnap.data() as ProductService;
+            const currentStocksByWh = { ...(currentData.stocksByWarehouse || {}) };
+            const whKey = mov.warehouseId || currentData.defaultWarehouseId || 'wh-central';
+            const oldWhStock = currentStocksByWh[whKey] ?? currentData.currentStock ?? 0;
+            const newWhStock = mov.type === 'IN' ? (oldWhStock + mov.quantity) : (oldWhStock - mov.quantity);
+            currentStocksByWh[whKey] = newWhStock;
+
             await setDoc(productRef, {
               ...currentData,
               currentStock: mov.resultingStock,
+              stocksByWarehouse: currentStocksByWh,
               purchaseCost: mov.unitCost > 0 ? mov.unitCost : (currentData.purchaseCost || 0),
               updatedAt: new Date().toISOString()
             }, { merge: true });
@@ -373,6 +384,270 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
     } catch (err: any) {
       console.error('Error al guardar documento comercial:', err);
       throw err;
+    }
+  };
+
+  // HANDLERS PARA MAESTRO DE BODEGAS (ERP FASE 1)
+  const handleSaveWarehouse = async (whData: Partial<Warehouse>) => {
+    if (isReadOnly) {
+      alert('🔒 Modo Solo Lectura: No tienes permisos para gestionar bodegas.');
+      return;
+    }
+    try {
+      const whId = whData.id || `wh-${Date.now()}`;
+      const payload: Warehouse = {
+        ...whData,
+        id: whId,
+        companyId: company.id,
+        code: whData.code || 'BOD-01',
+        name: whData.name || 'Bodega',
+        estado: whData.estado || 'Activo',
+        createdAt: whData.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      } as Warehouse;
+
+      if (payload.isDefault) {
+        for (const existingWh of warehouses) {
+          if (existingWh.id !== whId && existingWh.isDefault) {
+            await updateDoc(doc(companyRef, 'warehouses', existingWh.id), { isDefault: false });
+          }
+        }
+      }
+
+      await setDoc(doc(companyRef, 'warehouses', whId), payload);
+      setWarehouses(prev => {
+        const exists = prev.some(w => w.id === whId);
+        if (exists) {
+          return prev.map(w => w.id === whId ? payload : (payload.isDefault ? { ...w, isDefault: false } : w));
+        } else {
+          return [payload, ...(payload.isDefault ? prev.map(w => ({ ...w, isDefault: false })) : prev)];
+        }
+      });
+
+      logAuditEvent({
+        userId: auth.currentUser?.uid || 'anon',
+        userEmail: auth.currentUser?.email || '',
+        studyId,
+        companyId: company.id,
+        action: 'CREAR',
+        module: 'INVENTARIOS',
+        details: `Bodega ${payload.code} - ${payload.name} guardada exitosamente.`
+      });
+    } catch (err: any) {
+      console.error('Error al guardar bodega:', err);
+      alert(`Error al guardar bodega: ${err.message || err}`);
+    }
+  };
+
+  const handleDeleteWarehouse = async (whId: string) => {
+    if (isReadOnly) {
+      alert('🔒 Modo Solo Lectura: No tienes permisos para eliminar bodegas.');
+      return;
+    }
+    try {
+      await deleteDoc(doc(companyRef, 'warehouses', whId));
+      setWarehouses(prev => prev.filter(w => w.id !== whId));
+      logAuditEvent({
+        userId: auth.currentUser?.uid || 'anon',
+        userEmail: auth.currentUser?.email || '',
+        studyId,
+        companyId: company.id,
+        action: 'ELIMINAR',
+        module: 'INVENTARIOS',
+        details: `Bodega ID ${whId} eliminada.`
+      });
+    } catch (err: any) {
+      console.error('Error al eliminar bodega:', err);
+      alert(`Error al eliminar bodega: ${err.message || err}`);
+    }
+  };
+
+  const handleSetDefaultWarehouse = async (whId: string) => {
+    if (isReadOnly) return;
+    try {
+      for (const w of warehouses) {
+        await updateDoc(doc(companyRef, 'warehouses', w.id), { isDefault: w.id === whId });
+      }
+      setWarehouses(prev => prev.map(w => ({ ...w, isDefault: w.id === whId })));
+    } catch (err: any) {
+      console.error('Error al definir bodega principal:', err);
+    }
+  };
+
+  // HANDLERS PARA CATÁLOGO DE PRODUCTOS & SERVICIOS
+  const handleSaveProduct = async (product: ProductService) => {
+    if (isReadOnly) return;
+    try {
+      await setDoc(doc(companyRef, 'products', product.id), product);
+      setProducts(prev => {
+        const idx = prev.findIndex(p => p.id === product.id);
+        if (idx >= 0) {
+          const updated = [...prev];
+          updated[idx] = product;
+          return updated;
+        }
+        return [product, ...prev];
+      });
+      logAuditEvent({
+        userId: auth.currentUser?.uid || 'anon',
+        userEmail: auth.currentUser?.email || '',
+        studyId,
+        companyId: company.id,
+        action: 'CREAR',
+        module: 'INVENTARIOS',
+        details: `Producto/Servicio ${product.code} - ${product.name} guardado.`
+      });
+    } catch (err: any) {
+      console.error('Error al guardar producto:', err);
+      throw err;
+    }
+  };
+
+  const handleDeleteProduct = async (productId: string) => {
+    if (isReadOnly) return;
+    try {
+      await deleteDoc(doc(companyRef, 'products', productId));
+      setProducts(prev => prev.filter(p => p.id !== productId));
+      logAuditEvent({
+        userId: auth.currentUser?.uid || 'anon',
+        userEmail: auth.currentUser?.email || '',
+        studyId,
+        companyId: company.id,
+        action: 'ELIMINAR',
+        module: 'INVENTARIOS',
+        details: `Producto ID ${productId} eliminado.`
+      });
+    } catch (err: any) {
+      console.error('Error al eliminar producto:', err);
+      throw err;
+    }
+  };
+
+  // HANDLER PARA MOVIMIENTOS MANUALES Y TRASPASOS DE KARDEX
+  const handleSaveInventoryMovement = async (
+    mov: Partial<InventoryMovement>,
+    targetMov?: Partial<InventoryMovement>,
+    autoVoucher?: Partial<Voucher>
+  ) => {
+    if (isReadOnly) {
+      alert('🔒 Modo Solo Lectura: No tienes permisos para registrar movimientos de inventario.');
+      return;
+    }
+
+    try {
+      const movId = `mov-${Date.now()}`;
+      const mainMov: InventoryMovement = {
+        ...mov,
+        id: movId,
+        companyId: company.id,
+        createdAt: new Date().toISOString()
+      } as InventoryMovement;
+
+      await addDoc(collection(companyRef, 'inventoryMovements'), mainMov);
+
+      if (targetMov) {
+        const targetId = `mov-${Date.now()}-target`;
+        const tMov: InventoryMovement = {
+          ...targetMov,
+          id: targetId,
+          companyId: company.id,
+          createdAt: new Date().toISOString()
+        } as InventoryMovement;
+        await addDoc(collection(companyRef, 'inventoryMovements'), tMov);
+      }
+
+      // Actualizar stock del producto
+      const prod = products.find(p => p.id === mov.productId);
+      if (prod) {
+        const currentStocksByWh = { ...(prod.stocksByWarehouse || {}) };
+        
+        if (mov.movementReason === 'TRASPASO_BODEGA' && targetMov) {
+          // Disminuir de bodega origen y aumentar en bodega destino
+          if (mov.warehouseId) {
+            const oldSourceStock = currentStocksByWh[mov.warehouseId] ?? prod.currentStock ?? 0;
+            currentStocksByWh[mov.warehouseId] = Math.max(0, oldSourceStock - (mov.quantity || 0));
+          }
+          if (targetMov.warehouseId) {
+            const oldTargetStock = currentStocksByWh[targetMov.warehouseId] ?? 0;
+            currentStocksByWh[targetMov.warehouseId] = oldTargetStock + (targetMov.quantity || 0);
+          }
+        } else if (mov.warehouseId) {
+          const oldStock = currentStocksByWh[mov.warehouseId] ?? prod.currentStock ?? 0;
+          currentStocksByWh[mov.warehouseId] = mov.type === 'IN' ? (oldStock + (mov.quantity || 0)) : (oldStock - (mov.quantity || 0));
+        }
+
+        const updatedProduct: ProductService = {
+          ...prod,
+          currentStock: mov.movementReason === 'TRASPASO_BODEGA' ? prod.currentStock : (mov.resultingStock ?? prod.currentStock),
+          stocksByWarehouse: currentStocksByWh,
+          purchaseCost: mov.type === 'IN' && (mov.unitCost || 0) > 0 ? (mov.unitCost as number) : prod.purchaseCost,
+          updatedAt: new Date().toISOString()
+        };
+
+        await setDoc(doc(companyRef, 'products', prod.id), updatedProduct);
+        setProducts(prev => prev.map(p => p.id === prod.id ? updatedProduct : p));
+      }
+
+      // Si se solicitó comprobante contable automático por merma, consumo o ajuste
+      if (autoVoucher && autoVoucher.lines && autoVoucher.lines.length > 0) {
+        const vYear = autoVoucher.date ? new Date(autoVoucher.date).getFullYear() : new Date().getFullYear();
+        const yearVouchers = vouchers.filter(item => {
+          const itemYear = item.date ? new Date(item.date).getFullYear() : 0;
+          return itemYear === vYear;
+        });
+        const nextVNum = yearVouchers.length > 0 ? Math.max(...yearVouchers.map(x => x.voucherNumber || 0)) + 1 : 1;
+        const vLines = autoVoucher.lines as VoucherLine[];
+        const totDeb = vLines.reduce((acc, l) => acc + (Number(l.debit) || 0), 0);
+        const totCred = vLines.reduce((acc, l) => acc + (Number(l.credit) || 0), 0);
+
+        const newVoucher: Voucher = {
+          id: `vouch-${Date.now()}`,
+          companyId: company.id,
+          voucherNumber: nextVNum,
+          date: autoVoucher.date || mov.date || new Date().toISOString().split('T')[0],
+          period: (autoVoucher.date || mov.date || '').slice(0, 7),
+          type: autoVoucher.type || 'Traspaso',
+          gloss: autoVoucher.gloss || `Ajuste Kardex ${mov.movementReason}: ${mov.productName}`,
+          lines: vLines,
+          totalDebit: totDeb,
+          totalCredit: totCred,
+          status: 'Valido',
+          origin: 'Kardex',
+          creationMode: 'AUTOMATICO',
+          createdAt: new Date().toISOString()
+        };
+        await addDoc(collection(companyRef, 'vouchers'), newVoucher);
+        setVouchers(prev => [newVoucher, ...prev]);
+
+        logAuditEvent({
+          userId: auth.currentUser?.uid || 'anon',
+          userEmail: auth.currentUser?.email || '',
+          studyId,
+          companyId: company.id,
+          action: 'CREAR',
+          module: 'COMPROBANTES',
+          details: `Comprobante automático de ajuste de inventario #${nextVNum} generado.`
+        });
+      }
+
+      // Recargar movimientos de inventario
+      const invMovSnap = await getDocs(collection(companyRef, 'inventoryMovements'));
+      const fetchedInvMov = invMovSnap.docs.map(d => ({ ...d.data(), id: d.id } as InventoryMovement));
+      fetchedInvMov.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      setInventoryMovements(fetchedInvMov);
+
+      logAuditEvent({
+        userId: auth.currentUser?.uid || 'anon',
+        userEmail: auth.currentUser?.email || '',
+        studyId,
+        companyId: company.id,
+        action: 'CREAR',
+        module: 'INVENTARIOS',
+        details: `Movimiento de Kardex registrado: ${mov.type} ${mov.quantity} ${prod?.unitOfMeasure || 'UN'} (${mov.movementReason})`
+      });
+    } catch (err: any) {
+      console.error('Error al guardar movimiento de inventario:', err);
+      alert(`Error al guardar movimiento de inventario: ${err.message || err}`);
     }
   };
 
@@ -818,8 +1093,73 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
       const projSnap = await getDocs(collection(companyRef, 'projects'));
       setProjects(projSnap.docs.map(d => ({ ...d.data(), id: d.id } as ProjectMaster)));
 
+      // BODEGAS (Multi-Bodega ERP)
+      const whSnap = await getDocs(collection(companyRef, 'warehouses'));
+      let fetchedWh = whSnap.docs.map(d => ({ ...d.data(), id: d.id } as Warehouse));
+      if (fetchedWh.length === 0) {
+        const defaultWh: Warehouse = {
+          id: 'wh-central',
+          companyId: company.id,
+          code: 'BOD-01',
+          name: 'Bodega Central - Casa Matriz',
+          address: company.address || 'Casa Matriz',
+          responsible: 'Administración General',
+          isDefault: true,
+          estado: 'Activo',
+          createdAt: new Date().toISOString()
+        };
+        await setDoc(doc(companyRef, 'warehouses', 'wh-central'), defaultWh);
+        fetchedWh = [defaultWh];
+      }
+      setWarehouses(fetchedWh);
+
+      // PRODUCTOS Y SERVICIOS
       const prodSnap = await getDocs(collection(companyRef, 'products'));
-      setProducts(prodSnap.docs.map(d => ({ ...d.data(), id: d.id } as ProductMaster)));
+      if (prodSnap.empty) {
+        const defaultWhId = fetchedWh[0]?.id || 'wh-central';
+        const initialProducts: ProductService[] = [
+          {
+            id: 'prod-srv-1',
+            companyId: company.id,
+            code: 'SRV-CONS-01',
+            name: 'Asesoría y Consultoría Contable Mensual',
+            type: 'SERVICE',
+            unitOfMeasure: 'MES',
+            salesPrice: 450000,
+            purchaseCost: 0,
+            currentStock: 0,
+            minStock: 0,
+            allowNegativeStock: true,
+            category: 'Servicios Profesionales',
+            estado: 'Activo',
+            createdAt: new Date().toISOString()
+          },
+          {
+            id: 'prod-merc-1',
+            companyId: company.id,
+            code: 'PROD-RESM-01',
+            name: 'Resma Papel Carta 75g (Caja 10 unidades)',
+            type: 'PRODUCT',
+            unitOfMeasure: 'CAJA',
+            salesPrice: 42900,
+            purchaseCost: 28500,
+            currentStock: 35,
+            minStock: 10,
+            defaultWarehouseId: defaultWhId,
+            stocksByWarehouse: { [defaultWhId]: 35 },
+            allowNegativeStock: false,
+            category: 'Artículos de Oficina',
+            estado: 'Activo',
+            createdAt: new Date().toISOString()
+          }
+        ];
+        for (const p of initialProducts) {
+          await setDoc(doc(companyRef, 'products', p.id), p);
+        }
+        setProducts(initialProducts);
+      } else {
+        setProducts(prodSnap.docs.map(d => ({ ...d.data(), id: d.id } as ProductService)));
+      }
 
       const customItemsSnap = await getDocs(collection(companyRef, 'customAnalysisItems'));
       setCustomAnalysisItems(customItemsSnap.docs.map(d => ({ ...d.data(), id: d.id } as CustomAnalysisTableItem)));
@@ -913,7 +1253,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
     }, (err) => console.warn("Realtime listener error projects:", err));
 
     const unsubProd = onSnapshot(collection(companyRef, 'products'), (snap) => {
-      setProducts(snap.docs.map(d => ({ ...d.data(), id: d.id } as ProductMaster)));
+      setProducts(snap.docs.map(d => ({ ...d.data(), id: d.id } as ProductService)));
     }, (err) => console.warn("Realtime listener error products:", err));
 
     const unsubCustomItems = onSnapshot(collection(companyRef, 'customAnalysisItems'), (snap) => {
@@ -1096,12 +1436,12 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
 
   // Helper to normalize Chilean date formats (DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD)
   const normalizeChileanDate = (rawDate: string, defaultPeriod: string): { dateStr: string; periodStr: string } => {
-    // Validar defaultPeriod (debe ser formato YYYY-MM en rango 2025-2028)
+    // Validar defaultPeriod (debe ser formato YYYY-MM en rango 2025-2027)
     let safeDefaultPeriod = defaultPeriod;
     const defParts = (defaultPeriod || '').split('-');
     const defYear = parseInt(defParts[0], 10);
     const defMonth = parseInt(defParts[1], 10);
-    if (isNaN(defYear) || defYear < 2025 || defYear > 2028 || isNaN(defMonth) || defMonth < 1 || defMonth > 12) {
+    if (isNaN(defYear) || defYear < 2025 || defYear > 2027 || isNaN(defMonth) || defMonth < 1 || defMonth > 12) {
       safeDefaultPeriod = '2026-01';
     }
 
@@ -1114,7 +1454,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
       const day = dmyMatch[1].padStart(2, '0');
       const month = dmyMatch[2].padStart(2, '0');
       const year = parseInt(dmyMatch[3], 10);
-      if (year >= 2025 && year <= 2028) {
+      if (year >= 2025 && year <= 2027) {
         return { dateStr: `${year}-${month}-${day}`, periodStr: `${year}-${month}` };
       } else {
         return { dateStr: `${safeDefaultPeriod}-${day}`, periodStr: safeDefaultPeriod };
@@ -1125,7 +1465,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
       const year = parseInt(ymdMatch[1], 10);
       const month = ymdMatch[2].padStart(2, '0');
       const day = ymdMatch[3].padStart(2, '0');
-      if (year >= 2025 && year <= 2028) {
+      if (year >= 2025 && year <= 2027) {
         return { dateStr: `${year}-${month}-${day}`, periodStr: `${year}-${month}` };
       } else {
         return { dateStr: `${safeDefaultPeriod}-${day}`, periodStr: safeDefaultPeriod };
@@ -1213,14 +1553,14 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
 
         for (let r = 0; r < Math.min(tableRows.length, 10); r++) {
           const rowText = tableRows[r].join(' ').toLowerCase();
-          const mesAnoMatch = rowText.match(/(?:mes|periodo|per[ií]odo)\s*0?(\d{1,2})\s*(?:del\s*a[ñn]o|de|\/|-)\s*(202[5-8])/i) ||
-                              rowText.match(/(?:a[ñn]o|ejercicio)\s*(202[5-8])\s*(?:mes|periodo|per[ií]odo)\s*0?(\d{1,2})/i);
+          const mesAnoMatch = rowText.match(/(?:mes|periodo|per[ií]odo)\s*0?(\d{1,2})\s*(?:del\s*a[ñn]o|de|\/|-)\s*(202[5-7])/i) ||
+                              rowText.match(/(?:a[ñn]o|ejercicio)\s*(202[5-7])\s*(?:mes|periodo|per[ií]odo)\s*0?(\d{1,2})/i);
           if (mesAnoMatch) {
             const m = mesAnoMatch[1].length === 4 ? mesAnoMatch[2] : mesAnoMatch[1];
             const y = mesAnoMatch[1].length === 4 ? mesAnoMatch[1] : mesAnoMatch[2];
             const mNum = parseInt(m, 10);
             const yNum = parseInt(y, 10);
-            if (yNum >= 2025 && yNum <= 2028 && mNum >= 1 && mNum <= 12) {
+            if (yNum >= 2025 && yNum <= 2027 && mNum >= 1 && mNum <= 12) {
               detectedFromFile = `${yNum}-${String(mNum).padStart(2, '0')}`;
               break;
             }
@@ -1228,11 +1568,11 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
         }
 
         if (!detectedFromFile) {
-          const fnMatch = file.name.match(/(?:rcv|ventas?|compras?|honorarios?|mes|periodo|f29)?[_\-]?(202[5-8])[-_]?(0[1-9]|1[0-2])(?!\d)/i);
+          const fnMatch = file.name.match(/(?:rcv|ventas?|compras?|honorarios?|mes|periodo|f29)?[_\-]?(202[5-7])[-_]?(0[1-9]|1[0-2])(?!\d)/i);
           if (fnMatch) {
             const yNum = parseInt(fnMatch[1], 10);
             const mNum = parseInt(fnMatch[2], 10);
-            if (yNum >= 2025 && yNum <= 2028 && mNum >= 1 && mNum <= 12) {
+            if (yNum >= 2025 && yNum <= 2027 && mNum >= 1 && mNum <= 12) {
               detectedFromFile = `${yNum}-${String(mNum).padStart(2, '0')}`;
             }
           }
@@ -1255,10 +1595,10 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
           }
         }
 
-        // Garantía absoluta de que targetUploadPeriod esté en rango 2025-2028
+        // Garantía absoluta de que targetUploadPeriod esté en rango 2025-2027
         const finalTgtParts = targetUploadPeriod.split('-');
         const finalTgtYear = parseInt(finalTgtParts[0], 10);
-        if (isNaN(finalTgtYear) || finalTgtYear < 2025 || finalTgtYear > 2028) {
+        if (isNaN(finalTgtYear) || finalTgtYear < 2025 || finalTgtYear > 2027) {
           targetUploadPeriod = selectedRcvPeriod;
         }
 
@@ -1752,6 +2092,14 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
     }
 
     const [yearStr, monthStr] = selectedRcvPeriod.split('-');
+
+    // GEST_OK: Confirmación explícita de período antes de sincronizar
+    const confirmSync = window.confirm(
+      `🌐 Confirmación de Sincronización SII:\n\n` +
+      `Se rescatarán documentos para el período tributario [${selectedRcvPeriod}].\n\n` +
+      `¿Es correcto este período de proceso?`
+    );
+    if (!confirmSync) return;
 
     setIsRescatandoRcvApi(true);
     try {
@@ -3661,7 +4009,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
               }}
               className="font-bold text-[#0D253D] font-mono bg-white border border-slate-200 rounded-lg px-2 py-0.5 text-xs focus:ring-2 focus:ring-indigo-500/20 cursor-pointer shadow-2xs"
             >
-              {[2028, 2027, 2026, 2025].map(y => (
+              {[2027, 2026, 2025].map(y => (
                 <option key={y} value={y}>{y}</option>
               ))}
             </select>
@@ -3861,6 +4209,13 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
                     <span>Análisis de Cuentas</span>
                   </button>
                   <button
+                    onClick={() => setActiveTab('reportesAnaliticos')}
+                    className={getSubRibbonBtnClass(activeTab === 'reportesAnaliticos')}
+                  >
+                    <TableIcon className={`w-3.5 h-3.5 ${activeTab === 'reportesAnaliticos' ? 'text-indigo-300' : 'text-slate-500'}`} />
+                    <span>Reportes Analíticos & Ventas</span>
+                  </button>
+                  <button
                     onClick={() => setActiveTab('balance8')}
                     className={getSubRibbonBtnClass(activeTab === 'balance8')}
                   >
@@ -3906,7 +4261,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
                 </>
               )}
 
-              {/* 2. GRUPO: COMERCIAL */}
+              {/* 2. GRUPO: COMERCIAL / OPERACIONES */}
               {activeRibbonGroup === 'OPERACIONES' && (
                 <>
                   <button
@@ -3924,11 +4279,25 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
                     <span>Control de Inventario & Kardex PMP</span>
                   </button>
                   <button
+                    onClick={() => setActiveTab('warehouses')}
+                    className={getSubRibbonBtnClass(activeTab === 'warehouses')}
+                  >
+                    <WarehouseIcon className={`w-3.5 h-3.5 ${activeTab === 'warehouses' ? 'text-indigo-300' : 'text-slate-500'}`} />
+                    <span>Maestro Multi-Bodega</span>
+                  </button>
+                  <button
                     onClick={() => setActiveTab('productsServices')}
                     className={getSubRibbonBtnClass(activeTab === 'productsServices')}
                   >
                     <Boxes className={`w-3.5 h-3.5 ${activeTab === 'productsServices' ? 'text-indigo-300' : 'text-slate-500'}`} />
                     <span>Catálogo de Productos & Servicios</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('reportesAnaliticos')}
+                    className={getSubRibbonBtnClass(activeTab === 'reportesAnaliticos')}
+                  >
+                    <TableIcon className={`w-3.5 h-3.5 ${activeTab === 'reportesAnaliticos' ? 'text-indigo-300' : 'text-slate-500'}`} />
+                    <span>Reportes Dinámicos & Ventas</span>
                   </button>
                 </>
               )}
@@ -4108,6 +4477,13 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
                     <span>Tablero de Indicadores Financieros & KPIs</span>
                   </button>
                   <button
+                    onClick={() => setActiveTab('reportesAnaliticos')}
+                    className={getSubRibbonBtnClass(activeTab === 'reportesAnaliticos')}
+                  >
+                    <TableIcon className={`w-3.5 h-3.5 ${activeTab === 'reportesAnaliticos' ? 'text-indigo-300' : 'text-slate-500'}`} />
+                    <span>Matriz Dinámica & Ventas</span>
+                  </button>
+                  <button
                     onClick={() => setActiveTab('auditorEstadosFinancieros')}
                     className={getSubRibbonBtnClass(activeTab === 'auditorEstadosFinancieros', 'indigo')}
                   >
@@ -4260,8 +4636,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
                   onChange={(e) => setHistoricalRatesFilterYear(e.target.value)}
                   className="text-xs bg-white border border-slate-300 rounded-md px-2.5 py-1.5 font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 >
-                  <option value="Todos">Todos los Años (2025-2028)</option>
-                  <option value="2028">2028</option>
+                  <option value="Todos">Todos los Años (2025-2027)</option>
                   <option value="2027">2027</option>
                   <option value="2026">2026</option>
                   <option value="2025">2025</option>
@@ -4369,7 +4744,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
             costCenters={costCenters}
             expenseItems={expenseItems}
             projects={projects}
-            products={products}
+            products={products as unknown as ProductMaster[]}
             onRefresh={fetchData}
             onCreate={() => {
               setEditingAuxiliary(null);
@@ -4394,7 +4769,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
             costCenters={costCenters}
             expenseItems={expenseItems}
             projects={projects}
-            products={products}
+            products={products as unknown as ProductMaster[]}
             customAccountColumns={company.customAccountColumns || []}
             customAnalysisItems={customAnalysisItems}
             isReadOnly={isReadOnly}
@@ -5268,8 +5643,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
                 onChange={e => setVoucherFilterYear(e.target.value)}
                 className="border border-slate-300 p-2 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 bg-white"
               >
-                <option value="Todos">Todos los Años (2025-2028)</option>
-                <option value="2028">2028</option>
+                <option value="Todos">Todos los Años (2025-2027)</option>
                 <option value="2027">2027</option>
                 <option value="2026">2026</option>
                 <option value="2025">2025</option>
@@ -6812,6 +7186,26 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
         />
       )}
 
+      {/* TAB: REPORTES ANALITICOS Y MATRIZ DINAMICA */}
+      {activeTab === 'reportesAnaliticos' && (
+        <ReportesAnaliticosView
+          studyId={studyId}
+          company={company}
+          accounts={accounts}
+          vouchers={vouchers}
+          costCenters={costCenters}
+          expenseItems={expenseItems}
+          projects={projects}
+          products={products}
+          auxiliaries={auxiliaries}
+          rcvDocuments={rcvDocuments}
+          customAnalysisItems={customAnalysisItems}
+          customAccountColumns={company.customAccountColumns || []}
+          fiscalYears={fiscalYears}
+          isReadOnly={isReadOnly}
+        />
+      )}
+
       {/* TAB: ESTADO DE RESULTADOS */}
       {activeTab === 'estadoResultados' && (
         <EstadoResultadosView
@@ -6970,7 +7364,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
           costCenters={costCenters}
           expenseItems={expenseItems}
           projects={projects}
-          products={products}
+          products={products as unknown as ProductMaster[]}
           customAnalysisItems={customAnalysisItems}
           onVouchersUpdated={fetchData}
         />
@@ -7035,7 +7429,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
           expenseItems={expenseItems}
           nonSiiDocTypes={nonSiiDocTypes}
           projects={projects}
-          products={products}
+          products={products as unknown as ProductMaster[]}
           customAnalysisItems={customAnalysisItems}
           onRefreshData={fetchData}
         />
@@ -7058,7 +7452,10 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
           accounts={accounts}
           costCenters={costCenters}
           expenseItems={expenseItems}
-          products={products as unknown as ProductService[]}
+          products={products}
+          warehouses={warehouses}
+          onSaveProduct={handleSaveProduct}
+          onDeleteProduct={handleDeleteProduct}
           onProductsChange={() => fetchData()}
           isReadOnly={isAnalyst || isReadOnly}
         />
@@ -7070,12 +7467,13 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
           companyId={company.id}
           companyName={company.name}
           companyRut={company.rut}
-          products={products as unknown as ProductService[]}
+          products={products}
           accounts={accounts}
           auxiliaries={auxiliaries}
           costCenters={costCenters}
           expenseItems={expenseItems}
           commercialDocs={commercialDocuments}
+          warehouses={warehouses}
           onSaveDocument={(docData, movements, newVouchers) => {
             handleSaveCommercialDocument(docData, movements, newVouchers);
           }}
@@ -7088,9 +7486,25 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
         <StockKardexView
           companyId={company.id}
           companyName={company.name}
-          products={products as unknown as ProductService[]}
+          products={products}
           movements={inventoryMovements}
+          warehouses={warehouses}
           accounts={accounts}
+          onSaveMovement={handleSaveInventoryMovement}
+          isReadOnly={isAnalyst || isReadOnly}
+        />
+      )}
+
+      {/* TAB: MAESTRO MULTI-BODEGA ERP (FASE 1) */}
+      {activeTab === 'warehouses' && (
+        <WarehousesView
+          companyId={company.id}
+          companyName={company.name}
+          warehouses={warehouses}
+          products={products}
+          onSaveWarehouse={handleSaveWarehouse}
+          onDeleteWarehouse={handleDeleteWarehouse}
+          onSetDefaultWarehouse={handleSetDefaultWarehouse}
           isReadOnly={isAnalyst || isReadOnly}
         />
       )}
@@ -7108,7 +7522,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
           expenseItems={expenseItems}
           nonSiiDocTypes={nonSiiDocTypes}
           projects={projects}
-          products={products}
+          products={products as unknown as ProductMaster[]}
           customAnalysisItems={customAnalysisItems}
           customColumns={company.customAccountColumns || []}
           onApplyDistribution={(lineIdx, newLines) => {

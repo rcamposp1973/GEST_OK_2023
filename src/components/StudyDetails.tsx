@@ -10,6 +10,7 @@ import {
   getDefaultModulesForPlan 
 } from '../constants/subscriptionPlans';
 import ModuleAccessMatrix from './ModuleAccessMatrix';
+import { purgeDiagonConstruccionesData } from '../utils/diagonPurge';
 
 interface StudyDetailsProps {
   study: Study;
@@ -146,6 +147,29 @@ export default function StudyDetails({ study: initialStudy, onBack, onLogout }: 
       setActionError("Error al actualizar estudio: " + (err.message || err));
     } finally {
       setIsSavingStudy(false);
+    }
+  };
+
+  const [isPurgingDiagon, setIsPurgingDiagon] = useState(false);
+
+  const handlePurgeDiagon = async () => {
+    if (!window.confirm("¿Está seguro de purgar/borrar TODOS los RCV subidos y TODOS los comprobantes para la empresa Diagon Construcciones SpA? Esta acción no se puede deshacer.")) {
+      return;
+    }
+    setIsPurgingDiagon(true);
+    setActionError('');
+    setActionSuccess('');
+    try {
+      const res = await purgeDiagonConstruccionesData();
+      if (res.success) {
+        setActionSuccess(res.message);
+      } else {
+        setActionError(res.error || 'Error al purgar datos de Diagon Construcciones SpA.');
+      }
+    } catch (e: any) {
+      setActionError(e.message || 'Error inesperado.');
+    } finally {
+      setIsPurgingDiagon(false);
     }
   };
 
@@ -773,6 +797,21 @@ export default function StudyDetails({ study: initialStudy, onBack, onLogout }: 
       </section>
 
       {/* 3. SECCIÓN: EMPRESAS Y CONTADORES */}
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-center gap-3">
+        <div>
+          <h4 className="text-xs font-bold text-amber-900">Acción Especial de Depuración / Borrado</h4>
+          <p className="text-xs text-amber-700">Purgar todos los documentos RCV subidos y comprobantes (vouchers) para la empresa Diagon Construcciones SpA.</p>
+        </div>
+        <button
+          onClick={handlePurgeDiagon}
+          disabled={isPurgingDiagon}
+          className="bg-rose-600 hover:bg-rose-700 active:bg-rose-800 disabled:opacity-50 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm flex items-center gap-1.5 transition-colors shrink-0"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+          {isPurgingDiagon ? 'Purgando...' : '🗑️ Borrar RCV y Comprobantes (Diagon Construcciones)'}
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <section className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
           <div className="flex justify-between items-center mb-4">

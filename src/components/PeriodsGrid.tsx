@@ -29,7 +29,7 @@ const MONTH_NAMES = [
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
 ];
 
-const AVAILABLE_YEARS = [2028, 2027, 2026, 2025];
+const AVAILABLE_YEARS = [2027, 2026, 2025];
 
 export default function PeriodsGrid({
   selectedYear,

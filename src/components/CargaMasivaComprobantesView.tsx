@@ -180,6 +180,7 @@ export default function CargaMasivaComprobantesView({
     const colIdxMap: { [key: string]: number } = {
       vNum: 0,
       vDate: 1,
+      vPeriod: -1,
       vType: 2,
       vGloss: 3,
       accCode: 4,
@@ -258,6 +259,10 @@ export default function CargaMasivaComprobantesView({
         // 4. Voucher Date (Fecha Comprobante)
         else if (head.includes('fecha') || head.includes('date')) {
           colIdxMap.vDate = idx;
+        }
+        // 4.1 Voucher Period (Período Contable)
+        else if (head.includes('periodo') || head.includes('period')) {
+          colIdxMap.vPeriod = idx;
         }
         // 5. Document Type (TipoDoc) (CRITICAL: MUST CHECK BEFORE TIPO COMPROBANTE!)
         else if (
@@ -444,8 +449,34 @@ export default function CargaMasivaComprobantesView({
       const fileNumVal = !isNaN(parsedNum) ? parsedNum : currentVoucherIndex;
 
       const rawDateCell = colIdxMap.vDate >= 0 ? row[colIdxMap.vDate] : null;
-      const vDate = parseDateToYYYYMMDD(rawDateCell) || new Date().toISOString().split('T')[0];
-      const vPeriod = vDate.slice(0, 7);
+      let vDate = parseDateToYYYYMMDD(rawDateCell);
+      const rawPeriodCell = colIdxMap.vPeriod >= 0 ? getSafeCellString(row, colIdxMap.vPeriod) : '';
+      let vPeriod = '';
+      if (rawPeriodCell) {
+        if (/^\d{4}-\d{2}$/.test(rawPeriodCell)) vPeriod = rawPeriodCell;
+        else if (/^\d{6}$/.test(rawPeriodCell)) vPeriod = `${rawPeriodCell.slice(0, 4)}-${rawPeriodCell.slice(4, 6)}`;
+        else if (/^\d{1,2}[\/\-]\d{4}$/.test(rawPeriodCell)) {
+          const parts = rawPeriodCell.split(/[\/\-]/);
+          vPeriod = `${parts[1]}-${parts[0].padStart(2, '0')}`;
+        }
+      }
+      if (!vPeriod && vDate) {
+        vPeriod = vDate.slice(0, 7);
+      }
+      if (!vDate && vPeriod) {
+        vDate = `${vPeriod}-01`;
+      }
+      if (!vDate) {
+        // Si no hay fecha ni período, buscar en el grupo activo antes de asumir fecha
+        const existingInGroup = groupedByNumber.get(vNumKey);
+        if (existingInGroup?.date) {
+          vDate = existingInGroup.date;
+          vPeriod = existingInGroup.period;
+        } else {
+          vDate = '2026-01-01';
+          vPeriod = '2026-01';
+        }
+      }
 
       const rawType = getSafeCellString(row, colIdxMap.vType);
       const vType = (['Ingreso', 'Egreso', 'Traspaso'].includes(rawType) ? rawType : 'Traspaso') as 'Ingreso' | 'Egreso' | 'Traspaso';

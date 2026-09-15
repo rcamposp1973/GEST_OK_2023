@@ -5,6 +5,154 @@ import { Company, ChartOfAccount, Auxiliary, Voucher, VoucherLine, FiscalPeriodY
 import { useProcess } from '../context/ProcessContext';
 import { logAuditEvent } from '../utils/auditLogger';
 import { sanitizeVoucherLines } from '../utils/voucherValidation';
+import * as XLSX from 'xlsx';
+
+// Normaliza fechas en formatos DD/MM/YYYY, D/M/YYYY, YYYY-MM-DD, DD-MM-YYYY, YYYY/MM/DD o serial de Excel a ISO YYYY-MM-DD
+function normalizeDateToIso(val?: any): string {
+  if (!val) return '';
+  const cleaned = String(val).trim();
+  if (!cleaned) return '';
+
+  // ISO YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(cleaned)) {
+    return cleaned;
+  }
+
+  // YYYY/MM/DD o YYYY/M/D
+  if (/^\d{4}\/\d{1,2}\/\d{1,2}$/.test(cleaned)) {
+    const [y, m, d] = cleaned.split('/');
+    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  }
+
+  // D/M/YYYY o DD/MM/YYYY (Estándar chileno como 3/3/2026)
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(cleaned)) {
+    const [d, m, y] = cleaned.split('/');
+    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  }
+
+  // D-M-YYYY o DD-MM-YYYY
+  if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(cleaned)) {
+    const [d, m, y] = cleaned.split('-');
+    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  }
+
+  // Serial numérico de Excel (ej: 45000 a 48000 para años 2023-2031)
+  const num = Number(cleaned);
+  if (!isNaN(num) && num > 30000 && num < 70000) {
+    try {
+      const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+      const targetDate = new Date(excelEpoch.getTime() + num * 86400000);
+      return targetDate.toISOString().split('T')[0];
+    } catch {
+      // Ignorar fallback
+    }
+  }
+
+  // Intento nativo de fecha si es parseable
+  const parsed = new Date(cleaned);
+  if (!isNaN(parsed.getTime()) && parsed.getFullYear() >= 2020 && parsed.getFullYear() <= 2035) {
+    return parsed.toISOString().split('T')[0];
+  }
+
+  return '';
+}
+
+// Normaliza el período a formato YYYY-MM
+function normalizePeriod(periodVal?: any, dateIso?: string): string {
+  if (periodVal) {
+    const p = String(periodVal).trim();
+    // YYYY-MM
+    if (/^\d{4}-\d{2}$/.test(p)) return p;
+    // YYYYMM (ej: 202603)
+    if (/^\d{6}$/.test(p)) return `${p.slice(0, 4)}-${p.slice(4, 6)}`;
+    // MM/YYYY o M/YYYY (ej: 03/2026 o 3/2026)
+    if (/^\d{1,2}\/\d{4}$/.test(p)) {
+      const [m, y] = p.split('/');
+      return `${y}-${m.padStart(2, '0')}`;
+    }
+    // MM-YYYY o M-YYYY
+    if (/^\d{1,2}-\d{4}$/.test(p)) {
+      const [m, y] = p.split('-');
+      return `${y}-${m.padStart(2, '0')}`;
+    }
+  }
+
+  // Derivar de fecha ISO si está disponible
+  if (dateIso && /^\d{4}-\d{2}-\d{2}$/.test(dateIso)) {
+    return dateIso.slice(0, 7);
+  }
+
+  return '';
+}
+
+// Limpia montos numéricos de strings con puntos de miles o comas decimales
+function parseAmount(val?: any): number {
+  if (val === null || val === undefined) return 0;
+  if (typeof val === 'number') return isNaN(val) ? 0 : val;
+  const cleaned = String(val).replace(/[$ ]/g, '').replace(/\./g, '').replace(',', '.').trim();
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? 0 : num;
+}
+
+// Detecta si una fila está totalmente vacía
+function isRowBlank(row: any[]): boolean {
+  if (!row || row.length === 0) return true;
+  return row.every(cell => cell === null || cell === undefined || String(cell).trim() === '');
+}
+
+// Detecta si una fila corresponde a un encabezado de plantilla repetido
+function isHeaderRow(row: any[]): boolean {
+  if (!row || row.length === 0) return false;
+  const first = String(row[0] || '').toLowerCase().trim();
+  const second = String(row[1] || '').toLowerCase().trim();
+  return (
+    first.includes('numero') ||
+    first.includes('comprobante') ||
+    first.includes('n°') ||
+    first.includes('num') ||
+    first.includes('codigo') ||
+    first.includes('rut') ||
+    second.includes('fecha') ||
+    second.includes('date') ||
+    second.includes('nombre') ||
+    second.includes('razon')
+  );
+}
+
+// Parser CSV seguro que respeta comillas y múltiples delimitadores
+function parseCsvLine(line: string, delimiter: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"' || char === "'") {
+      if (inQuotes && line[i + 1] === char) {
+        current += char;
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === delimiter && !inQuotes) {
+      result.push(current.trim().replace(/^["']|["']$/g, ''));
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  result.push(current.trim().replace(/^["']|["']$/g, ''));
+  return result;
+}
+
+function detectDelimiter(firstLine: string): string {
+  const semiCount = (firstLine.match(/;/g) || []).length;
+  const commaCount = (firstLine.match(/,/g) || []).length;
+  const tabCount = (firstLine.match(/\t/g) || []).length;
+  if (semiCount >= commaCount && semiCount >= tabCount && semiCount > 0) return ';';
+  if (commaCount > semiCount && commaCount >= tabCount) return ',';
+  if (tabCount > 0) return '\t';
+  return ';';
+}
 
 interface ExcelImportCenterModalProps {
   isOpen: boolean;
@@ -114,13 +262,35 @@ export default function ExcelImportCenterModal({
     setFileName(file.name);
     setImportReport(null);
 
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      const text = (evt.target?.result as string) || '';
-      setFileContent(text);
-      parsePreview(text, activeTab);
-    };
-    reader.readAsText(file, 'UTF-8');
+    const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+
+    if (isExcel) {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        try {
+          const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          // Genera CSV delimitado con punto y coma para procesar
+          const csv = XLSX.utils.sheet_to_csv(worksheet, { FS: ';' });
+          setFileContent(csv);
+          parsePreview(csv, activeTab);
+        } catch (err: any) {
+          console.error('Error al leer archivo binario Excel:', err);
+          alert('No se pudo procesar el archivo Excel seleccionado. Verifique que no esté protegido o dañado.');
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const text = (evt.target?.result as string) || '';
+        setFileContent(text);
+        parsePreview(text, activeTab);
+      };
+      reader.readAsText(file, 'UTF-8');
+    }
   };
 
   const parsePreview = (rawCsv: string, type: ImportType) => {
@@ -134,13 +304,17 @@ export default function ExcelImportCenterModal({
       return;
     }
 
-    const delimiter = lines[0].includes(';') ? ';' : ',';
-    const rows = lines.slice(1).map(line => {
-      const parts = line.split(delimiter).map(p => p.trim().replace(/^["']|["']$/g, ''));
-      return parts;
-    });
+    const delimiter = detectDelimiter(lines[0]);
+    const parsedRows: string[][] = [];
+    for (let i = 1; i < lines.length; i++) {
+      const row = parseCsvLine(lines[i], delimiter);
+      if (isRowBlank(row)) continue;
+      if (isHeaderRow(row)) continue;
+      parsedRows.push(row);
+      if (parsedRows.length >= 10) break;
+    }
 
-    setPreviewData(rows.slice(0, 10)); // preview first 10
+    setPreviewData(parsedRows);
   };
 
   // Perform Real Batch Import to Firestore
@@ -160,8 +334,14 @@ export default function ExcelImportCenterModal({
       return;
     }
 
-    const delimiter = lines[0].includes(';') ? ';' : ',';
-    const rows = lines.slice(1).map(line => line.split(delimiter).map(p => p.trim().replace(/^["']|["']$/g, '')));
+    const delimiter = detectDelimiter(lines[0]);
+    const rawRows = lines.slice(1).map(line => parseCsvLine(line, delimiter));
+    const rows = rawRows.filter(r => !isRowBlank(r) && !isHeaderRow(r));
+
+    if (rows.length === 0) {
+      alert('El archivo no contiene filas de datos válidas para procesar.');
+      return;
+    }
 
     setIsProcessing(true);
     let successCount = 0;
@@ -181,11 +361,11 @@ export default function ExcelImportCenterModal({
                 current: i + 1,
                 total: rows.length,
                 message: `Importando Plan de Cuentas (${i + 1}/${rows.length})`,
-                stage: `${code} - ${name}`
+                stage: `${code || ''} - ${name || ''}`
               });
 
               if (!code || !name) {
-                errorCount++;
+                // Si la fila está vacía o incompleta, saltar
                 continue;
               }
 
@@ -207,10 +387,10 @@ export default function ExcelImportCenterModal({
               const nowIso = new Date().toISOString();
 
               const accountPayload: Omit<ChartOfAccount, 'id'> = {
-                code,
-                name,
+                code: String(code).trim(),
+                name: String(name).trim(),
                 type: normalizedType,
-                parentCode: parentCode || '',
+                parentCode: parentCode ? String(parentCode).trim() : '',
                 requiereCentroCosto: reqCC,
                 requiereAuxiliarRUT: reqAux,
                 requiereConciliacionBancaria: reqConc,
@@ -264,7 +444,6 @@ export default function ExcelImportCenterModal({
               });
 
               if (!rut || !name) {
-                errorCount++;
                 continue;
               }
 
@@ -274,8 +453,8 @@ export default function ExcelImportCenterModal({
               else if (rLower.includes('deudor') || rLower.includes('cliente')) role = 'Deudor';
               else if (rLower.includes('acreedor') || rLower.includes('proveedor')) role = 'Acreedor';
 
-              const matchedAcc1 = accounts.find(a => a.code === accCode1);
-              const matchedAcc2 = accounts.find(a => a.code === accCode2);
+              const matchedAcc1 = accounts.find(a => a.code === (accCode1 || '').trim());
+              const matchedAcc2 = accounts.find(a => a.code === (accCode2 || '').trim());
 
               let tipoCuenta: 'Corriente' | 'Vista' | 'Ahorro' | 'RUT' = 'Corriente';
               const tCtaLower = (tipoCtaStr || '').toLowerCase();
@@ -326,44 +505,99 @@ export default function ExcelImportCenterModal({
               lines: VoucherLine[];
             }>();
 
+            // Rastrear el comprobante activo para filas multilínea que heredan cabecera
+            let currentVNum = 1;
+            let currentDate = '';
+            let currentPeriod = '';
+            let currentType: 'Ingreso' | 'Egreso' | 'Traspaso' = 'Traspaso';
+            let currentGloss = 'Comprobante importado vía Excel';
+
             for (let i = 0; i < rows.length; i++) {
               const row = rows[i];
               const [numStr, dateStr, periodStr, typeStr, vGloss, accCode, lineGloss, auxRut, docType, docFolio, ccCode, debeStr, haberStr] = row;
 
-              const vNum = parseInt(numStr) || 1;
-              const key = `${vNum}_${dateStr || ''}`;
+              const debe = parseAmount(debeStr);
+              const haber = parseAmount(haberStr);
+              const hasAccount = Boolean(accCode && String(accCode).trim());
 
-              const matchedAcc = accounts.find(a => a.code === accCode);
-              const matchedAux = auxiliaries.find(a => a.rut.toLowerCase() === (auxRut || '').toLowerCase());
+              // Si la fila no tiene cuenta ni montos, omitir
+              if (!hasAccount && debe === 0 && haber === 0) {
+                continue;
+              }
 
-              const debe = parseFloat(debeStr?.replace(/\./g, '').replace(',', '.')) || 0;
-              const haber = parseFloat(haberStr?.replace(/\./g, '').replace(',', '.')) || 0;
+              // Determinar número de comprobante
+              const parsedNum = parseInt(numStr, 10);
+              if (!isNaN(parsedNum) && parsedNum > 0) {
+                currentVNum = parsedNum;
+              }
 
-              let vType: 'Ingreso' | 'Egreso' | 'Traspaso' = 'Traspaso';
-              const tLower = (typeStr || '').toLowerCase();
-              if (tLower.includes('ingreso')) vType = 'Ingreso';
-              else if (tLower.includes('egreso')) vType = 'Egreso';
+              // Determinar fecha normalizada (admite D/M/YYYY, DD/MM/YYYY, YYYY-MM-DD, etc.)
+              const parsedDate = normalizeDateToIso(dateStr);
+              if (parsedDate) {
+                currentDate = parsedDate;
+              }
+
+              // Determinar período normalizado (admite YYYY-MM, 2026-03, 202603, etc.)
+              const parsedPeriod = normalizePeriod(periodStr, currentDate);
+              if (parsedPeriod) {
+                currentPeriod = parsedPeriod;
+              } else if (currentDate) {
+                currentPeriod = currentDate.slice(0, 7);
+              }
+
+              // Si hay período pero no fecha exacta, asignar el primer día del mes
+              if (!currentDate && currentPeriod) {
+                currentDate = `${currentPeriod}-01`;
+              }
+
+              // Si no tiene fecha ni período válido, reportar error y no usar fecha de hoy
+              if (!currentDate || !currentPeriod) {
+                errorCount++;
+                errors.push(`Fila ${i + 2}: El comprobante N° ${currentVNum} no tiene fecha ni período contable válido.`);
+                continue;
+              }
+
+              // Determinar tipo de comprobante
+              if (typeStr && String(typeStr).trim()) {
+                const tLower = String(typeStr).toLowerCase();
+                if (tLower.includes('ingreso')) currentType = 'Ingreso';
+                else if (tLower.includes('egreso')) currentType = 'Egreso';
+                else if (tLower.includes('traspaso')) currentType = 'Traspaso';
+              }
+
+              if (vGloss && String(vGloss).trim()) {
+                currentGloss = String(vGloss).trim();
+              }
+
+              // Clave única para agrupar líneas del mismo comprobante
+              const key = `V_${currentVNum}_${currentPeriod}_${currentDate}`;
+
+              const matchedAcc = accounts.find(a => a.code === (accCode || '').trim());
+              const matchedAux = auxiliaries.find(a => (a.rut || '').replace(/[^0-9kK]/g, '').toUpperCase() === (auxRut || '').replace(/[^0-9kK]/g, '').toUpperCase());
+
+              const formattedDocRef = [docType, docFolio].filter(Boolean).map(s => String(s).trim()).join(' ');
 
               const lineObj: VoucherLine = {
                 id: `imp_line_${Date.now()}_${i}`,
                 accountId: matchedAcc?.id || '',
-                accountCode: accCode || '',
+                accountCode: (accCode || '').trim(),
                 accountName: matchedAcc?.name || 'Cuenta Importada',
-                gloss: lineGloss || vGloss || '',
-                auxiliaryRut: auxRut || '',
+                gloss: lineGloss ? String(lineGloss).trim() : currentGloss,
+                auxiliaryRut: auxRut ? String(auxRut).trim() : '',
                 auxiliaryName: matchedAux?.name || '',
-                documentRef: docFolio ? `${docType || 'Doc'} ${docFolio}` : '',
+                documentRef: formattedDocRef,
+                costCenter: ccCode ? String(ccCode).trim() : '',
                 debit: debe,
                 credit: haber
               };
 
               if (!vouchersMap.has(key)) {
                 vouchersMap.set(key, {
-                  voucherNumber: vNum,
-                  date: dateStr || new Date().toISOString().split('T')[0],
-                  period: periodStr || (dateStr ? dateStr.slice(0, 7) : new Date().toISOString().slice(0, 7)),
-                  type: vType,
-                  gloss: vGloss || 'Comprobante importado vía Excel',
+                  voucherNumber: currentVNum,
+                  date: currentDate,
+                  period: currentPeriod,
+                  type: currentType,
+                  gloss: currentGloss,
                   lines: [lineObj]
                 });
               } else {
@@ -380,19 +614,19 @@ export default function ExcelImportCenterModal({
                 if (parts.length >= 2) {
                   const y = parts[0];
                   const m = parseInt(parts[1], 10);
-                  const fy = fiscalYears.find(f => f.id === y);
+                  const fy = fiscalYears.find(f => String(f.id || f.year) === y);
                   if (fy && fy.months?.[m] === 'Cerrado') {
-                    closedDrafts.push(`Comprobante N° ${vData.voucherNumber} (${pStr})`);
+                    closedDrafts.push(`Comprobante N° ${vData.voucherNumber} (Período ${pStr})`);
                   }
                 }
               }
 
               if (closedDrafts.length > 0) {
                 throw new Error(
-                  `Acción bloqueada: Se encontraron ${closedDrafts.length} comprobantes con fecha en períodos CERRADOS.\n` +
-                  closedDrafts.slice(0, 3).join(', ') +
-                  (closedDrafts.length > 3 ? '...' : '') +
-                  `\nPor favor abre los períodos correspondientes en 'Configuraciones > Períodos Contables' antes de importar.`
+                  `Acción bloqueada: Se encontraron ${closedDrafts.length} comprobante(s) con fecha en períodos CERRADOS:\n` +
+                  closedDrafts.slice(0, 5).join('\n') +
+                  (closedDrafts.length > 5 ? `\n...y ${closedDrafts.length - 5} más.` : '') +
+                  `\n\nPor favor abre los períodos correspondientes en 'Configuraciones > Períodos Contables' antes de importar.`
                 );
               }
             }

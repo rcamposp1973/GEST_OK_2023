@@ -615,6 +615,28 @@ export interface BankReconciliation {
   updatedAt: string;
 }
 
+export interface JuniorGlossRule {
+  id?: string;
+  studyId?: string;
+  companyId?: string;
+  title?: string;
+  pattern: string; // Subcadena o texto a buscar en la glosa de la cartola (ej: "COMISION", "PAC TRANSBANK", "INTERESES")
+  matchType?: 'CONTAINS' | 'STARTS_WITH' | 'EXACT';
+  movementType: 'ALL' | 'CARGO' | 'ABONO'; // CARGO -> Comprobante de Egreso, ABONO -> Comprobante de Ingreso
+  accountId: string;
+  accountCode: string;
+  accountName: string;
+  auxiliaryRut?: string;
+  auxiliaryName?: string;
+  targetGloss?: string; // Glosa personalizada para el comprobante contable (opcional)
+  costCenter?: string;
+  expenseItem?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt?: string;
+  timesUsed?: number;
+}
+
 export interface CustomF29Code {
   id: string;
   code: string; // ej: '542', '586'

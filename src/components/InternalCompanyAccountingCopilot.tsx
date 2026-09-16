@@ -30,11 +30,20 @@ import {
   Lightbulb,
   ArrowLeftRight,
   EyeOff,
-  Eye
+  Eye,
+  Sparkles,
+  Play,
+  Check
 } from 'lucide-react';
 import { AnimatedOkLogo } from './AnimatedOkLogo';
 import { Company, ChartOfAccount, Voucher, RCVDocument, Auxiliary, FiscalPeriodYear } from '../types';
 import { CopilotKnowledgeItem } from './JuniorAITrainingCenter';
+import { 
+  parseJuniorGlossCommand, 
+  findMatchingCartolaLines, 
+  executeJuniorGlossAutomation, 
+  MatchedCartolaItem 
+} from '../utils/juniorGlossEngine';
 
 interface InternalCopilotProps {
   studyId: string;
@@ -45,6 +54,7 @@ interface InternalCopilotProps {
   auxiliaries: Auxiliary[];
   fiscalYears: FiscalPeriodYear[];
   onNavigateTab?: (tab: any) => void;
+  onVouchersUpdated?: () => void;
 }
 
 interface ChatMessage {
@@ -57,6 +67,16 @@ interface ChatMessage {
     tab: string;
     label: string;
   };
+  taskProposal?: {
+    pattern: string;
+    targetAccount: ChartOfAccount;
+    targetAuxiliary?: Auxiliary | null;
+    movementType: 'ALL' | 'CARGO' | 'ABONO';
+    items: MatchedCartolaItem[];
+    totalAmount: number;
+    executed?: boolean;
+    resultMessage?: string;
+  };
 }
 
 export default function InternalCompanyAccountingCopilot({
@@ -67,7 +87,8 @@ export default function InternalCompanyAccountingCopilot({
   rcvDocuments,
   auxiliaries,
   fiscalYears,
-  onNavigateTab
+  onNavigateTab,
+  onVouchersUpdated
 }: InternalCopilotProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
@@ -635,7 +656,74 @@ export default function InternalCompanyAccountingCopilot({
     };
   };
 
-  const handleSend = (textToSend?: string) => {
+  const [executingTaskId, setExecutingTaskId] = useState<string | null>(null);
+
+  const handleExecuteTaskProposal = async (msgId: string, proposal: NonNullable<ChatMessage['taskProposal']>) => {
+    setExecutingTaskId(msgId);
+    try {
+      const res = await executeJuniorGlossAutomation(
+        studyId,
+        company,
+        proposal.items,
+        proposal.targetAccount,
+        proposal.pattern,
+        {
+          movementType: proposal.movementType,
+          targetAuxiliary: proposal.targetAuxiliary,
+          saveAsPermanentRule: true,
+          existingVouchers: vouchers,
+          accounts
+        }
+      );
+
+      if (res.success) {
+        setMessages(prev => prev.map(m => {
+          if (m.id === msgId && m.taskProposal) {
+            return {
+              ...m,
+              taskProposal: {
+                ...m.taskProposal,
+                executed: true,
+                resultMessage: `✅ ¡Listo! Se generaron ${res.createdVouchersCount} comprobantes contables por un total de $${res.totalAmount.toLocaleString('es-CL')}, las facturas quedaron pagadas ($0) y las cartolas quedaron conciliadas.`
+              }
+            };
+          }
+          return m;
+        }));
+
+        // Append triumphant AI message
+        const followUpMsg: ChatMessage = {
+          id: `ai-success-${Date.now()}`,
+          sender: 'ai',
+          text: `🎉 **¡Tarea completada con éxito por Junior!**\n\n` +
+            `• Se generaron **${res.createdVouchersCount} comprobantes contables oficiales** (asientos de partida doble).\n` +
+            `• Se actualizaron los documentos RCV correspondientes al estado **'Pagada' (saldo $0)**.\n` +
+            `• Se conciliaron automáticamente las líneas correspondientes en las cartolas bancarias de **${company.name}**.\n\n` +
+            `Además, la regla contable *"${proposal.pattern}" ➔ [${proposal.targetAccount.code}] ${proposal.targetAccount.name}* quedó guardada en la memoria para futuras cartolas.`,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          suggestions: [
+            'Ver Conciliación Bancaria',
+            'Auditar Libro Diario',
+            'Ver Registro de Compras (RCV)'
+          ]
+        };
+        setMessages(prev => [...prev, followUpMsg]);
+
+        if (onVouchersUpdated) {
+          onVouchersUpdated();
+        }
+      } else {
+        alert(res.error || 'Error al ejecutar la contabilización automática.');
+      }
+    } catch (e: any) {
+      console.error('Error executing task proposal:', e);
+      alert(e?.message || 'Error al ejecutar la tarea.');
+    } finally {
+      setExecutingTaskId(null);
+    }
+  };
+
+  const handleSend = async (textToSend?: string) => {
     const text = textToSend || inputMessage;
     if (!text.trim()) return;
 
@@ -650,6 +738,99 @@ export default function InternalCompanyAccountingCopilot({
     if (!textToSend) setInputMessage('');
     setIsAnalyzing(true);
 
+    // 1. Check if user is asking for Cartola Gloss Automation / Invoice payment
+    const glossIntent = parseJuniorGlossCommand(text, accounts, auxiliaries, rcvDocuments);
+
+    if (glossIntent.isGlossTask && glossIntent.pattern) {
+      if (glossIntent.targetAccount) {
+        // Find matching lines in Firestore and match against RCV invoices
+        try {
+          const scanRes = await findMatchingCartolaLines(
+            studyId,
+            company,
+            glossIntent.pattern,
+            glossIntent.movementType,
+            accounts,
+            fiscalYears,
+            undefined,
+            rcvDocuments,
+            glossIntent.targetAuxiliary,
+            glossIntent.requireExactInvoiceMatch
+          );
+
+          setIsAnalyzing(false);
+
+          if (scanRes.totalCount > 0) {
+            const hasInvoices = scanRes.matchedInvoicesCount > 0;
+            const entityName = glossIntent.targetEntityName || glossIntent.targetAuxiliary?.name || glossIntent.targetRut;
+
+            const aiMsg: ChatMessage = {
+              id: `ai-task-${Date.now()}`,
+              sender: 'ai',
+              text: `🤖 **¡Entendido! Junior ha procesado tu instrucción de cartola y facturas.**\n\n` +
+                `• **Glosa Cartola:** "${glossIntent.pattern}"\n` +
+                (entityName ? `• **Entidad / Proveedor:** ${entityName}${glossIntent.targetRut ? ` (RUT: ${glossIntent.targetRut})` : ''}\n` : '') +
+                `• **Cuenta de Contrapartida:** [${glossIntent.targetAccount.code}] ${glossIntent.targetAccount.name}\n` +
+                `• **Movimientos coincidentes:** ${scanRes.totalCount} líneas por **$${(scanRes.totalCharges + scanRes.totalDeposits).toLocaleString('es-CL')}**\n` +
+                (hasInvoices ? `• **Facturas RCV vinculadas:** ${scanRes.matchedInvoicesCount} documento(s) pendiente(s) de pago\n` : '') +
+                `• **Acciones a ejecutar:** Generar comprobantes (${glossIntent.movementType === 'CARGO' ? 'Egreso' : 'Ingreso'}), ${hasInvoices ? 'marcar facturas como Pagadas (saldo $0) y ' : ''}conciliar las líneas bancarias.\n\n` +
+                `Haz clic en el botón a continuación para que Junior aplique todos los registros automáticamente:`,
+              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              taskProposal: {
+                pattern: glossIntent.pattern,
+                targetAccount: glossIntent.targetAccount,
+                targetAuxiliary: glossIntent.targetAuxiliary,
+                movementType: glossIntent.movementType,
+                items: scanRes.matchedLines,
+                totalAmount: scanRes.totalCharges + scanRes.totalDeposits
+              },
+              suggestions: [
+                'Ver Conciliación Bancaria',
+                'Auditar Libro Diario',
+                'Ver Registro de Compras'
+              ]
+            };
+            setMessages(prev => [...prev, aiMsg]);
+            return;
+          } else {
+            const aiMsg: ChatMessage = {
+              id: `ai-notfound-${Date.now()}`,
+              sender: 'ai',
+              text: `🔍 Junior analizó todas las cartolas bancarias de **${company.name}**, pero no encontró movimientos pendientes con la glosa **"${glossIntent.pattern}"**${glossIntent.requireExactInvoiceMatch ? ' que coincidan exactamente con facturas pendientes' : ''}.\n\n` +
+                `💡 **Consejo:** Verifica si la cartola correspondiente ya fue importada en el módulo de Conciliación Bancaria o si los movimientos ya están conciliados.`,
+              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              suggestions: [
+                'Ver Conciliación Bancaria',
+                'Buscar facturas pendientes por RUT'
+              ]
+            };
+            setMessages(prev => [...prev, aiMsg]);
+            return;
+          }
+        } catch (err) {
+          console.error('Error scanning cartola in Copilot:', err);
+        }
+      } else {
+        // Pattern detected but no target account specified
+        setIsAnalyzing(false);
+        const aiMsg: ChatMessage = {
+          id: `ai-askacc-${Date.now()}`,
+          sender: 'ai',
+          text: `🎯 **Junior detectó la glosa "${glossIntent.pattern}" para contabilizar la cartola bancaria.**\n\n` +
+            `Para poder generar los comprobantes contables con partida doble, por favor indícame contra qué **cuenta contable** deseas contabilizar (por ejemplo: *"contabiliza glosa '${glossIntent.pattern}' contra la cuenta 2101001 Proveedores Nacionales"* o *"pagando facturas del proveedor RUT 99.147.000-K"*).`,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          suggestions: [
+            `Contabilizar "${glossIntent.pattern}" contra 2101001 Proveedores`,
+            `Contabilizar "${glossIntent.pattern}" contra 5101004 Gastos Bancarios`,
+            'Ver Plan de Cuentas'
+          ]
+        };
+        setMessages(prev => [...prev, aiMsg]);
+        return;
+      }
+    }
+
+    // Default: Standard Accounting & Tax Knowledge reasoning
     setTimeout(() => {
       const result = processAccountingQuery(text);
       setIsAnalyzing(false);
@@ -664,7 +845,7 @@ export default function InternalCompanyAccountingCopilot({
       };
 
       setMessages(prev => [...prev, aiMsg]);
-    }, 500);
+    }, 400);
   };
 
   return (
@@ -851,6 +1032,86 @@ export default function InternalCompanyAccountingCopilot({
                   >
                     {msg.text}
                   </div>
+
+                  {/* Junior Task Proposal Interactive Card */}
+                  {msg.taskProposal && (
+                    <div className="mt-2.5 w-full max-w-[96%] bg-slate-900 border border-indigo-500/40 rounded-2xl p-3.5 shadow-lg text-xs space-y-2.5 animate-in fade-in">
+                      <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                        <div className="flex items-center gap-2">
+                          <BrainCircuit className="w-4 h-4 text-indigo-400" />
+                          <span className="font-bold text-white text-xs">Propuesta de Automatización de Cartola</span>
+                        </div>
+                        <span className="bg-indigo-950 text-indigo-300 font-mono text-[10px] px-2 py-0.5 rounded-full border border-indigo-800/60">
+                          {msg.taskProposal.items.length} movimientos
+                        </span>
+                      </div>
+
+                      {/* Mini table of matching lines */}
+                      <div className="max-h-40 overflow-y-auto rounded-lg border border-slate-800 bg-slate-950/80 text-[11px] font-mono">
+                        <table className="w-full text-left">
+                          <thead className="bg-slate-900 text-slate-400 border-b border-slate-800 text-[10px]">
+                            <tr>
+                              <th className="p-1.5">Fecha</th>
+                              <th className="p-1.5">Glosa / Doc Vinculado</th>
+                              <th className="p-1.5 text-right">Monto</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-900">
+                            {msg.taskProposal.items.slice(0, 5).map((item, idx) => (
+                              <tr key={idx} className="hover:bg-slate-900/50">
+                                <td className="p-1.5 text-slate-300 align-top">{item.line.date}</td>
+                                <td className="p-1.5 text-slate-400 truncate max-w-[160px] align-top">
+                                  <div className="text-slate-300 truncate">{item.line.description}</div>
+                                  {item.matchedDocument && (
+                                    <div className="text-[10px] text-emerald-400 font-sans flex items-center gap-1 font-semibold mt-0.5">
+                                      <FileText className="w-3 h-3 text-emerald-400 shrink-0" />
+                                      <span>Factura N° {item.matchedDocument.folio}</span>
+                                      <span className="text-slate-500 font-mono">({item.matchedDocument.rutEmisor || item.matchedDocument.rutReceptor})</span>
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="p-1.5 text-right font-bold text-emerald-400 align-top">
+                                  ${(item.line.charge || item.line.deposit).toLocaleString('es-CL')}
+                                </td>
+                              </tr>
+                            ))}
+                            {msg.taskProposal.items.length > 5 && (
+                              <tr>
+                                <td colSpan={3} className="p-1.5 text-center text-[10px] text-slate-500 italic bg-slate-900/30">
+                                  + {msg.taskProposal.items.length - 5} movimientos adicionales
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Execution Button */}
+                      <div className="pt-1 flex items-center justify-between gap-2">
+                        {msg.taskProposal.executed ? (
+                          <div className="w-full p-2 bg-emerald-950/60 border border-emerald-500/40 rounded-xl text-emerald-300 text-xs font-bold flex items-center justify-center gap-2">
+                            <Check className="w-4 h-4 text-emerald-400" />
+                            <span>{msg.taskProposal.resultMessage || 'Asientos generados y cartolas conciliadas'}</span>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => handleExecuteTaskProposal(msg.id, msg.taskProposal!)}
+                            disabled={executingTaskId === msg.id}
+                            className="w-full py-2.5 px-3 bg-gradient-to-r from-indigo-600 to-emerald-600 hover:from-indigo-500 hover:to-emerald-500 disabled:opacity-50 text-white font-black text-xs rounded-xl flex items-center justify-center gap-2 shadow-md transition-all hover:scale-[1.01] cursor-pointer"
+                          >
+                            <Play className="w-4 h-4 fill-white" />
+                            <span>
+                              {executingTaskId === msg.id 
+                                ? 'Junior generando comprobantes...' 
+                                : `🚀 Ejecutar Contabilización (${msg.taskProposal.items.length} Asientos)`
+                              }
+                            </span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   <span className="text-[10px] text-slate-500 mt-1 px-1">{msg.time}</span>
 
                   {/* Botón de acción rápida a módulo contable */}

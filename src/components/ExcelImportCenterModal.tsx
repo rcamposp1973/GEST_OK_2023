@@ -161,8 +161,11 @@ interface ExcelImportCenterModalProps {
   company: Company;
   accounts: ChartOfAccount[];
   auxiliaries: Auxiliary[];
+  vouchers?: Voucher[];
   fiscalYears?: FiscalPeriodYear[];
+  initialTab?: ImportType;
   onDataImported: () => void;
+  onNavigateToVouchers?: (period?: string, year?: string, month?: string) => void;
 }
 
 type ImportType = 'cuentas' | 'clientes' | 'proveedores' | 'comprobantes';
@@ -174,18 +177,47 @@ export default function ExcelImportCenterModal({
   company,
   accounts,
   auxiliaries,
+  vouchers = [],
   fiscalYears = [],
-  onDataImported
+  initialTab = 'cuentas',
+  onDataImported,
+  onNavigateToVouchers
 }: ExcelImportCenterModalProps) {
   const { withProcess } = useProcess();
-  const [activeTab, setActiveTab] = useState<ImportType>('cuentas');
+  const [activeTab, setActiveTab] = useState<ImportType>(initialTab);
   const [fileContent, setFileContent] = useState<string>('');
   const [fileName, setFileName] = useState<string>('');
+  const [detectedBadge, setDetectedBadge] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [previewData, setPreviewData] = useState<any[]>([]);
   const [importReport, setImportReport] = useState<string | null>(null);
+  const [renumberMode, setRenumberMode] = useState<'auto' | 'keep'>('auto');
+  const [importedBatchInfo, setImportedBatchInfo] = useState<{
+    count: number;
+    startNum: number;
+    endNum: number;
+    period: string;
+    year: string;
+    month: string;
+  } | null>(null);
+
+  // Sync initialTab when modal opens
+  React.useEffect(() => {
+    if (isOpen) {
+      setActiveTab(initialTab);
+      setFileContent('');
+      setFileName('');
+      setDetectedBadge(null);
+      setPreviewData([]);
+      setImportReport(null);
+      setImportedBatchInfo(null);
+    }
+  }, [isOpen, initialTab]);
 
   if (!isOpen) return null;
+
+  const maxExistingVNum = (vouchers || []).reduce((max, v) => Math.max(max, v.voucherNumber || 0), 0);
+  const nextRecommendedNum = maxExistingVNum + 1;
 
   const companyRef = doc(db, 'studies', studyId, 'companies', company.id);
 
@@ -261,8 +293,77 @@ export default function ExcelImportCenterModal({
 
     setFileName(file.name);
     setImportReport(null);
+    setImportedBatchInfo(null);
 
     const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+
+    const processContent = (content: string, fName: string) => {
+      setFileContent(content);
+      const lines = content.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+      if (lines.length > 0) {
+        const delimiter = detectDelimiter(lines[0]);
+        const header = lines[0].toLowerCase();
+        const firstRow = lines.length > 1 ? parseCsvLine(lines[1], delimiter) : [];
+        const fLower = fName.toLowerCase();
+
+        // 1. Detect Comprobantes
+        const isComprobanteFile = 
+          fLower.includes('comprobante') || 
+          fLower.includes('voucher') || 
+          fLower.includes('asiento') ||
+          header.includes('comprobante') ||
+          header.includes('tipocomprobante') ||
+          header.includes('glosacomprobante') ||
+          (header.includes('debe') && header.includes('haber')) ||
+          (firstRow.length >= 4 && (firstRow[3]?.toLowerCase().includes('ingreso') || firstRow[3]?.toLowerCase().includes('egreso') || firstRow[3]?.toLowerCase().includes('traspaso')));
+
+        // 2. Detect Plan de Cuentas
+        const isPlanFile = 
+          !isComprobanteFile && (
+            fLower.includes('plan') || 
+            fLower.includes('cuenta') ||
+            header.includes('requierecentrocosto') ||
+            header.includes('codigopadre') ||
+            header.includes('nombrecuenta')
+          );
+
+        // 3. Detect Clientes
+        const isClientesFile = 
+          fLower.includes('cliente') || 
+          fLower.includes('deudor') ||
+          header.includes('cuentacontablecobrar');
+
+        // 4. Detect Proveedores
+        const isProveedoresFile = 
+          fLower.includes('proveedor') || 
+          fLower.includes('acreedor') ||
+          header.includes('cuentacontablepagar');
+
+        if (isComprobanteFile && activeTab !== 'comprobantes') {
+          setActiveTab('comprobantes');
+          setDetectedBadge('✨ Archivo identificado como Comprobantes Contables (Se seleccionó la pestaña 4 automáticamente)');
+          parsePreview(content, 'comprobantes');
+          return;
+        } else if (isPlanFile && activeTab !== 'cuentas') {
+          setActiveTab('cuentas');
+          setDetectedBadge('✨ Archivo identificado como Plan de Cuentas (Se seleccionó la pestaña 1)');
+          parsePreview(content, 'cuentas');
+          return;
+        } else if (isClientesFile && activeTab !== 'clientes') {
+          setActiveTab('clientes');
+          setDetectedBadge('✨ Archivo identificado como Clientes (Se seleccionó la pestaña 2)');
+          parsePreview(content, 'clientes');
+          return;
+        } else if (isProveedoresFile && activeTab !== 'proveedores') {
+          setActiveTab('proveedores');
+          setDetectedBadge('✨ Archivo identificado como Proveedores (Se seleccionó la pestaña 3)');
+          parsePreview(content, 'proveedores');
+          return;
+        }
+      }
+      setDetectedBadge(null);
+      parsePreview(content, activeTab);
+    };
 
     if (isExcel) {
       const reader = new FileReader();
@@ -274,8 +375,7 @@ export default function ExcelImportCenterModal({
           const worksheet = workbook.Sheets[firstSheetName];
           // Genera CSV delimitado con punto y coma para procesar
           const csv = XLSX.utils.sheet_to_csv(worksheet, { FS: ';' });
-          setFileContent(csv);
-          parsePreview(csv, activeTab);
+          processContent(csv, file.name);
         } catch (err: any) {
           console.error('Error al leer archivo binario Excel:', err);
           alert('No se pudo procesar el archivo Excel seleccionado. Verifique que no esté protegido o dañado.');
@@ -286,8 +386,7 @@ export default function ExcelImportCenterModal({
       const reader = new FileReader();
       reader.onload = (evt) => {
         const text = (evt.target?.result as string) || '';
-        setFileContent(text);
-        parsePreview(text, activeTab);
+        processContent(text, file.name);
       };
       reader.readAsText(file, 'UTF-8');
     }
@@ -341,6 +440,39 @@ export default function ExcelImportCenterModal({
     if (rows.length === 0) {
       alert('El archivo no contiene filas de datos válidas para procesar.');
       return;
+    }
+
+    // --- PROTECCIÓN CONTRA IMPORTACIÓN EN PESTAÑA INCORRECTA ---
+    if (activeTab === 'cuentas') {
+      const looksLikeVoucher = rows.some(r => {
+        const d = normalizeDateToIso(r[1]);
+        const t = String(r[3] || '').toLowerCase();
+        return d !== '' && (t.includes('ingreso') || t.includes('egreso') || t.includes('traspaso'));
+      });
+      if (looksLikeVoucher) {
+        setActiveTab('comprobantes');
+        alert(
+          '🛡️ ¡Protección de Plan de Cuentas activada!\n\n' +
+          'El archivo seleccionado corresponde a Comprobantes Contables (contiene fechas y tipos Ingreso/Egreso/Traspaso), pero estaba seleccionada la pestaña "1. Plan de Cuentas".\n\n' +
+          'Hemos cambiado automáticamente a la pestaña "4. Comprobantes Contables" para evitar alterar su plan de cuentas. Por favor revise la vista previa y presione "Cargar COMPROBANTES a la Empresa".'
+        );
+        return;
+      }
+    }
+
+    if (activeTab === 'comprobantes') {
+      const looksLikePlan = rows.some(r => {
+        const t = String(r[2] || '').toLowerCase();
+        return (t === 'activo' || t === 'pasivo' || t === 'patrimonio' || t === 'ingreso' || t === 'gasto') && !r[1]?.includes('/');
+      });
+      if (looksLikePlan) {
+        setActiveTab('cuentas');
+        alert(
+          '🛡️ ¡Protección de Comprobantes activada!\n\n' +
+          'El archivo seleccionado parece ser un Plan de Cuentas. Hemos cambiado automáticamente a la pestaña "1. Plan de Cuentas".'
+        );
+        return;
+      }
     }
 
     setIsProcessing(true);
@@ -572,18 +704,28 @@ export default function ExcelImportCenterModal({
               // Clave única para agrupar líneas del mismo comprobante
               const key = `V_${currentVNum}_${currentPeriod}_${currentDate}`;
 
-              const matchedAcc = accounts.find(a => a.code === (accCode || '').trim());
-              const matchedAux = auxiliaries.find(a => (a.rut || '').replace(/[^0-9kK]/g, '').toUpperCase() === (auxRut || '').replace(/[^0-9kK]/g, '').toUpperCase());
+              const rawCode = (accCode || '').trim();
+              const cleanCode = rawCode.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+              const matchedAcc = accounts.find(a => 
+                a.code === rawCode || 
+                (a.code || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase() === cleanCode
+              );
+
+              const rawRut = (auxRut || '').trim();
+              const cleanRut = rawRut.replace(/[^0-9kK]/g, '').toUpperCase();
+              const matchedAux = rawRut ? auxiliaries.find(a => 
+                (a.rut || '').replace(/[^0-9kK]/g, '').toUpperCase() === cleanRut
+              ) : undefined;
 
               const formattedDocRef = [docType, docFolio].filter(Boolean).map(s => String(s).trim()).join(' ');
 
               const lineObj: VoucherLine = {
                 id: `imp_line_${Date.now()}_${i}`,
                 accountId: matchedAcc?.id || '',
-                accountCode: (accCode || '').trim(),
-                accountName: matchedAcc?.name || 'Cuenta Importada',
+                accountCode: matchedAcc?.code || rawCode,
+                accountName: matchedAcc?.name || (rawCode ? `Cuenta ${rawCode}` : 'Cuenta General'),
                 gloss: lineGloss ? String(lineGloss).trim() : currentGloss,
-                auxiliaryRut: auxRut ? String(auxRut).trim() : '',
+                auxiliaryRut: rawRut,
                 auxiliaryName: matchedAux?.name || '',
                 documentRef: formattedDocRef,
                 costCenter: ccCode ? String(ccCode).trim() : '',
@@ -631,13 +773,28 @@ export default function ExcelImportCenterModal({
               }
             }
 
-            const totalVouchers = vouchersMap.size;
+            const uniqueVouchers = Array.from(vouchersMap.values());
+            const totalVouchers = uniqueVouchers.length;
+            let startVNum = 1;
+            let endVNum = totalVouchers;
+
+            if (renumberMode === 'auto' && maxExistingVNum > 0) {
+              uniqueVouchers.forEach((vData, index) => {
+                vData.voucherNumber = maxExistingVNum + index + 1;
+              });
+              startVNum = maxExistingVNum + 1;
+              endVNum = maxExistingVNum + totalVouchers;
+            } else if (uniqueVouchers.length > 0) {
+              startVNum = uniqueVouchers[0].voucherNumber;
+              endVNum = uniqueVouchers[uniqueVouchers.length - 1].voucherNumber;
+            }
+
             let vIdx = 0;
             const userUid = auth.currentUser?.uid || 'import-excel';
             const userEmail = auth.currentUser?.email || '';
             const nowIso = new Date().toISOString();
 
-            for (const vData of vouchersMap.values()) {
+            for (const vData of uniqueVouchers) {
               vIdx++;
               updateProgress({
                 current: vIdx,
@@ -670,6 +827,19 @@ export default function ExcelImportCenterModal({
 
               await addDoc(collection(companyRef, 'vouchers'), voucherPayload);
               successCount++;
+            }
+
+            if (uniqueVouchers.length > 0) {
+              const sampleP = uniqueVouchers[0].period || uniqueVouchers[0].date.slice(0, 7);
+              const [y, m] = sampleP.split('-');
+              setImportedBatchInfo({
+                count: successCount,
+                startNum: startVNum,
+                endNum: endVNum,
+                period: sampleP,
+                year: y || '2026',
+                month: m || '03'
+              });
             }
           }
         }
@@ -773,7 +943,7 @@ export default function ExcelImportCenterModal({
           </div>
 
           {/* Step 2: Upload CSV / File Drop */}
-          <div className="border-2 border-dashed border-slate-300 hover:border-indigo-500 rounded-xl p-6 text-center transition-colors bg-slate-50/50">
+          <div className="border-2 border-dashed border-slate-300 hover:border-indigo-500 rounded-xl p-6 text-center transition-colors bg-slate-50/50 space-y-3">
             <input
               type="file"
               accept=".csv,.txt,.xlsx"
@@ -792,10 +962,62 @@ export default function ExcelImportCenterModal({
                 {fileName ? `Archivo seleccionado: ${fileName}` : 'Haga clic para seleccionar archivo Excel/CSV o arrástrelo aquí'}
               </span>
               <span className="text-[11px] text-slate-500">
-                Soporta archivos CSV delimitados por punto y coma (;) o coma (,) con codificación UTF-8.
+                Soporta archivos CSV delimitados por punto y coma (;) o coma (,) y libros Excel (.xlsx).
               </span>
             </label>
+
+            {detectedBadge && (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-100 text-indigo-800 font-semibold text-xs border border-indigo-200">
+                {detectedBadge}
+              </div>
+            )}
           </div>
+
+          {/* Opciones de Numeración de Comprobantes */}
+          {activeTab === 'comprobantes' && (
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+              <div className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                <span>🔢</span> Numeración de Comprobantes a Generar:
+              </div>
+              <div className="space-y-2 text-xs">
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="renumberMode"
+                    value="auto"
+                    checked={renumberMode === 'auto'}
+                    onChange={() => setRenumberMode('auto')}
+                    className="mt-0.5 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <div>
+                    <span className="text-slate-800 font-bold">
+                      Continuar correlativo automáticamente (Recomendado)
+                    </span>
+                    <p className="text-slate-500 text-[11px]">
+                      {maxExistingVNum > 0 
+                        ? `Asignará números correlativos a partir del N° ${nextRecommendedNum}, evitando colisiones con los comprobantes existentes en la empresa.`
+                        : 'Iniciará la numeración correlativa en N° 1.'}
+                    </p>
+                  </div>
+                </label>
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="renumberMode"
+                    value="keep"
+                    checked={renumberMode === 'keep'}
+                    onChange={() => setRenumberMode('keep')}
+                    className="mt-0.5 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <div>
+                    <span className="text-slate-700 font-medium">
+                      Conservar números originales del archivo Excel (ej. N° 1, 2, 3...)
+                    </span>
+                  </div>
+                </label>
+              </div>
+            </div>
+          )}
 
           {/* Step 3: Data Preview */}
           {previewData.length > 0 && (
@@ -835,6 +1057,32 @@ export default function ExcelImportCenterModal({
               }`}
             >
               {importReport}
+            </div>
+          )}
+
+          {/* Tarjeta de Éxito de Comprobantes con Botón Directo */}
+          {importedBatchInfo && (
+            <div className="p-4 bg-emerald-50 border-2 border-emerald-400 rounded-xl space-y-3">
+              <div className="flex items-center gap-2.5 text-emerald-900 font-black text-sm">
+                <span className="text-xl">🎉</span>
+                <span>¡{importedBatchInfo.count} Comprobantes Contables guardados en la contabilidad!</span>
+              </div>
+              <div className="text-xs text-emerald-800 space-y-1 bg-white/70 p-3 rounded-lg border border-emerald-200 font-mono">
+                <p>• Rango de Comprobantes: <span className="font-bold text-indigo-700">N° {importedBatchInfo.startNum} al N° {importedBatchInfo.endNum}</span></p>
+                <p>• Período Contable: <span className="font-bold">{importedBatchInfo.period}</span> (Año {importedBatchInfo.year}, Mes {importedBatchInfo.month})</p>
+              </div>
+              {onNavigateToVouchers && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onNavigateToVouchers(importedBatchInfo.period, importedBatchInfo.year, importedBatchInfo.month);
+                    onClose();
+                  }}
+                  className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
+                >
+                  <span>🔍 Ver Comprobantes Importados en la Contabilidad (N° {importedBatchInfo.startNum} - N° {importedBatchInfo.endNum})</span>
+                </button>
+              )}
             </div>
           )}
         </div>

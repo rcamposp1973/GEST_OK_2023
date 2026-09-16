@@ -24,8 +24,10 @@ import {
   Mail,
   Phone,
   FileText,
-  Sparkles
+  Sparkles,
+  Move
 } from 'lucide-react';
+import { useDraggableModal } from '../hooks/useDraggableModal';
 
 interface AuxiliaryModalProps {
   isOpen: boolean;
@@ -191,24 +193,33 @@ export default function AuxiliaryModal({
     }
   };
 
+  const { dragProps, modalStyle } = useDraggableModal({ isOpen });
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-3xl overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 p-4 overflow-y-auto">
+      <div
+        style={modalStyle}
+        className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-3xl overflow-hidden my-8"
+      >
         
         {/* CABECERA DEL MODAL */}
-        <div className="bg-slate-900 px-6 py-4 flex items-center justify-between border-b border-slate-800">
+        <div
+          {...dragProps}
+          className="bg-slate-900 px-6 py-4 flex items-center justify-between border-b border-slate-800 cursor-grab active:cursor-grabbing select-none"
+          title="Haz clic y arrastra para mover esta ventana"
+        >
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-600/30 text-indigo-400 rounded-xl border border-indigo-500/30">
-              <Building2 className="w-5 h-5" />
+            <div className="p-2 bg-indigo-600/30 text-indigo-400 rounded-xl border border-indigo-500/30" title="Arrastrar ventana">
+              <Move className="w-5 h-5" />
             </div>
             <div>
               <h2 className="text-base font-bold text-white">
                 {editingAuxiliary ? 'Modificar Ficha de Auxiliar' : 'Registrar Nuevo Auxiliar (Cliente / Proveedor)'}
               </h2>
               <p className="text-xs text-slate-400">
-                Gestión de cuentas corrientes de auxiliares y parámetros de análisis por defecto
+                Gestión de cuentas corrientes de auxiliares y parámetros por defecto (Ventana movible)
               </p>
             </div>
           </div>

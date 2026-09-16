@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { db, auth } from '../lib/firebase';
-import { collection, getDocs, addDoc, doc, setDoc, query, where } from 'firebase/firestore';
+import { collection, getDocs, getDoc, addDoc, doc, setDoc, query, where } from 'firebase/firestore';
 import {
   Company,
   ChartOfAccount,
@@ -24,9 +24,11 @@ import {
   getPreviousPeriod,
   getNextPeriod,
   recalculateRunningBalances,
+  mergeStatementLines,
   sanitizeForFirestore,
   calculateReconciliationMath,
-  getDuplicateVouchersMap
+  getDuplicateVouchersMap,
+  isMatchingBankReconciliation
 } from '../utils/bankReconciliationUtils';
 import {
   Filter,
@@ -53,6 +55,7 @@ import {
 } from 'lucide-react';
 import { ImportCSVModal, ManualMatchModal, QuickVoucherModal } from './BankReconciliationModals';
 import AutoRutMatchModal from './AutoRutMatchModal';
+import JuniorGlossAutomationModal from './JuniorGlossAutomationModal';
 import BankCartolaSmartImportModal from './BankCartolaSmartImportModal';
 import PendingItemsReportModal from './PendingItemsReportModal';
 import { parseChileanNumber } from '../utils/bankCartolaParser';
@@ -145,6 +148,7 @@ export default function ConciliacionBancariaView({
   const [showImportModal, setShowImportModal] = useState<boolean>(false);
   const [showSmartImportModal, setShowSmartImportModal] = useState<boolean>(false);
   const [showAutoRutModal, setShowAutoRutModal] = useState<boolean>(false);
+  const [showJuniorGlossModal, setShowJuniorGlossModal] = useState<boolean>(false);
   const [showPendingReportModal, setShowPendingReportModal] = useState<boolean>(false);
   const [pastedCSV, setPastedCSV] = useState<string>('');
   const [importInitialBalance, setImportInitialBalance] = useState<number>(0);
@@ -215,16 +219,16 @@ export default function ConciliacionBancariaView({
       const prevPeriodStr = getPreviousPeriod(activePeriod);
 
       // Sort all previous reconciliations for this account chronologically
-      const prevRec = recs.find(r => r.bankAccountId === selectedBankAccountId && r.period === prevPeriodStr);
-      const autoInitialBalance = prevRec ? prevRec.bankFinalBalance : 0;
+      const prevRec = recs.find(r => isMatchingBankReconciliation(r, selectedBankAccount, selectedBankAccountId) && r.period === prevPeriodStr);
+      const autoInitialBalance = prevRec?.bankFinalBalance !== undefined ? prevRec.bankFinalBalance : 0;
 
       // Load matching reconciliation if exists for current account and period
-      const existing = recs.find(r => r.bankAccountId === selectedBankAccountId && r.period === activePeriod);
+      const existing = recs.find(r => isMatchingBankReconciliation(r, selectedBankAccount, selectedBankAccountId) && r.period === activePeriod);
       if (existing) {
         setStatementLines(existing.lines || []);
         const initBal = existing.bankInitialBalance !== undefined ? existing.bankInitialBalance : autoInitialBalance;
         setBankInitialBalanceInput(initBal);
-        setBankFinalBalanceInput(existing.bankFinalBalance || 0);
+        setBankFinalBalanceInput(existing.bankFinalBalance !== undefined ? existing.bankFinalBalance : 0);
         setNotes(existing.notes || '');
       } else {
         setStatementLines([]);
@@ -241,7 +245,7 @@ export default function ConciliacionBancariaView({
     if (selectedBankAccountId) {
       fetchReconciliations();
     }
-  }, [selectedBankAccountId, selectedPeriod]);
+  }, [selectedBankAccountId, selectedPeriod, vouchers]);
 
   // Set of voucher IDs currently matched in the active in-memory cartola
   const currentMatchedVoucherIds = useMemo(() => {
@@ -256,7 +260,7 @@ export default function ConciliacionBancariaView({
   const otherPeriodsMatchedVouchers = useMemo(() => {
     const map = new Map<string, { period: string; voucherNumber?: number }>();
     savedReconciliations.forEach(r => {
-      if (r.bankAccountId === selectedBankAccountId && r.id !== currentRecId && r.lines) {
+      if (isMatchingBankReconciliation(r, selectedBankAccount, selectedBankAccountId) && r.id !== currentRecId && r.lines) {
         r.lines.forEach(l => {
           if (l.matchedStatus === 'Conciliado' && l.matchedVoucherId) {
             map.set(l.matchedVoucherId, { period: r.period, voucherNumber: l.matchedVoucherNumber });
@@ -265,7 +269,7 @@ export default function ConciliacionBancariaView({
       }
     });
     return map;
-  }, [savedReconciliations, selectedBankAccountId, currentRecId]);
+  }, [savedReconciliations, selectedBankAccount, selectedBankAccountId, currentRecId]);
 
   // All Bank Vouchers in accounting (any period)
   const allBankVouchers = useMemo(() => {
@@ -427,7 +431,7 @@ export default function ConciliacionBancariaView({
     if (!selectedBankAccount) return [];
 
     const accountRecs = savedReconciliations
-      .filter(r => r.bankAccountId === selectedBankAccountId)
+      .filter(r => isMatchingBankReconciliation(r, selectedBankAccount, selectedBankAccountId))
       .sort((a, b) => a.period.localeCompare(b.period));
 
     const currentPeriodExists = accountRecs.some(r => r.period === selectedPeriod);
@@ -526,7 +530,7 @@ export default function ConciliacionBancariaView({
         // Build combined statement lines across all historical periods for math calculation
         const combinedAllLines: (BankStatementLine & { period: string })[] = [];
         savedReconciliations.forEach(r => {
-          if (r.bankAccountId === selectedBankAccount.id && r.period !== period && r.lines) {
+          if (isMatchingBankReconciliation(r, selectedBankAccount, selectedBankAccountId) && r.period !== period && r.lines) {
             r.lines.forEach(l => {
               combinedAllLines.push({
                 ...l,
@@ -579,7 +583,7 @@ export default function ConciliacionBancariaView({
 
         // Update local savedReconciliations
         setSavedReconciliations(prev => {
-          const idx = prev.findIndex(r => r.id === recId);
+          const idx = prev.findIndex(r => r.id === recId || (isMatchingBankReconciliation(r, selectedBankAccount, selectedBankAccountId) && r.period === period));
           if (idx >= 0) {
             const next = [...prev];
             next[idx] = recData;
@@ -591,7 +595,7 @@ export default function ConciliacionBancariaView({
         // Cascade/update initial balance of the subsequent month if it exists
         const nextPeriodStr = getNextPeriod(period);
         const nextRec = savedReconciliations.find(
-          r => r.bankAccountId === selectedBankAccount.id && r.period === nextPeriodStr
+          r => isMatchingBankReconciliation(r, selectedBankAccount, selectedBankAccountId) && r.period === nextPeriodStr
         );
         if (nextRec && nextRec.bankInitialBalance !== finalBal) {
           const { updatedLines: nextLines, finalBalance: nextFinalBal } = recalculateRunningBalances(
@@ -825,22 +829,73 @@ export default function ConciliacionBancariaView({
 
     const sortedPeriods = Array.from(periodMap.keys()).sort();
     let progressiveBalance = importInitialBalance;
-    let totalSavedCount = 0;
+    let totalAddedCount = 0;
+    let totalDuplicatesCount = 0;
+    let summaryDetail = '';
 
     for (const p of sortedPeriods) {
-      const pLines = periodMap.get(p)!;
-      const initialForThisPeriod = progressiveBalance;
-      const { updatedLines, finalBalance } = recalculateRunningBalances(pLines, initialForThisPeriod);
+      const pNewLines = periodMap.get(p)!;
+      let pExistingLines: BankStatementLine[] = [];
+      let pInitialBal = 0;
+      let foundExisting = false;
+
+      if (p === selectedPeriod && statementLines.length > 0) {
+        pExistingLines = [...statementLines];
+        pInitialBal = bankInitialBalanceInput;
+        foundExisting = true;
+      }
+
+      if (!foundExisting && selectedBankAccount) {
+        try {
+          const cleanCode = (selectedBankAccount.code || '').replace(/[^a-zA-Z0-9_-]/g, '_');
+          const docSnap = await getDoc(doc(companyRef, 'bankReconciliations', `${cleanCode}_${p}`));
+          if (docSnap.exists()) {
+            const data = docSnap.data() as BankReconciliation;
+            pExistingLines = data.lines || [];
+            pInitialBal = data.bankInitialBalance !== undefined ? data.bankInitialBalance : 0;
+            foundExisting = true;
+          }
+        } catch (e) {
+          console.warn('Error fetching direct reconciliation doc:', e);
+        }
+      }
+
+      if (!foundExisting) {
+        const rec = savedReconciliations.find(
+          r => isMatchingBankReconciliation(r, selectedBankAccount, selectedBankAccountId) && r.period === p
+        );
+        if (rec) {
+          pExistingLines = rec.lines || [];
+          pInitialBal = rec.bankInitialBalance !== undefined ? rec.bankInitialBalance : 0;
+          foundExisting = true;
+        }
+      }
+
+      if (!foundExisting || pExistingLines.length === 0) {
+        const prevP = getPreviousPeriod(p);
+        const prevRec = savedReconciliations.find(
+          r => isMatchingBankReconciliation(r, selectedBankAccount, selectedBankAccountId) && r.period === prevP
+        );
+        pInitialBal = prevRec?.bankFinalBalance !== undefined ? prevRec.bankFinalBalance : (progressiveBalance || importInitialBalance);
+      }
+
+      // Merge new lines with existing lines and skip duplicates
+      const { mergedLines, addedCount, duplicateCount } = mergeStatementLines(pExistingLines, pNewLines);
+      totalAddedCount += addedCount;
+      totalDuplicatesCount += duplicateCount;
+
+      const effectiveInitial = pExistingLines.length > 0 ? pInitialBal : (progressiveBalance || importInitialBalance);
+      const { updatedLines, finalBalance } = recalculateRunningBalances(mergedLines, effectiveInitial);
       progressiveBalance = finalBalance;
 
       // Auto-save this period to Firestore
-      await persistReconciliation(p, updatedLines, initialForThisPeriod, finalBalance);
-      totalSavedCount += updatedLines.length;
+      await persistReconciliation(p, updatedLines, effectiveInitial, finalBalance);
+      summaryDetail += `\n• Período ${p}: ${mergedLines.length} movimientos totales (+${addedCount} añadidos, ${duplicateCount} omitidos) → Saldo Final: $${finalBalance.toLocaleString('es-CL')}`;
 
       // If this period matches the selected period, update active view state
       if (p === selectedPeriod) {
         setStatementLines(updatedLines);
-        setBankInitialBalanceInput(initialForThisPeriod);
+        setBankInitialBalanceInput(effectiveInitial);
         setBankFinalBalanceInput(finalBalance);
       }
     }
@@ -852,10 +907,12 @@ export default function ConciliacionBancariaView({
 
     setShowImportModal(false);
     setPastedCSV('');
-    await fetchReconciliations();
+    await fetchReconciliations(sortedPeriods[0] || selectedPeriod);
 
     alert(
-      `✅ Cartola importada y grabada automáticamente:\n• ${totalSavedCount} movimientos distribuidos en ${sortedPeriods.length} período(s) (${sortedPeriods.join(', ')}).\n• Saldo Inicial: $${importInitialBalance.toLocaleString('es-CL')}\n• Saldo Final Acumulado: $${progressiveBalance.toLocaleString('es-CL')}.`
+      `✅ Cartola importada, fusionada y grabada con éxito:\n• ${totalAddedCount} movimientos incorporados.\n` +
+      (totalDuplicatesCount > 0 ? `• ${totalDuplicatesCount} duplicados omitidos.\n` : '') +
+      `• Movimientos ordenados cronológicamente.${summaryDetail}\n• Saldo Final: $${progressiveBalance.toLocaleString('es-CL')}.`
     );
   };
 
@@ -1324,8 +1381,9 @@ export default function ConciliacionBancariaView({
     const source = unifiedHistoricalCartola.length > 0 ? unifiedHistoricalCartola : allStatementLines;
     source.forEach(l => {
       const d = (l.date || '').trim();
-      const yr = d.slice(0, 4) || (l.period ? l.period.slice(0, 4) : '');
-      const mo = d.slice(5, 7) || (l.period ? l.period.slice(5, 7) : '');
+      const linePeriod = (l as any).period || '';
+      const yr = d.slice(0, 4) || (linePeriod ? linePeriod.slice(0, 4) : '');
+      const mo = d.slice(5, 7) || (linePeriod ? linePeriod.slice(5, 7) : '');
       if (cartolaYearFilter === 'TODOS' || yr === cartolaYearFilter) {
         if (counts[mo] !== undefined) {
           counts[mo] = (counts[mo] || 0) + 1;
@@ -1593,6 +1651,19 @@ export default function ConciliacionBancariaView({
               </svg>
               <span className="uppercase tracking-tight font-extrabold">🧠 Nuez Mariposa (RUT Match)</span>
               <span className="bg-amber-950 text-amber-300 text-[9px] px-1.5 py-0.5 rounded font-mono font-black">PRO</span>
+            </span>
+          </button>
+
+          {/* JUNIOR GLOSS AUTOMATION BUTTON */}
+          <button
+            onClick={() => setShowJuniorGlossModal(true)}
+            className="relative group px-3.5 py-1.5 bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-800 hover:from-indigo-700 hover:to-indigo-900 text-white font-black text-xs rounded-xl shadow-md shadow-indigo-600/20 transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center gap-1.5 border-2 border-indigo-400 overflow-hidden"
+            title="Junior: Automatización y Contabilización por Glosa de Cartola"
+          >
+            <span className="relative flex items-center gap-1.5">
+              <span className="text-sm">🤖</span>
+              <span className="uppercase tracking-tight font-extrabold">Junior: Contabilizar por Glosa</span>
+              <span className="bg-indigo-950 text-indigo-200 text-[9px] px-1.5 py-0.5 rounded font-mono font-black border border-indigo-500/40">IA</span>
             </span>
           </button>
 
@@ -2655,42 +2726,106 @@ export default function ConciliacionBancariaView({
         selectedBankAccount={selectedBankAccount}
         selectedPeriod={selectedPeriod}
         existingLines={statementLines}
+        allExistingLines={allStatementLines}
         currentInitialBalance={bankInitialBalanceInput}
         onImportComplete={async ({ newLines, initialBalance, finalBalance, bankName }) => {
-          // Check if lines span multiple periods based on line.date (YYYY-MM)
+          // Group new lines by period (YYYY-MM)
           const periodBuckets = new Map<string, BankStatementLine[]>();
-
-          // Merge non-duplicate new lines with existing lines and sort chronologically
-          const combined = [...statementLines, ...newLines].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
-
-          combined.forEach(line => {
+          newLines.forEach(line => {
             const p = line.date && line.date.length >= 7 ? line.date.slice(0, 7) : selectedPeriod;
             if (!periodBuckets.has(p)) periodBuckets.set(p, []);
             periodBuckets.get(p)!.push(line);
           });
 
           const sortedPeriods = Array.from(periodBuckets.keys()).sort();
-          let runningInitial = initialBalance;
           let summaryPeriodsText = '';
+          let totalAddedAll = 0;
+          let totalDuplicatesAll = 0;
 
           for (const p of sortedPeriods) {
-            const pLines = periodBuckets.get(p)!;
-            const { updatedLines, finalBalance: pFinal } = recalculateRunningBalances(pLines, runningInitial);
-            await persistReconciliation(p, updatedLines, runningInitial, pFinal);
-            summaryPeriodsText += `\n• Período ${p}: ${pLines.length} movimientos (Saldo Final: $${pFinal.toLocaleString('es-CL')})`;
+            const pNewLines = periodBuckets.get(p)!;
+            
+            // Find existing lines for this period
+            let pExistingLines: BankStatementLine[] = [];
+            let pInitialBalance = 0;
+            let foundExisting = false;
+
+            if (p === selectedPeriod && statementLines.length > 0) {
+              pExistingLines = [...statementLines];
+              pInitialBalance = bankInitialBalanceInput;
+              foundExisting = true;
+            }
+
+            if (!foundExisting && selectedBankAccount) {
+              try {
+                const cleanCode = (selectedBankAccount.code || '').replace(/[^a-zA-Z0-9_-]/g, '_');
+                const docSnap = await getDoc(doc(companyRef, 'bankReconciliations', `${cleanCode}_${p}`));
+                if (docSnap.exists()) {
+                  const data = docSnap.data() as BankReconciliation;
+                  pExistingLines = data.lines || [];
+                  pInitialBalance = data.bankInitialBalance !== undefined ? data.bankInitialBalance : 0;
+                  foundExisting = true;
+                }
+              } catch (e) {
+                console.warn('Error fetching direct reconciliation doc in modal import:', e);
+              }
+            }
+
+            if (!foundExisting) {
+              const rec = savedReconciliations.find(
+                r => isMatchingBankReconciliation(r, selectedBankAccount, selectedBankAccountId) && r.period === p
+              );
+              if (rec) {
+                pExistingLines = rec.lines || [];
+                pInitialBalance = rec.bankInitialBalance !== undefined ? rec.bankInitialBalance : 0;
+                foundExisting = true;
+              }
+            }
+
+            if (!foundExisting || pExistingLines.length === 0) {
+              // Find previous period final balance if exists
+              const prevP = getPreviousPeriod(p);
+              const prevRec = savedReconciliations.find(
+                r => isMatchingBankReconciliation(r, selectedBankAccount, selectedBankAccountId) && r.period === prevP
+              );
+              pInitialBalance = prevRec?.bankFinalBalance !== undefined ? prevRec.bankFinalBalance : (initialBalance || 0);
+            }
+
+            // Merge existing lines with new lines
+            const { mergedLines, addedCount, duplicateCount } = mergeStatementLines(pExistingLines, pNewLines);
+            totalAddedAll += addedCount;
+            totalDuplicatesAll += duplicateCount;
+
+            // Determine effective initial balance:
+            const effectiveInitial = pExistingLines.length > 0 ? pInitialBalance : (pInitialBalance || initialBalance || 0);
+
+            // Recalculate running balance for all sorted lines
+            const { updatedLines, finalBalance: pFinal } = recalculateRunningBalances(mergedLines, effectiveInitial);
+
+            // Persist
+            await persistReconciliation(p, updatedLines, effectiveInitial, pFinal);
+            summaryPeriodsText += `\n• Período ${p}: ${mergedLines.length} movimientos totales (${addedCount} nuevos añadidos, ${duplicateCount} duplicados omitidos) → Saldo Final: $${pFinal.toLocaleString('es-CL')}`;
 
             if (p === selectedPeriod) {
-              setBankInitialBalanceInput(runningInitial);
+              setBankInitialBalanceInput(effectiveInitial);
               setBankFinalBalanceInput(pFinal);
               setStatementLines(updatedLines);
             }
-            runningInitial = pFinal;
           }
 
-          await fetchReconciliations();
+          // If single imported period and different from current selectedPeriod, switch to it
+          if (sortedPeriods.length === 1 && sortedPeriods[0] !== selectedPeriod) {
+            setSelectedPeriod(sortedPeriods[0]);
+          }
+
+          await fetchReconciliations(sortedPeriods[0] || selectedPeriod);
 
           alert(
-            `✅ Cartola de ${bankName} inyectada con éxito:\n• ${newLines.length} nuevos movimientos procesados.${summaryPeriodsText}\n• Guardado automáticamente en Firestore.`
+            `✅ Cartola de ${bankName} procesada e integrada con éxito:\n` +
+            `• ${totalAddedAll} nuevos movimientos incorporados a la cartola.\n` +
+            (totalDuplicatesAll > 0 ? `• ${totalDuplicatesAll} movimientos duplicados omitidos.\n` : '') +
+            `• Movimientos fusionados y ordenados por fecha cronológica.${summaryPeriodsText}\n` +
+            `• Guardado y respaldado automáticamente en Firestore.`
           );
         }}
       />
@@ -2777,6 +2912,24 @@ export default function ConciliacionBancariaView({
         unmatchedDeposits={statementLines.filter(l => l.matchedStatus !== 'Conciliado' && (l.deposit || 0) > 0)}
         outstandingChecks={allBankVouchers.filter(bv => !bv.isMatchedInCurrent && !bv.isMatchedInOther && (bv.credit || 0) > 0)}
         depositsInTransit={allBankVouchers.filter(bv => !bv.isMatchedInCurrent && !bv.isMatchedInOther && (bv.debit || 0) > 0)}
+      />
+
+      <JuniorGlossAutomationModal
+        isOpen={showJuniorGlossModal}
+        onClose={() => setShowJuniorGlossModal(false)}
+        studyId={studyId}
+        company={company}
+        accounts={accounts}
+        vouchers={vouchers}
+        auxiliaries={auxiliaries || []}
+        fiscalYears={fiscalYears}
+        selectedBankAccountId={selectedBankAccountId}
+        onSuccess={async () => {
+          await fetchReconciliations();
+          if (onVouchersUpdated) {
+            onVouchersUpdated();
+          }
+        }}
       />
     </div>
   );

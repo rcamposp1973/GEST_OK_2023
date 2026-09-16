@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { db, auth } from '../lib/firebase';
 import { collection, getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { Company, DTEConfig, ChartOfAccount, Auxiliary, ExchangeRate, FiscalPeriodYear, RCVDocument, Voucher, VoucherLine, RCVAccountingParams, BankReconciliation, UserRole, CostCenterMaster, ExpenseItemMaster, NonSiiDocTypeMaster, ProjectMaster, ProductMaster, CustomAnalysisTableItem, CommercialDocument, InventoryMovement, ProductService, Employee, PayrollSlip, Warehouse } from '../types';
@@ -3904,6 +3904,48 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
     return 'px-3.5 py-1.5 text-xs rounded-xl font-semibold flex items-center gap-1.5 transition-all whitespace-nowrap flex-shrink-0 bg-white hover:bg-slate-50 text-slate-700 hover:text-[#0D253D] border border-slate-200/80 shadow-2xs cursor-pointer';
   };
 
+  const filteredVouchers = useMemo(() => {
+    return vouchers
+      .filter(v => voucherFilterType === 'Todos' || v.type === voucherFilterType)
+      .filter(v => {
+        if (voucherFilterYear === 'Todos') return true;
+        if (!v.date) return false;
+        return v.date.startsWith(voucherFilterYear);
+      })
+      .filter(v => {
+        if (voucherFilterMonth === 'Todos') return true;
+        if (!v.date) return false;
+        const m = v.date.slice(5, 7);
+        return m === voucherFilterMonth;
+      })
+      .filter(v => 
+        !voucherSearchQuery ||
+        (v.gloss || '').toLowerCase().includes(voucherSearchQuery.toLowerCase()) ||
+        String(v.voucherNumber || '').includes(voucherSearchQuery) ||
+        (v.lines && v.lines.some(l => (l.auxiliaryRut || '').toLowerCase().includes(voucherSearchQuery.toLowerCase()) || (l.accountCode || '').includes(voucherSearchQuery)))
+      )
+      .filter(v => !colNumSearch || String(v.voucherNumber).toLowerCase().includes(colNumSearch.toLowerCase()))
+      .filter(v => !colDateSearch || (v.date && v.date.toLowerCase().includes(colDateSearch.toLowerCase())))
+      .filter(v => colTypeSearch === 'Todos' || v.type === colTypeSearch)
+      .filter(v => colStatusSearch === 'Todos' || v.status === colStatusSearch)
+      .filter(v => !colGlossSearch || (v.gloss && v.gloss.toLowerCase().includes(colGlossSearch.toLowerCase())))
+      .filter(v => !colDebitSearch || String(v.totalDebit).includes(colDebitSearch))
+      .filter(v => !colCreditSearch || String(v.totalCredit).includes(colCreditSearch));
+  }, [
+    vouchers,
+    voucherFilterType,
+    voucherFilterYear,
+    voucherFilterMonth,
+    voucherSearchQuery,
+    colNumSearch,
+    colDateSearch,
+    colTypeSearch,
+    colStatusSearch,
+    colGlossSearch,
+    colDebitSearch,
+    colCreditSearch
+  ]);
+
   return (
     <div className="space-y-4">
       {/* Super Admin Read-Only Notice Banner */}
@@ -5677,6 +5719,13 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
                 className="border border-slate-300 p-2 rounded-lg text-xs w-56 focus:ring-2 focus:ring-indigo-500"
               />
               <button
+                onClick={() => setShowExcelImportModal(true)}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors shadow-sm"
+              >
+                <span>📥</span>
+                Importar Excel
+              </button>
+              <button
                 onClick={handleOpenCreateVoucher}
                 className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-4 py-2 rounded-lg flex items-center gap-1.5 transition-colors shadow-sm"
               >
@@ -5686,6 +5735,39 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
                 Nuevo Comprobante
               </button>
             </div>
+          </div>
+
+          {/* Barra de estado de filtros y comprobantes */}
+          <div className="flex flex-wrap justify-between items-center bg-slate-50 px-4 py-2.5 rounded-lg border border-slate-200 text-xs text-slate-600 gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-semibold text-slate-800">
+                Mostrando <span className="text-indigo-700 font-bold">{filteredVouchers.length}</span> de <span className="font-bold">{vouchers.length}</span> comprobantes
+              </span>
+              {(voucherFilterType !== 'Todos' || voucherFilterYear !== 'Todos' || voucherFilterMonth !== 'Todos' || voucherSearchQuery.trim() !== '') && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-100 text-amber-800">
+                  Filtros activos ({[
+                    voucherFilterType !== 'Todos' ? `Tipo: ${voucherFilterType}` : null,
+                    voucherFilterYear !== 'Todos' ? `Año: ${voucherFilterYear}` : null,
+                    voucherFilterMonth !== 'Todos' ? `Mes: ${voucherFilterMonth}` : null,
+                    voucherSearchQuery.trim() !== '' ? `Búsqueda: "${voucherSearchQuery}"` : null
+                  ].filter(Boolean).join(', ')})
+                </span>
+              )}
+            </div>
+
+            {(voucherFilterType !== 'Todos' || voucherFilterYear !== 'Todos' || voucherFilterMonth !== 'Todos' || voucherSearchQuery.trim() !== '') && (
+              <button
+                onClick={() => {
+                  setVoucherFilterType('Todos');
+                  setVoucherFilterYear('Todos');
+                  setVoucherFilterMonth('Todos');
+                  setVoucherSearchQuery('');
+                }}
+                className="text-indigo-600 hover:text-indigo-800 font-bold text-xs flex items-center gap-1 hover:underline cursor-pointer"
+              >
+                <span>✕</span> Restablecer filtros (Ver todos)
+              </button>
+            )}
           </div>
 
           <div className="border border-slate-200 rounded-lg overflow-auto max-h-[550px] relative shadow-2xs">
@@ -5793,33 +5875,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {vouchers
-                  .filter(v => voucherFilterType === 'Todos' || v.type === voucherFilterType)
-                  .filter(v => {
-                    if (voucherFilterYear === 'Todos') return true;
-                    if (!v.date) return false;
-                    return v.date.startsWith(voucherFilterYear);
-                  })
-                  .filter(v => {
-                    if (voucherFilterMonth === 'Todos') return true;
-                    if (!v.date) return false;
-                    const m = v.date.slice(5, 7);
-                    return m === voucherFilterMonth;
-                  })
-                  .filter(v => 
-                    !voucherSearchQuery ||
-                    (v.gloss || '').toLowerCase().includes(voucherSearchQuery.toLowerCase()) ||
-                    String(v.voucherNumber || '').includes(voucherSearchQuery) ||
-                    (v.lines && v.lines.some(l => (l.auxiliaryRut || '').toLowerCase().includes(voucherSearchQuery.toLowerCase()) || (l.accountCode || '').includes(voucherSearchQuery)))
-                  )
-                  .filter(v => !colNumSearch || String(v.voucherNumber).toLowerCase().includes(colNumSearch.toLowerCase()))
-                  .filter(v => !colDateSearch || (v.date && v.date.toLowerCase().includes(colDateSearch.toLowerCase())))
-                  .filter(v => colTypeSearch === 'Todos' || v.type === colTypeSearch)
-                  .filter(v => colStatusSearch === 'Todos' || v.status === colStatusSearch)
-                  .filter(v => !colGlossSearch || (v.gloss && v.gloss.toLowerCase().includes(colGlossSearch.toLowerCase())))
-                  .filter(v => !colDebitSearch || String(v.totalDebit).includes(colDebitSearch))
-                  .filter(v => !colCreditSearch || String(v.totalCredit).includes(colCreditSearch))
-                  .map((v) => {
+                {filteredVouchers.map((v) => {
                     const isAnulado = v.status === 'Anulado';
                     return (
                       <tr key={v.id} className={`hover:bg-slate-50 transition-colors ${isAnulado ? 'bg-rose-50/40 text-slate-500' : ''}`}>
@@ -5877,10 +5933,40 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
                       </tr>
                     );
                   })}
-                {vouchers.length === 0 && (
+                {filteredVouchers.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="p-8 text-center text-slate-500 italic">
-                      No hay comprobantes contables registrados en la empresa. Puedes crear uno manual o generarlos desde el módulo RCV.
+                    <td colSpan={8} className="p-8 text-center text-slate-500">
+                      {vouchers.length === 0 ? (
+                        <div className="space-y-3">
+                          <p className="italic">No hay comprobantes contables registrados en la empresa. Puedes crear uno manual, generarlos desde el módulo RCV o cargarlos vía Excel.</p>
+                          <button
+                            onClick={() => setShowExcelImportModal(true)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 font-medium rounded-lg text-xs hover:bg-indigo-100 border border-indigo-200 cursor-pointer"
+                          >
+                            <span>📥</span> Cargar Comprobantes desde Excel
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <p className="font-semibold text-slate-700">
+                            No se encontraron comprobantes con los filtros activos.
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            Existen <span className="font-bold text-indigo-700">{vouchers.length}</span> comprobantes registrados en la empresa que no coinciden con la combinación actual de filtros (Año: {voucherFilterYear}, Mes: {voucherFilterMonth}, Tipo: {voucherFilterType}).
+                          </p>
+                          <button
+                            onClick={() => {
+                              setVoucherFilterType('Todos');
+                              setVoucherFilterYear('Todos');
+                              setVoucherFilterMonth('Todos');
+                              setVoucherSearchQuery('');
+                            }}
+                            className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg text-xs hover:bg-indigo-700 shadow-xs cursor-pointer"
+                          >
+                            <span>🔄</span> Restablecer Filtros y Ver Todos ({vouchers.length})
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 )}
@@ -7543,9 +7629,20 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
         company={company}
         accounts={accounts}
         auxiliaries={auxiliaries}
+        vouchers={vouchers}
         fiscalYears={fiscalYears}
+        initialTab={activeTab === 'vouchers' ? 'comprobantes' : activeTab === 'accounts' ? 'cuentas' : activeTab === 'auxiliaries' ? 'proveedores' : 'cuentas'}
         onDataImported={async () => {
           await fetchData();
+        }}
+        onNavigateToVouchers={(period, year, month) => {
+          setActiveTab('vouchers');
+          if (year) setVoucherFilterYear(year);
+          else setVoucherFilterYear('Todos');
+          if (month) setVoucherFilterMonth(month);
+          else setVoucherFilterMonth('Todos');
+          setVoucherFilterType('Todos');
+          setVoucherSearchQuery('');
         }}
       />
 
@@ -7561,6 +7658,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
         onNavigateTab={(tab) => {
           setActiveTab(tab as any);
         }}
+        onVouchersUpdated={fetchData}
       />
     </div>
   );

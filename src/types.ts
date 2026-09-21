@@ -360,7 +360,12 @@ export interface RCVDocument {
   montoRetencion?: number;
   montoLiquido?: number;
   montoOtrosImpuestos?: number; // Impuestos adicionales (ILA, diesel, carnes, licores, etc.)
+  isBoletaResumen?: boolean; // Identificador de resumen consolidado de boletas de venta
+  totalDocumentos?: number; // Conteo de documentos agrupados en el resumen
   refFolioOrig?: string; // Folio de referencia para NC / ND
+  refTipoDocOrig?: string; // Tipo docto referenciado (ej: 33, 34)
+  montoCeec?: number; // Crédito Especial Empresas Constructoras (Art. 21 D.L. 910)
+  isConstructoraCeec?: boolean; // Indicador de rebaja franquicia CEEC en la factura
   estadoContabilizado: boolean;
   voucherId?: string;
   auxiliaryId?: string;
@@ -506,6 +511,8 @@ export interface RCVAccountingParams {
   retencionBheAccountId?: string; // IVA Retenido / Retención BHE (Honorarios)
   exentoAccountId?: string; // Impuesto Exento / No Gravado
   otrosImpuestosAccountId?: string; // Impuestos Adicionales (ILA, Harinas, Licores, etc.)
+  ceecAccountId?: string; // Cuenta Activo Crédito Especial Empresas Constructoras (Art. 21 D.L. 910)
+  isEmpresaConstructora?: boolean; // Tratamiento Especial Constructoras (Rebaja Crédito CEEC en Ventas)
   defaultCustomerAccountId?: string; // Clientes por Cobrar por Defecto
   defaultSupplierAccountId?: string; // Proveedores por Pagar por Defecto
   defaultHonorariosAccountId?: string; // Honorarios por Pagar por Defecto

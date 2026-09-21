@@ -502,6 +502,61 @@ export default function InternalCompanyAccountingCopilot({
       };
     }
 
+    // 3.5. Empresas Constructoras (CEEC Art. 21 D.L. 910) y Trazabilidad de Notas de Crédito (NC con Folio de Referencia)
+    if (
+      q.includes('constructora') || 
+      q.includes('construccion') || 
+      q.includes('construcción') || 
+      q.includes('ceec') || 
+      q.includes('dl 910') || 
+      q.includes('d.l. 910') || 
+      q.includes('credito especial') || 
+      q.includes('crédito especial') || 
+      q.includes('rebajar credito') || 
+      q.includes('rebajar crédito') || 
+      (q.includes('nota de credito') && (q.includes('folio') || q.includes('referencia') || q.includes('anula') || q.includes('corrige') || q.includes('rebaja'))) ||
+      (q.includes('notas de credito') && (q.includes('folio') || q.includes('referencia') || q.includes('anula') || q.includes('corrige') || q.includes('rebaja')))
+    ) {
+      const isConstructora = Boolean(
+        company.isEmpresaConstructora ||
+        (company.razonSocial && (company.razonSocial.toUpperCase().includes('CONSTRUCTORA') || company.razonSocial.toUpperCase().includes('CONSTRUCCION') || company.razonSocial.toUpperCase().includes('CONSTRUCCIÓN'))) ||
+        (company.name && (company.name.toUpperCase().includes('CONSTRUCTORA') || company.name.toUpperCase().includes('CONSTRUCCION') || company.name.toUpperCase().includes('CONSTRUCCIÓN'))) ||
+        (company.giro && (company.giro.toUpperCase().includes('CONSTRUCTORA') || company.giro.toUpperCase().includes('CONSTRUCCION') || company.giro.toUpperCase().includes('EDIFICACION') || company.giro.toUpperCase().includes('OBRAS')))
+      );
+
+      const docsVentasCeec = rcvDocuments.filter(d => d.tipoRegistro === 'Venta' && (d.montoCeec || (d.montoTotal > 0 && d.montoTotal < (d.montoNeto + d.montoIva + (d.montoExento || 0)))));
+      const totalCeecDeducido = docsVentasCeec.reduce((acc, d) => {
+        const ceec = d.montoCeec || ((d.montoNeto + d.montoIva + (d.montoExento || 0)) - d.montoTotal);
+        return acc + (ceec > 0 ? ceec : 0);
+      }, 0);
+
+      const docsNcConRef = rcvDocuments.filter(d => (d.tipoDoc === '61' || String(d.tipoDoc).includes('61')) && d.refFolioOrig);
+
+      let text = `🏗️ **Tratamiento Contable y Tributario para Empresa Constructora (${company.name}):**\n\n`;
+      text += `1️⃣ **Franquicia Crédito Especial Empresas Constructoras (CEEC Art. 21 D.L. 910):**\n`;
+      text += `• **¿En qué consiste?:** Las empresas constructoras de inmuebles con destino habitacional tienen derecho a deducir de sus facturas de venta el crédito especial (hasta un 65% del débito fiscal IVA facturado).\n`;
+      text += `• **Contabilización y Partida Doble:** En la factura de venta, el total a cobrar al cliente es menor porque se rebaja el crédito CEEC. Para cuadrar la partida doble al centavo sin descuadre, el sistema imputa esta rebaja a la cuenta de activo tributario:\n`;
+      text += `   - **[1104001] Clientes Nacionales (Activo)** ── Debe $ Total Factura (Total Líquido a Cobrar)\n`;
+      text += `   - **[1107001] Crédito Especial Constructora CEEC (Activo Tributario)** ── Debe $ Monto CEEC Rebajado\n`;
+      text += `   - **[5101001] Ingresos por Ventas (Resultado Ganancia)** ── Haber $ Monto Neto Facturado\n`;
+      text += `   - **[2104001] IVA Débito Fiscal (Pasivo)** ────── Haber $ Débito Fiscal IVA (19%)\n`;
+      text += `• **Estado en esta empresa:** ${isConstructora ? '✅ Empresa identificada como Constructora' : 'ℹ️ Franquicia disponible y parametrizable en RCV'}. Se detectaron **${docsVentasCeec.length} documentos** con deducción CEEC por un total de **$ ${totalCeecDeducido.toLocaleString('es-CL')}**.\n\n`;
+
+      text += `2️⃣ **Trazabilidad y Referencia en Notas de Crédito (Tipo DTE 61):**\n`;
+      text += `• **Folio Original de Referencia:** Cada Nota de Crédito captura y vincula el **Folio de la Factura que modifica, anula o rebaja** (\`refFolioOrig\`).\n`;
+      text += `• **Reverso Simétrico y Cuadratura:** Al emitir o centralizar una Nota de Crédito sobre una factura con franquicia constructora, el sistema reversa automáticamente los ingresos, el IVA débito, la deuda del cliente y el crédito CEEC proporcional al Haber, garantizando que el Libro Mayor y el Balance queden perfectamente equilibrados.\n`;
+      text += `• **Glosa y Auditoría:** Los comprobantes contables incluyen explícitamente la referencia \`(Modifica Factura #XXXX)\` para trazabilidad inmediata ante auditorías y fiscalizaciones del SII.\n`;
+      if (docsNcConRef.length > 0) {
+        text += `• **Notas de Crédito con Referencia en RCV:** ${docsNcConRef.length} documento(s) con folio de referencia vinculado.\n`;
+      }
+
+      return {
+        response: text,
+        suggestions: ['Ver Compras y Ventas RCV', 'Ver Formulario 29', 'Ver Libro Diario', 'Parámetros Contables RCV'],
+        actionLink: { tab: 'rcv', label: 'Abrir Registro de Compras y Ventas (RCV)' }
+      };
+    }
+
     // 4. IVA, F29, Débito, Crédito, Remanente y PPM
     if (q.includes('iva') || q.includes('f29') || q.includes('debito') || q.includes('débito') || q.includes('credito') || q.includes('crédito') || q.includes('ppm') || q.includes('impuesto')) {
       const totalVentas = rcvDocuments.filter(d => d.tipoRegistro === 'Venta');
@@ -589,40 +644,111 @@ export default function InternalCompanyAccountingCopilot({
       };
     }
 
-    // 7. Auditoría de cuadratura / Balance / Asientos
-    if (q.includes('balance') || q.includes('cuadratura') || q.includes('diario') || q.includes('comprobantes')) {
+    // 7. Auditoría de cuadratura / Descuadres / Balance / Partida Doble
+    if (
+      q.includes('descuadr') || 
+      q.includes('diferencia') || 
+      q.includes('partida doble') || 
+      q.includes('cuadratura') || 
+      q.includes('balance') || 
+      q.includes('diario') || 
+      q.includes('comprobante')
+    ) {
       let totalDebe = 0;
       let totalHaber = 0;
-      let descuadradosCount = 0;
+      const descuadradosList: Array<{
+        voucherNumber: number;
+        date: string;
+        type: string;
+        period: string;
+        gloss: string;
+        vDebit: number;
+        vCredit: number;
+        diff: number;
+        id: string;
+        accountsSummary: string[];
+      }> = [];
 
       vouchers.forEach((v) => {
-        const vDebe = (v.lines || []).reduce((s, l) => s + (Number(l.debit) || 0), 0);
-        const vHaber = (v.lines || []).reduce((s, l) => s + (Number(l.credit) || 0), 0);
-        totalDebe += vDebe;
-        totalHaber += vHaber;
-        if (Math.abs(vDebe - vHaber) > 0.01) {
-          descuadradosCount++;
+        if (v.status === 'Anulado') return;
+        const vDebit = v.totalDebit || v.lines?.reduce((s, l) => s + (Number(l.debit) || 0), 0) || 0;
+        const vCredit = v.totalCredit || v.lines?.reduce((s, l) => s + (Number(l.credit) || 0), 0) || 0;
+        totalDebe += vDebit;
+        totalHaber += vCredit;
+        const diff = vDebit - vCredit;
+        if (Math.abs(diff) > 0.01) {
+          const accounts = (v.lines || []).map(l => `${l.accountCode || ''} ${l.accountName || ''}`.trim()).filter(Boolean);
+          descuadradosList.push({
+            voucherNumber: v.voucherNumber,
+            date: v.date,
+            type: v.type || 'Traspaso',
+            period: v.period || 'N/A',
+            gloss: v.gloss || 'Sin glosa',
+            vDebit,
+            vCredit,
+            diff,
+            id: v.id,
+            accountsSummary: Array.from(new Set(accounts)).slice(0, 3)
+          });
         }
       });
 
-      const diferencia = Math.abs(totalDebe - totalHaber);
-      let balanceReport = `📋 **Auditoría de Comprobantes y Partida Doble para ${company.name}:**\n\n`;
-      balanceReport += `• **Comprobantes Totales:** ${vouchers.length} asientos ingresados.\n`;
-      balanceReport += `• **Sumas Acumuladas del Libro Diario:**\n`;
-      balanceReport += `  - Total Debe: $ ${totalDebe.toLocaleString('es-CL')}\n`;
-      balanceReport += `  - Total Haber: $ ${totalHaber.toLocaleString('es-CL')}\n`;
+      const diferenciaGlobal = Math.abs(totalDebe - totalHaber);
 
-      if (descuadradosCount === 0 && diferencia === 0) {
-        balanceReport += `\n✅ **Estado:** ¡Cuadratura perfecta! El Libro Diario y Balance cumplen rigurosamente el principio de Partida Doble (Diferencia: $ 0).`;
+      let reportText = '';
+
+      if (descuadradosList.length > 0) {
+        reportText = `⚠️ **Auditoría de Partida Doble en ${company.name}:**\n\n`;
+        reportText += `• **Comprobantes Totales:** ${vouchers.length} asientos (${vouchers.filter(v => v.status !== 'Anulado').length} válidos).\n`;
+        reportText += `• **Sumas del Libro Diario:**\n`;
+        reportText += `  - Total Débitos (Debe): $ ${totalDebe.toLocaleString('es-CL')}\n`;
+        reportText += `  - Total Créditos (Haber): $ ${totalHaber.toLocaleString('es-CL')}\n`;
+        reportText += `  - **Diferencia Neta Acumulada:** $ ${diferenciaGlobal.toLocaleString('es-CL')}\n\n`;
+        reportText += `🚨 **Se detectaron exactamente ${descuadradosList.length} comprobante(s) con descuadre:**\n\n`;
+
+        descuadradosList.forEach((item, idx) => {
+          const diffAbs = Math.abs(item.diff);
+          const explicacion = item.diff > 0
+            ? `Falta abono en el Haber por $ ${diffAbs.toLocaleString('es-CL')}`
+            : `Falta cargo en el Debe por $ ${diffAbs.toLocaleString('es-CL')}`;
+
+          reportText += `**${idx + 1}. Asiento N° ${item.voucherNumber}** (${item.type}) | Fecha: **${item.date}** (Período: ${item.period})\n`;
+          reportText += `   • **Glosa:** "${item.gloss}"\n`;
+          reportText += `   • **Debe:** $ ${item.vDebit.toLocaleString('es-CL')} | **Haber:** $ ${item.vCredit.toLocaleString('es-CL')}\n`;
+          reportText += `   • ⚠️ **Descuadre:** $ ${diffAbs.toLocaleString('es-CL')} ➔ *${explicacion}*\n`;
+          if (item.accountsSummary.length > 0) {
+            reportText += `   • **Cuentas en el asiento:** ${item.accountsSummary.join(', ')}\n`;
+          }
+          reportText += `\n`;
+        });
+
+        reportText += `🛠️ **¿Cómo resolver estos descuadres?**\n`;
+        reportText += `1. Puedes ir directamente al **Libro Diario** y activar el filtro **"⚠️ Solo Descuadrados"** para revisarlos en pantalla.\n`;
+        reportText += `2. O entrar a la pestaña **Comprobantes Contables**, buscar el número de asiento correspondiente y hacer clic en **"Modificar"** para cuadrar los cargos y abonos.`;
+
+        return {
+          response: reportText,
+          suggestions: [
+            'Ir al Libro Diario',
+            'Ver Comprobantes Contables',
+            'Auditar cuadratura del Balance'
+          ],
+          actionLink: { tab: 'libroDiario', label: 'Ver Descuadrados en Libro Diario' }
+        };
       } else {
-        balanceReport += `\n⚠️ **Atención:** Se detectaron ${descuadradosCount} comprobantes con descuadre. Diferencia total: $ ${diferencia.toLocaleString('es-CL')}.`;
-      }
+        reportText = `📋 **Auditoría de Comprobantes y Partida Doble para ${company.name}:**\n\n`;
+        reportText += `• **Comprobantes Totales:** ${vouchers.length} asientos ingresados.\n`;
+        reportText += `• **Sumas Acumuladas del Libro Diario:**\n`;
+        reportText += `  - Total Debe: $ ${totalDebe.toLocaleString('es-CL')}\n`;
+        reportText += `  - Total Haber: $ ${totalHaber.toLocaleString('es-CL')}\n`;
+        reportText += `\n✅ **Estado:** ¡Cuadratura perfecta! Todos los asientos contables cumplen rigurosamente el principio de Partida Doble (Diferencia: $ 0).`;
 
-      return {
-        response: balanceReport,
-        suggestions: ['Ver Balance de 8 Columnas', 'Ver Balance Clasificado IFRS', 'Ver Libro Diario'],
-        actionLink: { tab: 'balance8', label: 'Abrir Balance de 8 Columnas' }
-      };
+        return {
+          response: reportText,
+          suggestions: ['Ver Balance de 8 Columnas', 'Ver Balance Clasificado IFRS', 'Ver Libro Diario'],
+          actionLink: { tab: 'libroDiario', label: 'Ver Libro Diario' }
+        };
+      }
     }
 
     // 8. Timbraje, Hojas Sueltas y Folios Oficiales SII

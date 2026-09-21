@@ -56,6 +56,67 @@ const cleanRut = (rut: string): string => {
 };
 
 /**
+ * Normaliza texto eliminando acentos/tildes y espacios extra en minúsculas
+ */
+const normalizeText = (str: string): string => {
+  if (!str) return '';
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+};
+
+/**
+ * Evalúa con alta precisión si un auxiliar (por RUT formateado, RUT limpio o Nombre/Razón Social)
+ * coincide con el término de búsqueda ingresado por el usuario.
+ */
+function matchesAuxiliarySearch(
+  rut: string,
+  cRut: string,
+  auxName: string,
+  searchTerm: string
+): boolean {
+  if (!searchTerm || !searchTerm.trim()) return true;
+
+  const rawTerm = searchTerm.trim();
+  const normTerm = normalizeText(rawTerm);
+  if (!normTerm) return true;
+
+  const normName = normalizeText(auxName || '');
+  const normRut = normalizeText(rut || '');
+
+  // 1. Coincidencia directa por Nombre o Razón Social
+  if (normName && normName.includes(normTerm)) {
+    return true;
+  }
+
+  // 2. Coincidencia por múltiples palabras del Nombre (ej. "alfa metales" en "ALFA METALES SPA")
+  const searchWords = normTerm.split(/\s+/).filter(w => w.length > 0);
+  if (searchWords.length > 1 && normName) {
+    const allWordsMatch = searchWords.every(word => normName.includes(word));
+    if (allWordsMatch) return true;
+  }
+
+  // 3. Coincidencia por RUT textual o formateado (ej. "77.044.205-2" o "77.044")
+  if (normRut && normRut.includes(normTerm)) {
+    return true;
+  }
+
+  // 4. Coincidencia por dígitos de RUT limpios
+  // CRÍTICO: Solo se evalúa si el término ingresado contiene dígitos
+  // Si el usuario escribe solo texto (como "alfa metales spa"), termDigits no contiene dígitos
+  // y por ende NO debe coincidir falsamente con todos los RUTs.
+  const termDigits = rawTerm.replace(/[^0-9kK]/g, '').toLowerCase();
+  const hasDigits = /[0-9]/.test(termDigits);
+  if (hasDigits && termDigits.length >= 2 && cRut && cRut.includes(termDigits)) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * Intelligent Document Reference Parser
  * Extracts Document Type (e.g. 33, 34, 39, 56, 61, BHE, OTRO/9999) and Document Number
  */
@@ -237,13 +298,32 @@ export default function AnalisisAuxiliaresView({
       docsMap: Map<string, TempDocBucket>;
     }
 
+    // Mapa de nombres más completos/precisos por cada RUT (catálogo + comprobantes)
+    const bestAuxNameByRut = new Map<string, string>();
+    auxiliaries.forEach(a => {
+      if (a.rut && a.name && a.name.trim()) {
+        const c = cleanRut(a.rut);
+        if (c) bestAuxNameByRut.set(c, a.name.trim());
+      }
+    });
+    vouchers.forEach(v => {
+      (v.lines || []).forEach(l => {
+        if (l.auxiliaryRut && l.auxiliaryName && l.auxiliaryName.trim()) {
+          const c = cleanRut(l.auxiliaryRut);
+          if (c && !bestAuxNameByRut.has(c)) {
+            bestAuxNameByRut.set(c, l.auxiliaryName.trim());
+          }
+        }
+      });
+    });
+
     const auxGroupsMap = new Map<string, TempAuxBucket>();
 
     const getOrCreateAuxBucket = (rutStr: string, fallbackName?: string): TempAuxBucket => {
       const cRut = cleanRut(rutStr);
       if (!auxGroupsMap.has(cRut)) {
         const auxObj = auxMap.get(cRut);
-        const resolvedName = auxObj?.name || fallbackName || rutStr;
+        const resolvedName = bestAuxNameByRut.get(cRut) || auxObj?.name || fallbackName || rutStr;
         auxGroupsMap.set(cRut, {
           rut: auxObj?.rut || rutStr,
           cleanRut: cRut,
@@ -251,7 +331,11 @@ export default function AnalisisAuxiliaresView({
           docsMap: new Map()
         });
       }
-      return auxGroupsMap.get(cRut)!;
+      const bucket = auxGroupsMap.get(cRut)!;
+      if (bucket.name === bucket.rut && (fallbackName || bestAuxNameByRut.get(cRut))) {
+        bucket.name = bestAuxNameByRut.get(cRut) || fallbackName || bucket.name;
+      }
+      return bucket;
     };
 
     // 1. Procesar Comprobantes Contables Oficiales (Vouchers)
@@ -274,12 +358,11 @@ export default function AnalisisAuxiliaresView({
         const cRut = cleanRut(rut);
         if (!cRut) return;
 
-        // Filtro de búsqueda por RUT / Nombre Auxiliar
+        // Filtro de búsqueda por RUT / Nombre Auxiliar (preciso y sin falsos positivos)
         if (rutSearch) {
-          const sTerm = rutSearch.toLowerCase().trim();
           const auxObj = auxMap.get(cRut);
-          const aName = (line.auxiliaryName || auxObj?.name || '').toLowerCase();
-          if (!cRut.includes(cleanRut(sTerm)) && !aName.includes(sTerm) && !rut.toLowerCase().includes(sTerm)) {
+          const auxName = bestAuxNameByRut.get(cRut) || line.auxiliaryName || auxObj?.name || '';
+          if (!matchesAuxiliarySearch(rut, cRut, auxName, rutSearch)) {
             return;
           }
         }
@@ -357,6 +440,11 @@ export default function AnalisisAuxiliaresView({
     const result: AuxiliaryGroup[] = [];
 
     auxGroupsMap.forEach((auxBucket) => {
+      // Filtro de búsqueda por RUT o Nombre de Auxiliar a nivel de Grupo
+      if (rutSearch && !matchesAuxiliarySearch(auxBucket.rut, auxBucket.cleanRut, auxBucket.name, rutSearch)) {
+        return;
+      }
+
       const documents: AuxiliaryDocumentItem[] = [];
       const accountCodesSet = new Set<string>();
       let auxTotalDebits = 0;
@@ -441,6 +529,7 @@ export default function AnalisisAuxiliaresView({
     return result;
   }, [
     vouchers,
+    auxiliaries,
     auxMap,
     accountMap,
     rutSearch,
@@ -707,13 +796,26 @@ export default function AnalisisAuxiliaresView({
           {/* Buscar por RUT o Razón Social */}
           <div>
             <label className="block font-bold text-slate-700 mb-1">Buscar por Auxiliar (RUT o Nombre):</label>
-            <input
-              type="text"
-              placeholder="Ej. 96.511.460-2 o CONSTRUMART..."
-              value={rutSearch}
-              onChange={e => setRutSearch(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-slate-900 focus:ring-2 focus:ring-indigo-500 font-medium"
-            />
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Ej. 77.044.205-2 o ALFA METALES..."
+                value={rutSearch}
+                onChange={e => setRutSearch(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 pr-8 text-slate-900 focus:ring-2 focus:ring-indigo-500 font-medium"
+              />
+              {rutSearch && (
+                <button
+                  type="button"
+                  onClick={() => setRutSearch('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full hover:bg-slate-200 transition-colors"
+                  title="Limpiar búsqueda"
+                  aria-label="Limpiar búsqueda"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Modo de Fecha */}

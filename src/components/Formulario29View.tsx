@@ -292,7 +292,9 @@ export default function Formulario29View({
       // En facturas de constructoras con CEEC: Total = (Neto + IVA) - CEEC (donde CEEC es habitualmente 65% del IVA)
       if (isConstructora && (t === '33' || t === 'Factura Electrónica' || t === '30')) {
         const expectedTotal = net + iva + exento;
-        if (total > 0 && total < expectedTotal) {
+        if (doc.montoCeec && doc.montoCeec > 0) {
+          ceecCreditoConstructora += doc.montoCeec;
+        } else if (total > 0 && total < expectedTotal) {
           const docCeec = expectedTotal - total;
           ceecCreditoConstructora += docCeec;
         } else if ((doc as any).montoRetencion && (doc as any).montoRetencion > 0 && total < expectedTotal) {
@@ -312,9 +314,13 @@ export default function Formulario29View({
       } else if (t === '61' || t === 'Nota de Crédito' || t === 'Nota de Crédito Electrónica') {
         creditoNotasCreditoEmitidas += iva;
         ventasAfectasNeto -= net;
-        if (isConstructora && total > 0 && total < (net + iva)) {
-          const docCeec = (net + iva) - total;
-          ceecCreditoConstructora -= docCeec;
+        if (isConstructora) {
+          if (doc.montoCeec && doc.montoCeec > 0) {
+            ceecCreditoConstructora -= doc.montoCeec;
+          } else if (total > 0 && total < (net + iva)) {
+            const docCeec = (net + iva) - total;
+            ceecCreditoConstructora -= docCeec;
+          }
         }
       } else if (t === '34' || t === 'Factura Exenta') {
         ventasExentasTotal += net;

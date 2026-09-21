@@ -10,6 +10,8 @@ interface Balance8ColumnasViewProps {
   accounts: ChartOfAccount[];
   fiscalYears: FiscalPeriodYear[];
   onOpenAuditor?: () => void;
+  onNavigateToLibroDiario?: () => void;
+  onFixCeecVouchers?: () => Promise<void>;
 }
 
 interface BalanceRow {
@@ -32,7 +34,9 @@ export default function Balance8ColumnasView({
   vouchers,
   accounts,
   fiscalYears,
-  onOpenAuditor
+  onOpenAuditor,
+  onNavigateToLibroDiario,
+  onFixCeecVouchers
 }: Balance8ColumnasViewProps) {
   const [periodFilter, setPeriodFilter] = useState<string>('Todos');
   const [dateFrom, setDateFrom] = useState<string>('');
@@ -95,17 +99,20 @@ export default function Balance8ColumnasView({
       if (periodFilter !== 'Todos' && v.period !== periodFilter) return false;
       if (dateFrom && v.date < dateFrom) return false;
       if (dateTo && v.date > dateTo) return false;
-      return v.status === 'Descuadrado' || v.isDescuadrado || Math.abs((v.totalDebit || 0) - (v.totalCredit || 0)) > 0.01;
+      const vDeb = v.totalDebit ?? v.lines?.reduce((s, l) => s + (Number(l.debit) || 0), 0) ?? 0;
+      const vCred = v.totalCredit ?? v.lines?.reduce((s, l) => s + (Number(l.credit) || 0), 0) ?? 0;
+      return Math.abs(vDeb - vCred) > 0.01;
     });
 
     // Sum movements ONLY from valid, perfectly balanced vouchers (Strict Partida Doble)
     const validVouchers = vouchers.filter(v => {
       if (v.status === 'Anulado') return false;
-      if (v.status === 'Descuadrado' || v.isDescuadrado) return false;
-      if (Math.abs((v.totalDebit || 0) - (v.totalCredit || 0)) > 0.01) return false;
       if (periodFilter !== 'Todos' && v.period !== periodFilter) return false;
       if (dateFrom && v.date < dateFrom) return false;
       if (dateTo && v.date > dateTo) return false;
+      const vDeb = v.totalDebit ?? v.lines?.reduce((s, l) => s + (Number(l.debit) || 0), 0) ?? 0;
+      const vCred = v.totalCredit ?? v.lines?.reduce((s, l) => s + (Number(l.credit) || 0), 0) ?? 0;
+      if (Math.abs(vDeb - vCred) > 0.01) return false;
       return true;
     });
 
@@ -576,12 +583,37 @@ export default function Balance8ColumnasView({
 
       {/* Alerta de comprobantes excluidos por descuadratura */}
       {descuadradosCount > 0 && (
-        <div className="bg-amber-50 border border-amber-300 p-3.5 rounded-xl text-amber-900 text-xs flex items-center justify-between gap-3 shadow-xs">
-          <div className="flex items-center gap-2">
-            <span className="text-base">⚠️</span>
+        <div className="bg-amber-50 border border-amber-300 p-3.5 rounded-xl text-amber-900 text-xs flex flex-wrap items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-2 max-w-3xl">
+            <span className="text-xl">⚠️</span>
             <div>
-              <span className="font-bold">Partida Doble Estricta:</span> Se han excluido automáticamente <strong>{descuadradosCount}</strong> comprobante(s) que presentaban descuadre o falta de balance (Debe ≠ Haber) para garantizar un Balance Tributario 100% fidedigno y cuadrado.
+              <span className="font-bold">Partida Doble Estricta:</span> Se han excluido automáticamente <strong>{descuadradosCount}</strong> comprobante(s) que presentan descuadre (Debe ≠ Haber).
+              <p className="text-[11px] text-amber-800 mt-0.5">
+                Por esa razón el balance suma igual en sus columnas, pero <strong>no incluye</strong> las cuentas ni saldos de esos comprobantes (ej. Clientes Nacionales [1102001] o Ventas [5101001]). En empresas constructoras, el descuadre típico proviene de la rebaja de Crédito Especial Constructora (CEEC D.L. 910).
+              </p>
             </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {onFixCeecVouchers && (
+              <button
+                type="button"
+                onClick={onFixCeecVouchers}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+                title="Detectar y regularizar automáticamente comprobantes con Crédito Especial Constructora CEEC"
+              >
+                <span>🏗️</span>
+                <span>Auto-Cuadrar Descuadres CEEC Constructora</span>
+              </button>
+            )}
+            {onNavigateToLibroDiario && (
+              <button
+                type="button"
+                onClick={onNavigateToLibroDiario}
+                className="bg-amber-700 hover:bg-amber-800 text-white font-semibold px-3 py-1.5 rounded-lg text-xs shadow-xs transition-colors cursor-pointer"
+              >
+                Ver en Libro Diario
+              </button>
+            )}
           </div>
         </div>
       )}

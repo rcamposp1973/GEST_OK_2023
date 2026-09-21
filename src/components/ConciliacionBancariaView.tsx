@@ -145,6 +145,7 @@ export default function ConciliacionBancariaView({
   const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState<boolean>(false);
 
   // Modals
+  const [isActionsDropdownOpen, setIsActionsDropdownOpen] = useState<boolean>(false);
   const [showImportModal, setShowImportModal] = useState<boolean>(false);
   const [showSmartImportModal, setShowSmartImportModal] = useState<boolean>(false);
   const [showAutoRutModal, setShowAutoRutModal] = useState<boolean>(false);
@@ -1174,6 +1175,32 @@ export default function ConciliacionBancariaView({
     }
   };
 
+  // Helper: Desconciliar todos los movimientos del período activo
+  const handleUnmatchAll = async () => {
+    if (statementLines.length === 0) {
+      alert(`La cartola del período ${selectedPeriod} no tiene movimientos.`);
+      return;
+    }
+    const conciliated = statementLines.filter(l => l.matchedStatus === 'Conciliado');
+    if (conciliated.length === 0) {
+      alert('No hay movimientos en estado "Conciliado" en este período para desconciliar.');
+      return;
+    }
+    if (!window.confirm(`¿Estás seguro de desconciliar los ${conciliated.length} movimientos de ${selectedPeriod}?\n\nLos comprobantes contables quedarán liberados como pendientes.`)) {
+      return;
+    }
+    const updated = statementLines.map(l => ({
+      ...l,
+      matchedStatus: 'Pendiente' as const,
+      matchedVoucherId: undefined,
+      matchedVoucherNumber: undefined,
+      matchedVoucherPeriod: undefined
+    }));
+    setStatementLines(updated);
+    await persistReconciliation(selectedPeriod, updated, bankInitialBalanceInput, bankFinalBalanceInput);
+    alert(`✅ Se desconciliaron ${conciliated.length} movimientos del período ${selectedPeriod}.`);
+  };
+
   // 6. Quick Post Unaccounted Bank Fee or Income + Auto-Match + Immediate Auto-Save
   const handleQuickPostVoucher = async (customData?: {
     period: string;
@@ -1539,167 +1566,194 @@ export default function ConciliacionBancariaView({
   }, [manualMatchLine, allBankVouchers, modalScope, modalExactOnly, modalSearch, selectedPeriod]);
 
   return (
-    <div className="space-y-4">
-      {/* Top Header with Auto-Save Badge */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="text-xl">🏦</span>
-            <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase">
-              Conciliación Bancaria Multiatributo y Multimes
-            </h3>
+    <div className="space-y-3">
+      {/* Top Header Bar with Auto-Save Indicator and Consolidated Actions Dropdown */}
+      <div className="bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-xs flex flex-wrap justify-between items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Auto-save real-time indicator */}
+          <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+            {autoSaveStatus === 'SAVING' && (
+              <>
+                <span className="animate-spin text-indigo-600">⏳</span>
+                <span className="text-indigo-700">Guardando...</span>
+              </>
+            )}
+            {autoSaveStatus === 'SAVED' && (
+              <>
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="text-emerald-800">Grabado automático ({lastSavedTime})</span>
+              </>
+            )}
+            {autoSaveStatus === 'ERROR' && (
+              <>
+                <span className="text-rose-600">⚠️</span>
+                <span className="text-rose-700">{saveMessage || 'Error al guardar'}</span>
+              </>
+            )}
           </div>
-          <div className="flex items-center gap-2 mt-1 flex-wrap">
-            <p className="text-xs text-slate-500">
-              Saldos encadenados y acumulativos mes a mes ({company.name})
-            </p>
-            {/* Auto-save real-time indicator */}
-            <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
-              {autoSaveStatus === 'SAVING' && (
-                <>
-                  <span className="animate-spin text-indigo-600">⏳</span>
-                  <span className="text-indigo-700">Guardando en la base de datos...</span>
-                </>
-              )}
-              {autoSaveStatus === 'SAVED' && (
-                <>
-                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                  <span className="text-emerald-800">Grabado automático ({lastSavedTime})</span>
-                </>
-              )}
-              {autoSaveStatus === 'ERROR' && (
-                <>
-                  <span className="text-rose-600">⚠️</span>
-                  <span className="text-rose-700">{saveMessage || 'Error al guardar'}</span>
-                </>
-              )}
-            </div>
 
-            {/* Persistence & state retention badge */}
-            <div className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200" title="Su progreso de conciliación, filtros y cartola activa se mantienen intactos al cambiar de pestaña dentro del sistema.">
-              <span>⚡</span>
-              <span>Estado Retenido en Navegación</span>
-            </div>
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200" title="Su progreso de conciliación, filtros y cartola activa se mantienen intactos al cambiar de pestaña.">
+            <span>⚡</span>
+            <span>Estado Retenido</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={() => {
-              const csvContent =
-                'data:text/csv;charset=utf-8,\uFEFFFecha;Descripcion;N_Doc;Cargo;Abono;Saldo\n2026-08-01;PAGO PROVEEDOR FACTURA 1024;1024;50000;0;450000\n2026-08-02;ABONO CLIENTE TRANSFERENCIA;TR-12;0;120000;570000\n2026-08-05;COMISION MANTENCION CTA;COM;5500;0;564500';
-              const encodedUri = encodeURI(csvContent);
-              const link = document.createElement('a');
-              link.setAttribute('href', encodedUri);
-              link.setAttribute('download', `Plantilla_Cartola_Bancaria.csv`);
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
-            }}
-            className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-lg border border-slate-300 transition-colors flex items-center gap-1.5"
-            title="Descargar plantilla CSV para subir cartolas"
-          >
-            <span>📊</span>
-            <span>Plantilla CSV</span>
-          </button>
+        <div className="flex items-center gap-2">
+          {/* Consolidated Actions Dropdown */}
+          <div className="relative inline-block text-left">
+            <button
+              type="button"
+              onClick={() => setIsActionsDropdownOpen(!isActionsDropdownOpen)}
+              className="px-3 py-1.5 bg-[#533AFD] hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-xs flex items-center gap-1.5 cursor-pointer transition-all"
+            >
+              <span>⚡ Acciones y Herramientas</span>
+              <ChevronDown className="w-3.5 h-3.5" />
+            </button>
 
-          <button
-            onClick={() => setShowSmartImportModal(true)}
-            className="px-3.5 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-black rounded-lg shadow-sm transition-all flex items-center gap-1.5 border border-indigo-400/30"
-            title="Lectura inteligente de cartolas Excel / CSV de cualquier banco chileno con deduplicación y cuadratura"
-          >
-            <span>🏦</span>
-            <span>Lectura Inteligente Cartola</span>
-            <span className="bg-white/20 text-[9px] px-1 py-0.2 rounded uppercase font-bold">Smart</span>
-          </button>
+            {isActionsDropdownOpen && (
+              <>
+                <div 
+                  className="fixed inset-0 z-40" 
+                  onClick={() => setIsActionsDropdownOpen(false)} 
+                />
+                <div className="absolute right-0 mt-1.5 w-72 rounded-xl bg-white shadow-xl border border-slate-200 py-1.5 z-50 text-xs divide-y divide-slate-100">
+                  <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Importación & Plantillas
+                  </div>
+                  <div className="py-1">
+                    <button
+                      onClick={() => { setIsActionsDropdownOpen(false); setShowSmartImportModal(true); }}
+                      className="w-full text-left px-3 py-1.5 text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 font-semibold flex items-center gap-2 cursor-pointer"
+                    >
+                      <span className="text-base">🏦</span>
+                      <div>
+                        <div className="font-bold text-slate-800">Importar Cartola Excel / Smart</div>
+                        <div className="text-[10px] text-slate-400 font-normal">Lectura inteligente cualquier banco</div>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => { setIsActionsDropdownOpen(false); setImportInitialBalance(bankInitialBalanceInput); setShowImportModal(true); }}
+                      className="w-full text-left px-3 py-1.5 text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 font-semibold flex items-center gap-2 cursor-pointer"
+                    >
+                      <span className="text-base">📥</span>
+                      <div>
+                        <div className="font-bold text-slate-800">Importar CSV / Pegar Texto</div>
+                        <div className="text-[10px] text-slate-400 font-normal">Pegado directo de cartolas</div>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsActionsDropdownOpen(false);
+                        const csvContent = 'data:text/csv;charset=utf-8,\uFEFFFecha;Descripcion;N_Doc;Cargo;Abono;Saldo\n2026-08-01;PAGO PROVEEDOR FACTURA 1024;1024;50000;0;450000\n2026-08-02;ABONO CLIENTE TRANSFERENCIA;TR-12;0;120000;570000\n2026-08-05;COMISION MANTENCION CTA;COM;5500;0;564500';
+                        const encodedUri = encodeURI(csvContent);
+                        const link = document.createElement('a');
+                        link.setAttribute('href', encodedUri);
+                        link.setAttribute('download', `Plantilla_Cartola_Bancaria.csv`);
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                      }}
+                      className="w-full text-left px-3 py-1.5 text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 font-semibold flex items-center gap-2 cursor-pointer"
+                    >
+                      <span className="text-base">📊</span>
+                      <div>
+                        <div className="font-bold text-slate-800">Descargar Plantilla CSV</div>
+                        <div className="text-[10px] text-slate-400 font-normal">Formato modelo estándar</div>
+                      </div>
+                    </button>
+                  </div>
 
-          <button
-            onClick={() => {
-              setImportInitialBalance(bankInitialBalanceInput);
-              setShowImportModal(true);
-            }}
-            className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-xs font-bold rounded-lg border border-indigo-200 transition-colors flex items-center gap-1.5 shadow-2xs"
-          >
-            <span>📥</span>
-            <span>Importar CSV / Pegar</span>
-          </button>
+                  <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Automatización & Cruces
+                  </div>
+                  <div className="py-1">
+                    <button
+                      onClick={() => { setIsActionsDropdownOpen(false); handleAutoMatch(); }}
+                      className="w-full text-left px-3 py-1.5 text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 font-semibold flex items-center gap-2 cursor-pointer"
+                    >
+                      <span className="text-base">⚡</span>
+                      <div>
+                        <div className="font-bold text-slate-800">Auto-Conciliar con IA / Multimes</div>
+                        <div className="text-[10px] text-slate-400 font-normal">Cruce exacto en mes y cruzado</div>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => { setIsActionsDropdownOpen(false); setShowAutoRutModal(true); }}
+                      className="w-full text-left px-3 py-1.5 text-amber-900 hover:bg-amber-50 font-semibold flex items-center gap-2 cursor-pointer"
+                    >
+                      <span className="text-base">🧠</span>
+                      <div>
+                        <div className="font-bold text-amber-900">Nuez Mariposa (RUT Match)</div>
+                        <div className="text-[10px] text-amber-700 font-normal">Match y asiento automático por RUT</div>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => { setIsActionsDropdownOpen(false); setShowJuniorGlossModal(true); }}
+                      className="w-full text-left px-3 py-1.5 text-indigo-900 hover:bg-indigo-50 font-semibold flex items-center gap-2 cursor-pointer"
+                    >
+                      <span className="text-base">🤖</span>
+                      <div>
+                        <div className="font-bold text-indigo-900">Junior: Contabilizar por Glosa</div>
+                        <div className="text-[10px] text-indigo-700 font-normal">Reglas automáticas por glosa</div>
+                      </div>
+                    </button>
+                  </div>
 
-          {/* ANULAR / LIMPIAR CARTOLA DEL MES BUTTON */}
-          <button
-            onClick={handleClearCartolaPeriod}
-            className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-lg border border-rose-200 transition-colors flex items-center gap-1.5 shadow-2xs"
-            title="Anular o borrar la cartola cargada de este mes si no tiene movimientos conciliados"
-          >
-            <span>🗑️</span>
-            <span>Anular Cartola</span>
-          </button>
-
-          {/* NUEZ MARIPOSA / AUTO RUT MATCH BUTTON */}
-          <button
-            onClick={() => setShowAutoRutModal(true)}
-            className="relative group px-3.5 py-1.5 bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 font-black text-xs rounded-xl shadow-md shadow-amber-500/20 transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center gap-1.5 border-2 border-amber-300 overflow-hidden"
-            title="Nuez Mariposa: Match y Contabilización Automática por RUT en Cartola"
-          >
-            {/* Glowing aura */}
-            <span className="absolute -inset-1 bg-amber-400/50 rounded-xl blur-xs opacity-75 group-hover:opacity-100 transition animate-pulse"></span>
-            <span className="relative flex items-center gap-1.5">
-              <svg className="w-4 h-4 text-slate-950 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 2C8 2 5 4.5 5 8c0 2 1 3.5 2.5 4.5C6 13.5 5 15 5 17c0 3 3 5 7 5s7-2 7-5c0-2-1-3.5-2.5-4.5C18 11.5 19 10 19 8c0-3.5-3-6-7-6z" fill="currentColor" opacity="0.25" />
-                <path d="M12 2v20" strokeDasharray="2 2" />
-                <path d="M7.5 8c1-.5 2.5 0 3 1s0 2.5-1 3" />
-                <path d="M16.5 8c-1-.5-2.5 0-3 1s0 2.5 1 3" />
-              </svg>
-              <span className="uppercase tracking-tight font-extrabold">🧠 Nuez Mariposa (RUT Match)</span>
-              <span className="bg-amber-950 text-amber-300 text-[9px] px-1.5 py-0.5 rounded font-mono font-black">PRO</span>
-            </span>
-          </button>
-
-          {/* JUNIOR GLOSS AUTOMATION BUTTON */}
-          <button
-            onClick={() => setShowJuniorGlossModal(true)}
-            className="relative group px-3.5 py-1.5 bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-800 hover:from-indigo-700 hover:to-indigo-900 text-white font-black text-xs rounded-xl shadow-md shadow-indigo-600/20 transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center gap-1.5 border-2 border-indigo-400 overflow-hidden"
-            title="Junior: Automatización y Contabilización por Glosa de Cartola"
-          >
-            <span className="relative flex items-center gap-1.5">
-              <span className="text-sm">🤖</span>
-              <span className="uppercase tracking-tight font-extrabold">Junior: Contabilizar por Glosa</span>
-              <span className="bg-indigo-950 text-indigo-200 text-[9px] px-1.5 py-0.5 rounded font-mono font-black border border-indigo-500/40">IA</span>
-            </span>
-          </button>
-
-          <button
-            onClick={handleAutoMatch}
-            className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
-            title="Cruce automático de montos idénticos en el mes y entre otros meses"
-          >
-            <span>⚡</span>
-            <span>Match Automático Multimes</span>
-          </button>
-
-          <button
-            onClick={() => setShowPendingReportModal(true)}
-            className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center gap-1.5 border border-slate-700"
-            title="Ver reporte oficial de partidas pendientes de conciliación bancaria"
-          >
-            <span>📑</span>
-            <span>Partidas Pendientes</span>
-          </button>
+                  <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Reportes & Mantenimiento
+                  </div>
+                  <div className="py-1">
+                    <button
+                      onClick={() => { setIsActionsDropdownOpen(false); setShowPendingReportModal(true); }}
+                      className="w-full text-left px-3 py-1.5 text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 font-semibold flex items-center gap-2 cursor-pointer"
+                    >
+                      <span className="text-base">📑</span>
+                      <div>
+                        <div className="font-bold text-slate-800">Exportar Informe / Partidas Pendientes</div>
+                        <div className="text-[10px] text-slate-400 font-normal">Reporte oficial de conciliación</div>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => { setIsActionsDropdownOpen(false); handleUnmatchAll(); }}
+                      className="w-full text-left px-3 py-1.5 text-amber-700 hover:bg-amber-50 font-semibold flex items-center gap-2 cursor-pointer"
+                    >
+                      <span className="text-base">🔄</span>
+                      <div>
+                        <div className="font-bold text-amber-800">Desconciliar Todo el Período</div>
+                        <div className="text-[10px] text-amber-600 font-normal">Liberar comprobantes del mes</div>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => { setIsActionsDropdownOpen(false); handleClearCartolaPeriod(); }}
+                      className="w-full text-left px-3 py-1.5 text-rose-700 hover:bg-rose-50 font-semibold flex items-center gap-2 cursor-pointer"
+                    >
+                      <span className="text-base">🗑️</span>
+                      <div>
+                        <div className="font-bold text-rose-700">Anular / Limpiar Cartola del Mes</div>
+                        <div className="text-[10px] text-rose-500 font-normal">Borrar movimientos no conciliados</div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
 
           <button
             onClick={async () => {
               await persistReconciliation(selectedPeriod, statementLines, bankInitialBalanceInput, bankFinalBalanceInput);
-              alert('💾 Conciliación bancaria verificada y sincronizada en Firestore.');
+              alert('💾 Conciliación bancaria verificada y sincronizada.');
             }}
-            className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
+            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center gap-1 cursor-pointer"
           >
             <span>💾</span>
-            <span>Guardar Ahora</span>
+            <span>Guardar</span>
           </button>
         </div>
       </div>
 
       {/* Control Bar: Account, Period, Cumulative Balance Control */}
-      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-xs grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3.5 text-xs">
+      <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 shadow-xs grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 text-xs">
         <div>
           <label className="block font-bold text-slate-700 mb-1">Cuenta Bancaria:</label>
           <select

@@ -638,6 +638,8 @@ export interface JuniorGlossRule {
   targetGloss?: string; // Glosa personalizada para el comprobante contable (opcional)
   costCenter?: string;
   expenseItem?: string;
+  project?: string;
+  product?: string;
   isActive: boolean;
   createdAt: string;
   updatedAt?: string;

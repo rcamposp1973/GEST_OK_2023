@@ -528,6 +528,8 @@ export async function executeJuniorGlossAutomation(
     saveAsPermanentRule?: boolean;
     costCenter?: string;
     expenseItem?: string;
+    project?: string;
+    product?: string;
     existingVouchers: Voucher[];
     accounts: ChartOfAccount[];
   }
@@ -589,6 +591,10 @@ export async function executeJuniorGlossAutomation(
 
       const docType = item.matchedDocument?.tipoDoc || (isCharge ? '33' : '39');
 
+      const effectiveCostCenter = options.costCenter || options.targetAuxiliary?.defaultCostCenter || '';
+      const effectiveExpenseItem = options.expenseItem || options.targetAuxiliary?.defaultExpenseItem || '';
+      const effectiveProject = options.project || options.targetAuxiliary?.defaultProject || '';
+
       // Build balanced double entry (Partida Doble Oficial)
       let voucherLines: VoucherLine[] = [];
 
@@ -607,8 +613,9 @@ export async function executeJuniorGlossAutomation(
             documentType: docType,
             documentRef: docFolio,
             gloss: defaultGloss,
-            costCenter: options.costCenter || '',
-            expenseItem: options.expenseItem || ''
+            costCenter: effectiveCostCenter,
+            expenseItem: effectiveExpenseItem,
+            project: effectiveProject
           },
           {
             id: 'l2',
@@ -648,8 +655,9 @@ export async function executeJuniorGlossAutomation(
             documentType: docType,
             documentRef: docFolio,
             gloss: defaultGloss,
-            costCenter: options.costCenter || '',
-            expenseItem: options.expenseItem || ''
+            costCenter: effectiveCostCenter,
+            expenseItem: effectiveExpenseItem,
+            project: effectiveProject
           }
         ];
       }
@@ -752,6 +760,8 @@ export async function executeJuniorGlossAutomation(
           targetGloss: options.customGloss,
           costCenter: options.costCenter,
           expenseItem: options.expenseItem,
+          project: options.project,
+          product: options.product,
           isActive: true,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),

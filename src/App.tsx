@@ -30,7 +30,7 @@ import LandingHome from './components/LandingHome';
 import { logAuditEvent } from './utils/auditLogger';
 import { APP_VERSION } from './constants/version';
 import { purgeDiagonConstruccionesData } from './utils/diagonPurge';
-import { Building2, PlusCircle, CreditCard, ShieldCheck, Users, ShieldAlert, History, Sparkles, LogOut, Megaphone, Activity, Quote, Trash2 } from 'lucide-react';
+import { Building2, PlusCircle, CreditCard, ShieldCheck, Users, ShieldAlert, History, Sparkles, LogOut, Megaphone, Activity, Quote, Trash2, Search, X } from 'lucide-react';
 
 function Dashboard() {
   const { currentUser } = useAuth();
@@ -38,6 +38,8 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [studies, setStudies] = useState<Study[]>([]);
+  const [studySearchQuery, setStudySearchQuery] = useState('');
+  const [studyStatusFilter, setStudyStatusFilter] = useState<'ALL' | 'Vigente' | 'Sin Vigencia'>('ALL');
   const [selectedStudy, setSelectedStudy] = useState<Study | null>(null);
   const [superAdminTab, setSuperAdminTab] = useState<'monitor' | 'studies' | 'create_study' | 'plans' | 'super_users' | 'marketing_promo' | 'testimonials' | 'pricing' | 'audit_logs' | 'presentation'>('monitor');
   const [role, setRole] = useState<UserRole | null>(null);
@@ -527,85 +529,187 @@ function Dashboard() {
               </div>
             )}
 
-            {superAdminTab === 'studies' && (
-              <section className="space-y-4">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-900">Estudios Contables Registrados ({studies.length})</h3>
-                    <p className="text-xs text-slate-500">Selecciona un estudio para auditar sus sociedades o gestionar sus administradores.</p>
-                  </div>
-                  <button
-                    onClick={() => setSuperAdminTab('create_study')}
-                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-xs flex items-center gap-1.5"
-                  >
-                    <PlusCircle className="w-3.5 h-3.5" /> Nuevo Estudio
-                  </button>
-                </div>
+            {superAdminTab === 'studies' && (() => {
+              const filteredStudies = studies.filter(study => {
+                if (studyStatusFilter !== 'ALL') {
+                  const isVigente = study.estado !== 'Sin Vigencia';
+                  if (studyStatusFilter === 'Vigente' && !isVigente) return false;
+                  if (studyStatusFilter === 'Sin Vigencia' && isVigente) return false;
+                }
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {studies.map(study => {
-                    const isVigente = study.estado !== 'Sin Vigencia';
-                    const adminEmail = study.adminEmail || study.email || (study.administrators && study.administrators[0]?.email) || 'No configurado';
-                    const adminCount = (study.administrators && study.administrators.length) || 1;
+                if (!studySearchQuery.trim()) return true;
+                const q = studySearchQuery.toLowerCase().trim();
+                const cleanQ = q.replace(/[^0-9kK]/g, '');
 
-                    return (
-                      <div
-                        key={study.id}
-                        onClick={() => setSelectedStudy(study)}
-                        className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer flex flex-col justify-between"
-                      >
-                        <div>
-                          <div className="flex justify-between items-start mb-2">
-                            <div>
-                              <h4 className="font-bold text-slate-900 text-sm hover:text-indigo-600 transition-colors">
-                                {study.name}
-                              </h4>
-                              <p className="text-xs font-mono text-slate-500">RUT: {study.rut || 'No informado'}</p>
-                            </div>
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${
-                              isVigente ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
-                            }`}>
-                              {study.estado || 'Vigente'}
-                            </span>
-                          </div>
+                const nameMatch = study.name?.toLowerCase().includes(q);
+                const rutRawMatch = study.rut?.toLowerCase().includes(q);
+                const rutCleanMatch = cleanQ.length > 0 && study.rut?.replace(/[^0-9kK]/g, '').toLowerCase().includes(cleanQ);
+                const emailMatch = (study.adminEmail || study.email || '')?.toLowerCase().includes(q);
+                const adminListMatch = study.administrators?.some((a: any) => 
+                  a.email?.toLowerCase().includes(q) || a.name?.toLowerCase().includes(q)
+                );
 
-                          <div className="text-xs text-slate-600 space-y-1 my-2 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                            <p className="flex justify-between">
-                              <span className="text-slate-400">Admin:</span>
-                              <span className="font-mono font-medium text-slate-800 truncate max-w-[170px]">{adminEmail}</span>
-                            </p>
-                            <p className="flex justify-between">
-                              <span className="text-slate-400">Total Admins:</span>
-                              <span className="font-semibold text-indigo-700">{adminCount} asignado(s)</span>
-                            </p>
-                          </div>
-                        </div>
+                return nameMatch || rutRawMatch || rutCleanMatch || emailMatch || adminListMatch;
+              });
 
-                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between mt-2">
-                          <span className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
-                            Auditar y Gestionar &rarr;
-                          </span>
-
-                          {study.name !== 'Pulso Contable' && study.name !== 'EST_PRUEBA' && (
-                            <button
-                              onClick={(e) => handleDeleteStudy(study.id, e)}
-                              className="text-rose-600 hover:text-rose-800 text-xs font-semibold px-2 py-0.5 rounded hover:bg-rose-50 transition-colors"
-                            >
-                              Eliminar
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {studies.length === 0 && (
-                    <div className="col-span-full p-8 text-center bg-white rounded-xl border border-slate-200 text-xs text-slate-500 italic">
-                      No hay estudios registrados actualmente. Utiliza el botón superior para registrar el primero.
+              return (
+                <section className="space-y-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-900">Estudios Contables Registrados ({studies.length})</h3>
+                      <p className="text-xs text-slate-500">Selecciona un estudio para auditar sus sociedades o gestionar sus administradores.</p>
                     </div>
-                  )}
-                </div>
-              </section>
-            )}
+                    <button
+                      onClick={() => setSuperAdminTab('create_study')}
+                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-xs flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <PlusCircle className="w-3.5 h-3.5" /> Nuevo Estudio
+                    </button>
+                  </div>
+
+                  {/* Barra de Búsqueda y Filtros de Estado */}
+                  <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div className="relative flex-1 w-full">
+                      <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input
+                        type="text"
+                        value={studySearchQuery}
+                        onChange={(e) => setStudySearchQuery(e.target.value)}
+                        placeholder="Buscar estudio por nombre o RUT (ej. 76.123.456-7)..."
+                        className="w-full pl-9 pr-8 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all outline-hidden text-slate-800 placeholder:text-slate-400 font-medium"
+                      />
+                      {studySearchQuery && (
+                        <button
+                          onClick={() => setStudySearchQuery('')}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
+                          title="Limpiar búsqueda"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 justify-between sm:justify-end">
+                      <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg text-xs">
+                        <button
+                          onClick={() => setStudyStatusFilter('ALL')}
+                          className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
+                            studyStatusFilter === 'ALL'
+                              ? 'bg-white text-indigo-900 shadow-xs font-bold'
+                              : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          Todos ({studies.length})
+                        </button>
+                        <button
+                          onClick={() => setStudyStatusFilter('Vigente')}
+                          className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
+                            studyStatusFilter === 'Vigente'
+                              ? 'bg-white text-emerald-800 shadow-xs font-bold'
+                              : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          Vigentes
+                        </button>
+                        <button
+                          onClick={() => setStudyStatusFilter('Sin Vigencia')}
+                          className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
+                            studyStatusFilter === 'Sin Vigencia'
+                              ? 'bg-white text-rose-800 shadow-xs font-bold'
+                              : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          Sin Vigencia
+                        </button>
+                      </div>
+
+                      <span className="text-[11px] font-medium text-slate-500 whitespace-nowrap">
+                        {filteredStudies.length} {filteredStudies.length === 1 ? 'estudio' : 'estudios'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredStudies.map(study => {
+                      const isVigente = study.estado !== 'Sin Vigencia';
+                      const adminEmail = study.adminEmail || study.email || (study.administrators && study.administrators[0]?.email) || 'No configurado';
+                      const adminCount = (study.administrators && study.administrators.length) || 1;
+
+                      return (
+                        <div
+                          key={study.id}
+                          onClick={() => setSelectedStudy(study)}
+                          className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer flex flex-col justify-between"
+                        >
+                          <div>
+                            <div className="flex justify-between items-start mb-2">
+                              <div>
+                                <h4 className="font-bold text-slate-900 text-sm hover:text-indigo-600 transition-colors">
+                                  {study.name}
+                                </h4>
+                                <p className="text-xs font-mono text-slate-500">RUT: {study.rut || 'No informado'}</p>
+                              </div>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${
+                                isVigente ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                              }`}>
+                                {study.estado || 'Vigente'}
+                              </span>
+                            </div>
+
+                            <div className="text-xs text-slate-600 space-y-1 my-2 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                              <p className="flex justify-between">
+                                <span className="text-slate-400">Admin:</span>
+                                <span className="font-mono font-medium text-slate-800 truncate max-w-[170px]">{adminEmail}</span>
+                              </p>
+                              <p className="flex justify-between">
+                                <span className="text-slate-400">Total Admins:</span>
+                                <span className="font-semibold text-indigo-700">{adminCount} asignado(s)</span>
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="pt-2 border-t border-slate-100 flex items-center justify-between mt-2">
+                            <span className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
+                              Auditar y Gestionar &rarr;
+                            </span>
+
+                            {study.name !== 'Pulso Contable' && study.name !== 'EST_PRUEBA' && (
+                              <button
+                                onClick={(e) => handleDeleteStudy(study.id, e)}
+                                className="text-rose-600 hover:text-rose-800 text-xs font-semibold px-2 py-0.5 rounded hover:bg-rose-50 transition-colors"
+                              >
+                                Eliminar
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {filteredStudies.length === 0 && (
+                      <div className="col-span-full p-8 text-center bg-white rounded-xl border border-slate-200 text-xs text-slate-500 space-y-2">
+                        {studies.length === 0 ? (
+                          <p className="italic">No hay estudios registrados actualmente. Utiliza el botón superior para registrar el primero.</p>
+                        ) : (
+                          <>
+                            <p className="font-semibold text-slate-700">No se encontraron estudios que coincidan con la búsqueda.</p>
+                            <p className="text-slate-400">Prueba ajustando el texto de búsqueda o cambiando el filtro de estado.</p>
+                            <button
+                              onClick={() => {
+                                setStudySearchQuery('');
+                                setStudyStatusFilter('ALL');
+                              }}
+                              className="mt-2 px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+                            >
+                              Restablecer búsqueda y filtros
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </section>
+              );
+            })()}
           </div>
           )
         ) : (role === UserRole.STUDY_ADMIN || role === UserRole.ACCOUNTANT || role === UserRole.ANALYST || role === UserRole.OBSERVER) && userData?.studyId ? (

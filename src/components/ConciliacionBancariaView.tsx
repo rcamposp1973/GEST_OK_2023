@@ -51,7 +51,9 @@ import {
   Maximize2,
   Minimize2,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Landmark,
+  Save
 } from 'lucide-react';
 import { ImportCSVModal, ManualMatchModal, QuickVoucherModal } from './BankReconciliationModals';
 import AutoRutMatchModal from './AutoRutMatchModal';
@@ -90,7 +92,10 @@ interface ConciliacionBancariaViewProps {
   projects?: ProjectMaster[];
   products?: ProductMaster[];
   customAnalysisItems?: CustomAnalysisTableItem[];
+  currentUserRole?: string;
   onVouchersUpdated?: () => void;
+  onAccountsUpdated?: () => void;
+  onClose?: () => void;
 }
 
 export default function ConciliacionBancariaView({
@@ -106,7 +111,8 @@ export default function ConciliacionBancariaView({
   projects = [],
   products = [],
   customAnalysisItems = [],
-  onVouchersUpdated
+  onVouchersUpdated,
+  onClose
 }: ConciliacionBancariaViewProps) {
   const [selectedBankAccountId, setSelectedBankAccountId] = useState<string>('');
   const [selectedPeriod, setSelectedPeriod] = useState<string>(() => getLatestOpenPeriod(fiscalYears));
@@ -169,6 +175,9 @@ export default function ConciliacionBancariaView({
 
   // Dual Panels Layout: 'side-by-side' (Lado a Lado) | 'stacked' (Arriba / Abajo)
   const [panelsLayout, setPanelsLayout] = useState<'side-by-side' | 'stacked'>('side-by-side');
+
+  // Full Screen Mode
+  const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
 
   const companyRef = doc(db, 'studies', studyId, 'companies', company.id);
 
@@ -1566,45 +1575,70 @@ export default function ConciliacionBancariaView({
   }, [manualMatchLine, allBankVouchers, modalScope, modalExactOnly, modalSearch, selectedPeriod]);
 
   return (
-    <div className="space-y-3">
-      {/* Top Header Bar with Auto-Save Indicator and Consolidated Actions Dropdown */}
-      <div className="bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-xs flex flex-wrap justify-between items-center gap-3">
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Auto-save real-time indicator */}
-          <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+    <div className="fixed inset-0 z-50 bg-[#0b1329]/70 backdrop-blur-xs flex flex-col w-screen h-screen overflow-hidden animate-in fade-in duration-150">
+      {/* HEADER DE VENTANA EMERGENTE - PANTALLA COMPLETA SIN DISTRACTORES */}
+      <div className="bg-slate-900 text-white px-4 py-2.5 flex items-center justify-between border-b border-slate-800 shrink-0 shadow-lg z-20">
+        {/* Lado Izquierdo: Icono, Título y Nombre Empresa */}
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white border border-indigo-400/40 shadow-inner shrink-0">
+            <Landmark className="w-4 h-4 text-indigo-100" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-bold tracking-tight text-white uppercase">
+                Conciliación Bancaria Inteligente
+              </h2>
+              <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-mono px-2 py-0.5 rounded-full uppercase font-bold tracking-wider">
+                Pantalla Completa
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 font-medium">
+              {company.name} • RUT: {company.rut}
+            </p>
+          </div>
+        </div>
+
+        {/* Lado Derecho: Auto-guardado, Guardar, Acciones y Botón Cerrar */}
+        <div className="flex items-center gap-2.5">
+          {/* Indicador de Auto-guardado en tiempo real */}
+          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700">
             {autoSaveStatus === 'SAVING' && (
               <>
-                <span className="animate-spin text-indigo-600">⏳</span>
-                <span className="text-indigo-700">Guardando...</span>
+                <span className="animate-spin text-indigo-400">⏳</span>
+                <span className="text-indigo-300">Guardando...</span>
               </>
             )}
             {autoSaveStatus === 'SAVED' && (
               <>
-                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span className="text-emerald-800">Grabado automático ({lastSavedTime})</span>
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span className="text-emerald-300">Grabado automático ({lastSavedTime})</span>
               </>
             )}
             {autoSaveStatus === 'ERROR' && (
               <>
-                <span className="text-rose-600">⚠️</span>
-                <span className="text-rose-700">{saveMessage || 'Error al guardar'}</span>
+                <span className="text-rose-400">⚠️</span>
+                <span className="text-rose-300">{saveMessage || 'Error al guardar'}</span>
               </>
             )}
           </div>
 
-          <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200" title="Su progreso de conciliación, filtros y cartola activa se mantienen intactos al cambiar de pestaña.">
-            <span>⚡</span>
-            <span>Estado Retenido</span>
-          </div>
-        </div>
+          <button
+            onClick={async () => {
+              await persistReconciliation(selectedPeriod, statementLines, bankInitialBalanceInput, bankFinalBalanceInput);
+              alert('💾 Conciliación bancaria verificada y sincronizada.');
+            }}
+            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer border border-emerald-500"
+          >
+            <Save className="w-3.5 h-3.5 text-emerald-100" />
+            <span>Guardar Acta</span>
+          </button>
 
-        <div className="flex items-center gap-2">
           {/* Consolidated Actions Dropdown */}
           <div className="relative inline-block text-left">
             <button
               type="button"
               onClick={() => setIsActionsDropdownOpen(!isActionsDropdownOpen)}
-              className="px-3 py-1.5 bg-[#533AFD] hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-xs flex items-center gap-1.5 cursor-pointer transition-all"
+              className="px-3 py-1.5 bg-[#533AFD] hover:bg-indigo-600 text-white text-xs font-bold rounded-lg shadow-xs flex items-center gap-1.5 cursor-pointer transition-all border border-indigo-400/30"
             >
               <span>⚡ Acciones y Herramientas</span>
               <ChevronDown className="w-3.5 h-3.5" />
@@ -1739,18 +1773,23 @@ export default function ConciliacionBancariaView({
             )}
           </div>
 
-          <button
-            onClick={async () => {
-              await persistReconciliation(selectedPeriod, statementLines, bankInitialBalanceInput, bankFinalBalanceInput);
-              alert('💾 Conciliación bancaria verificada y sincronizada.');
-            }}
-            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center gap-1 cursor-pointer"
-          >
-            <span>💾</span>
-            <span>Guardar</span>
-          </button>
+          {/* Botón Cerrar Modal */}
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-3 py-1.5 bg-slate-800 hover:bg-rose-950/80 hover:border-rose-600/60 text-slate-300 hover:text-rose-200 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer border border-slate-700 group ml-1"
+              title="Cerrar ventana emergente de conciliación bancaria"
+            >
+              <X className="w-4 h-4 text-slate-400 group-hover:text-rose-300" />
+              <span>Cerrar</span>
+            </button>
+          )}
         </div>
       </div>
+
+      {/* ÁREA DE TRABAJO SCROLLABLE */}
+      <div className="flex-1 overflow-y-auto bg-slate-100 p-3 md:p-4 space-y-3">
 
       {/* Control Bar: Account, Period, Cumulative Balance Control */}
       <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 shadow-xs grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 text-xs">
@@ -2978,6 +3017,11 @@ export default function ConciliacionBancariaView({
         auxiliaries={auxiliaries || []}
         fiscalYears={fiscalYears}
         selectedBankAccountId={selectedBankAccountId}
+        costCenters={costCenters}
+        expenseItems={expenseItems}
+        projects={projects}
+        products={products}
+        customAnalysisItems={customAnalysisItems}
         onSuccess={async () => {
           await fetchReconciliations();
           if (onVouchersUpdated) {
@@ -2985,6 +3029,7 @@ export default function ConciliacionBancariaView({
           }
         }}
       />
+      </div>
     </div>
   );
 }

@@ -20,6 +20,7 @@ import {
   F29AccountingParams
 } from '../types';
 import { sanitizeVoucherLines } from '../utils/voucherValidation';
+import { Receipt, Download, Save, Zap } from 'lucide-react';
 
 interface Formulario29ViewProps {
   studyId: string;
@@ -915,45 +916,43 @@ export default function Formulario29View({
   return (
     <div className="space-y-4">
       {/* HEADER */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="text-xl">📑</span>
-            <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase">
-              Formulario 29 y Determinación de Impuestos Mensuales
-            </h3>
+      <div className="bg-white px-4 py-2.5 rounded-xl border border-slate-200 shadow-xs flex flex-wrap justify-between items-center gap-2">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-md bg-indigo-50 flex items-center justify-center text-indigo-700 border border-indigo-200/60">
+            <Receipt className="w-4 h-4" />
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Cálculo oficial de Débito/Crédito Fiscal IVA, Retenciones de Segunda Categoría, PPM y Liquidación Contable ({company.name} - RUT: {company.rut})
-          </p>
+          <h3 className="text-sm font-bold text-slate-900 tracking-tight uppercase">
+            Formulario 29 y Determinación de Impuestos Mensuales
+          </h3>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <button
             onClick={handleExportCSV}
-            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg border border-slate-300 transition-colors flex items-center gap-1.5"
+            className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg border border-slate-300 transition-colors flex items-center justify-center cursor-pointer"
+            title="Exportar Resumen F29 a CSV / Excel"
           >
-            <span>📥</span>
-            <span>Exportar F29 CSV</span>
+            <Download className="w-4 h-4 text-slate-600" />
           </button>
 
           <button
             onClick={handleCentralizeF29Voucher}
             disabled={isSubmitting}
-            className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
-            title="Generar asiento contable de liquidación mensual en Libro Diario"
+            className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            title="Generar y contabilizar asiento de liquidación mensual F29 en Libro Diario"
           >
-            <span>⚡</span>
-            <span>Contabilizar Asiento F29</span>
+            <Zap className="w-3.5 h-3.5 text-indigo-200" />
+            <span className="hidden sm:inline">Contabilizar F29</span>
           </button>
 
           <button
             onClick={handleSaveDeclaration}
             disabled={isSubmitting}
-            className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
+            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            title="Guardar estado de la declaración F29"
           >
-            <span>💾</span>
-            <span>{isSubmitting ? 'Guardando...' : 'Guardar Declaración'}</span>
+            <Save className="w-3.5 h-3.5 text-emerald-200" />
+            <span>{isSubmitting ? 'Guardando...' : 'Guardar'}</span>
           </button>
         </div>
       </div>

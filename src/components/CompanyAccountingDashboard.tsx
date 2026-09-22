@@ -53,9 +53,27 @@ import {
   BarChart3, Settings, Calendar, Download, ChevronLeft, ChevronRight, 
   FileSpreadsheet, ArrowLeft, Building2, CheckCircle2, Lock, Unlock,
   ShieldCheck, Boxes, Package, ArrowRightLeft, ShoppingBag, Calculator, Briefcase, Sparkles,
-  Warehouse as WarehouseIcon, Table as TableIcon
+  Warehouse as WarehouseIcon, Table as TableIcon, Pin, Plus, X, Check
 } from 'lucide-react';
 
+const QUICK_ACCESS_ITEMS = [
+  { id: 'vouchers', label: 'Vouchers / Asientos', group: 'FINANZAS', icon: FileText, tab: 'vouchers' },
+  { id: 'libroDiario', label: 'Libro Diario Oficial', group: 'FINANZAS', icon: BookOpen, tab: 'libroDiario' },
+  { id: 'libroMayor', label: 'Libro Mayor', group: 'FINANZAS', icon: Layers, tab: 'libroMayor' },
+  { id: 'balance8', label: 'Balance 8 Columnas', group: 'FINANZAS', icon: Scale, tab: 'balance8' },
+  { id: 'balanceIFRS', label: 'Balance IFRS / FECU', group: 'FINANZAS', icon: BarChart3, tab: 'balanceIFRS' },
+  { id: 'analisisAuxiliares', label: 'Auxiliares Cuentas Corrientes', group: 'FINANZAS', icon: Users, tab: 'analisisAuxiliares' },
+  { id: 'rcv', label: 'Carga RCV Compra/Venta', group: 'IMPORTACIONES', icon: Download, tab: 'rcv' },
+  { id: 'formulario29', label: 'Impuestos F29', group: 'IMPUESTOS', icon: Receipt, tab: 'formulario29' },
+  { id: 'operativaComercial', label: 'Gestión Comercial', group: 'OPERACIONES', icon: ShoppingCart, tab: 'operativaComercial' },
+  { id: 'emisionDte', label: 'Emisión DTE / Facturas', group: 'OPERACIONES', icon: FileSpreadsheet, tab: 'emisionDte' },
+  { id: 'conciliacionBancaria', label: 'Conciliación Bancaria', group: 'TESORERIA', icon: CreditCard, tab: 'conciliacionBancaria' },
+  { id: 'nominasPago', label: 'Nóminas de Pago', group: 'TESORERIA', icon: Landmark, tab: 'nominasPago' },
+  { id: 'employees', label: 'Ficha de Empleados', group: 'PERSONAL', icon: Briefcase, tab: 'employees' },
+  { id: 'indicadoresFinancieros', label: 'Indicadores & KPIs', group: 'INDICADORES', icon: TrendingUp, tab: 'indicadoresFinancieros' },
+  { id: 'accounts', label: 'Plan de Cuentas', group: 'CONFIGURACIONES', icon: FolderTree, tab: 'accounts' },
+  { id: 'juniorAI', label: 'Copilot Contable IA', group: 'FINANZAS', icon: Sparkles, tab: 'smartNotebooks' }
+] as const;
 
 interface CompanyAccountingDashboardProps {
   studyId: string;
@@ -76,6 +94,26 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
   const [auxSubTab, setAuxSubTab] = useState<'deudores' | 'acreedores'>('deudores');
   const [employeeSubTab, setEmployeeSubTab] = useState<'employees' | 'contracts' | 'attendance' | 'advances' | 'severance' | 'certificates'>('employees');
   const [payrollTab, setPayrollTab] = useState<'NOMINA' | 'LIQUIDACION_INDIVIDUAL' | 'LRD_DT' | 'PREVIRED' | 'PARAMETROS' | 'CONCEPTOS' | 'RELIQUIDACIONES'>('NOMINA');
+
+  const [pinnedQuickAccessIds, setPinnedQuickAccessIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('gestok_quick_access_pinned');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return ['vouchers', 'libroDiario', 'balance8', 'formulario29', 'rcv', 'conciliacionBancaria'];
+  });
+  const [showQuickAccessConfig, setShowQuickAccessConfig] = useState<boolean>(false);
+
+  const togglePinQuickAccess = (id: string) => {
+    setPinnedQuickAccessIds(prev => {
+      const exists = prev.includes(id);
+      const updated = exists ? prev.filter(item => item !== id) : [...prev, id];
+      try {
+        localStorage.setItem('gestok_quick_access_pinned', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
 
   const [showExchangeBar, setShowExchangeBar] = useState<boolean>(true);
   const [rcvFilterType, setRcvFilterType] = useState<'Todos' | 'Compra' | 'Venta' | 'Honorarios'>('Compra');
@@ -4423,7 +4461,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
       <div className="-mx-3 md:-mx-5 -mt-3 md:-mt-5 sticky top-[52px] z-40 bg-white/95 backdrop-blur-md text-[#0D253D] border-b border-slate-200/90 shadow-xs px-3 md:px-5 py-2 space-y-1.5">
         {/* Fila Superior: Volver/Empresa + Pestañas de Módulos (Ribbon) + Año/Mes/Importar */}
         <div className="flex items-center justify-between gap-2.5 flex-wrap">
-          {/* Lado Izquierdo: Volver + Empresa Activa */}
+          {/* Lado Izquierdo: Volver a Empresas + Acceso Rápido */}
           <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={onBack}
@@ -4434,12 +4472,43 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
               <span>Empresas</span>
             </button>
 
-            <div className="h-4 w-px bg-slate-200 hidden sm:block"></div>
-
-            <div className="flex items-center gap-1.5 text-xs font-medium">
-              <span className="text-[#0D253D] font-black tracking-tight truncate max-w-[160px] sm:max-w-[200px] xl:max-w-[260px]" title={`${company.name} (RUT: ${company.rut})`}>
-                {company.name}
+            {/* Barra de Acceso Rápido Personalizable (Estilo Excel) */}
+            <div className="h-4 w-px bg-slate-200 hidden md:block"></div>
+            <div className="hidden md:flex items-center gap-1 bg-slate-100/90 p-0.5 rounded-lg border border-slate-200/80 text-xs">
+              <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider px-1.5 flex items-center gap-1">
+                <Pin className="w-2.5 h-2.5 text-indigo-600" />
+                Acceso Rápido
               </span>
+              <div className="flex items-center gap-0.5">
+                {QUICK_ACCESS_ITEMS.filter(item => pinnedQuickAccessIds.includes(item.id)).map(item => {
+                  const IconComp = item.icon;
+                  const isCurrentTab = activeTab === item.tab;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        setActiveRibbonGroup(item.group as RibbonGroup);
+                        setActiveTab(item.tab as any);
+                      }}
+                      className={`p-1.5 rounded-md transition-all cursor-pointer flex items-center justify-center ${
+                        isCurrentTab
+                          ? 'bg-[#533AFD] text-white shadow-2xs font-bold ring-1 ring-indigo-300'
+                          : 'bg-white hover:bg-slate-200/80 text-slate-700 border border-slate-200/80'
+                      }`}
+                      title={`${item.label} (${item.group})`}
+                    >
+                      <IconComp className="w-3.5 h-3.5" />
+                    </button>
+                  );
+                })}
+                <button
+                  onClick={() => setShowQuickAccessConfig(!showQuickAccessConfig)}
+                  className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-white rounded-md border border-dashed border-slate-300 transition-colors cursor-pointer"
+                  title="Personalizar barra de acceso rápido (Anclar / Desanclar herramientas estilo Excel)"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -8211,6 +8280,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
           products={products as unknown as ProductMaster[]}
           customAnalysisItems={customAnalysisItems}
           onVouchersUpdated={fetchData}
+          onClose={() => setActiveTab('vouchers')}
         />
       </div>
 
@@ -8403,6 +8473,75 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
           setVoucherSearchQuery('');
         }}
       />
+
+      {/* MODAL DE CONFIGURACIÓN DE ACCESO RÁPIDO ESTILO EXCEL */}
+      {showQuickAccessConfig && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl w-full max-w-md overflow-hidden">
+            <div className="bg-slate-900 text-white p-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Pin className="w-4 h-4 text-indigo-400" />
+                <h3 className="text-sm font-bold tracking-tight">Barra de Acceso Rápido Personalizada</h3>
+              </div>
+              <button
+                onClick={() => setShowQuickAccessConfig(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-md transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-3 max-h-[65vh] overflow-y-auto">
+              <p className="text-xs text-slate-600">
+                Selecciona las herramientas que deseas anclar en tu barra superior para un acceso directo de 1 clic:
+              </p>
+
+              <div className="space-y-1.5 pt-1">
+                {QUICK_ACCESS_ITEMS.map((item) => {
+                  const IconComp = item.icon;
+                  const isPinned = pinnedQuickAccessIds.includes(item.id);
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => togglePinQuickAccess(item.id)}
+                      className={`w-full p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-between transition-all cursor-pointer ${
+                        isPinned
+                          ? 'bg-indigo-50/80 border-indigo-300 text-indigo-950 shadow-2xs'
+                          : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className={`p-1.5 rounded-lg ${isPinned ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                          <IconComp className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="text-left">
+                          <p className="font-bold">{item.label}</p>
+                          <p className="text-[10px] text-slate-500 font-mono">{item.group}</p>
+                        </div>
+                      </div>
+
+                      <div className={`w-5 h-5 rounded-md flex items-center justify-center border transition-all ${
+                        isPinned ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300 bg-white'
+                      }`}>
+                        {isPinned && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="p-3 bg-slate-50 border-t border-slate-200 flex justify-end">
+              <button
+                onClick={() => setShowQuickAccessConfig(false)}
+                className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-lg shadow-2xs cursor-pointer"
+              >
+                Guardar Preferencias
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* COPILOTO CONTABLE INTELIGENTE (MULTI-TENANT EMPRESA ACTUAL) */}
       <InternalCompanyAccountingCopilot

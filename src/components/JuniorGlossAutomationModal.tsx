@@ -27,7 +27,12 @@ import {
   Auxiliary, 
   FiscalPeriodYear, 
   BankStatementLine, 
-  JuniorGlossRule 
+  JuniorGlossRule,
+  CostCenterMaster,
+  ExpenseItemMaster,
+  ProjectMaster,
+  ProductMaster,
+  CustomAnalysisTableItem
 } from '../types';
 import { 
   loadJuniorGlossRules, 
@@ -49,6 +54,11 @@ interface JuniorGlossAutomationModalProps {
   fiscalYears: FiscalPeriodYear[];
   selectedBankAccountId?: string;
   onSuccess?: () => void;
+  costCenters?: CostCenterMaster[];
+  expenseItems?: ExpenseItemMaster[];
+  projects?: ProjectMaster[];
+  products?: ProductMaster[];
+  customAnalysisItems?: CustomAnalysisTableItem[];
 }
 
 export default function JuniorGlossAutomationModal({
@@ -61,7 +71,12 @@ export default function JuniorGlossAutomationModal({
   auxiliaries,
   fiscalYears,
   selectedBankAccountId,
-  onSuccess
+  onSuccess,
+  costCenters = [],
+  expenseItems = [],
+  projects = [],
+  products = [],
+  customAnalysisItems = []
 }: JuniorGlossAutomationModalProps) {
   const [rules, setRules] = useState<JuniorGlossRule[]>([]);
   const [loadingRules, setLoadingRules] = useState(false);
@@ -72,6 +87,10 @@ export default function JuniorGlossAutomationModal({
   const [formMovementType, setFormMovementType] = useState<'ALL' | 'CARGO' | 'ABONO'>('CARGO');
   const [formAccountId, setFormAccountId] = useState('');
   const [formAuxiliaryRut, setFormAuxiliaryRut] = useState('');
+  const [formCostCenter, setFormCostCenter] = useState('');
+  const [formExpenseItem, setFormExpenseItem] = useState('');
+  const [formProject, setFormProject] = useState('');
+  const [formProduct, setFormProduct] = useState('');
   const [formCustomGloss, setFormCustomGloss] = useState('');
   const [formSearchAccount, setFormSearchAccount] = useState('');
 
@@ -161,10 +180,32 @@ export default function JuniorGlossAutomationModal({
     movType: 'ALL' | 'CARGO' | 'ABONO',
     auxRut?: string,
     customGloss?: string,
+    costCenter?: string,
+    expenseItem?: string,
+    project?: string,
+    product?: string,
     saveAsRule: boolean = true
   ) => {
     if (!targetAcc || !pattern) {
       alert('Debes indicar la glosa y la cuenta contable de destino.');
+      return;
+    }
+
+    // Validation for required attributes on selected account
+    if (targetAcc.requiereCentroCosto && !costCenter) {
+      alert(`La cuenta [${targetAcc.code}] ${targetAcc.name} requiere Centro de Costos. Por favor selecciona un Centro de Costos.`);
+      return;
+    }
+    if (targetAcc.requiereItemGasto && !expenseItem) {
+      alert(`La cuenta [${targetAcc.code}] ${targetAcc.name} requiere Ítem de Gasto. Por favor selecciona un Ítem de Gasto.`);
+      return;
+    }
+    if (targetAcc.requiereAuxiliarRUT && !auxRut) {
+      alert(`La cuenta [${targetAcc.code}] ${targetAcc.name} requiere Auxiliar (RUT). Por favor selecciona un Auxiliar.`);
+      return;
+    }
+    if (targetAcc.requiereProyecto && !project) {
+      alert(`La cuenta [${targetAcc.code}] ${targetAcc.name} requiere Proyecto. Por favor selecciona un Proyecto.`);
       return;
     }
 
@@ -205,6 +246,10 @@ export default function JuniorGlossAutomationModal({
           movementType: movType,
           targetAuxiliary: auxObj,
           customGloss: customGloss || undefined,
+          costCenter: costCenter || undefined,
+          expenseItem: expenseItem || undefined,
+          project: project || undefined,
+          product: product || undefined,
           saveAsPermanentRule: saveAsRule,
           existingVouchers: vouchers,
           accounts
@@ -430,13 +475,33 @@ export default function JuniorGlossAutomationModal({
                             </span>
                           </div>
 
-                          <div className="flex items-center gap-2 text-xs text-slate-600 font-medium">
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600 font-medium">
                             <span>Contrapartida:</span>
                             <strong className="font-mono text-indigo-700">[{rule.accountCode}]</strong>
                             <span className="text-slate-800 font-bold">{rule.accountName}</span>
                             {rule.auxiliaryRut && (
-                              <span className="text-[11px] text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded border">
+                              <span className="text-[11px] text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 font-mono">
                                 Aux: {rule.auxiliaryRut}
+                              </span>
+                            )}
+                            {rule.costCenter && (
+                              <span className="text-[11px] text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 font-medium">
+                                CC: {rule.costCenter}
+                              </span>
+                            )}
+                            {rule.expenseItem && (
+                              <span className="text-[11px] text-indigo-800 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200 font-medium">
+                                Gasto: {rule.expenseItem}
+                              </span>
+                            )}
+                            {rule.project && (
+                              <span className="text-[11px] text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 font-medium">
+                                Proy: {rule.project}
+                              </span>
+                            )}
+                            {rule.targetGloss && (
+                              <span className="text-[11px] text-slate-600 italic bg-slate-50 px-1.5 py-0.5 rounded border">
+                                Glosa: "{rule.targetGloss}"
                               </span>
                             )}
                           </div>
@@ -446,7 +511,18 @@ export default function JuniorGlossAutomationModal({
                           <button
                             onClick={() => {
                               if (accObj) {
-                                handleExecuteRule(rule.pattern, accObj, rule.movementType, rule.auxiliaryRut, rule.targetGloss, false);
+                                handleExecuteRule(
+                                  rule.pattern,
+                                  accObj,
+                                  rule.movementType,
+                                  rule.auxiliaryRut,
+                                  rule.targetGloss,
+                                  rule.costCenter,
+                                  rule.expenseItem,
+                                  rule.project,
+                                  rule.product,
+                                  false
+                                );
                               }
                             }}
                             disabled={executing}
@@ -588,26 +664,140 @@ export default function JuniorGlossAutomationModal({
                 </div>
               </div>
 
-              {/* Auxiliar Opcional si la cuenta lo requiere */}
-              {selectedFormAccount?.requiereAuxiliarRUT && (
-                <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 space-y-1.5">
-                  <label className="block text-xs font-black text-amber-900">
-                    ⚠️ Esta cuenta requiere Auxiliar (RUT):
-                  </label>
-                  <select
-                    value={formAuxiliaryRut}
-                    onChange={e => setFormAuxiliaryRut(e.target.value)}
-                    className="w-full bg-white border border-amber-300 rounded-lg p-2 font-mono text-xs text-slate-900"
-                  >
-                    <option value="">-- Seleccionar Auxiliar / Proveedor / Banco --</option>
-                    {auxiliaries.map(aux => (
-                      <option key={aux.id || aux.rut} value={aux.rut}>
-                        {aux.rut} - {aux.name}
-                      </option>
-                    ))}
-                  </select>
+              {/* 4. Dimensiones y Atributos de Análisis Contable */}
+              <div className="space-y-3 pt-2 border-t border-slate-100">
+                <label className="block text-xs font-black uppercase tracking-wider text-slate-700">
+                  4. Dimensiones de Análisis Contable (Centro de Costos, Ítem de Gasto, Proyecto, Auxiliar):
+                </label>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {/* Centro de Costos */}
+                  <div className={`p-2.5 rounded-xl border transition-all ${
+                    selectedFormAccount?.requiereCentroCosto
+                      ? 'bg-amber-50/70 border-amber-300 ring-1 ring-amber-200'
+                      : 'bg-slate-50 border-slate-200'
+                  }`}>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="text-[11px] font-bold text-slate-700">Centro de Costos:</label>
+                      {selectedFormAccount?.requiereCentroCosto && (
+                        <span className="text-[10px] font-black text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-200">
+                          ⚠️ Requerido
+                        </span>
+                      )}
+                    </div>
+                    <select
+                      value={formCostCenter}
+                      onChange={e => setFormCostCenter(e.target.value)}
+                      className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="">-- Sin Centro de Costos --</option>
+                      {costCenters.map(cc => (
+                        <option key={cc.id || cc.code} value={cc.code}>
+                          [{cc.code}] {cc.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Ítem de Gasto / Clasificación */}
+                  <div className={`p-2.5 rounded-xl border transition-all ${
+                    selectedFormAccount?.requiereItemGasto
+                      ? 'bg-amber-50/70 border-amber-300 ring-1 ring-amber-200'
+                      : 'bg-slate-50 border-slate-200'
+                  }`}>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="text-[11px] font-bold text-slate-700">Ítem de Gasto / Clasificación:</label>
+                      {selectedFormAccount?.requiereItemGasto && (
+                        <span className="text-[10px] font-black text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-200">
+                          ⚠️ Requerido
+                        </span>
+                      )}
+                    </div>
+                    <select
+                      value={formExpenseItem}
+                      onChange={e => setFormExpenseItem(e.target.value)}
+                      className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="">-- Sin Ítem de Gasto --</option>
+                      {expenseItems.map(ei => (
+                        <option key={ei.id || ei.code} value={ei.code}>
+                          [{ei.code}] {ei.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Proyecto */}
+                  <div className={`p-2.5 rounded-xl border transition-all ${
+                    selectedFormAccount?.requiereProyecto
+                      ? 'bg-amber-50/70 border-amber-300 ring-1 ring-amber-200'
+                      : 'bg-slate-50 border-slate-200'
+                  }`}>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="text-[11px] font-bold text-slate-700">Proyecto:</label>
+                      {selectedFormAccount?.requiereProyecto && (
+                        <span className="text-[10px] font-black text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-200">
+                          ⚠️ Requerido
+                        </span>
+                      )}
+                    </div>
+                    <select
+                      value={formProject}
+                      onChange={e => setFormProject(e.target.value)}
+                      className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="">-- Sin Proyecto --</option>
+                      {projects.map(p => (
+                        <option key={p.id || p.code} value={p.code}>
+                          [{p.code}] {p.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Auxiliar / RUT */}
+                  <div className={`p-2.5 rounded-xl border transition-all ${
+                    selectedFormAccount?.requiereAuxiliarRUT
+                      ? 'bg-amber-50/70 border-amber-300 ring-1 ring-amber-200'
+                      : 'bg-slate-50 border-slate-200'
+                  }`}>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="text-[11px] font-bold text-slate-700">Auxiliar (RUT / Entidad):</label>
+                      {selectedFormAccount?.requiereAuxiliarRUT && (
+                        <span className="text-[10px] font-black text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-200">
+                          ⚠️ Requerido
+                        </span>
+                      )}
+                    </div>
+                    <select
+                      value={formAuxiliaryRut}
+                      onChange={e => setFormAuxiliaryRut(e.target.value)}
+                      className="w-full bg-white border border-slate-300 rounded-lg p-2 font-mono text-xs font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="">-- Sin Auxiliar Específico --</option>
+                      {auxiliaries.map(aux => (
+                        <option key={aux.id || aux.rut} value={aux.rut}>
+                          {aux.rut} - {aux.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-              )}
+
+                {/* Glosa Personalizada para el Asiento (Opcional) */}
+                <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                  <label className="block text-[11px] font-bold text-slate-700">
+                    Glosa Personalizada para el Comprobante (Opcional):
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej: Pago de comisión bancaria o Intereses mensual..."
+                    value={formCustomGloss}
+                    onChange={e => setFormCustomGloss(e.target.value)}
+                    className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs text-slate-800 focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
 
               {/* Action Buttons: Scan Preview & Execute */}
               <div className="pt-3 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
@@ -631,6 +821,10 @@ export default function JuniorGlossAutomationModal({
                         formMovementType,
                         formAuxiliaryRut,
                         formCustomGloss,
+                        formCostCenter,
+                        formExpenseItem,
+                        formProject,
+                        formProduct,
                         true
                       );
                     }

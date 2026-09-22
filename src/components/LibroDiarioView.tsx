@@ -323,56 +323,65 @@ export default function LibroDiarioView({
   return (
     <div className="space-y-4">
       {/* Header & Controls */}
-      <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-2xs flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-md bg-slate-100 flex items-center justify-center text-slate-700 border border-slate-200">
-              <BookOpen className="w-4 h-4 text-slate-700" />
-            </div>
-            <h3 className="text-base font-bold text-slate-900 tracking-tight uppercase">Libro Diario Contable</h3>
+      <div className="bg-white px-4 py-2.5 rounded-lg border border-slate-200 shadow-2xs flex flex-wrap justify-between items-center gap-2">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-md bg-indigo-50 flex items-center justify-center text-indigo-700 border border-indigo-200/60">
+            <BookOpen className="w-4 h-4" />
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Registro cronológico a partida doble de todas las transacciones y comprobantes • {company.name} (RUT: {company.rut})
-          </p>
+          <h3 className="text-sm font-bold text-slate-900 tracking-tight uppercase">Libro Diario Contable</h3>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {onFixCeecVouchers && (
+            <button
+              onClick={onFixCeecVouchers}
+              className="p-2 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-md border border-amber-300 flex items-center justify-center transition-colors shadow-2xs cursor-pointer"
+              title="Detectar y regularizar automáticamente comprobantes con Crédito Especial Constructora CEEC"
+            >
+              <span className="text-sm">⚡</span>
+            </button>
+          )}
+
           <button
             onClick={handlePrintOfficialBook}
             disabled={isPrintingOfficial}
-            className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-md flex items-center gap-1.5 transition-colors shadow-2xs disabled:opacity-50"
+            className="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-md flex items-center gap-1.5 transition-colors shadow-2xs disabled:opacity-50 cursor-pointer"
             title="Emisión oficial con numeración correlativa de folios timbrados por el SII"
           >
             <Printer className="w-3.5 h-3.5 text-slate-300" />
-            <span>{isPrintingOfficial ? 'Emitiendo Folios...' : 'Libro Diario Oficial (Folios SII)'}</span>
+            <span className="hidden sm:inline">{isPrintingOfficial ? 'Emitiendo...' : 'Folios SII'}</span>
           </button>
+
           <button
             onClick={handleDownloadSIIReport}
-            className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-md border border-slate-300 flex items-center gap-1.5 transition-colors shadow-2xs"
+            className="p-2 bg-white hover:bg-slate-50 text-slate-700 rounded-md border border-slate-300 flex items-center justify-center transition-colors shadow-2xs cursor-pointer"
+            title="Descargar Informe SII en PDF"
           >
-            <FileText className="w-3.5 h-3.5 text-slate-600" />
-            <span>Informe SII (PDF)</span>
+            <FileText className="w-4 h-4 text-slate-600" />
           </button>
+
           <button
             onClick={() => setViewMode(viewMode === 'detailed' ? 'compact' : 'detailed')}
-            className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-md border border-slate-300 flex items-center gap-1.5 transition-colors"
+            className="p-2 bg-white hover:bg-slate-50 text-slate-700 rounded-md border border-slate-300 flex items-center justify-center transition-colors shadow-2xs cursor-pointer"
+            title={viewMode === 'detailed' ? 'Cambiar a Vista Compacta' : 'Cambiar a Vista Detallada'}
           >
-            <LayoutList className="w-3.5 h-3.5 text-slate-600" />
-            <span>{viewMode === 'detailed' ? 'Vista Compacta' : 'Vista Detallada'}</span>
+            <LayoutList className="w-4 h-4 text-slate-600" />
           </button>
+
           <button
             onClick={handleExportCSV}
-            className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-md border border-slate-300 flex items-center gap-1.5 transition-colors shadow-2xs"
+            className="p-2 bg-white hover:bg-slate-50 text-slate-700 rounded-md border border-slate-300 flex items-center justify-center transition-colors shadow-2xs cursor-pointer"
+            title="Exportar datos a archivo CSV / Excel"
           >
-            <Download className="w-3.5 h-3.5 text-slate-600" />
-            <span>Exportar CSV</span>
+            <Download className="w-4 h-4 text-slate-600" />
           </button>
+
           <button
             onClick={handlePrint}
-            className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-md border border-slate-300 flex items-center gap-1.5 transition-colors shadow-2xs"
+            className="p-2 bg-white hover:bg-slate-50 text-slate-700 rounded-md border border-slate-300 flex items-center justify-center transition-colors shadow-2xs cursor-pointer"
+            title="Imprimir Libro Diario"
           >
-            <Printer className="w-3.5 h-3.5 text-slate-600" />
-            <span>Imprimir</span>
+            <Printer className="w-4 h-4 text-slate-600" />
           </button>
         </div>
       </div>
@@ -528,34 +537,6 @@ export default function LibroDiarioView({
           </p>
         </div>
       </div>
-
-      {/* Banner de Regularización Automática CEEC para Constructoras */}
-      {onFixCeecVouchers && (
-        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300 p-3.5 rounded-xl flex flex-wrap items-center justify-between gap-3 shadow-xs">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-amber-500/15 flex items-center justify-center text-xl shrink-0">
-              🏗️
-            </div>
-            <div>
-              <div className="font-bold text-xs text-amber-950 flex items-center gap-1.5">
-                <span>Regularización de Asientos con Crédito Constructora CEEC (Art. 21 D.L. 910)</span>
-                <span className="bg-amber-200 text-amber-900 text-[10px] font-bold px-1.5 py-0.5 rounded">Constructora</span>
-              </div>
-              <p className="text-[11px] text-amber-800 mt-0.5 max-w-2xl">
-                Si las facturas del Registro de Ventas dedujeron el crédito especial de constructora, los asientos quedaron con el Debe menor al Haber. Con esta función puedes agregar automáticamente la cuenta <strong>[1107001] Crédito Especial Constructora</strong> al Debe y dejarlos todos cuadrados para que ingresen al Balance.
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onFixCeecVouchers}
-            className="bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white font-bold px-3.5 py-2 rounded-lg text-xs transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
-          >
-            <span>⚡</span>
-            <span>Auto-Cuadrar Asientos con CEEC</span>
-          </button>
-        </div>
-      )}
 
       {/* Main Journal Table */}
       {filteredVouchers.length === 0 ? (

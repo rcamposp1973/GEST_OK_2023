@@ -204,6 +204,7 @@ export interface Company {
   contactPhone?: string; // Contacto Operativo Teléfono
   estado?: 'Activo' | 'Inactivo';
   isEmpresaConstructora?: boolean; // Tratamiento especial constructoras (CEEC Art. 21 DL 910)
+  isDemoCompany?: boolean; // Empresa exclusiva para demostraciones de ventas (reseteable)
   initialRemanenteUTM?: number; // Remanente inicial de apertura en UTM
   initialRemanentePesos?: number; // Remanente inicial de apertura en Pesos
   f29CodeSettings?: { [key: string]: boolean };
@@ -584,6 +585,23 @@ export interface CollectionRecord {
   createdAt: string;
 }
 
+export interface BankStatementLineClientInput {
+  identifiedAt?: string;
+  identifiedByEmail?: string;
+  identifiedByName?: string;
+  explanation: string; // Explicación o glosa dada por el dueño de empresa (ej: "Combustible camioneta", "Pago factura 451 Sodimac")
+  suggestedCategory?: 'PROVEEDOR' | 'CLIENTE' | 'RETIRO_SOCIO' | 'GASTO_GENERAL' | 'REMUNERACION' | 'IMPUESTO' | 'TRANSFERENCIA_INTERNA' | 'OTRO';
+  suggestedRut?: string;
+  suggestedRazonSocial?: string;
+  suggestedAccountId?: string;
+  suggestedAccountCode?: string;
+  suggestedAccountName?: string;
+  suggestedDocRef?: string;
+  attachmentName?: string;
+  notes?: string;
+  status?: 'PENDIENTE_REVISION' | 'CONTABILIZADO';
+}
+
 export interface BankStatementLine {
   id: string;
   date: string; // YYYY-MM-DD
@@ -596,6 +614,7 @@ export interface BankStatementLine {
   matchedVoucherNumber?: number;
   matchedVoucherPeriod?: string; // Período del comprobante contable vinculado (ej: 2026-02)
   matchedStatus: 'Pendiente' | 'Conciliado' | 'No_Corresponde';
+  clientInput?: BankStatementLineClientInput;
 }
 
 export interface BankReconciliation {
@@ -721,6 +740,37 @@ export interface F29Retenciones {
   prestamoSolidario: number;
   totalRetenciones: number;
   docsCount: number;
+}
+
+export interface FiniquitoRecord {
+  id?: string;
+  companyId: string;
+  employeeId: string;
+  employeeRut: string;
+  employeeName: string;
+  causalTermino: string;
+  causalNombre: string;
+  fechaIngreso: string;
+  fechaCese: string;
+  anosServicio: number;
+  ultimaRemuneracion: number;
+  
+  montoIndemnizacionAnosServicio: number;
+  montoSustitutivaAvisoPrevio: number;
+  diasVacacionesPendientes: number;
+  montoVacacionesProporcionales: number;
+  otrosHaberesFiniquito: number;
+  
+  descuentosPrestamos: number;
+  descuentosOtros: number;
+  
+  totalBrutoFiniquito: number;
+  totalDescuentosFiniquito: number;
+  totalLiquidoFiniquito: number;
+  
+  fechaPago: string;
+  estado: 'BORRADOR' | 'FIRMADO' | 'PAGADO';
+  createdAt: string;
 }
 
 export interface F29PPM {

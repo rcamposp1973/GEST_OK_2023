@@ -4,6 +4,7 @@
  */
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ProcessProvider } from './context/ProcessContext';
+import { ToastProvider } from './context/ToastContext';
 import GlobalProcessIndicator from './components/GlobalProcessIndicator';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './components/Login';
@@ -879,8 +880,10 @@ export default function App() {
   return (
     <AuthProvider>
       <ProcessProvider>
-        <GlobalProcessIndicator />
-        <AppContent />
+        <ToastProvider>
+          <GlobalProcessIndicator />
+          <AppContent />
+        </ToastProvider>
       </ProcessProvider>
     </AuthProvider>
   );

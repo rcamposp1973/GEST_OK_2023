@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Search, X, Check, User, Building2 } from 'lucide-react';
+import { Search, X, Check, User, Building2, Filter } from 'lucide-react';
 import { Auxiliary } from '../types';
 import { formatRut, cleanRutString } from '../utils/rutMatcher';
+import { sortAuxiliariesByRut, filterAuxiliariesForAccount } from '../utils/sortingUtils';
 
 interface SearchableAuxiliarySelectProps {
   auxiliaries: Auxiliary[];
@@ -16,6 +17,8 @@ interface SearchableAuxiliarySelectProps {
   className?: string;
   showManualInputs?: boolean;
   size?: 'sm' | 'md';
+  forAccountId?: string;
+  forAccountCode?: string;
 }
 
 export function SearchableAuxiliarySelect({
@@ -30,10 +33,13 @@ export function SearchableAuxiliarySelect({
   disabled = false,
   className = '',
   showManualInputs = true,
-  size = 'md'
+  size = 'md',
+  forAccountId,
+  forAccountCode
 }: SearchableAuxiliarySelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showOnlyAccountAuxiliaries, setShowOnlyAccountAuxiliaries] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -50,15 +56,36 @@ export function SearchableAuxiliarySelect({
     };
   }, []);
 
-  // Filtered auxiliaries by RUT or Name
+  // Filter & sort auxiliaries numerically by RUT and by account association
+  const { accountSpecificAuxiliaries, sortedAuxiliaries, isFilteredByAccount } = useMemo(() => {
+    const { filtered, isFilteredByAccount: isFiltered, allSorted } = filterAuxiliariesForAccount(
+      auxiliaries,
+      forAccountId,
+      forAccountCode
+    );
+    return {
+      accountSpecificAuxiliaries: filtered,
+      sortedAuxiliaries: allSorted,
+      isFilteredByAccount: isFiltered
+    };
+  }, [auxiliaries, forAccountId, forAccountCode]);
+
+  const activeAuxList = useMemo(() => {
+    if (isFilteredByAccount && showOnlyAccountAuxiliaries) {
+      return accountSpecificAuxiliaries;
+    }
+    return sortedAuxiliaries;
+  }, [isFilteredByAccount, showOnlyAccountAuxiliaries, accountSpecificAuxiliaries, sortedAuxiliaries]);
+
+  // Filtered auxiliaries by search term
   const filteredAuxiliaries = useMemo(() => {
     if (!searchTerm.trim()) {
-      return auxiliaries.slice(0, 30);
+      return activeAuxList.slice(0, 30);
     }
     const term = searchTerm.toLowerCase().trim();
     const cleanSearchRut = term.replace(/[^0-9kK]/g, '');
 
-    return auxiliaries.filter(aux => {
+    return activeAuxList.filter(aux => {
       const nameMatch = (aux.name || '').toLowerCase().includes(term);
       const rutMatch = (aux.rut || '').toLowerCase().includes(term);
       const cleanAuxRut = (aux.rut || '').toLowerCase().replace(/[^0-9kK]/g, '');
@@ -66,7 +93,7 @@ export function SearchableAuxiliarySelect({
       const roleMatch = (aux.role || '').toLowerCase().includes(term);
       return nameMatch || rutMatch || rutCleanMatch || roleMatch;
     }).slice(0, 40);
-  }, [auxiliaries, searchTerm]);
+  }, [activeAuxList, searchTerm]);
 
   // Current selected auxiliary object
   const currentAux = useMemo(() => {
@@ -167,6 +194,27 @@ export function SearchableAuxiliarySelect({
                 </button>
               )}
             </div>
+
+            {/* Account Specific Auxiliary Filter Notice */}
+            {isFilteredByAccount && (
+              <div className="px-2.5 py-1.5 bg-amber-50 border-b border-amber-200/60 flex items-center justify-between text-[11px] text-amber-900 font-medium">
+                <div className="flex items-center gap-1.5 truncate mr-1">
+                  <Filter className="w-3 h-3 text-amber-700 shrink-0" />
+                  <span className="truncate">
+                    {showOnlyAccountAuxiliaries
+                      ? `Filtrados para esta cuenta (${accountSpecificAuxiliaries.length})`
+                      : `Mostrando todos (${sortedAuxiliaries.length})`}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowOnlyAccountAuxiliaries(!showOnlyAccountAuxiliaries)}
+                  className="text-indigo-700 hover:text-indigo-900 underline font-bold text-[10px] shrink-0"
+                >
+                  {showOnlyAccountAuxiliaries ? 'Ver Todos' : 'Filtrar por Cuenta'}
+                </button>
+              </div>
+            )}
 
             {/* List of matches */}
             <div className="overflow-y-auto flex-1 p-1 divide-y divide-slate-50">

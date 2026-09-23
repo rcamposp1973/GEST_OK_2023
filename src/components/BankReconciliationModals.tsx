@@ -1498,6 +1498,19 @@ function QuickVoucherModalContent({
     }
   };
 
+  // Global F2 keyboard shortcut to submit voucher
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F2') {
+        e.preventDefault();
+        e.stopPropagation();
+        handleSubmit();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleSubmit]);
+
   const { dragProps, modalStyle } = useDraggableModal({ isOpen: true });
 
   return (
@@ -2474,9 +2487,11 @@ function QuickVoucherModalContent({
           </button>
           <button
             onClick={handleSubmit}
-            className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl shadow-md transition-all flex items-center gap-2 hover:scale-[1.01] active:scale-[0.99]"
+            className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl shadow-md transition-all flex items-center gap-2 hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
           >
-            <span>✓</span> Crear Asiento, Conciliar y Guardar
+            <span>✓</span>
+            <span>Crear Asiento, Conciliar y Guardar</span>
+            <kbd className="ml-1.5 px-1.5 py-0.5 bg-emerald-800 text-emerald-100 rounded text-[10px] font-mono border border-emerald-500/60 shadow-xs">F2</kbd>
           </button>
         </div>
       </div>

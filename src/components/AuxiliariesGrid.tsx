@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { validateRutModulo11, cleanRutString, formatChileanRut, formatRut } from '../utils/rutMatcher';
+import { compareRuts } from '../utils/sortingUtils';
 import AuxiliaryUpgradeModal from './AuxiliaryUpgradeModal';
 
 export interface RutAnalysis {
@@ -365,12 +366,14 @@ export default function AuxiliariesGrid({
   // Ordenamiento secundario
   const sortedAuxiliaries = useMemo(() => {
     return [...filteredAuxiliaries].sort((a, b) => {
+      if (sortBy === 'rut') {
+        const cmp = compareRuts(a.rut, b.rut);
+        return sortOrder === 'asc' ? cmp : -cmp;
+      }
+
       let valA = '';
       let valB = '';
-      if (sortBy === 'rut') {
-        valA = (a.rut || '').toLowerCase();
-        valB = (b.rut || '').toLowerCase();
-      } else if (sortBy === 'name') {
+      if (sortBy === 'name') {
         valA = (a.name || '').toLowerCase();
         valB = (b.name || '').toLowerCase();
       } else if (sortBy === 'role') {

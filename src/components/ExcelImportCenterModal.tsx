@@ -221,34 +221,191 @@ export default function ExcelImportCenterModal({
 
   const companyRef = doc(db, 'studies', studyId, 'companies', company.id);
 
-  // Template Download Functions (generates standard CSV with UTF-8 BOM that Excel opens directly)
+  // Template Download Functions (supports both XLSX and standard CSV with UTF-8 BOM)
+  const downloadExcelTemplate = (type: ImportType) => {
+    const customCols = company.customAccountColumns || [];
+
+    if (type === 'comprobantes') {
+      const sampleData = [
+        {
+          NumeroComprobante: 1,
+          Fecha: '2026-01-02',
+          Periodo: '2026-01',
+          TipoComprobante: 'Ingreso',
+          GlosaComprobante: 'Aporte inicial de capital social',
+          CodigoCuenta: accounts[0]?.code || '1.1.01.002',
+          NombreCuenta: accounts[0]?.name || 'Banco Estado Cta Cte',
+          Debe: 10000000,
+          Haber: 0,
+          GlosaLinea: 'Deposito bancario capital',
+          RUTAuxiliar: '',
+          RazonSocialAuxiliar: '',
+          TipoDocumento: '',
+          FolioDocumento: '',
+          FechaVencimiento: '',
+          CentroCosto: '',
+          ItemGasto: '',
+          Proyecto: '',
+          Producto: '',
+          RefBancaria: 'Cartola 0126',
+          ...customCols.reduce((acc, c) => ({ ...acc, [c]: '' }), {})
+        },
+        {
+          NumeroComprobante: 1,
+          Fecha: '2026-01-02',
+          Periodo: '2026-01',
+          TipoComprobante: 'Ingreso',
+          GlosaComprobante: 'Aporte inicial de capital social',
+          CodigoCuenta: accounts[1]?.code || '3.1.01',
+          NombreCuenta: accounts[1]?.name || 'Capital Social',
+          Debe: 0,
+          Haber: 10000000,
+          GlosaLinea: 'Suscripcion y pago capital social',
+          RUTAuxiliar: '',
+          RazonSocialAuxiliar: '',
+          TipoDocumento: '',
+          FolioDocumento: '',
+          FechaVencimiento: '',
+          CentroCosto: '',
+          ItemGasto: '',
+          Proyecto: '',
+          Producto: '',
+          RefBancaria: '',
+          ...customCols.reduce((acc, c) => ({ ...acc, [c]: '' }), {})
+        },
+        {
+          NumeroComprobante: 2,
+          Fecha: '2026-01-15',
+          Periodo: '2026-01',
+          TipoComprobante: 'Egreso',
+          GlosaComprobante: 'Pago de arriendo oficina comercial',
+          CodigoCuenta: accounts[2]?.code || '5.2.01',
+          NombreCuenta: accounts[2]?.name || 'Gastos de Administracion',
+          Debe: 850000,
+          Haber: 0,
+          GlosaLinea: 'Arriendo mes enero',
+          RUTAuxiliar: '76.123.456-7',
+          RazonSocialAuxiliar: 'INMOBILIARIA CENTRAL SPA',
+          TipoDocumento: 'Factura',
+          FolioDocumento: '1045',
+          FechaVencimiento: '2026-01-25',
+          CentroCosto: 'ADMINISTRACION',
+          ItemGasto: 'ARRIENDOS',
+          Proyecto: 'SEDE CENTRAL',
+          Producto: '',
+          RefBancaria: 'TRF 98231',
+          ...customCols.reduce((acc, c) => ({ ...acc, [c]: '' }), {})
+        },
+        {
+          NumeroComprobante: 2,
+          Fecha: '2026-01-15',
+          Periodo: '2026-01',
+          TipoComprobante: 'Egreso',
+          GlosaComprobante: 'Pago de arriendo oficina comercial',
+          CodigoCuenta: accounts[0]?.code || '1.1.01.002',
+          NombreCuenta: accounts[0]?.name || 'Banco Estado Cta Cte',
+          Debe: 0,
+          Haber: 850000,
+          GlosaLinea: 'Transferencia bancaria',
+          RUTAuxiliar: '76.123.456-7',
+          RazonSocialAuxiliar: 'INMOBILIARIA CENTRAL SPA',
+          TipoDocumento: 'Factura',
+          FolioDocumento: '1045',
+          FechaVencimiento: '2026-01-25',
+          CentroCosto: 'ADMINISTRACION',
+          ItemGasto: '',
+          Proyecto: '',
+          Producto: '',
+          RefBancaria: 'TRF 98231',
+          ...customCols.reduce((acc, c) => ({ ...acc, [c]: '' }), {})
+        },
+        {
+          NumeroComprobante: 3,
+          Fecha: '2026-02-28',
+          Periodo: '2026-02',
+          TipoComprobante: 'Traspaso',
+          GlosaComprobante: 'Centralización de Remuneraciones Febrero 2026',
+          CodigoCuenta: '4202002',
+          NombreCuenta: 'Sueldo Base',
+          Debe: 1500000,
+          Haber: 0,
+          GlosaLinea: 'SUELDO BASE | RECURSOS HUMANOS',
+          RUTAuxiliar: '15.432.109-8',
+          RazonSocialAuxiliar: 'GONZALEZ PEREZ JUAN PABLO',
+          TipoDocumento: 'Liquidacion',
+          FolioDocumento: '202602',
+          FechaVencimiento: '2026-02-28',
+          CentroCosto: 'RRHH',
+          ItemGasto: 'SUELDOS',
+          Proyecto: '',
+          Producto: '',
+          RefBancaria: '',
+          ...customCols.reduce((acc, c) => ({ ...acc, [c]: '' }), {})
+        },
+        {
+          NumeroComprobante: 3,
+          Fecha: '2026-02-28',
+          Periodo: '2026-02',
+          TipoComprobante: 'Traspaso',
+          GlosaComprobante: 'Centralización de Remuneraciones Febrero 2026',
+          CodigoCuenta: '2.1.01.001',
+          NombreCuenta: 'Remuneraciones por Pagar',
+          Debe: 0,
+          Haber: 1500000,
+          GlosaLinea: 'Sueldo Líquido por Pagar',
+          RUTAuxiliar: '15.432.109-8',
+          RazonSocialAuxiliar: 'GONZALEZ PEREZ JUAN PABLO',
+          TipoDocumento: 'Liquidacion',
+          FolioDocumento: '202602',
+          FechaVencimiento: '2026-03-05',
+          CentroCosto: 'RRHH',
+          ItemGasto: '',
+          Proyecto: '',
+          Producto: '',
+          RefBancaria: '',
+          ...customCols.reduce((acc, c) => ({ ...acc, [c]: '' }), {})
+        }
+      ];
+
+      const worksheet = XLSX.utils.json_to_sheet(sampleData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Comprobantes');
+      XLSX.writeFile(workbook, `Plantilla_Comprobantes_Contables_${company.rut}.xlsx`);
+    } else {
+      downloadTemplate(type);
+    }
+  };
+
   const downloadTemplate = (type: ImportType) => {
     let headers = '';
     let sampleRows = '';
     let filename = '';
+    const customCols = company.customAccountColumns || [];
+    const customHeaderStr = customCols.length > 0 ? ';' + customCols.join(';') : '';
+    const customEmptyStr = customCols.length > 0 ? ';' + customCols.map(() => '').join(';') : '';
 
     if (type === 'cuentas') {
       filename = `Plantilla_Plan_de_Cuentas_${company.rut}.csv`;
-      headers = 'Codigo;Nombre;Tipo;CodigoPadre;RequiereCentroCosto;RequiereAuxiliarRUT;RequiereConciliacionBancaria;RequiereDocumento;Estado';
+      headers = 'Codigo;Nombre;Tipo;CodigoPadre;RequiereCentroCosto;RequiereAuxiliarRUT;RequiereConciliacionBancaria;RequiereDocumento;Estado' + customHeaderStr;
       sampleRows = [
-        '1;ACTIVO;Activo;;NO;NO;NO;NO;Activo',
-        '1.1;ACTIVO CIRCULANTE;Activo;1;NO;NO;NO;NO;Activo',
-        '1.1.01;Disponible;Activo;1.1;NO;NO;SI;NO;Activo',
-        '1.1.01.001;Caja Moneda Nacional;Activo;1.1.01;NO;NO;NO;NO;Activo',
-        '1.1.01.002;Banco Estado Cta Cte;Activo;1.1.01;NO;NO;SI;NO;Activo',
-        '1.1.02;Deudores por Ventas;Activo;1.1;NO;SI;NO;SI;Activo',
-        '1.1.02.001;Clientes Nacionales;Activo;1.1.02;NO;SI;NO;SI;Activo',
-        '2;PASIVO;Pasivo;;NO;NO;NO;NO;Activo',
-        '2.1;PASIVO CIRCULANTE;Pasivo;2;NO;NO;NO;NO;Activo',
-        '2.1.01;Cuentas por Pagar;Pasivo;2.1;NO;SI;NO;SI;Activo',
-        '2.1.01.001;Proveedores Nacionales;Pasivo;2.1.01;NO;SI;NO;SI;Activo',
-        '3;PATRIMONIO;Patrimonio;;NO;NO;NO;NO;Activo',
-        '3.1.01;Capital Social;Patrimonio;3;NO;NO;NO;NO;Activo',
-        '4;RESULTADO GANANCIA;Ingreso;;NO;NO;NO;NO;Activo',
-        '4.1.01;Ventas del Giro;Ingreso;4;SI;NO;NO;NO;Activo',
-        '5;RESULTADO PERDIDA;Gasto;;NO;NO;NO;NO;Activo',
-        '5.1.01;Costo de Ventas;Gasto;5;SI;NO;NO;NO;Activo',
-        '5.2.01;Gastos de Administracion;Gasto;5;SI;NO;NO;NO;Activo'
+        '1;ACTIVO;Activo;;NO;NO;NO;NO;Activo' + customEmptyStr,
+        '1.1;ACTIVO CIRCULANTE;Activo;1;NO;NO;NO;NO;Activo' + customEmptyStr,
+        '1.1.01;Disponible;Activo;1.1;NO;NO;SI;NO;Activo' + customEmptyStr,
+        '1.1.01.001;Caja Moneda Nacional;Activo;1.1.01;NO;NO;NO;NO;Activo' + customEmptyStr,
+        '1.1.01.002;Banco Estado Cta Cte;Activo;1.1.01;NO;NO;SI;NO;Activo' + customEmptyStr,
+        '1.1.02;Deudores por Ventas;Activo;1.1;NO;SI;NO;SI;Activo' + customEmptyStr,
+        '1.1.02.001;Clientes Nacionales;Activo;1.1.02;NO;SI;NO;SI;Activo' + customEmptyStr,
+        '2;PASIVO;Pasivo;;NO;NO;NO;NO;Activo' + customEmptyStr,
+        '2.1;PASIVO CIRCULANTE;Pasivo;2;NO;NO;NO;NO;Activo' + customEmptyStr,
+        '2.1.01;Cuentas por Pagar;Pasivo;2.1;NO;SI;NO;SI;Activo' + customEmptyStr,
+        '2.1.01.001;Proveedores Nacionales;Pasivo;2.1.01;NO;SI;NO;SI;Activo' + customEmptyStr,
+        '3;PATRIMONIO;Patrimonio;;NO;NO;NO;NO;Activo' + customEmptyStr,
+        '3.1.01;Capital Social;Patrimonio;3;NO;NO;NO;NO;Activo' + customEmptyStr,
+        '4;RESULTADO GANANCIA;Ingreso;;NO;NO;NO;NO;Activo' + customEmptyStr,
+        '4.1.01;Ventas del Giro;Ingreso;4;SI;NO;NO;NO;Activo' + customEmptyStr,
+        '5;RESULTADO PERDIDA;Gasto;;NO;NO;NO;NO;Activo' + customEmptyStr,
+        '5.1.01;Costo de Ventas;Gasto;5;SI;NO;NO;NO;Activo' + customEmptyStr,
+        '5.2.01;Gastos de Administracion;Gasto;5;SI;NO;NO;NO;Activo' + customEmptyStr
       ].join('\n');
     } else if (type === 'clientes') {
       filename = `Plantilla_Clientes_${company.rut}.csv`;
@@ -266,12 +423,14 @@ export default function ExcelImportCenterModal({
       ].join('\n');
     } else if (type === 'comprobantes') {
       filename = `Plantilla_Comprobantes_Contables_${company.rut}.csv`;
-      headers = 'NumeroComprobante;Fecha;Periodo;TipoComprobante;GlosaComprobante;CodigoCuenta;GlosaLinea;RUTAuxiliar;TipoDocumento;FolioDocumento;CentroCosto;Debe;Haber';
+      headers = 'NumeroComprobante;Fecha;Periodo;TipoComprobante;GlosaComprobante;CodigoCuenta;NombreCuenta;Debe;Haber;GlosaLinea;RUTAuxiliar;RazonSocialAuxiliar;TipoDocumento;FolioDocumento;FechaVencimiento;CentroCosto;ItemGasto;Proyecto;Producto;RefBancaria' + customHeaderStr;
       sampleRows = [
-        '1;2026-01-02;2026-01;Ingreso;Aporte inicial de capital social;1.1.01.002;Deposito bancario capital;;;;;10000000;0',
-        '1;2026-01-02;2026-01;Ingreso;Aporte inicial de capital social;3.1.01;Suscripcion y pago capital social;;;;;0;10000000',
-        '2;2026-01-15;2026-01;Egreso;Pago de arriendo oficina comercial;5.2.01;Arriendo mes enero;;;;ADM;850000;0',
-        '2;2026-01-15;2026-01;Egreso;Pago de arriendo oficina comercial;1.1.01.002;Transferencia bancaria;;;;;0;850000'
+        `1;2026-01-02;2026-01;Ingreso;Aporte inicial de capital social;${accounts[0]?.code || '1.1.01.002'};${accounts[0]?.name || 'Banco Estado Cta Cte'};10000000;0;Deposito bancario capital;;;;;;;;;;Cartola 0126${customEmptyStr}`,
+        `1;2026-01-02;2026-01;Ingreso;Aporte inicial de capital social;${accounts[1]?.code || '3.1.01'};${accounts[1]?.name || 'Capital Social'};0;10000000;Suscripcion y pago capital social;;;;;;;;;;${customEmptyStr}`,
+        `2;2026-01-15;2026-01;Egreso;Pago de arriendo oficina comercial;${accounts[2]?.code || '5.2.01'};${accounts[2]?.name || 'Gastos de Administracion'};850000;0;Arriendo mes enero;76.123.456-7;INMOBILIARIA CENTRAL SPA;Factura;1045;2026-01-25;ADMINISTRACION;ARRIENDOS;SEDE CENTRAL;;TRF 98231${customEmptyStr}`,
+        `2;2026-01-15;2026-01;Egreso;Pago de arriendo oficina comercial;${accounts[0]?.code || '1.1.01.002'};${accounts[0]?.name || 'Banco Estado Cta Cte'};0;850000;Transferencia bancaria;76.123.456-7;INMOBILIARIA CENTRAL SPA;Factura;1045;2026-01-25;ADMINISTRACION;;;;TRF 98231${customEmptyStr}`,
+        `3;2026-02-28;2026-02;Traspaso;Centralización de Remuneraciones Febrero 2026;4202002;Sueldo Base;1500000;0;SUELDO BASE | RECURSOS HUMANOS;15.432.109-8;GONZALEZ PEREZ JUAN PABLO;Liquidacion;202602;2026-02-28;RRHH;SUELDOS;;;;${customEmptyStr}`,
+        `3;2026-02-28;2026-02;Traspaso;Centralización de Remuneraciones Febrero 2026;2.1.01.001;Remuneraciones por Pagar;0;1500000;Sueldo Líquido por Pagar;15.432.109-8;GONZALEZ PEREZ JUAN PABLO;Liquidacion;202602;2026-03-05;RRHH;;;;;${customEmptyStr}`
       ].join('\n');
     }
 
@@ -637,6 +796,43 @@ export default function ExcelImportCenterModal({
               lines: VoucherLine[];
             }>();
 
+            // Detectar índices de columnas dinámicamente según encabezado
+            const headerRow = lines.length > 0 ? parseCsvLine(lines[0], delimiter) : [];
+            const colMap: { [key: string]: number } = {};
+            headerRow.forEach((h, idx) => {
+              const cleanH = h.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+              colMap[cleanH] = idx;
+            });
+
+            const getColIdx = (aliases: string[], fallbackIdx: number): number => {
+              for (const alias of aliases) {
+                const cleanA = alias.toLowerCase().replace(/[^a-z0-9]/g, '');
+                if (colMap[cleanA] !== undefined) return colMap[cleanA];
+              }
+              return fallbackIdx;
+            };
+
+            const numIdx = getColIdx(['numerocomprobante', 'numcomprobante', 'ncomprobante', 'asiento', 'folio', 'numero', 'num'], 0);
+            const dateIdx = getColIdx(['fecha', 'date', 'fechacomprobante', 'fechacontabilizacion'], 1);
+            const periodIdx = getColIdx(['periodo', 'period', 'periodocontable', 'mes'], 2);
+            const typeIdx = getColIdx(['tipocomprobante', 'tipo', 'type', 'tipovoucher'], 3);
+            const vGlossIdx = getColIdx(['glosacomprobante', 'glosageneral', 'glosa', 'descripcion', 'concepto'], 4);
+            const codeIdx = getColIdx(['codigocuenta', 'codigo', 'cuenta', 'codcuenta', 'codigocuentacontable'], 5);
+            const nameIdx = getColIdx(['nombrecuenta', 'nombre', 'cuenta', 'cuentanombre'], 6);
+            const debitIdx = getColIdx(['debe', 'debito', 'cargos', 'cargo', 'debitos'], 7);
+            const creditIdx = getColIdx(['haber', 'credito', 'abonos', 'abono', 'creditos'], 8);
+            const lineGlossIdx = getColIdx(['glosalinea', 'detalle', 'glosadetalle', 'explicacion'], 9);
+            const rutIdx = getColIdx(['rutauxiliar', 'rut', 'auxiliarrut', 'rutcliprov', 'rutcliente', 'rutproveedor'], 10);
+            const auxNameIdx = getColIdx(['razonsocialauxiliar', 'nombreauxiliar', 'auxiliarnombre', 'razonsocial', 'razonsocialcliprov', 'nombrecliente'], 11);
+            const docTypeIdx = getColIdx(['tipodocumento', 'tipodoc', 'documentotipo', 'dte'], 12);
+            const docFolioIdx = getColIdx(['foliodocumento', 'numerodoc', 'numdoc', 'nrodocumento', 'folio', 'factura'], 13);
+            const dueIdx = getColIdx(['fechavencimiento', 'vencimiento', 'fvencimiento', 'fvenc', 'duedate'], 14);
+            const ccIdx = getColIdx(['centrocosto', 'centrodecosto', 'cc', 'cdecosto'], 15);
+            const itemIdx = getColIdx(['itemgasto', 'clasificadorgasto', 'item', 'rubro'], 16);
+            const projIdx = getColIdx(['proyecto', 'obra', 'faena'], 17);
+            const prodIdx = getColIdx(['producto', 'servicio', 'itemproducto', 'articulo'], 18);
+            const bankRefIdx = getColIdx(['refbancaria', 'referenciabancaria', 'refbanco', 'cheque', 'cartola', 'transferencia', 'noperacion'], 19);
+
             // Rastrear el comprobante activo para filas multilínea que heredan cabecera
             let currentVNum = 1;
             let currentDate = '';
@@ -644,13 +840,36 @@ export default function ExcelImportCenterModal({
             let currentType: 'Ingreso' | 'Egreso' | 'Traspaso' = 'Traspaso';
             let currentGloss = 'Comprobante importado vía Excel';
 
+            const customCols = company.customAccountColumns || [];
+
             for (let i = 0; i < rows.length; i++) {
               const row = rows[i];
-              const [numStr, dateStr, periodStr, typeStr, vGloss, accCode, lineGloss, auxRut, docType, docFolio, ccCode, debeStr, haberStr] = row;
+              const getVal = (idx: number): string => (row[idx] !== undefined && row[idx] !== null ? String(row[idx]).trim() : '');
+
+              const numStr = getVal(numIdx);
+              const dateStr = getVal(dateIdx);
+              const periodStr = getVal(periodIdx);
+              const typeStr = getVal(typeIdx);
+              const vGloss = getVal(vGlossIdx);
+              const accCode = getVal(codeIdx);
+              const accName = getVal(nameIdx);
+              const debeStr = getVal(debitIdx);
+              const haberStr = getVal(creditIdx);
+              const lineGloss = getVal(lineGlossIdx);
+              const auxRut = getVal(rutIdx);
+              const auxName = getVal(auxNameIdx);
+              const docType = getVal(docTypeIdx);
+              const docFolio = getVal(docFolioIdx);
+              const dueDate = normalizeDateToIso(getVal(dueIdx));
+              const ccCode = getVal(ccIdx);
+              const expenseItem = getVal(itemIdx);
+              const project = getVal(projIdx);
+              const product = getVal(prodIdx);
+              const bankRef = getVal(bankRefIdx);
 
               const debe = parseAmount(debeStr);
               const haber = parseAmount(haberStr);
-              const hasAccount = Boolean(accCode && String(accCode).trim());
+              const hasAccount = Boolean(accCode);
 
               // Si la fila no tiene cuenta ni montos, omitir
               if (!hasAccount && debe === 0 && haber === 0) {
@@ -690,45 +909,61 @@ export default function ExcelImportCenterModal({
               }
 
               // Determinar tipo de comprobante
-              if (typeStr && String(typeStr).trim()) {
-                const tLower = String(typeStr).toLowerCase();
+              if (typeStr) {
+                const tLower = typeStr.toLowerCase();
                 if (tLower.includes('ingreso')) currentType = 'Ingreso';
                 else if (tLower.includes('egreso')) currentType = 'Egreso';
                 else if (tLower.includes('traspaso')) currentType = 'Traspaso';
               }
 
-              if (vGloss && String(vGloss).trim()) {
-                currentGloss = String(vGloss).trim();
+              if (vGloss) {
+                currentGloss = vGloss;
               }
 
               // Clave única para agrupar líneas del mismo comprobante
               const key = `V_${currentVNum}_${currentPeriod}_${currentDate}`;
 
-              const rawCode = (accCode || '').trim();
+              const rawCode = accCode;
               const cleanCode = rawCode.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
               const matchedAcc = accounts.find(a => 
                 a.code === rawCode || 
                 (a.code || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase() === cleanCode
               );
 
-              const rawRut = (auxRut || '').trim();
+              const rawRut = auxRut;
               const cleanRut = rawRut.replace(/[^0-9kK]/g, '').toUpperCase();
               const matchedAux = rawRut ? auxiliaries.find(a => 
                 (a.rut || '').replace(/[^0-9kK]/g, '').toUpperCase() === cleanRut
               ) : undefined;
 
-              const formattedDocRef = [docType, docFolio].filter(Boolean).map(s => String(s).trim()).join(' ');
+              const formattedDocRef = [docType, docFolio].filter(Boolean).join(' ');
+
+              // Recopilar análisis personalizados
+              const customAnalyses: { [key: string]: string } = {};
+              customCols.forEach(colName => {
+                const cIdx = getColIdx([colName], -1);
+                if (cIdx !== -1) {
+                  customAnalyses[colName] = getVal(cIdx);
+                }
+              });
 
               const lineObj: VoucherLine = {
                 id: `imp_line_${Date.now()}_${i}`,
                 accountId: matchedAcc?.id || '',
                 accountCode: matchedAcc?.code || rawCode,
-                accountName: matchedAcc?.name || (rawCode ? `Cuenta ${rawCode}` : 'Cuenta General'),
-                gloss: lineGloss ? String(lineGloss).trim() : currentGloss,
+                accountName: matchedAcc?.name || accName || (rawCode ? `Cuenta ${rawCode}` : 'Cuenta General'),
+                gloss: lineGloss || currentGloss,
                 auxiliaryRut: rawRut,
-                auxiliaryName: matchedAux?.name || '',
+                auxiliaryName: auxName || matchedAux?.name || '',
+                documentType: docType || '',
                 documentRef: formattedDocRef,
-                costCenter: ccCode ? String(ccCode).trim() : '',
+                dueDate: dueDate || '',
+                costCenter: ccCode || '',
+                expenseItem: expenseItem || '',
+                project: project || '',
+                product: product || '',
+                bankDocRef: bankRef || '',
+                customAnalyses,
                 debit: debe,
                 credit: haber
               };
@@ -934,12 +1169,28 @@ export default function ExcelImportCenterModal({
                 Descargue el formato con los encabezados y filas de ejemplo estándar chilenos para completar su información.
               </p>
             </div>
-            <button
-              onClick={() => downloadTemplate(activeTab)}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2 rounded-lg transition-colors flex items-center gap-2 shadow-xs whitespace-nowrap"
-            >
-              <span>⬇️ Descargar Formato {activeTab.toUpperCase()}</span>
-            </button>
+            <div className="flex items-center gap-2 flex-wrap">
+              {activeTab === 'comprobantes' && (
+                <button
+                  type="button"
+                  onClick={() => downloadExcelTemplate('comprobantes')}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5 shadow-xs whitespace-nowrap cursor-pointer"
+                  title="Descargar plantilla formateada en formato Excel (.xlsx)"
+                >
+                  <span>📊</span>
+                  <span>Plantilla Excel (.xlsx)</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => downloadTemplate(activeTab)}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5 shadow-xs whitespace-nowrap cursor-pointer"
+                title="Descargar plantilla estándar en formato CSV delimitado por punto y coma (;)"
+              >
+                <span>📥</span>
+                <span>Plantilla CSV (.csv)</span>
+              </button>
+            </div>
           </div>
 
           {/* Step 2: Upload CSV / File Drop */}

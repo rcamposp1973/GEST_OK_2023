@@ -81,6 +81,23 @@ export default function AuxiliaryModal({
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
+  // Global F2 keyboard shortcut to save
+  useEffect(() => {
+    if (!isOpen || isReadOnly) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F2') {
+        e.preventDefault();
+        e.stopPropagation();
+        const formEl = document.querySelector('form[data-aux-modal-form="true"]') as HTMLFormElement | null;
+        if (formEl) {
+          formEl.requestSubmit();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, isReadOnly]);
+
   // Sincronizar formulario cuando cambia editingAuxiliary o isOpen
   useEffect(() => {
     if (isOpen) {
@@ -240,7 +257,7 @@ export default function AuxiliaryModal({
         )}
 
         {/* FORMULARIO */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+        <form data-aux-modal-form="true" onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
 
           {/* SECCIÓN 1: DATOS IDENTIFICATORIOS */}
           <div className="space-y-4">
@@ -704,7 +721,7 @@ export default function AuxiliaryModal({
             <button
               type="submit"
               disabled={saving || isReadOnly}
-              className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 rounded-xl shadow-md transition-all flex items-center gap-2"
+              className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
             >
               {saving ? (
                 <>
@@ -715,6 +732,7 @@ export default function AuxiliaryModal({
                 <>
                   <CheckCircle2 className="w-4 h-4" />
                   <span>{editingAuxiliary ? 'Guardar Cambios' : 'Registrar Auxiliar'}</span>
+                  <kbd className="ml-1 px-1.5 py-0.5 bg-indigo-800 text-indigo-100 rounded text-[10px] font-mono border border-indigo-400/40 shadow-xs font-bold">F2</kbd>
                 </>
               )}
             </button>

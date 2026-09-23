@@ -20,6 +20,7 @@ import {
 import { checkIsPeriodClosed, getLatestOpenPeriod, getNextOpenPeriodAndDate } from '../utils/periodUtils';
 import { logAuditEvent } from '../utils/auditLogger';
 import { sanitizeVoucherLines } from '../utils/voucherValidation';
+import { notify } from '../context/ToastContext';
 import {
   getPreviousPeriod,
   getNextPeriod,
@@ -659,7 +660,7 @@ export default function ConciliacionBancariaView({
     if (!selectedBankAccount) return;
 
     if (statementLines.length === 0) {
-      alert(`La cartola del período ${selectedPeriod} para ${selectedBankAccount.name} ya se encuentra vacía.`);
+      notify.info(`La cartola del período ${selectedPeriod} para ${selectedBankAccount.name} ya se encuentra vacía.`, 'Cartola Vacía');
       return;
     }
 
@@ -667,10 +668,9 @@ export default function ConciliacionBancariaView({
     const conciliatedLines = statementLines.filter(l => l.matchedStatus === 'Conciliado');
 
     if (conciliatedLines.length > 0) {
-      alert(
-        `⚠️ NO SE PUEDE ANULAR LA CARTOLA DEL PERÍODO ${selectedPeriod}\n\n` +
-        `Esta cartola contiene ${conciliatedLines.length} movimiento(s) en estado "Conciliado".\n\n` +
-        `Para poder anular, borrar o volver a cargar la cartola de este mes, debes primero desconciliar o desvincular los movimientos marcados como Conciliados.`
+      notify.warning(
+        `Esta cartola contiene ${conciliatedLines.length} movimiento(s) en estado "Conciliado". Para poder anularla o recargarla, desconcilia primero los movimientos vinculados.`,
+        `No se puede anular (${selectedPeriod})`
       );
       return;
     }
@@ -688,10 +688,10 @@ export default function ConciliacionBancariaView({
       setBankFinalBalanceInput(bankInitialBalanceInput);
       await persistReconciliation(selectedPeriod, [], bankInitialBalanceInput, bankInitialBalanceInput);
 
-      alert(`✅ Cartola del período ${selectedPeriod} anulada correctamente. Ahora puedes volver a cargar la cartola limpia.`);
+      notify.success(`Cartola del período ${selectedPeriod} anulada correctamente. Ahora puedes volver a cargar la cartola limpia.`, 'Cartola Anulada');
     } catch (err: any) {
       console.error("Error al anular cartola:", err);
-      alert("Error al anular la cartola: " + (err.message || 'Error desconocido'));
+      notify.error("Error al anular la cartola: " + (err.message || 'Error desconocido'));
     }
   };
 
@@ -701,7 +701,7 @@ export default function ConciliacionBancariaView({
     const lineInCurrent = statementLines.find(l => l.id === lineId);
     if (lineInCurrent) {
       if (lineInCurrent.matchedStatus === 'Conciliado') {
-        alert('⚠️ No se puede eliminar un movimiento que ya está conciliado. Desvincula el comprobante contable primero.');
+        notify.warning('No se puede eliminar un movimiento que ya está conciliado. Desvincula el comprobante contable primero.', 'Movimiento Conciliado');
         return;
       }
       const amt = (lineInCurrent.charge || 0) + (lineInCurrent.deposit || 0);
@@ -715,6 +715,7 @@ export default function ConciliacionBancariaView({
       setBankFinalBalanceInput(finalBalance);
       await persistReconciliation(selectedPeriod, updatedLines, bankInitialBalanceInput, finalBalance);
       await fetchReconciliations();
+      notify.success('Movimiento eliminado de la cartola.', 'Cartola Actualizada');
       return;
     }
 
@@ -724,7 +725,7 @@ export default function ConciliacionBancariaView({
         const lineInRec = rec.lines.find(l => l.id === lineId);
         if (lineInRec) {
           if (lineInRec.matchedStatus === 'Conciliado') {
-            alert('⚠️ No se puede eliminar un movimiento que ya está conciliado. Desvincula el comprobante contable primero.');
+            notify.warning('No se puede eliminar un movimiento que ya está conciliado. Desvincula el comprobante contable primero.', 'Movimiento Conciliado');
             return;
           }
           const amt = (lineInRec.charge || 0) + (lineInRec.deposit || 0);
@@ -736,6 +737,7 @@ export default function ConciliacionBancariaView({
           const { updatedLines, finalBalance } = recalculateRunningBalances(filtered, rec.bankInitialBalance || 0);
           await persistReconciliation(rec.period, updatedLines, rec.bankInitialBalance || 0, finalBalance);
           await fetchReconciliations();
+          notify.success('Movimiento eliminado del período ' + rec.period, 'Cartola Actualizada');
           return;
         }
       }
@@ -1069,21 +1071,15 @@ export default function ConciliacionBancariaView({
     setStatementLines(finalLines);
     await persistReconciliation(selectedPeriod, finalLines, bankInitialBalanceInput, bankFinalBalanceInput);
 
-    let summaryMessage = `⚡ Match Automático completado y grabado:\n• ${matchedInPeriodCount} partidas conciliadas en el mes actual (${selectedPeriod})\n• ${matchedCrossPeriodCount} partidas regularizadas cruzando otros períodos.`;
-
     if (duplicateSkippedReasons.length > 0) {
-      summaryMessage += `\n\n⚠️ PARTIDAS OMITIDAS POR DUPLICIDAD EN CONTABILIDAD (${duplicateSkippedReasons.length}):\n`;
-      summaryMessage += `Se detectaron movimientos con 2 o más comprobantes contables con el mismo monto (posibles comprobantes duplicados por el contador). Por seguridad y auditoría, NO fueron conciliados automáticamente:\n`;
-      duplicateSkippedReasons.slice(0, 5).forEach((d, idx) => {
-        summaryMessage += `\n${idx + 1}. [${d.type}] ${d.lineDescription} ($${d.amount.toLocaleString('es-CL')}): Coincide con ${d.duplicateCount} comprobantes (Asientos ${d.voucherNumbers.map(n => `N° ${n}`).join(', ')} en ${d.scope}).`;
-      });
-      if (duplicateSkippedReasons.length > 5) {
-        summaryMessage += `\n... y ${duplicateSkippedReasons.length - 5} partidas más.`;
-      }
-      summaryMessage += `\n\n👉 Revise y elimine el comprobante duplicado en el libro contable o realice el match manual si corresponde.`;
+      const detailMsg = `• ${matchedInPeriodCount} partidas conciliadas (${selectedPeriod})\n• ${matchedCrossPeriodCount} cruzadas con otros períodos.\n⚠️ ${duplicateSkippedReasons.length} omitidas por comprobantes duplicados con igual monto.`;
+      notify.warning(detailMsg, 'Match Automático con Observaciones', 6000);
+    } else {
+      notify.success(
+        `• ${matchedInPeriodCount} partidas conciliadas (${selectedPeriod})\n• ${matchedCrossPeriodCount} regularizadas cruzando otros períodos.`,
+        '⚡ Match Automático Completado'
+      );
     }
-
-    alert(summaryMessage);
   };
 
   // 4. Toggle manual match / unmatch + Immediate Auto-Save
@@ -1187,12 +1183,12 @@ export default function ConciliacionBancariaView({
   // Helper: Desconciliar todos los movimientos del período activo
   const handleUnmatchAll = async () => {
     if (statementLines.length === 0) {
-      alert(`La cartola del período ${selectedPeriod} no tiene movimientos.`);
+      notify.info(`La cartola del período ${selectedPeriod} no tiene movimientos.`, 'Sin Movimientos');
       return;
     }
     const conciliated = statementLines.filter(l => l.matchedStatus === 'Conciliado');
     if (conciliated.length === 0) {
-      alert('No hay movimientos en estado "Conciliado" en este período para desconciliar.');
+      notify.info('No hay movimientos en estado "Conciliado" en este período para desconciliar.', 'Sin Movimientos Conciliados');
       return;
     }
     if (!window.confirm(`¿Estás seguro de desconciliar los ${conciliated.length} movimientos de ${selectedPeriod}?\n\nLos comprobantes contables quedarán liberados como pendientes.`)) {
@@ -1207,7 +1203,7 @@ export default function ConciliacionBancariaView({
     }));
     setStatementLines(updated);
     await persistReconciliation(selectedPeriod, updated, bankInitialBalanceInput, bankFinalBalanceInput);
-    alert(`✅ Se desconciliaron ${conciliated.length} movimientos del período ${selectedPeriod}.`);
+    notify.success(`Se desconciliaron ${conciliated.length} movimientos del período ${selectedPeriod}.`, 'Desconciliación Masiva');
   };
 
   // 6. Quick Post Unaccounted Bank Fee or Income + Auto-Match + Immediate Auto-Save
@@ -1220,14 +1216,14 @@ export default function ConciliacionBancariaView({
     newAuxiliaryToSave?: Auxiliary;
   }) => {
     if (!quickVoucherLine || !selectedBankAccount) {
-      alert('Información del movimiento bancario no disponible.');
+      notify.error('Información del movimiento bancario no disponible.');
       return;
     }
 
     const counterAccId = customData?.counterAccountId || quickExpenseAccountId;
     const counterAcc = accounts.find(a => a.id === counterAccId);
     if (!counterAcc && (!customData?.lines || customData.lines.length === 0)) {
-      alert('Seleccione la cuenta de contrapartida (Gasto Bancario / Ingreso).');
+      notify.warning('Seleccione la cuenta de contrapartida (Gasto Bancario / Ingreso).', 'Falta Cuenta');
       return;
     }
 
@@ -1237,7 +1233,7 @@ export default function ConciliacionBancariaView({
 
     const periodCheck = checkIsPeriodClosed(targetPeriod, fiscalYears);
     if (periodCheck.isClosed) {
-      alert(`⚠️ Acción Bloqueada:\n\n${periodCheck.errorMsg}\n\nNo puedes registrar comprobantes en un período cerrado.`);
+      notify.warning(`No puedes registrar comprobantes en un período cerrado: ${periodCheck.errorMsg}`, 'Período Cerrado');
       return;
     }
 
@@ -1376,15 +1372,17 @@ export default function ConciliacionBancariaView({
         }
       }
 
-      alert(
+      notify.success(
         effective.wasShifted
-          ? `✅ Comprobante N° ${nextVoucherNumber} generado el ${targetDate} (Período ${targetPeriod}, por estar cerrado el mes original ${effective.originalPeriod}), conciliado y guardado automáticamente.`
-          : `✅ Comprobante N° ${nextVoucherNumber} generado en período ${targetPeriod} (${targetDate}), conciliado y guardado automáticamente.`
+          ? `Comprobante N° ${nextVoucherNumber} generado el ${targetDate} (Período ${targetPeriod}, por estar cerrado el mes original ${effective.originalPeriod}), conciliado y guardado automáticamente.`
+          : `Comprobante N° ${nextVoucherNumber} generado en período ${targetPeriod} (${targetDate}), conciliado y guardado automáticamente.`,
+        '✅ Comprobante Contabilizado y Conciliado',
+        4200
       );
       if (onVouchersUpdated) onVouchersUpdated();
     } catch (err: any) {
       console.error('Error posting quick voucher:', err);
-      alert('Error: ' + err.message);
+      notify.error('Error al generar comprobante: ' + err.message);
     }
   };
 

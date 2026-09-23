@@ -6,6 +6,7 @@ import { EmployeesView } from './EmployeesView';
 import { LiquidacionSueldosView } from './LiquidacionSueldosView';
 import { syncOnlineChileanIndicators, generateOfficialChileanIndicators } from '../utils/chileanEconomicIndicators';
 import { logAuditEvent } from '../utils/auditLogger';
+import { notify } from '../context/ToastContext';
 import LibroDiarioView from './LibroDiarioView';
 import LibroMayorView from './LibroMayorView';
 import Balance8ColumnasView from './Balance8ColumnasView';
@@ -18,6 +19,7 @@ import CobranzaView from './CobranzaView';
 import AnalisisAuxiliaresView from './AnalisisAuxiliaresView';
 import AnalisisCuentasView from './AnalisisCuentasView';
 import ConciliacionBancariaView from './ConciliacionBancariaView';
+import LibroBancoColaborativoView from './LibroBancoColaborativoView';
 import CargaMasivaComprobantesView from './CargaMasivaComprobantesView';
 import Formulario29View from './Formulario29View';
 import PlantillasYCargaMasivaView from './PlantillasYCargaMasivaView';
@@ -40,6 +42,10 @@ import { OperativaComercialView } from './OperativaComercialView';
 import { StockKardexView } from './StockKardexView';
 import { WarehousesView } from './WarehousesView';
 import ReportesAnaliticosView from './ReportesAnaliticosView';
+import { ActivoFijoView } from './ActivoFijoView';
+import { DeclaracionesJuradasView } from './DeclaracionesJuradasView';
+import { FiniquitosCalculatorModal } from './payroll/FiniquitosCalculatorModal';
+import { CommandPaletteModal } from './CommandPaletteModal';
 import { SearchableAuxiliarySelect } from './SearchableAuxiliarySelect';
 import * as XLSX from 'xlsx';
 import { useProcess } from '../context/ProcessContext';
@@ -47,6 +53,8 @@ import { validateVoucherLine, isCustomAnalysisRequired, sanitizeVoucherLine, san
 import { getLatestOpenPeriod, checkIsPeriodClosed as checkIsPeriodClosedUtil, getNextOpenPeriodAndDate } from '../utils/periodUtils';
 import { fetchRcvFromSii } from '../utils/siiRcvClient';
 import { formatRut } from '../utils/rutMatcher';
+import DemoFerreteriaManagerModal from './DemoFerreteriaManagerModal';
+import { isDemoFerreteriaCompany, DEMO_COMPANY_NAME } from '../utils/demoFerreteriaGenerator';
 import { 
   FileText, BookOpen, Layers, Users, Sliders, Scale, Printer, 
   FolderTree, CreditCard, Receipt, TrendingUp, Landmark, ShoppingCart, 
@@ -68,8 +76,11 @@ const QUICK_ACCESS_ITEMS = [
   { id: 'operativaComercial', label: 'Gestión Comercial', group: 'OPERACIONES', icon: ShoppingCart, tab: 'operativaComercial' },
   { id: 'emisionDte', label: 'Emisión DTE / Facturas', group: 'OPERACIONES', icon: FileSpreadsheet, tab: 'emisionDte' },
   { id: 'conciliacionBancaria', label: 'Conciliación Bancaria', group: 'TESORERIA', icon: CreditCard, tab: 'conciliacionBancaria' },
+  { id: 'libroBancoColaborativo', label: 'Libro Banco (Aclaraciones)', group: 'TESORERIA', icon: Landmark, tab: 'libroBancoColaborativo' },
   { id: 'nominasPago', label: 'Nóminas de Pago', group: 'TESORERIA', icon: Landmark, tab: 'nominasPago' },
   { id: 'employees', label: 'Ficha de Empleados', group: 'PERSONAL', icon: Briefcase, tab: 'employees' },
+  { id: 'activoFijo', label: 'Activo Fijo & Depreciación', group: 'FINANZAS', icon: Building2, tab: 'activoFijo' },
+  { id: 'ddjj', label: 'Declaraciones Juradas SII', group: 'IMPUESTOS', icon: ShieldCheck, tab: 'ddjj' },
   { id: 'indicadoresFinancieros', label: 'Indicadores & KPIs', group: 'INDICADORES', icon: TrendingUp, tab: 'indicadoresFinancieros' },
   { id: 'accounts', label: 'Plan de Cuentas', group: 'CONFIGURACIONES', icon: FolderTree, tab: 'accounts' },
   { id: 'juniorAI', label: 'Copilot Contable IA', group: 'FINANZAS', icon: Sparkles, tab: 'smartNotebooks' }
@@ -90,10 +101,28 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
   const { withProcess } = useProcess();
   type RibbonGroup = 'FINANZAS' | 'OPERACIONES' | 'TESORERIA' | 'PERSONAL' | 'IMPORTACIONES' | 'IMPUESTOS' | 'INDICADORES' | 'CONFIGURACIONES';
   const [activeRibbonGroup, setActiveRibbonGroup] = useState<RibbonGroup>('FINANZAS');
-  const [activeTab, setActiveTab] = useState<'accounts' | 'auxiliaries' | 'periods' | 'rcv' | 'exchange' | 'rcvParams' | 'f29Codes' | 'vouchers' | 'libroDiario' | 'libroMayor' | 'balance8' | 'balanceIFRS' | 'analisisAuxiliares' | 'analisisCuentas' | 'reportesAnaliticos' | 'estadoResultados' | 'indicadoresFinancieros' | 'auditorEstadosFinancieros' | 'smartNotebooks' | 'flujoDeCaja' | 'nominasPago' | 'cobranza' | 'conciliacionBancaria' | 'cargaMasiva' | 'formulario29' | 'plantillasCarga' | 'emisionDte' | 'tablasAnalisis' | 'controlFolios' | 'productsServices' | 'operativaComercial' | 'stockKardex' | 'warehouses' | 'employees' | 'liquidaciones'>('vouchers');
+  const [activeTab, setActiveTab] = useState<'accounts' | 'auxiliaries' | 'periods' | 'rcv' | 'exchange' | 'rcvParams' | 'f29Codes' | 'vouchers' | 'libroDiario' | 'libroMayor' | 'balance8' | 'balanceIFRS' | 'analisisAuxiliares' | 'analisisCuentas' | 'reportesAnaliticos' | 'estadoResultados' | 'indicadoresFinancieros' | 'auditorEstadosFinancieros' | 'smartNotebooks' | 'flujoDeCaja' | 'nominasPago' | 'cobranza' | 'conciliacionBancaria' | 'libroBancoColaborativo' | 'cargaMasiva' | 'formulario29' | 'plantillasCarga' | 'emisionDte' | 'tablasAnalisis' | 'controlFolios' | 'productsServices' | 'operativaComercial' | 'stockKardex' | 'warehouses' | 'employees' | 'liquidaciones' | 'activoFijo' | 'ddjj'>('vouchers');
   const [auxSubTab, setAuxSubTab] = useState<'deudores' | 'acreedores'>('deudores');
   const [employeeSubTab, setEmployeeSubTab] = useState<'employees' | 'contracts' | 'attendance' | 'advances' | 'severance' | 'certificates'>('employees');
   const [payrollTab, setPayrollTab] = useState<'NOMINA' | 'LIQUIDACION_INDIVIDUAL' | 'LRD_DT' | 'PREVIRED' | 'PARAMETROS' | 'CONCEPTOS' | 'RELIQUIDACIONES'>('NOMINA');
+
+  // Command Palette Cmd+K
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
+  const [showFiniquitoModal, setShowFiniquitoModal] = useState<boolean>(false);
+  const [showDemoManagerModal, setShowDemoManagerModal] = useState<boolean>(false);
+  const isDemoCompany = isDemoFerreteriaCompany(company);
+
+  // Escuchar Cmd+K o Ctrl+K
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
 
   const [pinnedQuickAccessIds, setPinnedQuickAccessIds] = useState<string[]>(() => {
     try {
@@ -3780,7 +3809,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
               metadata: { voucherNumber: voucherForm.voucherNumber, totalDebit, totalCredit }
             });
 
-            alert(`Comprobante N° ${voucherForm.voucherNumber} modificado exitosamente.`);
+            notify.success(`Comprobante N° ${voucherForm.voucherNumber} (${voucherForm.type}) actualizado exitosamente.`, 'Comprobante Modificado');
             if (selectedVoucher?.id === voucherForm.id) {
               setSelectedVoucher({ id: voucherForm.id, ...payload });
             }
@@ -3807,7 +3836,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
               metadata: { voucherNumber: voucherForm.voucherNumber, totalDebit, totalCredit }
             });
 
-            alert(`Comprobante N° ${voucherForm.voucherNumber} creado exitosamente.`);
+            notify.success(`Comprobante N° ${voucherForm.voucherNumber} (${voucherForm.type}) registrado exitosamente.`, 'Comprobante Registrado');
           }
 
           setVoucherForm(null);
@@ -3816,9 +3845,34 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
       );
     } catch (err: any) {
       console.error("Error guardando comprobante:", err);
-      alert('Error al guardar comprobante: ' + err.message);
+      notify.error('Error al guardar comprobante: ' + err.message);
     }
   };
+
+  // Atajo de teclado F2 para Grabar / Guardar Comprobante Contable o Formularios de Edición
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F2') {
+        if (voucherForm && distributingLineIdx === null && editingAnalysisLineIdx === null) {
+          e.preventDefault();
+          e.stopPropagation();
+          const formElement = document.querySelector('form[data-voucher-form="true"]') as HTMLFormElement | null;
+          if (formElement) {
+            formElement.requestSubmit();
+          }
+        } else if (editingRcvDoc) {
+          e.preventDefault();
+          e.stopPropagation();
+          const rcvForm = document.querySelector('form[data-rcv-edit-form="true"]') as HTMLFormElement | null;
+          if (rcvForm) {
+            rcvForm.requestSubmit();
+          }
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [voucherForm, distributingLineIdx, editingAnalysisLineIdx, editingRcvDoc]);
 
   // Delete Single RCV Document (Purchases, Sales, Honorarios, etc.)
   const handleDeleteSingleRcvDoc = async (docId: string, tipo: string, folio: string) => {
@@ -4472,6 +4526,18 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
               <span>Empresas</span>
             </button>
 
+            {isDemoCompany && (
+              <button
+                type="button"
+                onClick={() => setShowDemoManagerModal(true)}
+                className="px-2.5 py-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-black text-xs rounded-lg shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
+                title="Gestor y Reset de Demostración 2025"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline font-bold">🎯 Reset Demo 2025</span>
+              </button>
+            )}
+
             {/* Barra de Acceso Rápido Personalizable (Estilo Excel) */}
             <div className="h-4 w-px bg-slate-200 hidden md:block"></div>
             <div className="hidden md:flex items-center gap-1 bg-slate-100/90 p-0.5 rounded-lg border border-slate-200/80 text-xs">
@@ -4859,6 +4925,13 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
                   >
                     <Landmark className={`w-3.5 h-3.5 ${activeTab === 'conciliacionBancaria' ? 'text-indigo-300' : 'text-slate-500'}`} />
                     <span>Conciliación Bancaria</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('libroBancoColaborativo')}
+                    className={getSubRibbonBtnClass(activeTab === 'libroBancoColaborativo', 'indigo')}
+                  >
+                    <Landmark className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Libro Banco & Cartola (Aclaraciones)</span>
                   </button>
                 </>
               )}
@@ -6284,6 +6357,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
                         }
                       }}
                       className="p-5 space-y-4 text-xs"
+                      data-rcv-edit-form="true"
                     >
                       <div className="grid grid-cols-2 gap-3">
                         <div>
@@ -6433,7 +6507,10 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
 
                       <div className="flex justify-end gap-2 pt-2">
                         <button type="button" onClick={() => setEditingRcvDoc(null)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer">Cancelar</button>
-                        <button type="submit" className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold cursor-pointer">Guardar Cambios</button>
+                        <button type="submit" className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold cursor-pointer flex items-center gap-1.5">
+                          <span>Guardar Cambios</span>
+                          <kbd className="ml-1 px-1.5 py-0.5 bg-indigo-800 text-indigo-100 rounded text-[10px] font-mono border border-indigo-400/40 font-bold">F2</kbd>
+                        </button>
                       </div>
                     </form>
                   );
@@ -7085,7 +7162,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
                   </button>
                 </div>
 
-                <form onSubmit={handleSaveVoucherForm} className="flex-1 flex flex-col overflow-hidden">
+                <form data-voucher-form="true" onSubmit={handleSaveVoucherForm} className="flex-1 flex flex-col overflow-hidden">
                   <div className="p-5 space-y-4 overflow-y-auto flex-1">
                     {/* Header Controls */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs">
@@ -7566,12 +7643,13 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
                     </button>
                     <button
                       type="submit"
-                      className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-colors shadow-sm flex items-center gap-1.5"
+                      className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
-                      {voucherForm.id ? 'Guardar Cambios' : 'Registrar Comprobante'}
+                      <span>{voucherForm.id ? 'Guardar Cambios' : 'Registrar Comprobante'}</span>
+                      <kbd className="ml-1.5 px-1.5 py-0.5 bg-indigo-800 text-indigo-100 rounded text-[10px] font-mono border border-indigo-400/40 shadow-2xs font-bold">F2</kbd>
                     </button>
                   </div>
                 </form>
@@ -8115,6 +8193,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
           customAnalysisItems={customAnalysisItems}
           customAccountColumns={company.customAccountColumns || []}
           fiscalYears={fiscalYears}
+          defaultYear={selectedYear}
           isReadOnly={isReadOnly}
         />
       )}
@@ -8174,6 +8253,9 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
             fiscalYears={fiscalYears}
             bankReconciliations={bankReconciliations}
             rcvDocuments={rcvDocuments}
+            auxiliaries={auxiliaries}
+            costCenters={costCenters}
+            expenseItems={expenseItems}
           />
         )
       )}
@@ -8283,6 +8365,25 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
           onClose={() => setActiveTab('vouchers')}
         />
       </div>
+
+      {/* TAB: LIBRO BANCO & CARTOLA COLABORATIVA */}
+      {activeTab === 'libroBancoColaborativo' && (
+        <LibroBancoColaborativoView
+          studyId={studyId}
+          company={company}
+          accounts={accounts}
+          vouchers={vouchers}
+          fiscalYears={fiscalYears}
+          auxiliaries={auxiliaries}
+          rcvDocuments={rcvDocuments}
+          bankReconciliations={bankReconciliations}
+          currentUserRole={currentUserRole}
+          mode="CONTADOR"
+          onVouchersUpdated={fetchData}
+          onNavigateToConciliacion={() => setActiveTab('conciliacionBancaria')}
+          onClose={() => setActiveTab('vouchers')}
+        />
+      )}
 
       {/* TAB: CARGA MASIVA COMPROBANTES */}
       {activeTab === 'cargaMasiva' && (
@@ -8423,6 +8524,63 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
         />
       )}
 
+      {/* TAB: ACTIVO FIJO Y DEPRECIACIÓN DUAL (ART. 31 LIR / IFRS) */}
+      {activeTab === 'activoFijo' && (
+        <ActivoFijoView
+          studyId={studyId}
+          company={company}
+          accounts={accounts}
+          onCentralizeVoucher={async (voucherData) => {
+            const vId = `v_${Date.now()}`;
+            const newV = { ...voucherData, id: vId };
+            setVouchers(prev => [...prev, newV as Voucher]);
+            return vId;
+          }}
+        />
+      )}
+
+      {/* TAB: DECLARACIONES JURADAS SII (DDJJ RENTA) */}
+      {activeTab === 'ddjj' && (
+        <DeclaracionesJuradasView
+          company={company}
+          employees={employees}
+          savedSlips={payrollSlips}
+          accounts={accounts}
+        />
+      )}
+
+      {/* COMMAND PALETTE OMNISEARCH CMD+K */}
+      <CommandPaletteModal
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onNavigateToView={(viewKey) => {
+          if (viewKey === 'PLAN_CUENTAS') setActiveTab('accounts');
+          else if (viewKey === 'LIBRO_DIARIO') setActiveTab('libroDiario');
+          else if (viewKey === 'LIBRO_MAYOR') setActiveTab('libroMayor');
+          else if (viewKey === 'BALANCE_8_COLUMNAS') setActiveTab('balance8');
+          else if (viewKey === 'CONCILIACION_BANCARIA') setActiveTab('conciliacionBancaria');
+          else if (viewKey === 'REMUNERACIONES') setActiveTab('liquidaciones');
+          else if (viewKey === 'ACTIVO_FIJO') setActiveTab('activoFijo');
+          else if (viewKey === 'DDJJ_SII') setActiveTab('ddjj');
+          else if (viewKey === 'AUXILIARES') setActiveTab('auxiliaries');
+        }}
+        accounts={accounts}
+        auxiliaries={auxiliaries}
+        vouchers={vouchers}
+      />
+
+      {/* MODAL FINIQUITOS LEGALES */}
+      {showFiniquitoModal && (
+        <FiniquitosCalculatorModal
+          companyName={company.name}
+          companyRut={company.rut}
+          companyAddress={company.address}
+          employees={employees}
+          accounts={accounts}
+          onClose={() => setShowFiniquitoModal(false)}
+        />
+      )}
+
 
 
       {/* MODAL DE DISTRIBUCIÓN DE LÍNEA DE COMPROBANTE */}
@@ -8556,6 +8714,19 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
           setActiveTab(tab as any);
         }}
         onVouchersUpdated={fetchData}
+      />
+
+      {/* Modal de Demostración y Reset 2025 para FERRETERIA DON ALI KT LTDA */}
+      <DemoFerreteriaManagerModal
+        isOpen={showDemoManagerModal}
+        onClose={() => setShowDemoManagerModal(false)}
+        studyId={studyId}
+        currentCompany={company}
+        userEmail={auth.currentUser?.email || undefined}
+        userId={auth.currentUser?.uid || undefined}
+        onSuccess={() => {
+          fetchData();
+        }}
       />
     </div>
   );

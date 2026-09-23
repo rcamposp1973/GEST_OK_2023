@@ -74,6 +74,7 @@ interface ReportesAnaliticosViewProps {
   customAnalysisItems?: any[];
   customAccountColumns?: string[];
   fiscalYears?: FiscalPeriodYear[];
+  defaultYear?: number;
   isReadOnly?: boolean;
 }
 
@@ -101,6 +102,7 @@ export default function ReportesAnaliticosView({
   customAnalysisItems = [],
   customAccountColumns = [],
   fiscalYears = [],
+  defaultYear,
   isReadOnly = false
 }: ReportesAnaliticosViewProps) {
   // --- SUB-PESTAÑA PRINCIPAL ---
@@ -112,9 +114,13 @@ export default function ReportesAnaliticosView({
     const yearsSet = new Set<number>();
     yearsSet.add(currentYearNum);
     yearsSet.add(currentYearNum - 1);
+    if (defaultYear) yearsSet.add(defaultYear);
     vouchers.forEach(v => {
       if (v.date) {
         const y = parseInt(v.date.slice(0, 4), 10);
+        if (!isNaN(y)) yearsSet.add(y);
+      } else if (v.period) {
+        const y = parseInt(v.period.slice(0, 4), 10);
         if (!isNaN(y)) yearsSet.add(y);
       }
     });
@@ -129,9 +135,15 @@ export default function ReportesAnaliticosView({
       if (fy.year) yearsSet.add(fy.year);
     });
     return Array.from(yearsSet).sort((a, b) => b - a);
-  }, [vouchers, rcvDocuments, fiscalYears, currentYearNum]);
+  }, [vouchers, rcvDocuments, fiscalYears, currentYearNum, defaultYear]);
 
-  const [selectedYear, setSelectedYear] = useState<number>(availableYears[0] || currentYearNum);
+  const [selectedYear, setSelectedYear] = useState<number>(defaultYear || availableYears[0] || currentYearNum);
+
+  useEffect(() => {
+    if (defaultYear && defaultYear !== selectedYear) {
+      setSelectedYear(defaultYear);
+    }
+  }, [defaultYear]);
 
   // =========================================================================
   // ESTADOS - MODO 1: MATRIZ DINÁMICA DE ANÁLISIS (PIVOT TABLE)
@@ -282,18 +294,44 @@ export default function ReportesAnaliticosView({
 
   // Helpers de resolución
   const resolveCostCenterLabel = useCallback((val?: string): { code: string; name: string; full: string } => {
-    if (!val || val === 'NONE') return { code: 'S/CC', name: 'Sin Centro de Costo', full: '(Sin Centro de Costo)' };
-    const cc = costCentersMap.get(val) || costCentersMap.get(val.toLowerCase().trim());
+    if (!val || val === 'NONE' || val.trim() === '') return { code: 'S/CC', name: 'Sin Centro de Costo', full: '(Sin Centro de Costo)' };
+    const raw = val.trim();
+    const rawLower = raw.toLowerCase();
+    let cc = costCentersMap.get(raw) || costCentersMap.get(rawLower);
+    if (!cc) {
+      cc = costCenters.find(c =>
+        c.id === raw ||
+        c.code.toLowerCase() === rawLower ||
+        c.name.toLowerCase() === rawLower ||
+        rawLower.startsWith(c.code.toLowerCase()) ||
+        rawLower.includes(c.code.toLowerCase()) ||
+        c.name.toLowerCase().includes(rawLower) ||
+        rawLower.includes(c.name.toLowerCase())
+      );
+    }
     if (cc) return { code: cc.code, name: cc.name, full: `${cc.code} - ${cc.name}` };
-    return { code: val, name: val, full: val };
-  }, [costCentersMap]);
+    return { code: raw, name: raw, full: raw };
+  }, [costCentersMap, costCenters]);
 
   const resolveExpenseItemLabel = useCallback((val?: string): { code: string; name: string; full: string } => {
-    if (!val || val === 'NONE') return { code: 'S/IT', name: 'Sin Ítem de Gasto', full: '(Sin Ítem de Gasto)' };
-    const ei = expenseItemsMap.get(val) || expenseItemsMap.get(val.toLowerCase().trim());
+    if (!val || val === 'NONE' || val.trim() === '') return { code: 'S/IT', name: 'Sin Ítem de Gasto', full: '(Sin Ítem de Gasto)' };
+    const raw = val.trim();
+    const rawLower = raw.toLowerCase();
+    let ei = expenseItemsMap.get(raw) || expenseItemsMap.get(rawLower);
+    if (!ei) {
+      ei = expenseItems.find(e =>
+        e.id === raw ||
+        e.code.toLowerCase() === rawLower ||
+        e.name.toLowerCase() === rawLower ||
+        rawLower.startsWith(e.code.toLowerCase()) ||
+        rawLower.includes(e.code.toLowerCase()) ||
+        e.name.toLowerCase().includes(rawLower) ||
+        rawLower.includes(e.name.toLowerCase())
+      );
+    }
     if (ei) return { code: ei.code, name: ei.name, full: `${ei.code} - ${ei.name}` };
-    return { code: val, name: val, full: val };
-  }, [expenseItemsMap]);
+    return { code: raw, name: raw, full: raw };
+  }, [expenseItemsMap, expenseItems]);
 
   const resolveAccountLabel = useCallback((accIdOrCode: string, lineAccName?: string): { code: string; name: string; full: string; type: string } => {
     const acc = accountsMap.get(accIdOrCode);
@@ -337,26 +375,60 @@ export default function ReportesAnaliticosView({
 
     vouchers.forEach(v => {
       if (v.status === 'Anulado') return;
-      if (!v.date) return;
-      const d = new Date(v.date);
-      const y = d.getFullYear();
-      if (y !== selectedYear) return;
-      const month = d.getMonth() + 1; // 1-12
+      if (!v.date && !v.period) return;
+
+      // Safe date parsing without timezone shift bugs
+      let y = selectedYear;
+      let month = 1;
+      if (v.date) {
+        const parts = v.date.split('-');
+        y = parseInt(parts[0], 10);
+        month = parts.length > 1 ? parseInt(parts[1], 10) : 1;
+      } else if (v.period) {
+        y = parseInt(v.period.slice(0, 4), 10);
+        month = parseInt(v.period.slice(5, 7), 10) || 1;
+      }
+
+      if (isNaN(y) || y !== selectedYear) return;
+      if (isNaN(month) || month < 1 || month > 12) month = 1;
 
       (v.lines || []).forEach(l => {
         const debit = Number(l.debit) || 0;
         const credit = Number(l.credit) || 0;
         const accInfo = resolveAccountLabel(l.accountId || l.accountCode, l.accountName);
 
-        // Clasificar cuenta
-        const firstDigit = accInfo.code ? accInfo.code.charAt(0) : '5';
+        // Robust Account Classification
+        const normType = (accInfo.type || '').toLowerCase();
+        const normName = (accInfo.name || '').toLowerCase();
+        const codeStr = (accInfo.code || '').trim();
+        const firstDigit = codeStr.charAt(0);
+
         let accClass: 'ACTIVO' | 'PASIVO' | 'PATRIMONIO' | 'INGRESO' | 'GASTO' | 'COSTO' = 'GASTO';
-        if (firstDigit === '1') accClass = 'ACTIVO';
-        else if (firstDigit === '2') accClass = 'PASIVO';
-        else if (firstDigit === '3') accClass = 'PATRIMONIO';
-        else if (firstDigit === '4') accClass = 'INGRESO';
-        else if (firstDigit === '5') accClass = 'GASTO';
-        else if (firstDigit === '6') accClass = 'COSTO';
+
+        if (normType.includes('activo') || firstDigit === '1') {
+          accClass = 'ACTIVO';
+        } else if (normType.includes('pasivo') || (firstDigit === '2' && !codeStr.startsWith('23') && !codeStr.startsWith('2.3') && !codeStr.startsWith('2-3'))) {
+          accClass = 'PASIVO';
+        } else if (normType.includes('patrimonio') || normType.includes('capital') || codeStr.startsWith('23') || codeStr.startsWith('2.3') || codeStr.startsWith('2-3') || (firstDigit === '3' && !normType.includes('ingreso') && !normName.includes('venta'))) {
+          accClass = 'PATRIMONIO';
+        } else if (normType.includes('costo') || normName.includes('costo') || firstDigit === '6') {
+          accClass = 'COSTO';
+        } else if (normType.includes('ingreso') || normType.includes('ganancia') || normName.includes('venta') || firstDigit === '5' || (firstDigit === '3' && (normType.includes('ingreso') || normName.includes('venta') || normName.includes('ganancia')))) {
+          accClass = 'INGRESO';
+        } else if (normType.includes('gasto') || normType.includes('perdida') || normType.includes('pérdida') || firstDigit === '4') {
+          accClass = 'GASTO';
+        } else {
+          // Fallback
+          if (firstDigit === '4' || firstDigit === '5') {
+            if (normName.includes('ingreso') || normName.includes('venta') || normName.includes('ganancia')) {
+              accClass = 'INGRESO';
+            } else {
+              accClass = 'GASTO';
+            }
+          } else if (firstDigit === '3') {
+            accClass = 'INGRESO';
+          }
+        }
 
         const ccInfo = resolveCostCenterLabel(l.costCenter);
         const eiInfo = resolveExpenseItemLabel(l.expenseItem);
@@ -367,7 +439,7 @@ export default function ReportesAnaliticosView({
         list.push({
           voucherId: v.id,
           voucherNumber: v.voucherNumber,
-          voucherDate: v.date,
+          voucherDate: v.date || `${selectedYear}-01-01`,
           voucherType: v.type,
           month,
           year: y,
@@ -403,18 +475,36 @@ export default function ReportesAnaliticosView({
   const filteredLines = useMemo(() => {
     return normalizedLines.filter(line => {
       // Filtro de tipo de cuenta
-      if (accountFilter === 'GASTOS' && !['GASTO', 'COSTO'].includes(line.accountClass)) return false;
-      if (accountFilter === 'INGRESOS' && line.accountClass !== 'INGRESO') return false;
-      if (accountFilter === 'BALANCE' && !['ACTIVO', 'PASIVO', 'PATRIMONIO'].includes(line.accountClass)) return false;
+      if (accountFilter === 'GASTOS') {
+        const isExpense = ['GASTO', 'COSTO'].includes(line.accountClass) || line.accountCode.startsWith('4') || line.accountCode.startsWith('5') || line.accountCode.startsWith('6');
+        if (!isExpense) return false;
+      } else if (accountFilter === 'INGRESOS') {
+        const isIncome = line.accountClass === 'INGRESO' || line.accountCode.startsWith('3') || line.accountCode.startsWith('5');
+        if (!isIncome) return false;
+      } else if (accountFilter === 'BALANCE') {
+        if (!['ACTIVO', 'PASIVO', 'PATRIMONIO'].includes(line.accountClass)) return false;
+      }
 
       // Filtro de Centro de Costo específico
       if (selectedCostCenterFilter !== 'ALL') {
-        if (line.costCenterId !== selectedCostCenterFilter && line.costCenterLabel !== selectedCostCenterFilter) return false;
+        const targetCC = selectedCostCenterFilter.toLowerCase().trim();
+        const matches =
+          line.costCenterId.toLowerCase().trim() === targetCC ||
+          line.costCenterLabel.toLowerCase().trim() === targetCC ||
+          line.costCenterLabel.toLowerCase().includes(targetCC) ||
+          line.costCenterId.toLowerCase().includes(targetCC);
+        if (!matches) return false;
       }
 
       // Filtro de Ítem de Gasto específico
       if (selectedExpenseItemFilter !== 'ALL') {
-        if (line.expenseItemId !== selectedExpenseItemFilter && line.expenseItemLabel !== selectedExpenseItemFilter) return false;
+        const targetEI = selectedExpenseItemFilter.toLowerCase().trim();
+        const matches =
+          line.expenseItemId.toLowerCase().trim() === targetEI ||
+          line.expenseItemLabel.toLowerCase().trim() === targetEI ||
+          line.expenseItemLabel.toLowerCase().includes(targetEI) ||
+          line.expenseItemId.toLowerCase().includes(targetEI);
+        if (!matches) return false;
       }
 
       return true;
@@ -1326,8 +1416,8 @@ export default function ReportesAnaliticosView({
                   onChange={(e) => setAccountFilter(e.target.value as AccountFilter)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 font-semibold text-slate-800 focus:bg-white focus:border-indigo-500 outline-hidden"
                 >
-                  <option value="GASTOS">Solo Gastos y Costos (Clases 5 y 6)</option>
-                  <option value="INGRESOS">Solo Ingresos (Clase 4)</option>
+                  <option value="GASTOS">Solo Gastos y Costos (Clases 4, 5 y 6)</option>
+                  <option value="INGRESOS">Solo Ingresos (Clases 3, 4 y 5)</option>
                   <option value="BALANCE">Cuentas de Balance (1, 2, 3)</option>
                   <option value="ALL">Todas las Cuentas</option>
                 </select>
@@ -1361,7 +1451,7 @@ export default function ReportesAnaliticosView({
                 <select
                   value={selectedCostCenterFilter}
                   onChange={(e) => setSelectedCostCenterFilter(e.target.value)}
-                  className="text-xs bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-slate-700 outline-hidden"
+                  className="text-xs bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-slate-700 outline-hidden font-medium"
                 >
                   <option value="ALL">Todos los Centros de Costo</option>
                   {costCenters.map(cc => (
@@ -1373,13 +1463,30 @@ export default function ReportesAnaliticosView({
                 <select
                   value={selectedExpenseItemFilter}
                   onChange={(e) => setSelectedExpenseItemFilter(e.target.value)}
-                  className="text-xs bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-slate-700 outline-hidden"
+                  className="text-xs bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-slate-700 outline-hidden font-medium"
                 >
                   <option value="ALL">Todos los Ítems de Gasto</option>
                   {expenseItems.map(ei => (
                     <option key={ei.id} value={ei.code}>{ei.code} - {ei.name}</option>
                   ))}
                 </select>
+
+                {/* Botón para restablecer todos los filtros */}
+                {(selectedCostCenterFilter !== 'ALL' || selectedExpenseItemFilter !== 'ALL' || matrixSearchTerm !== '' || accountFilter !== 'GASTOS') && (
+                  <button
+                    onClick={() => {
+                      setSelectedCostCenterFilter('ALL');
+                      setSelectedExpenseItemFilter('ALL');
+                      setMatrixSearchTerm('');
+                      setAccountFilter('GASTOS');
+                    }}
+                    className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl transition-colors cursor-pointer"
+                    title="Restablecer filtros a valores predeterminados"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    <span>Restablecer Filtros</span>
+                  </button>
+                )}
               </div>
 
               {/* ACCIONES: EXPANDIR TODO Y EXPORTAR */}

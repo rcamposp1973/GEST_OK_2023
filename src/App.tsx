@@ -5,6 +5,7 @@
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ProcessProvider } from './context/ProcessContext';
 import { ToastProvider } from './context/ToastContext';
+import { SystemFormatProvider, useSystemFormat } from './context/SystemFormatContext';
 import GlobalProcessIndicator from './components/GlobalProcessIndicator';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './components/Login';
@@ -35,6 +36,7 @@ import { Building2, PlusCircle, CreditCard, ShieldCheck, Users, ShieldAlert, His
 
 function Dashboard() {
   const { currentUser } = useAuth();
+  const { setAssignedFormat } = useSystemFormat();
   const [userData, setUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -47,6 +49,15 @@ function Dashboard() {
   const [activeCompany, setActiveCompany] = useState<Company | null>(null);
   const [showGlobalIndicatorsModal, setShowGlobalIndicatorsModal] = useState(false);
   const [isPurgingDiagonApp, setIsPurgingDiagonApp] = useState(false);
+
+  // Sync active format when a study is selected or loaded
+  useEffect(() => {
+    if (selectedStudy?.appFormat) {
+      setAssignedFormat(selectedStudy.appFormat);
+    } else if (userData?.appFormat) {
+      setAssignedFormat(userData.appFormat);
+    }
+  }, [selectedStudy?.appFormat, userData?.appFormat, setAssignedFormat]);
 
   const handleLogout = async () => {
     try {
@@ -879,12 +890,14 @@ function AppContent() {
 export default function App() {
   return (
     <AuthProvider>
-      <ProcessProvider>
-        <ToastProvider>
-          <GlobalProcessIndicator />
-          <AppContent />
-        </ToastProvider>
-      </ProcessProvider>
+      <SystemFormatProvider>
+        <ProcessProvider>
+          <ToastProvider>
+            <GlobalProcessIndicator />
+            <AppContent />
+          </ToastProvider>
+        </ProcessProvider>
+      </SystemFormatProvider>
     </AuthProvider>
   );
 }

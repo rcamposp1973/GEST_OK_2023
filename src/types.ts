@@ -35,10 +35,13 @@ export interface StudyModulePermissions {
 
 export type StudySubscriptionStatus = 'Vigente' | 'Solo_Lectura' | 'Suspendido_Pago' | 'Sin_Vigencia';
 
+export type SystemAppFormat = 'VERSION_A' | 'VERSION_B' | 'VERSION_C1' | 'VERSION_C2';
+
 export interface Plan {
   id: string;
   name: string;
   code?: string;
+  appFormat?: SystemAppFormat; // Formato A, B, C1, C2
   priceUF?: number | null;
   priceText?: string;
   maxCompanies: number;
@@ -62,6 +65,7 @@ export interface StudyAdmin {
 export interface Study {
   id: string;
   name: string;
+  appFormat?: SystemAppFormat; // Versión A (Estudio Clásico), B (Pyme Clásica), C1 (Estudio Agéntico 2040), C2 (Pyme Agéntica 2040)
   planId?: string;
   planCode?: string; // PLAN_ENTRADA, PLAN_ESTUDIO_10, PLAN_ESTUDIO_FULL, PLAN_CORPORATIVO, CUSTOM
   planName?: string;
@@ -191,6 +195,7 @@ export interface Company {
   razonSocial?: string; // Alias Razón Social
   fantasyName?: string; // Nombre Fantasía
   rut: string; // RUT
+  appFormat?: SystemAppFormat; // Formato A, B, C1 o C2 para vista directa de empresa
   giro?: string; // Giro / Actividad Económica
   address?: string; // Dirección Tributaria
   comuna?: string; // Comuna
@@ -288,15 +293,21 @@ export interface ManualCashProjection {
   }[];
 }
 
+export type AuxiliaryRole = 'Deudor' | 'Acreedor' | 'Personal' | 'Deudores Varios' | 'Acreedores Varios' | 'Ambos' | string;
+
 export interface Auxiliary {
   id: string;
   rut: string;
   name: string; // Razón Social / Nombre
-  role: 'Deudor' | 'Acreedor' | 'Ambos';
+  role: AuxiliaryRole;
+  category?: 'Deudores' | 'Acreedores' | 'Personal' | 'Deudores Varios' | 'Acreedores Varios' | 'Ambos' | string;
   defaultDebtorAccountIds?: string[]; // Legacy / multi
   defaultCreditorAccountIds?: string[]; // Legacy / multi
   defaultDebtorAccountId?: string; // Cuenta Contable de Deudor / Cliente (ej. Clientes por Cobrar)
   defaultCreditorAccountId?: string; // Cuenta Contable de Acreedor / Proveedor (ej. Proveedores por Pagar)
+  defaultPersonalAccountId?: string; // Cuenta Contable de Personal (ej. 1104009 Anticipo Trabajadores, 1104003 Préstamos Trabajadores)
+  defaultOtherDebtorAccountId?: string; // Cuenta Contable Deudores Varios (no del giro)
+  defaultOtherCreditorAccountId?: string; // Cuenta Contable Acreedores Varios (socios, bancos, previsionales)
   defaultExpenseOrIncomeAccountId?: string; // Cuenta Contable de Ingreso o Costo/Gasto por Defecto
   defaultGloss?: string; // Glosa Predeterminada / Sugerida para Asientos y Comprobantes Contables
   defaultCostCenter?: string;
@@ -1382,6 +1393,7 @@ export interface LandingTestimonial {
 export interface LandingPricingPlan {
   id: string;
   name: string;
+  appFormat?: SystemAppFormat; // Versión A, B, C1 o C2
   subtitle?: string;
   price?: string;
   priceUF?: number | null;

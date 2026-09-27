@@ -69,6 +69,9 @@ export function filterAuxiliariesForAccount<T extends {
   rut: string;
   defaultDebtorAccountId?: string;
   defaultCreditorAccountId?: string;
+  defaultPersonalAccountId?: string;
+  defaultOtherDebtorAccountId?: string;
+  defaultOtherCreditorAccountId?: string;
   defaultExpenseOrIncomeAccountId?: string;
   defaultDebtorAccountIds?: string[];
   defaultCreditorAccountIds?: string[];
@@ -87,6 +90,9 @@ export function filterAuxiliariesForAccount<T extends {
       if (
         aux.defaultDebtorAccountId === accountId ||
         aux.defaultCreditorAccountId === accountId ||
+        aux.defaultPersonalAccountId === accountId ||
+        aux.defaultOtherDebtorAccountId === accountId ||
+        aux.defaultOtherCreditorAccountId === accountId ||
         aux.defaultExpenseOrIncomeAccountId === accountId ||
         aux.defaultDebtorAccountIds?.includes(accountId) ||
         aux.defaultCreditorAccountIds?.includes(accountId)

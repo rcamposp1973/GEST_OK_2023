@@ -1,15 +1,20 @@
-import { StudyModulePermissions } from '../types';
+import { StudyModulePermissions, SystemAppFormat } from '../types';
 
 export type StudyPlanCode = 
   | 'PLAN_ENTRADA' 
   | 'PLAN_ESTUDIO_10' 
   | 'PLAN_ESTUDIO_FULL' 
   | 'PLAN_CORPORATIVO' 
+  | 'PLAN_ENTRADA_AGENTICO' 
+  | 'PLAN_ESTUDIO_10_AGENTICO' 
+  | 'PLAN_ESTUDIO_FULL_AGENTICO' 
+  | 'PLAN_PYME_AGENTICO' 
   | 'CUSTOM';
 
 export interface SubscriptionPlanDefinition {
   code: StudyPlanCode;
   name: string;
+  appFormat?: SystemAppFormat;
   priceUF: number | null; // null = A Convenir
   priceText: string;
   period: string;
@@ -253,22 +258,133 @@ export const OFFICIAL_SUBSCRIPTION_PLANS: Record<StudyPlanCode, SubscriptionPlan
   PLAN_CORPORATIVO: {
     code: 'PLAN_CORPORATIVO',
     name: 'Plan Corporativo / PYMES',
+    appFormat: 'VERSION_B',
     priceUF: 4.0,
     priceText: 'Desde UF 4,0 + IVA',
     period: '/ mes + IVA',
     popular: false,
-    badge: 'Holding / A Convenir',
+    badge: 'Pyme Clásica / Versión B',
     subtitle: 'Módulos y Usuarios a convenir según requerimientos.',
-    description: 'Solución empresarial integral para grandes firmas contables, holdings y empresas corporativas con alta volumetría.',
+    description: 'Solución integral para pymes y empresas comerciales tradicionales con facturación DTE y tesorería.',
     maxCompanies: 500,
     maxUsers: 20,
     features: [
       'Empresas y Usuarios a convenir (escalable)',
-      'Todos los módulos del sistema (Finanzas, Comercial, KPIs, RCV, Personal, Tesorería)',
-      'Integración con facturadores electrónicos y ERP',
-      'Soporte prioritario 24/7 con SLA garantizado',
-      'Capacitación in-company para todo el equipo contable',
-      'Servidor y respaldos dedicados con alta disponibilidad'
+      'Facturación Electrónica DTE y Gestión Comercial',
+      'Tesorería, Cobranzas y Cartolas Bancarias',
+      'Libros Diario, Mayor y Auxiliares',
+      'Soporte prioritario y puesta en marcha'
+    ],
+    defaultModules: {
+      contabilidadBase: true,
+      rcvSii: true,
+      formulario29: true,
+      cartolasBancarias: true,
+      conciliacionBancaria: true,
+      kpisIndicadores: true,
+      ifrsAuditoria: true,
+      comercialInventario: true,
+      tesoreria: true,
+      remuneraciones: true,
+      visorClientes: true,
+      copilotoIA: false
+    },
+    order: 4
+  },
+  PLAN_ENTRADA_AGENTICO: {
+    code: 'PLAN_ENTRADA_AGENTICO',
+    name: 'Plan de Entrada Agéntico',
+    appFormat: 'VERSION_C1',
+    priceUF: 0.7,
+    priceText: 'UF 0,7 + IVA',
+    period: '/ mes + IVA',
+    popular: false,
+    badge: 'Agéntico 2040 ⚡ / 1 Empresa',
+    subtitle: '1 empresa con Auditor Autónomo de Cuadraturas 2040.',
+    description: 'Ideal para contadores individuales que desean auditar en tiempo real con agentes autónomos.',
+    maxCompanies: 1,
+    maxUsers: 1,
+    features: [
+      '1 Empresa / RUT Comercial',
+      '🤖 Agente Auditor Autónomo 2040 en tiempo real',
+      '⚡ Copiloto Tributario F29 con alertas preventivas SII',
+      'Contabilidad Base y Libros Oficiales',
+      'Sincronización RCV Automática con SII'
+    ],
+    defaultModules: {
+      contabilidadBase: true,
+      rcvSii: true,
+      formulario29: true,
+      cartolasBancarias: true,
+      conciliacionBancaria: true,
+      kpisIndicadores: false,
+      ifrsAuditoria: false,
+      comercialInventario: false,
+      tesoreria: false,
+      remuneraciones: false,
+      visorClientes: false,
+      copilotoIA: true
+    },
+    order: 5
+  },
+  PLAN_ESTUDIO_10_AGENTICO: {
+    code: 'PLAN_ESTUDIO_10_AGENTICO',
+    name: 'Plan Estudio 10 Agéntico',
+    appFormat: 'VERSION_C1',
+    priceUF: 1.6,
+    priceText: 'UF 1,6 + IVA',
+    period: '/ mes + IVA',
+    popular: false,
+    badge: 'Agéntico 2040 ⚡ / 10 Empresas',
+    subtitle: 'Plan para 2 usuarios y 10 empresas con Agentes Autónomos.',
+    description: 'Estudios contables que automatizan conciliaciones, detección de descuadraturas y reportes ejecutivos.',
+    maxCompanies: 10,
+    maxUsers: 2,
+    features: [
+      '10 Empresas / Clientes',
+      '2 Usuarios: 1 Administrador + 1 Analista',
+      '🤖 Agente Auditor Autónomo 2040 continuo',
+      '⚡ Copiloto Tributario F29 y Cruce RCV',
+      'Conciliación Bancaria Agéntica Inteligente',
+      'Balance 8 Columnas e IFRS Auditado'
+    ],
+    defaultModules: {
+      contabilidadBase: true,
+      rcvSii: true,
+      formulario29: true,
+      cartolasBancarias: true,
+      conciliacionBancaria: true,
+      kpisIndicadores: true,
+      ifrsAuditoria: true,
+      comercialInventario: false,
+      tesoreria: true,
+      remuneraciones: false,
+      visorClientes: false,
+      copilotoIA: true
+    },
+    order: 6
+  },
+  PLAN_ESTUDIO_FULL_AGENTICO: {
+    code: 'PLAN_ESTUDIO_FULL_AGENTICO',
+    name: 'Plan Estudio Full Agéntico',
+    appFormat: 'VERSION_C1',
+    priceUF: 3.2,
+    priceText: 'UF 3,2 + IVA',
+    period: '/ mes + IVA',
+    popular: true,
+    badge: 'Agéntico 2040 ⚡ / 100 Empresas',
+    subtitle: 'El estándar del 2040 para 4 usuarios y 100 empresas.',
+    description: 'Máximo rendimiento para firmas contables con auditoría autónoma 24/7 y generación automática de dictámenes.',
+    maxCompanies: 100,
+    maxUsers: 4,
+    features: [
+      '100 Empresas / Clientes',
+      '4 Usuarios: 1 Administrador + 3 Analistas',
+      '🤖 Centro de Mando Agéntico 2040 Completo',
+      '⚡ Copiloto SII 24/7 y Auditor Preventivo F29',
+      'Conciliación Bancaria Automática con IA',
+      'Balance 8 Columnas e IFRS con Dictamen',
+      'Visor para Clientes con Asistente Virtual'
     ],
     defaultModules: {
       contabilidadBase: true,
@@ -284,7 +400,44 @@ export const OFFICIAL_SUBSCRIPTION_PLANS: Record<StudyPlanCode, SubscriptionPlan
       visorClientes: true,
       copilotoIA: true
     },
-    order: 4
+    order: 7
+  },
+  PLAN_PYME_AGENTICO: {
+    code: 'PLAN_PYME_AGENTICO',
+    name: 'Plan Pyme Agéntico',
+    appFormat: 'VERSION_C2',
+    priceUF: 5.3,
+    priceText: 'Desde UF 5,3 + IVA',
+    period: '/ mes + IVA',
+    popular: false,
+    badge: 'Pyme Agéntica 2040 ⚡',
+    subtitle: 'CFO Virtual Autónomo, Cobranza Inteligente y Cazador de Fugas.',
+    description: 'Para empresas y pymes que desean automatizar cobranzas WhatsApp, detectar fugas de dinero y proyectar flujo de caja.',
+    maxCompanies: 50,
+    maxUsers: 10,
+    features: [
+      '🤖 Agente de Cobranza Inteligente WhatsApp',
+      '🛡️ Cazador de Fugas de Dinero y Gastos Fantasma',
+      '💬 Asistente Financiero Ejecutivo CFO 2040 en vivo',
+      '📈 Proyección de Flujo de Caja Predictivo a 30/60/90 días',
+      'Facturación DTE, Inventario Kardex y Tesorería',
+      'Soporte prioritario y configuración personalizada'
+    ],
+    defaultModules: {
+      contabilidadBase: true,
+      rcvSii: true,
+      formulario29: true,
+      cartolasBancarias: true,
+      conciliacionBancaria: true,
+      kpisIndicadores: true,
+      ifrsAuditoria: true,
+      comercialInventario: true,
+      tesoreria: true,
+      remuneraciones: true,
+      visorClientes: true,
+      copilotoIA: true
+    },
+    order: 8
   },
   CUSTOM: {
     code: 'CUSTOM',
@@ -321,14 +474,22 @@ export const OFFICIAL_SUBSCRIPTION_PLANS: Record<StudyPlanCode, SubscriptionPlan
 };
 
 /**
- * Obtener la lista ordenada de planes oficiales
+ * Obtener la lista ordenada de planes oficiales (Clásicos y Agénticos 2040)
  */
 export function getOfficialPlansList(): SubscriptionPlanDefinition[] {
   return [
+    // Formato A: Estudio Clásico
     OFFICIAL_SUBSCRIPTION_PLANS.PLAN_ENTRADA,
     OFFICIAL_SUBSCRIPTION_PLANS.PLAN_ESTUDIO_10,
     OFFICIAL_SUBSCRIPTION_PLANS.PLAN_ESTUDIO_FULL,
-    OFFICIAL_SUBSCRIPTION_PLANS.PLAN_CORPORATIVO
+    // Formato B: Pyme Clásica
+    OFFICIAL_SUBSCRIPTION_PLANS.PLAN_CORPORATIVO,
+    // Formato C1: Estudio Agéntico 2040
+    OFFICIAL_SUBSCRIPTION_PLANS.PLAN_ENTRADA_AGENTICO,
+    OFFICIAL_SUBSCRIPTION_PLANS.PLAN_ESTUDIO_10_AGENTICO,
+    OFFICIAL_SUBSCRIPTION_PLANS.PLAN_ESTUDIO_FULL_AGENTICO,
+    // Formato C2: Pyme Agéntica 2040
+    OFFICIAL_SUBSCRIPTION_PLANS.PLAN_PYME_AGENTICO
   ];
 }
 

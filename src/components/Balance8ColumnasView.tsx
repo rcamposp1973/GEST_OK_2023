@@ -44,6 +44,18 @@ export default function Balance8ColumnasView({
   const [onlyWithMovements, setOnlyWithMovements] = useState<boolean>(true);
   const [isPrintingOfficial, setIsPrintingOfficial] = useState<boolean>(false);
 
+  // Handle period change with automatic year start date setting
+  const handlePeriodChange = (val: string) => {
+    setPeriodFilter(val);
+    if (val !== 'Todos') {
+      const year = val.slice(0, 4);
+      setDateFrom(`${year}-01-01`);
+    } else {
+      setDateFrom('');
+      setDateTo('');
+    }
+  };
+
   // Handle date changes with cycle validation
   const handleDateFromChange = (date: string) => {
     // Para balances anuales/acumulados, forzar inicio en 01-01
@@ -93,12 +105,24 @@ export default function Balance8ColumnasView({
       });
     });
 
+    // Helper to check cumulative period and date filter
+    const isValidVoucherForBalance = (v: Voucher) => {
+      if (v.status === 'Anulado') return false;
+      if (periodFilter !== 'Todos') {
+        const year = periodFilter.slice(0, 4);
+        const vPeriod = v.period || (v.date ? v.date.slice(0, 7) : '');
+        if (!vPeriod) return false;
+        // Acumulativo desde enero del año comercial hasta el período seleccionado (ej: 2026-01 hasta 2026-09)
+        if (vPeriod < `${year}-01` || vPeriod > periodFilter) return false;
+      }
+      if (dateFrom && v.date && v.date < dateFrom) return false;
+      if (dateTo && v.date && v.date > dateTo) return false;
+      return true;
+    };
+
     // Detect excluded imbalanced/descuadrados vouchers
     const descuadradosVouchers = vouchers.filter(v => {
-      if (v.status === 'Anulado') return false;
-      if (periodFilter !== 'Todos' && v.period !== periodFilter) return false;
-      if (dateFrom && v.date < dateFrom) return false;
-      if (dateTo && v.date > dateTo) return false;
+      if (!isValidVoucherForBalance(v)) return false;
       const vDeb = v.totalDebit ?? v.lines?.reduce((s, l) => s + (Number(l.debit) || 0), 0) ?? 0;
       const vCred = v.totalCredit ?? v.lines?.reduce((s, l) => s + (Number(l.credit) || 0), 0) ?? 0;
       return Math.abs(vDeb - vCred) > 0.01;
@@ -106,10 +130,7 @@ export default function Balance8ColumnasView({
 
     // Sum movements ONLY from valid, perfectly balanced vouchers (Strict Partida Doble)
     const validVouchers = vouchers.filter(v => {
-      if (v.status === 'Anulado') return false;
-      if (periodFilter !== 'Todos' && v.period !== periodFilter) return false;
-      if (dateFrom && v.date < dateFrom) return false;
-      if (dateTo && v.date > dateTo) return false;
+      if (!isValidVoucherForBalance(v)) return false;
       const vDeb = v.totalDebit ?? v.lines?.reduce((s, l) => s + (Number(l.debit) || 0), 0) ?? 0;
       const vCred = v.totalCredit ?? v.lines?.reduce((s, l) => s + (Number(l.credit) || 0), 0) ?? 0;
       if (Math.abs(vDeb - vCred) > 0.01) return false;
@@ -593,7 +614,7 @@ export default function Balance8ColumnasView({
             <label className="font-semibold text-slate-700">Período:</label>
             <select
               value={periodFilter}
-              onChange={(e) => setPeriodFilter(e.target.value)}
+              onChange={(e) => handlePeriodChange(e.target.value)}
               className="bg-white border border-slate-300 rounded-md px-2.5 py-1 text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
             >
               <option value="Todos">Todo el Ejercicio</option>

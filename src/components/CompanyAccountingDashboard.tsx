@@ -47,6 +47,9 @@ import { DeclaracionesJuradasView } from './DeclaracionesJuradasView';
 import { FiniquitosCalculatorModal } from './payroll/FiniquitosCalculatorModal';
 import { CommandPaletteModal } from './CommandPaletteModal';
 import { SearchableAuxiliarySelect } from './SearchableAuxiliarySelect';
+import { useSystemFormat } from '../context/SystemFormatContext';
+import AgenticStudyHub2040 from './AgenticStudyHub2040';
+import AgenticPymeHub2040 from './AgenticPymeHub2040';
 import * as XLSX from 'xlsx';
 import { useProcess } from '../context/ProcessContext';
 import { validateVoucherLine, isCustomAnalysisRequired, sanitizeVoucherLine, sanitizeVoucherLines } from '../utils/voucherValidation';
@@ -55,16 +58,22 @@ import { fetchRcvFromSii } from '../utils/siiRcvClient';
 import { formatRut } from '../utils/rutMatcher';
 import DemoFerreteriaManagerModal from './DemoFerreteriaManagerModal';
 import { isDemoFerreteriaCompany, DEMO_COMPANY_NAME } from '../utils/demoFerreteriaGenerator';
+import { WorkspaceTab, DockPosition, COCKPIT_MODULE_CATALOG } from './cockpit/cockpitTypes';
+import { CockpitTabBar } from './cockpit/CockpitTabBar';
+import { CockpitDock } from './cockpit/CockpitDock';
+import { NewTabModal } from './cockpit/NewTabModal';
+import { FloatingAccountingCalculator } from './cockpit/FloatingAccountingCalculator';
 import { 
   FileText, BookOpen, Layers, Users, Sliders, Scale, Printer, 
   FolderTree, CreditCard, Receipt, TrendingUp, Landmark, ShoppingCart, 
   BarChart3, Settings, Calendar, Download, ChevronLeft, ChevronRight, 
   FileSpreadsheet, ArrowLeft, Building2, CheckCircle2, Lock, Unlock,
-  ShieldCheck, Boxes, Package, ArrowRightLeft, ShoppingBag, Calculator, Briefcase, Sparkles,
+  ShieldCheck, Boxes, Package, ArrowRightLeft, ShoppingBag, Calculator, Briefcase, Sparkles, ArrowRight,
   Warehouse as WarehouseIcon, Table as TableIcon, Pin, Plus, X, Check
 } from 'lucide-react';
 
 const QUICK_ACCESS_ITEMS = [
+  { id: 'calculator', label: 'Calculadora Táctica & Cinta', group: 'FINANZAS', icon: Calculator, tab: 'calculator' },
   { id: 'vouchers', label: 'Vouchers / Asientos', group: 'FINANZAS', icon: FileText, tab: 'vouchers' },
   { id: 'libroDiario', label: 'Libro Diario Oficial', group: 'FINANZAS', icon: BookOpen, tab: 'libroDiario' },
   { id: 'libroMayor', label: 'Libro Mayor', group: 'FINANZAS', icon: Layers, tab: 'libroMayor' },
@@ -97,11 +106,12 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
   const isSuperUser = currentUserRole === UserRole.SUPER_USER;
   const isAnalyst = currentUserRole === UserRole.ANALYST;
   const isReadOnly = currentUserRole === UserRole.OBSERVER;
+  const { currentFormat, formatInfo, isAgentic, isPymeFormat, isStudyFormat } = useSystemFormat();
 
   const { withProcess } = useProcess();
   type RibbonGroup = 'FINANZAS' | 'OPERACIONES' | 'TESORERIA' | 'PERSONAL' | 'IMPORTACIONES' | 'IMPUESTOS' | 'INDICADORES' | 'CONFIGURACIONES';
   const [activeRibbonGroup, setActiveRibbonGroup] = useState<RibbonGroup>('FINANZAS');
-  const [activeTab, setActiveTab] = useState<'accounts' | 'auxiliaries' | 'periods' | 'rcv' | 'exchange' | 'rcvParams' | 'f29Codes' | 'vouchers' | 'libroDiario' | 'libroMayor' | 'balance8' | 'balanceIFRS' | 'analisisAuxiliares' | 'analisisCuentas' | 'reportesAnaliticos' | 'estadoResultados' | 'indicadoresFinancieros' | 'auditorEstadosFinancieros' | 'smartNotebooks' | 'flujoDeCaja' | 'nominasPago' | 'cobranza' | 'conciliacionBancaria' | 'libroBancoColaborativo' | 'cargaMasiva' | 'formulario29' | 'plantillasCarga' | 'emisionDte' | 'tablasAnalisis' | 'controlFolios' | 'productsServices' | 'operativaComercial' | 'stockKardex' | 'warehouses' | 'employees' | 'liquidaciones' | 'activoFijo' | 'ddjj'>('vouchers');
+  const [activeTab, setActiveTab] = useState<'accounts' | 'auxiliaries' | 'periods' | 'rcv' | 'exchange' | 'rcvParams' | 'f29Codes' | 'vouchers' | 'libroDiario' | 'libroMayor' | 'balance8' | 'balanceIFRS' | 'analisisAuxiliares' | 'analisisCuentas' | 'reportesAnaliticos' | 'estadoResultados' | 'indicadoresFinancieros' | 'auditorEstadosFinancieros' | 'smartNotebooks' | 'flujoDeCaja' | 'nominasPago' | 'cobranza' | 'conciliacionBancaria' | 'libroBancoColaborativo' | 'cargaMasiva' | 'formulario29' | 'plantillasCarga' | 'emisionDte' | 'tablasAnalisis' | 'controlFolios' | 'productsServices' | 'operativaComercial' | 'stockKardex' | 'warehouses' | 'employees' | 'liquidaciones' | 'activoFijo' | 'ddjj' | 'agenticStudy2040' | 'agenticPyme2040'>('vouchers');
   const [auxSubTab, setAuxSubTab] = useState<'deudores' | 'acreedores'>('deudores');
   const [employeeSubTab, setEmployeeSubTab] = useState<'employees' | 'contracts' | 'attendance' | 'advances' | 'severance' | 'certificates'>('employees');
   const [payrollTab, setPayrollTab] = useState<'NOMINA' | 'LIQUIDACION_INDIVIDUAL' | 'LRD_DT' | 'PREVIRED' | 'PARAMETROS' | 'CONCEPTOS' | 'RELIQUIDACIONES'>('NOMINA');
@@ -127,11 +137,151 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
   const [pinnedQuickAccessIds, setPinnedQuickAccessIds] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('gestok_quick_access_pinned');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Ensure uniqueness
+        return Array.from(new Set(parsed));
+      }
     } catch {}
-    return ['vouchers', 'libroDiario', 'balance8', 'formulario29', 'rcv', 'conciliacionBancaria'];
+    // Default unique list
+    return ['calculator', 'vouchers', 'libroDiario', 'libroMayor', 'analisisAuxiliares', 'balance8', 'conciliacionBancaria', 'rcv', 'formulario29'];
   });
+
   const [showQuickAccessConfig, setShowQuickAccessConfig] = useState<boolean>(false);
+
+  // --- COCKPIT WORKSPACE & MODULAR DOCK STATE ---
+  const [dockPosition, setDockPosition] = useState<DockPosition>(() => {
+    try {
+      const saved = localStorage.getItem('gestok_dock_position') as DockPosition;
+      if (saved && ['left', 'right', 'bottom', 'hidden'].includes(saved)) return saved;
+    } catch {}
+    return 'left';
+  });
+
+  const handleSetDockPosition = (pos: DockPosition) => {
+    setDockPosition(pos);
+    try {
+      localStorage.setItem('gestok_dock_position', pos);
+    } catch {}
+  };
+
+  const [isZenMode, setIsZenMode] = useState<boolean>(false);
+  const [showNewTabModal, setShowNewTabModal] = useState<boolean>(false);
+  const [showCalculator, setShowCalculator] = useState<boolean>(false);
+
+  const [openTabs, setOpenTabs] = useState<WorkspaceTab[]>(() => {
+    return [
+      {
+        id: 'tab_vouchers',
+        moduleId: 'vouchers',
+        title: 'Vouchers / Asientos',
+        category: 'FINANZAS',
+        colorScheme: 'indigo',
+        closable: false
+      }
+    ];
+  });
+  const [activeTabId, setActiveTabId] = useState<string>('tab_vouchers');
+
+  const handleOpenModuleInTab = (moduleId: string) => {
+    if (moduleId === 'calculator') {
+      setShowCalculator(prev => !prev);
+      return;
+    }
+    setOpenTabs(prev => {
+      const existingTab = prev.find(t => t.moduleId === moduleId);
+      if (existingTab) {
+        setActiveTabId(existingTab.id);
+        setActiveTab(existingTab.moduleId as any);
+        return prev;
+      }
+      const modItem = COCKPIT_MODULE_CATALOG.find(m => m.id === moduleId);
+      const newTab: WorkspaceTab = {
+        id: `tab_${moduleId}_${Date.now()}`,
+        moduleId: moduleId,
+        title: modItem?.shortLabel || modItem?.label || moduleId,
+        category: modItem?.category || 'FINANZAS',
+        colorScheme: modItem?.colorScheme || 'indigo',
+        closable: true
+      };
+      setActiveTabId(newTab.id);
+      setActiveTab(moduleId as any);
+      return [...prev, newTab];
+    });
+  };
+
+  const handleSelectTab = (tabId: string) => {
+    const found = openTabs.find(t => t.id === tabId);
+    if (found) {
+      setActiveTabId(found.id);
+      setActiveTab(found.moduleId as any);
+    }
+  };
+
+  const handleCloseTab = (tabId: string) => {
+    setOpenTabs(prev => {
+      if (prev.length <= 1) return prev;
+      const filtered = prev.filter(t => t.id !== tabId);
+      if (activeTabId === tabId) {
+        const last = filtered[filtered.length - 1];
+        setActiveTabId(last.id);
+        setActiveTab(last.moduleId as any);
+      }
+      return filtered;
+    });
+  };
+
+  // Keyboard navigation for Cockpit (Ctrl+Tab, Ctrl+W, F11, Ctrl+D)
+  useEffect(() => {
+    const handleCockpitShortcuts = (e: KeyboardEvent) => {
+      // Ctrl+Tab to cycle tabs
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Tab') {
+        e.preventDefault();
+        setOpenTabs(currentTabs => {
+          if (currentTabs.length <= 1) return currentTabs;
+          const currentIndex = currentTabs.findIndex(t => t.id === activeTabId);
+          const nextIndex = e.shiftKey
+            ? (currentIndex - 1 + currentTabs.length) % currentTabs.length
+            : (currentIndex + 1) % currentTabs.length;
+          const nextTab = currentTabs[nextIndex];
+          setActiveTabId(nextTab.id);
+          setActiveTab(nextTab.moduleId as any);
+          return currentTabs;
+        });
+      }
+      // Ctrl+W to close active tab
+      else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'w') {
+        const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+        if (tag !== 'input' && tag !== 'textarea') {
+          e.preventDefault();
+          handleCloseTab(activeTabId);
+        }
+      }
+      // F11 or Ctrl+B to toggle Zen mode
+      else if (e.key === 'F11' || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b')) {
+        e.preventDefault();
+        setIsZenMode(prev => !prev);
+      }
+      // Ctrl+D to toggle dock
+      else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
+        const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+        if (tag !== 'input' && tag !== 'textarea') {
+          e.preventDefault();
+          handleSetDockPosition(dockPosition === 'hidden' ? 'left' : dockPosition === 'left' ? 'bottom' : 'hidden');
+        }
+      }
+    };
+    window.addEventListener('keydown', handleCockpitShortcuts);
+    return () => window.removeEventListener('keydown', handleCockpitShortcuts);
+  }, [activeTabId, dockPosition]);
+
+  // Keep openTabs in sync if activeTab is changed from child component handlers
+  useEffect(() => {
+    const currentTab = openTabs.find(t => t.id === activeTabId);
+    if (!currentTab || currentTab.moduleId !== activeTab) {
+      handleOpenModuleInTab(activeTab);
+    }
+  }, [activeTab]);
 
   const togglePinQuickAccess = (id: string) => {
     setPinnedQuickAccessIds(prev => {
@@ -3339,6 +3489,29 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
     });
   };
 
+  const handleOpenVoucherModal = (voucherRef: Voucher | string | number) => {
+    if (!voucherRef) return;
+    if (typeof voucherRef === 'object' && 'lines' in voucherRef) {
+      setSelectedVoucher(voucherRef as Voucher);
+      return;
+    }
+    
+    const refStr = String(voucherRef).trim();
+    const refNum = Number(voucherRef);
+
+    const found = vouchers.find(v => 
+      v.id === refStr ||
+      String(v.voucherNumber) === refStr ||
+      (!isNaN(refNum) && Number(v.voucherNumber) === refNum)
+    );
+
+    if (found) {
+      setSelectedVoucher(found);
+    } else {
+      notify.warning(`No se encontró el comprobante N° ${voucherRef} en los registros de la empresa.`, 'Comprobante no encontrado');
+    }
+  };
+
   const handleOpenEditVoucher = (v: Voucher) => {
     setVoucherForm({
       id: v.id,
@@ -4496,721 +4669,95 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
   ]);
 
   return (
-    <div className="space-y-4">
-      {/* Super Admin Read-Only Notice Banner */}
-      {isReadOnly && (
-        <div className="bg-amber-50 border border-amber-300 px-4 py-2.5 rounded-lg flex items-center justify-between text-amber-900 shadow-xs">
-          <div className="flex items-center gap-2.5">
-            <span className="text-lg">🔒</span>
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider">Modo Solo Lectura (Perfil Observador)</p>
-              <p className="text-[11px] text-amber-700">Tienes acceso de lectura y navegación a todos los módulos. La creación, modificación o eliminación de registros contables o tributarios está restringida exclusivamente a los administradores y contadores del estudio.</p>
-            </div>
-          </div>
-          <span className="text-[10px] font-mono font-bold bg-amber-200 text-amber-800 px-2.5 py-1 rounded border border-amber-300 whitespace-nowrap">SOLO LECTURA</span>
-        </div>
+    <div className="fixed inset-0 z-40 bg-slate-950 text-slate-100 flex flex-col w-screen h-screen overflow-hidden select-none animate-in fade-in duration-150">
+      {/* CABECERA COCKPIT CON PESTAÑAS INTEGRADAS, SELECTORES OPERATIVOS Y CONTROL ZEN */}
+      <CockpitTabBar
+        company={company}
+        openTabs={openTabs}
+        activeTabId={activeTabId}
+        onSelectTab={handleSelectTab}
+        onCloseTab={handleCloseTab}
+        onOpenNewTabModal={() => setShowNewTabModal(true)}
+        onBackToCompanies={onBack}
+        selectedYear={selectedYear}
+        onChangeYear={(yr) => {
+          setSelectedYear(yr);
+          handleEnsureFiscalYear(yr);
+        }}
+        selectedPeriod={selectedRcvPeriod}
+        onChangePeriod={(p) => setSelectedRcvPeriod(p)}
+        fiscalYears={fiscalYears}
+        checkIsPeriodClosed={checkIsPeriodClosed}
+        onOpenExcelImport={() => setShowExcelImportModal(true)}
+        onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+        onOpenCalculator={() => setShowCalculator(true)}
+        onOpenQuickAccessConfig={() => setShowQuickAccessConfig(true)}
+        isZenMode={isZenMode}
+        onToggleZenMode={() => setIsZenMode(prev => !prev)}
+        dockPosition={dockPosition}
+        onChangeDockPosition={handleSetDockPosition}
+      />
+
+      {/* BOTÓN FLOTANTE PARA RESTAURAR EL DOCK CUANDO ESTÁ OCULTO */}
+      {dockPosition === 'hidden' && (
+        <button
+          onClick={() => handleSetDockPosition('left')}
+          className="fixed bottom-3 left-3 z-50 bg-[#0D253D] hover:bg-slate-800 text-indigo-200 border border-slate-600 px-3 py-2 rounded-xl shadow-2xl text-xs font-bold flex items-center gap-2 cursor-pointer transition-all animate-bounce"
+          title="Mostrar barra de acceso rápido"
+        >
+          <span>📂</span>
+          <span>Mostrar Barra de Acceso Rápido</span>
+        </button>
       )}
 
-      {/* Barra de Navegación Contextual y Menú Ribbon Integrado (Espacio Optimizado) */}
-      <div className="-mx-3 md:-mx-5 -mt-3 md:-mt-5 sticky top-[52px] z-40 bg-white/95 backdrop-blur-md text-[#0D253D] border-b border-slate-200/90 shadow-xs px-3 md:px-5 py-2 space-y-1.5">
-        {/* Fila Superior: Volver/Empresa + Pestañas de Módulos (Ribbon) + Año/Mes/Importar */}
-        <div className="flex items-center justify-between gap-2.5 flex-wrap">
-          {/* Lado Izquierdo: Volver a Empresas + Acceso Rápido */}
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={onBack}
-              className="px-2.5 py-1 bg-white hover:bg-slate-50 active:bg-slate-100 text-[#0D253D] font-bold text-xs rounded-lg border border-slate-200 shadow-2xs flex items-center gap-1.5 transition-all cursor-pointer"
-              title="Volver a la lista de empresas clientes"
-            >
-              <ArrowLeft className="w-3.5 h-3.5 text-slate-500" />
-              <span>Empresas</span>
-            </button>
+      {/* ÁREA PRINCIPAL: DOCK LATERAL + SUPERFICIE DE TRABAJO CONTABLE */}
+      <div className="flex-1 flex flex-row overflow-hidden relative w-full h-full min-h-0 bg-slate-950">
+        {/* DOCK LATERAL IZQUIERDO */}
+        {dockPosition === 'left' && (
+          <CockpitDock
+            position="left"
+            onChangePosition={handleSetDockPosition}
+            activeModuleId={activeTab}
+            openModuleIds={openTabs.map(t => t.moduleId)}
+            onOpenModule={handleOpenModuleInTab}
+            onOpenNewTabModal={() => setShowNewTabModal(true)}
+            onOpenQuickAccessConfig={() => setShowQuickAccessConfig(true)}
+            pinnedModuleIds={pinnedQuickAccessIds}
+          />
+        )}
 
-            {isDemoCompany && (
+        {/* SUPERFICIE DE TRABAJO (100% ALTURA, SCROLL INTERNO ÚNICO, CERO DESPERDICIO) */}
+        <div className="flex-1 flex flex-col overflow-auto min-h-0 min-w-0 bg-slate-100 text-slate-900 p-2 sm:p-3 relative">
+          {/* Aviso Perfil Observador (Solo Lectura) */}
+          {isReadOnly && (
+            <div className="mb-2 bg-amber-500/10 border border-amber-500/30 px-3 py-1.5 rounded-lg flex items-center justify-between text-amber-900 text-xs shrink-0">
+              <span className="flex items-center gap-2 font-bold">
+                <span>🔒 Modo Solo Lectura</span>
+                <span className="text-[11px] font-normal text-amber-700">Visualización activa para el perfil observador.</span>
+              </span>
+              <span className="text-[10px] font-mono font-bold bg-amber-200/80 px-2 py-0.5 rounded">OBSERVADOR</span>
+            </div>
+          )}
+
+          {/* Reset Demo si es empresa demo */}
+          {isDemoCompany && (
+            <div className="mb-2 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/30 p-2 rounded-xl flex items-center justify-between gap-3 text-xs shrink-0">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-amber-600" />
+                <span className="font-bold text-amber-900">Empresa de Demostración Ferretería Don Alí KT Ltda</span>
+                <span className="text-[11px] text-amber-700 hidden md:inline">Puedes restablecer los datos originales de prueba cuando lo desees.</span>
+              </div>
               <button
                 type="button"
                 onClick={() => setShowDemoManagerModal(true)}
-                className="px-2.5 py-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-black text-xs rounded-lg shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
-                title="Gestor y Reset de Demostración 2025"
+                className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg shadow-xs text-xs cursor-pointer shrink-0"
               >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline font-bold">🎯 Reset Demo 2025</span>
+                🎯 Reset Demo 2025
               </button>
-            )}
-
-            {/* Barra de Acceso Rápido Personalizable (Estilo Excel) */}
-            <div className="h-4 w-px bg-slate-200 hidden md:block"></div>
-            <div className="hidden md:flex items-center gap-1 bg-slate-100/90 p-0.5 rounded-lg border border-slate-200/80 text-xs">
-              <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider px-1.5 flex items-center gap-1">
-                <Pin className="w-2.5 h-2.5 text-indigo-600" />
-                Acceso Rápido
-              </span>
-              <div className="flex items-center gap-0.5">
-                {QUICK_ACCESS_ITEMS.filter(item => pinnedQuickAccessIds.includes(item.id)).map(item => {
-                  const IconComp = item.icon;
-                  const isCurrentTab = activeTab === item.tab;
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => {
-                        setActiveRibbonGroup(item.group as RibbonGroup);
-                        setActiveTab(item.tab as any);
-                      }}
-                      className={`p-1.5 rounded-md transition-all cursor-pointer flex items-center justify-center ${
-                        isCurrentTab
-                          ? 'bg-[#533AFD] text-white shadow-2xs font-bold ring-1 ring-indigo-300'
-                          : 'bg-white hover:bg-slate-200/80 text-slate-700 border border-slate-200/80'
-                      }`}
-                      title={`${item.label} (${item.group})`}
-                    >
-                      <IconComp className="w-3.5 h-3.5" />
-                    </button>
-                  );
-                })}
-                <button
-                  onClick={() => setShowQuickAccessConfig(!showQuickAccessConfig)}
-                  className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-white rounded-md border border-dashed border-slate-300 transition-colors cursor-pointer"
-                  title="Personalizar barra de acceso rápido (Anclar / Desanclar herramientas estilo Excel)"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                </button>
-              </div>
             </div>
-          </div>
+          )}
 
-          {/* Centro: Pestañas Principales Ribbon */}
-          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5 max-w-full">
-            {(['FINANZAS', 'OPERACIONES', 'TESORERIA', 'PERSONAL', 'IMPORTACIONES', 'IMPUESTOS', 'INDICADORES', 'CONFIGURACIONES'] as const)
-              .filter((ribbonTab) => !(isAnalyst && ribbonTab === 'INDICADORES'))
-              .map((ribbonTab, idx) => {
-              const isActive = activeRibbonGroup === ribbonTab;
-              const displayLabels: Record<string, string> = {
-                FINANZAS: 'FINANZAS',
-                OPERACIONES: 'COMERCIAL',
-                TESORERIA: 'TESORERÍA',
-                PERSONAL: 'PERSONAL',
-                IMPORTACIONES: 'CARGA RCV/BH',
-                IMPUESTOS: 'IMPUESTOS F.29',
-                INDICADORES: 'INDICADORES (KPIS)',
-                CONFIGURACIONES: 'CONFIGURACIONES'
-              };
-
-              return (
-                <button
-                  key={ribbonTab}
-                  onClick={() => {
-                    setActiveRibbonGroup(ribbonTab);
-                    if (ribbonTab === 'FINANZAS') setActiveTab('vouchers');
-                    if (ribbonTab === 'OPERACIONES') setActiveTab('operativaComercial');
-                    if (ribbonTab === 'TESORERIA') setActiveTab('nominasPago');
-                    if (ribbonTab === 'PERSONAL') { setActiveTab('employees'); setEmployeeSubTab('employees'); }
-                    if (ribbonTab === 'IMPORTACIONES') setActiveTab('rcv');
-                    if (ribbonTab === 'IMPUESTOS') setActiveTab('formulario29');
-                    if (ribbonTab === 'INDICADORES') setActiveTab('indicadoresFinancieros');
-                    if (ribbonTab === 'CONFIGURACIONES' && !['accounts', 'auxiliaries', 'exchange', 'rcvParams', 'periods', 'plantillasCarga', 'productsServices'].includes(activeTab)) {
-                      setActiveTab('accounts');
-                    }
-                  }}
-                  className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all uppercase tracking-wider whitespace-nowrap flex items-center gap-1 cursor-pointer ${
-                    isActive
-                      ? 'bg-[#533AFD] text-white shadow-xs'
-                      : 'text-slate-600 hover:text-[#0D253D] hover:bg-slate-100'
-                  }`}
-                >
-                  <span className={`text-[10px] font-mono px-1 py-0.2 rounded font-bold ${isActive ? 'bg-white/20 text-white' : 'bg-slate-200/80 text-slate-700'}`}>
-                    {idx + 1}
-                  </span>
-                  <span>{displayLabels[ribbonTab]}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Lado Derecho: Selector de Año, Mes Operativo & Importar Excel */}
-          <div className="flex items-center gap-1.5 text-xs shrink-0 flex-wrap">
-            <div className="flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-200/80 shadow-2xs">
-              <label className="text-slate-500 font-bold text-[10px]">Año:</label>
-              <select
-                value={selectedYear}
-                onChange={(e) => {
-                  const yr = parseInt(e.target.value);
-                  setSelectedYear(yr);
-                  handleEnsureFiscalYear(yr);
-                  const fy = fiscalYears.find(f => f.id === String(yr));
-                  if (fy && fy.months) {
-                    let foundOpen = '';
-                    for (let m = 1; m <= 12; m++) {
-                      if (fy.months[m] === 'Abierto') {
-                        foundOpen = `${yr}-${String(m).padStart(2, '0')}`;
-                        break;
-                      }
-                    }
-                    if (foundOpen) {
-                      setSelectedRcvPeriod(foundOpen);
-                    }
-                  }
-                }}
-                className="font-bold text-[#0D253D] font-mono bg-white border border-slate-200 rounded px-1.5 py-0.5 text-xs focus:ring-1 focus:ring-indigo-500/20 cursor-pointer"
-              >
-                {[2027, 2026, 2025].map(y => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-200/80 shadow-2xs">
-              <label className="text-slate-500 font-bold text-[10px] flex items-center gap-1">
-                <span>Mes:</span>
-                {(() => {
-                  const check = checkIsPeriodClosed(selectedRcvPeriod);
-                  return (
-                    <span className={`text-[9px] px-1.5 py-0.2 rounded font-mono font-bold flex items-center gap-0.5 ${
-                      check.isClosed 
-                        ? 'bg-rose-50 text-rose-700 border border-rose-200' 
-                        : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                    }`}>
-                      {check.isClosed ? (
-                        <>
-                          <Lock className="w-2.5 h-2.5 stroke-[2]" />
-                          <span>Cerrado</span>
-                        </>
-                      ) : (
-                        <>
-                          <Unlock className="w-2.5 h-2.5 stroke-[2]" />
-                          <span>Abierto</span>
-                        </>
-                      )}
-                    </span>
-                  );
-                })()}
-              </label>
-              <select
-                value={selectedRcvPeriod}
-                onChange={(e) => {
-                  const newPeriod = e.target.value;
-                  if (!newPeriod) return;
-                  const check = checkIsPeriodClosed(newPeriod);
-                  if (check.isClosed) {
-                    alert(`⚠️ Período Cerrado:\n\nEl período ${newPeriod} se encuentra CERRADO.\n\nSolo se permite seleccionar períodos ABIERTOS. Para trabajar en este mes, debes abrirlo primero en 'Configuraciones > Períodos Contables'.`);
-                    return;
-                  }
-                  setSelectedRcvPeriod(newPeriod);
-                }}
-                className="font-bold text-[#0D253D] font-mono bg-white border border-slate-200 rounded px-1.5 py-0.5 text-xs focus:ring-1 focus:ring-indigo-500/20 cursor-pointer"
-                title="Período de trabajo activo"
-              >
-                {(() => {
-                  const currFy = fiscalYears.find(f => f.id === String(selectedYear));
-                  const monthNames = ['', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-                  const monthOptions: { periodStr: string; label: string; isOpen: boolean }[] = [];
-                  for (let m = 1; m <= 12; m++) {
-                    const mStr = String(m).padStart(2, '0');
-                    const periodStr = `${selectedYear}-${mStr}`;
-                    const isOpen = currFy ? currFy.months[m] === 'Abierto' : false;
-                    monthOptions.push({
-                      periodStr,
-                      label: `${monthNames[m]} ${selectedYear} — ${isOpen ? 'Abierto' : '🔒 Cerrado'}`,
-                      isOpen
-                    });
-                  }
-                  const hasAnyOpen = monthOptions.some(o => o.isOpen);
-                  if (!hasAnyOpen) {
-                    return (
-                      <option value="" disabled>
-                        ⚠️ Sin meses abiertos en {selectedYear}
-                      </option>
-                    );
-                  }
-                  return monthOptions.map((opt) => (
-                    <option 
-                      key={opt.periodStr} 
-                      value={opt.periodStr}
-                      disabled={!opt.isOpen}
-                      className={!opt.isOpen ? 'text-slate-400 bg-slate-100 italic' : 'text-slate-900 font-bold'}
-                    >
-                      {opt.label}
-                    </option>
-                  ));
-                })()}
-              </select>
-            </div>
-
-            <button
-              onClick={() => setShowExcelImportModal(true)}
-              className="bg-[#533AFD] hover:bg-[#4326EB] text-white font-bold px-2.5 py-1 rounded-lg text-xs flex items-center gap-1 shadow-xs transition-all cursor-pointer"
-              title="Cargar Plan de Cuentas, Clientes, Proveedores o Comprobantes desde archivo Excel/CSV"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span className="hidden xl:inline">Importar Excel</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Fila Inferior: Sub-Ribbon Horizontal de Fichas de Trabajo */}
-        <div className="relative bg-slate-50/90 rounded-xl p-1 border border-slate-200/70 flex items-center">
-          {/* Flecha izquierda */}
-          <button
-            type="button"
-            onClick={() => scrollSubRibbon('left')}
-            className="flex-shrink-0 p-1 text-slate-500 hover:text-slate-800 hover:bg-white rounded-md border border-slate-200 transition-colors mr-1 z-10 shadow-2xs cursor-pointer"
-            title="Desplazar opciones hacia la izquierda"
-          >
-            <ChevronLeft className="w-3.5 h-3.5" />
-          </button>
-
-          {/* Contenedor desplazable de herramientas / sub-pestañas */}
-          <div
-            ref={subRibbonScrollRef}
-            className="flex-1 flex items-center gap-1.5 overflow-x-auto scroll-smooth no-scrollbar py-0.5 px-1"
-          >
-              {/* 1. GRUPO: FINANZAS */}
-              {activeRibbonGroup === 'FINANZAS' && (
-                <>
-                  <button
-                    onClick={() => setActiveTab('vouchers')}
-                    className={getSubRibbonBtnClass(activeTab === 'vouchers')}
-                  >
-                    <FileText className={`w-3.5 h-3.5 ${activeTab === 'vouchers' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Vouchers</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('libroDiario')}
-                    className={getSubRibbonBtnClass(activeTab === 'libroDiario')}
-                  >
-                    <BookOpen className={`w-3.5 h-3.5 ${activeTab === 'libroDiario' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Libro Diario</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('libroMayor')}
-                    className={getSubRibbonBtnClass(activeTab === 'libroMayor')}
-                  >
-                    <Layers className={`w-3.5 h-3.5 ${activeTab === 'libroMayor' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Libro Mayor</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('analisisAuxiliares')}
-                    className={getSubRibbonBtnClass(activeTab === 'analisisAuxiliares')}
-                  >
-                    <Users className={`w-3.5 h-3.5 ${activeTab === 'analisisAuxiliares' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Auxiliar Cuentas Corrientes</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('analisisCuentas')}
-                    className={getSubRibbonBtnClass(activeTab === 'analisisCuentas')}
-                  >
-                    <Sliders className={`w-3.5 h-3.5 ${activeTab === 'analisisCuentas' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Análisis de Cuentas</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('reportesAnaliticos')}
-                    className={getSubRibbonBtnClass(activeTab === 'reportesAnaliticos')}
-                  >
-                    <TableIcon className={`w-3.5 h-3.5 ${activeTab === 'reportesAnaliticos' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Reportes Analíticos & Ventas</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('balance8')}
-                    className={getSubRibbonBtnClass(activeTab === 'balance8')}
-                  >
-                    <Scale className={`w-3.5 h-3.5 ${activeTab === 'balance8' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Balance 8 Columnas</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('auditorEstadosFinancieros')}
-                    className={getSubRibbonBtnClass(activeTab === 'auditorEstadosFinancieros', 'indigo')}
-                  >
-                    <ShieldCheck className="w-3.5 h-3.5 text-indigo-500" />
-                    <span>Auditor de Estados Financieros</span>
-                  </button>
-                   <button
-                     onClick={() => setActiveTab('smartNotebooks')}
-                     className={getSubRibbonBtnClass(activeTab === 'smartNotebooks', 'gradient')}
-                   >
-                     <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
-                     <span>Cuadernos Inteligentes IA</span>
-                     <span className="bg-indigo-600 text-white text-[9px] font-bold px-1.5 py-0.2 rounded-full">Trial 15d</span>
-                   </button>
-                  <button
-                    onClick={() => setActiveTab('controlFolios')}
-                    className={getSubRibbonBtnClass(activeTab === 'controlFolios')}
-                  >
-                    <Printer className={`w-3.5 h-3.5 ${activeTab === 'controlFolios' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Timbraje y Folios SII</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('productsServices')}
-                    className={getSubRibbonBtnClass(activeTab === 'productsServices')}
-                  >
-                    <Boxes className={`w-3.5 h-3.5 ${activeTab === 'productsServices' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Catálogo de Productos & Servicios</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('tablasAnalisis')}
-                    className={getSubRibbonBtnClass(activeTab === 'tablasAnalisis')}
-                  >
-                    <FolderTree className={`w-3.5 h-3.5 ${activeTab === 'tablasAnalisis' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Catálogos de Análisis</span>
-                  </button>
-                </>
-              )}
-
-              {/* 2. GRUPO: COMERCIAL / OPERACIONES */}
-              {activeRibbonGroup === 'OPERACIONES' && (
-                <>
-                  <button
-                    onClick={() => setActiveTab('operativaComercial')}
-                    className={getSubRibbonBtnClass(activeTab === 'operativaComercial')}
-                  >
-                    <ShoppingCart className={`w-3.5 h-3.5 ${activeTab === 'operativaComercial' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Módulo Comercial (Compras y Ventas)</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('stockKardex')}
-                    className={getSubRibbonBtnClass(activeTab === 'stockKardex')}
-                  >
-                    <Package className={`w-3.5 h-3.5 ${activeTab === 'stockKardex' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Control de Inventario & Kardex PMP</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('warehouses')}
-                    className={getSubRibbonBtnClass(activeTab === 'warehouses')}
-                  >
-                    <WarehouseIcon className={`w-3.5 h-3.5 ${activeTab === 'warehouses' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Maestro Multi-Bodega</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('productsServices')}
-                    className={getSubRibbonBtnClass(activeTab === 'productsServices')}
-                  >
-                    <Boxes className={`w-3.5 h-3.5 ${activeTab === 'productsServices' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Catálogo de Productos & Servicios</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('reportesAnaliticos')}
-                    className={getSubRibbonBtnClass(activeTab === 'reportesAnaliticos')}
-                  >
-                    <TableIcon className={`w-3.5 h-3.5 ${activeTab === 'reportesAnaliticos' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Reportes Dinámicos & Ventas</span>
-                  </button>
-                </>
-              )}
-
-              {/* 3. GRUPO: TESORERÍA */}
-              {activeRibbonGroup === 'TESORERIA' && (
-                <>
-                  <button
-                    onClick={() => setActiveTab('nominasPago')}
-                    className={getSubRibbonBtnClass(activeTab === 'nominasPago')}
-                  >
-                    <CreditCard className={`w-3.5 h-3.5 ${activeTab === 'nominasPago' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Nóminas de Pago a Proveedores</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('cobranza')}
-                    className={getSubRibbonBtnClass(activeTab === 'cobranza')}
-                  >
-                    <Receipt className={`w-3.5 h-3.5 ${activeTab === 'cobranza' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Cobranza y Cuentas por Cobrar</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('flujoDeCaja')}
-                    className={getSubRibbonBtnClass(activeTab === 'flujoDeCaja')}
-                  >
-                    <TrendingUp className={`w-3.5 h-3.5 ${activeTab === 'flujoDeCaja' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Flujo de Caja Real & Proyectado</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('conciliacionBancaria')}
-                    className={getSubRibbonBtnClass(activeTab === 'conciliacionBancaria')}
-                  >
-                    <Landmark className={`w-3.5 h-3.5 ${activeTab === 'conciliacionBancaria' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Conciliación Bancaria</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('libroBancoColaborativo')}
-                    className={getSubRibbonBtnClass(activeTab === 'libroBancoColaborativo', 'indigo')}
-                  >
-                    <Landmark className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Libro Banco & Cartola (Aclaraciones)</span>
-                  </button>
-                </>
-              )}
-
-              {/* GRUPO: PERSONAL & REMUNERACIONES */}
-              {activeRibbonGroup === 'PERSONAL' && (
-                <>
-                  <button
-                    onClick={() => { setActiveTab('employees'); setEmployeeSubTab('employees'); }}
-                    className={getSubRibbonBtnClass(activeTab === 'employees' && employeeSubTab === 'employees')}
-                  >
-                    <Users className={`w-3.5 h-3.5 ${activeTab === 'employees' && employeeSubTab === 'employees' ? 'text-indigo-300' : 'text-indigo-600'}`} />
-                    <span>Fichas del Personal</span>
-                  </button>
-                  <button
-                    onClick={() => { setActiveTab('employees'); setEmployeeSubTab('contracts'); }}
-                    className={getSubRibbonBtnClass(activeTab === 'employees' && employeeSubTab === 'contracts')}
-                  >
-                    <FileText className={`w-3.5 h-3.5 ${activeTab === 'employees' && employeeSubTab === 'contracts' ? 'text-indigo-300' : 'text-indigo-600'}`} />
-                    <span>Contratos & Anexos</span>
-                  </button>
-                  <button
-                    onClick={() => { setActiveTab('liquidaciones'); setPayrollTab('NOMINA'); }}
-                    className={getSubRibbonBtnClass(activeTab === 'liquidaciones' && payrollTab === 'NOMINA')}
-                  >
-                    <Calculator className={`w-3.5 h-3.5 ${activeTab === 'liquidaciones' && payrollTab === 'NOMINA' ? 'text-indigo-300' : 'text-emerald-600'}`} />
-                    <span>Cálculo de Remuneraciones</span>
-                  </button>
-                  <button
-                    onClick={() => { setActiveTab('liquidaciones'); setPayrollTab('LIQUIDACION_INDIVIDUAL'); }}
-                    className={getSubRibbonBtnClass(activeTab === 'liquidaciones' && payrollTab === 'LIQUIDACION_INDIVIDUAL')}
-                  >
-                    <FileSpreadsheet className={`w-3.5 h-3.5 ${activeTab === 'liquidaciones' && payrollTab === 'LIQUIDACION_INDIVIDUAL' ? 'text-indigo-300' : 'text-indigo-600'}`} />
-                    <span>Liquidaciones Oficiales</span>
-                  </button>
-                  <button
-                    onClick={() => { setActiveTab('liquidaciones'); setPayrollTab('PREVIRED'); }}
-                    className={getSubRibbonBtnClass(activeTab === 'liquidaciones' && payrollTab === 'PREVIRED')}
-                  >
-                    <Download className={`w-3.5 h-3.5 ${activeTab === 'liquidaciones' && payrollTab === 'PREVIRED' ? 'text-indigo-300' : 'text-amber-600'}`} />
-                    <span>Previred (105 campos)</span>
-                  </button>
-                  <button
-                    onClick={() => { setActiveTab('liquidaciones'); setPayrollTab('LRD_DT'); }}
-                    className={getSubRibbonBtnClass(activeTab === 'liquidaciones' && payrollTab === 'LRD_DT')}
-                  >
-                    <Building2 className={`w-3.5 h-3.5 ${activeTab === 'liquidaciones' && payrollTab === 'LRD_DT' ? 'text-indigo-300' : 'text-blue-600'}`} />
-                    <span>Libro Remuneraciones Digital DT</span>
-                  </button>
-                  <button
-                    onClick={() => { setActiveTab('employees'); setEmployeeSubTab('attendance'); }}
-                    className={getSubRibbonBtnClass(activeTab === 'employees' && employeeSubTab === 'attendance')}
-                  >
-                    <Calendar className={`w-3.5 h-3.5 ${activeTab === 'employees' && employeeSubTab === 'attendance' ? 'text-indigo-300' : 'text-purple-600'}`} />
-                    <span>Asistencia & Licencias</span>
-                  </button>
-                  <button
-                    onClick={() => { setActiveTab('employees'); setEmployeeSubTab('advances'); }}
-                    className={getSubRibbonBtnClass(activeTab === 'employees' && employeeSubTab === 'advances')}
-                  >
-                    <CreditCard className={`w-3.5 h-3.5 ${activeTab === 'employees' && employeeSubTab === 'advances' ? 'text-indigo-300' : 'text-emerald-600'}`} />
-                    <span>Anticipos & Préstamos</span>
-                  </button>
-                  <button
-                    onClick={() => { setActiveTab('employees'); setEmployeeSubTab('severance'); }}
-                    className={getSubRibbonBtnClass(activeTab === 'employees' && employeeSubTab === 'severance')}
-                  >
-                    <Briefcase className={`w-3.5 h-3.5 ${activeTab === 'employees' && employeeSubTab === 'severance' ? 'text-indigo-300' : 'text-rose-600'}`} />
-                    <span>Finiquitos Legales</span>
-                  </button>
-                  <button
-                    onClick={() => { setActiveTab('employees'); setEmployeeSubTab('certificates'); }}
-                    className={getSubRibbonBtnClass(activeTab === 'employees' && employeeSubTab === 'certificates')}
-                  >
-                    <Sparkles className={`w-3.5 h-3.5 ${activeTab === 'employees' && employeeSubTab === 'certificates' ? 'text-indigo-300' : 'text-amber-500'}`} />
-                    <span>Certificados Laborales</span>
-                  </button>
-                </>
-              )}
-
-              {/* 3. GRUPO: IMPORTACIONES */}
-              {activeRibbonGroup === 'IMPORTACIONES' && (
-                <>
-                  <button
-                    onClick={() => { setActiveTab('rcv'); setRcvFilterType('Compra'); }}
-                    className={getSubRibbonBtnClass(activeTab === 'rcv' && rcvFilterType === 'Compra')}
-                  >
-                    <ShoppingCart className={`w-3.5 h-3.5 ${activeTab === 'rcv' && rcvFilterType === 'Compra' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Compras (RCV)</span>
-                  </button>
-                  <button
-                    onClick={() => { setActiveTab('rcv'); setRcvFilterType('Venta'); }}
-                    className={getSubRibbonBtnClass(activeTab === 'rcv' && rcvFilterType === 'Venta')}
-                  >
-                    <TrendingUp className={`w-3.5 h-3.5 ${activeTab === 'rcv' && rcvFilterType === 'Venta' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Ventas (RCV)</span>
-                  </button>
-                  <button
-                    onClick={() => { setActiveTab('rcv'); setRcvFilterType('Honorarios'); }}
-                    className={getSubRibbonBtnClass(activeTab === 'rcv' && rcvFilterType === 'Honorarios')}
-                  >
-                    <Receipt className={`w-3.5 h-3.5 ${activeTab === 'rcv' && rcvFilterType === 'Honorarios' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Honorarios (BHR)</span>
-                  </button>
-                  <button
-                    onClick={() => { setActiveTab('rcv'); setRcvFilterType('Todos'); }}
-                    className={getSubRibbonBtnClass(activeTab === 'rcv' && rcvFilterType === 'Todos')}
-                  >
-                    <FileText className={`w-3.5 h-3.5 ${activeTab === 'rcv' && rcvFilterType === 'Todos' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Todos los Documentos RCV</span>
-                  </button>
-                </>
-              )}
-
-              {/* 4. GRUPO: IMPUESTOS F.29 */}
-              {activeRibbonGroup === 'IMPUESTOS' && (
-                <>
-                  <button
-                    onClick={() => setActiveTab('formulario29')}
-                    className={getSubRibbonBtnClass(activeTab === 'formulario29')}
-                  >
-                    <FileSpreadsheet className={`w-3.5 h-3.5 ${activeTab === 'formulario29' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Formulario 29 Mensual (F29 - SII)</span>
-                  </button>
-                  <button
-                    onClick={() => { setActiveTab('rcv'); setRcvFilterType('Compra'); }}
-                    className={getSubRibbonBtnClass(activeTab === 'rcv')}
-                  >
-                    <BarChart3 className={`w-3.5 h-3.5 ${activeTab === 'rcv' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Registro Compras y Ventas (RCV)</span>
-                  </button>
-                </>
-              )}
-
-              {/* 5. GRUPO: INDICADORES (KPIs) */}
-              {activeRibbonGroup === 'INDICADORES' && (
-                <>
-                  <button
-                    onClick={() => setActiveTab('indicadoresFinancieros')}
-                    className={getSubRibbonBtnClass(activeTab === 'indicadoresFinancieros')}
-                  >
-                    <BarChart3 className={`w-3.5 h-3.5 ${activeTab === 'indicadoresFinancieros' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Tablero de Indicadores Financieros & KPIs</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('reportesAnaliticos')}
-                    className={getSubRibbonBtnClass(activeTab === 'reportesAnaliticos')}
-                  >
-                    <TableIcon className={`w-3.5 h-3.5 ${activeTab === 'reportesAnaliticos' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Matriz Dinámica & Ventas</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('auditorEstadosFinancieros')}
-                    className={getSubRibbonBtnClass(activeTab === 'auditorEstadosFinancieros', 'indigo')}
-                  >
-                    <ShieldCheck className="w-3.5 h-3.5 text-indigo-500" />
-                    <span>Auditor de Estados Financieros</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('balanceIFRS')}
-                    className={getSubRibbonBtnClass(activeTab === 'balanceIFRS')}
-                  >
-                    <Scale className={`w-3.5 h-3.5 ${activeTab === 'balanceIFRS' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Balance Clasificado (IFRS)</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('estadoResultados')}
-                    className={getSubRibbonBtnClass(activeTab === 'estadoResultados')}
-                  >
-                    <TrendingUp className={`w-3.5 h-3.5 ${activeTab === 'estadoResultados' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Estado de Resultados</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('flujoDeCaja')}
-                    className={getSubRibbonBtnClass(activeTab === 'flujoDeCaja')}
-                  >
-                    <Landmark className={`w-3.5 h-3.5 ${activeTab === 'flujoDeCaja' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Flujo y Proyección de Caja</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('exchange')}
-                    className={getSubRibbonBtnClass(activeTab === 'exchange')}
-                  >
-                    <Sliders className={`w-3.5 h-3.5 ${activeTab === 'exchange' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Indicadores Económicos Oficiales</span>
-                  </button>
-                </>
-              )}
-
-              {/* 6. GRUPO: CONFIGURACIONES */}
-              {activeRibbonGroup === 'CONFIGURACIONES' && (
-                <>
-                  <button
-                    onClick={() => setActiveTab('accounts')}
-                    className={getSubRibbonBtnClass(activeTab === 'accounts')}
-                  >
-                    <Layers className={`w-3.5 h-3.5 ${activeTab === 'accounts' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Plan de Cuentas</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('auxiliaries')}
-                    className={getSubRibbonBtnClass(activeTab === 'auxiliaries')}
-                  >
-                    <Users className={`w-3.5 h-3.5 ${activeTab === 'auxiliaries' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Maestro de Auxiliares</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('productsServices')}
-                    className={getSubRibbonBtnClass(activeTab === 'productsServices')}
-                  >
-                    <Boxes className={`w-3.5 h-3.5 ${activeTab === 'productsServices' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Catálogo de Productos & Servicios</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('tablasAnalisis')}
-                    className={getSubRibbonBtnClass(activeTab === 'tablasAnalisis')}
-                  >
-                    <FolderTree className={`w-3.5 h-3.5 ${activeTab === 'tablasAnalisis' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Catálogos de Análisis</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('rcvParams')}
-                    className={getSubRibbonBtnClass(activeTab === 'rcvParams')}
-                  >
-                    <Settings className={`w-3.5 h-3.5 ${activeTab === 'rcvParams' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Parámetros Contables RCV</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('f29Codes')}
-                    className={getSubRibbonBtnClass(activeTab === 'f29Codes')}
-                  >
-                    <FileSpreadsheet className={`w-3.5 h-3.5 ${activeTab === 'f29Codes' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Configuración Códigos F.29</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('periods')}
-                    className={getSubRibbonBtnClass(activeTab === 'periods')}
-                  >
-                    <Calendar className={`w-3.5 h-3.5 ${activeTab === 'periods' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Apertura Ejercicios y Períodos</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('plantillasCarga')}
-                    className={getSubRibbonBtnClass(activeTab === 'plantillasCarga')}
-                  >
-                    <Download className={`w-3.5 h-3.5 ${activeTab === 'plantillasCarga' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Plantillas Excel y Cargas Masivas</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('exchange')}
-                    className={getSubRibbonBtnClass(activeTab === 'exchange')}
-                  >
-                    <Sliders className={`w-3.5 h-3.5 ${activeTab === 'exchange' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Indicadores Económicos (UF, USD, UTM)</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('controlFolios')}
-                    className={getSubRibbonBtnClass(activeTab === 'controlFolios')}
-                  >
-                    <Printer className={`w-3.5 h-3.5 ${activeTab === 'controlFolios' ? 'text-indigo-300' : 'text-slate-500'}`} />
-                    <span>Autorizaciones de Folios SII</span>
-                  </button>
-                </>
-              )}
-            </div>
-
-            {/* Flecha derecha */}
-            <button
-              type="button"
-              onClick={() => scrollSubRibbon('right')}
-              className="flex-shrink-0 p-1.5 text-slate-500 hover:text-slate-800 hover:bg-white rounded-lg border border-slate-200 transition-colors ml-1 z-10 shadow-2xs cursor-pointer"
-              title="Desplazar opciones hacia la derecha"
-            >
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-
-      {/* Modal Histórico Completo de Factores Económicos */}
+      {/* Modal Histórico Completo de Factores Económicos */}      {/* Modal Histórico Completo de Factores Económicos */}
       {showHistoricalRatesModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-4xl w-full max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
@@ -5375,6 +4922,34 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
             isReadOnly={isReadOnly}
           />
         </div>
+      )}
+
+      {/* TAB: CENTRO DE CONTROL AGÉNTICO ESTUDIO 2040 (C1) */}
+      {activeTab === 'agenticStudy2040' && (
+        <AgenticStudyHub2040
+          company={company}
+          vouchers={vouchers}
+          rcvDocuments={rcvDocuments}
+          bankReconciliations={bankReconciliations}
+          accounts={accounts}
+          onNavigateToTab={(targetTab) => {
+            setActiveTab(targetTab as any);
+          }}
+          onRefreshData={fetchData}
+        />
+      )}
+
+      {/* TAB: CENTRO DE CONTROL AGÉNTICO PYME 2040 (C2) */}
+      {activeTab === 'agenticPyme2040' && (
+        <AgenticPymeHub2040
+          company={company}
+          rcvDocuments={rcvDocuments}
+          commercialDocs={[]}
+          vouchers={vouchers}
+          onNavigateToTab={(targetTab) => {
+            setActiveTab(targetTab as any);
+          }}
+        />
       )}
 
       {/* EXCHANGE RATES TAB: INDICADORES ECONÓMICOS OFICIALES DE CHILE */}
@@ -5798,6 +5373,47 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
             </button>
           </div>
         </div>
+      )}
+
+      {/* TAB AGÉNTICO 2040: ESTUDIO CONTABLE (VERSIÓN C1) */}
+      {activeTab === 'agenticStudy2040' && (
+        <AgenticStudyHub2040
+          company={company}
+          vouchers={vouchers}
+          rcvDocuments={rcvDocuments}
+          bankReconciliations={bankReconciliations}
+          accounts={accounts}
+          onNavigateToTab={(t) => {
+            if (t === 'vouchers' || t === 'libroDiario' || t === 'libroMayor' || t === 'balance8') {
+              setActiveRibbonGroup('FINANZAS');
+            } else if (t === 'rcv') {
+              setActiveRibbonGroup('IMPORTACIONES');
+            } else if (t === 'formulario29') {
+              setActiveRibbonGroup('IMPUESTOS');
+            } else if (t === 'conciliacionBancaria') {
+              setActiveRibbonGroup('TESORERIA');
+            }
+            setActiveTab(t as any);
+          }}
+          onRefreshData={fetchData}
+        />
+      )}
+
+      {/* TAB AGÉNTICO 2040: PYME & EMPRESA (VERSIÓN C2) */}
+      {activeTab === 'agenticPyme2040' && (
+        <AgenticPymeHub2040
+          company={company}
+          rcvDocuments={rcvDocuments}
+          vouchers={vouchers}
+          onNavigateToTab={(t) => {
+            if (t === 'emisionDte' || t === 'operativaComercial') {
+              setActiveRibbonGroup('OPERACIONES');
+            } else if (t === 'cobranza' || t === 'flujoDeCaja') {
+              setActiveRibbonGroup('TESORERIA');
+            }
+            setActiveTab(t as any);
+          }}
+        />
       )}
 
       {/* TAB 3: FISCAL PERIODS */}
@@ -6834,10 +6450,18 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
               </tbody>
             </table>
           </div>
+        </div>
+      )}
 
-          {/* Modal Detalle de Comprobante */}
-          {selectedVoucher && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+      {/* ========================================================================= */}
+      {/* MODALES GLOBALES DE COMPROBANTES CONTABLES                                */}
+      {/* Accesibles desde cualquier módulo (Auxiliares, Cuentas, Mayor, Diario, etc.)*/}
+      {/* Permiten consultar, modificar, anular o eliminar sin salir de la vista    */}
+      {/* ========================================================================= */}
+
+      {/* Modal Detalle de Comprobante */}
+      {selectedVoucher && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
               <div className="bg-white rounded-xl shadow-xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[90vh]">
                 <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-50">
                   <div className="flex items-center gap-3">
@@ -8089,8 +7713,6 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
               </div>
             </div>
           )}
-        </div>
-      )}
 
       {/* TAB: LIBRO DIARIO */}
       {activeTab === 'libroDiario' && (
@@ -8100,6 +7722,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
           vouchers={vouchers}
           accounts={accounts}
           fiscalYears={fiscalYears}
+          onViewVoucher={handleOpenVoucherModal}
           onEditVoucher={handleOpenEditVoucher}
           onFixCeecVouchers={handleAutoFixCeecVouchers}
         />
@@ -8113,6 +7736,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
           vouchers={vouchers}
           accounts={accounts}
           fiscalYears={fiscalYears}
+          onViewVoucher={handleOpenVoucherModal}
         />
       )}
 
@@ -8160,6 +7784,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
           rcvDocuments={rcvDocuments}
           vouchers={vouchers}
           fiscalYears={fiscalYears}
+          onOpenVoucher={handleOpenVoucherModal}
         />
       )}
 
@@ -8174,6 +7799,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
           auxiliaries={auxiliaries}
           rcvDocuments={rcvDocuments}
           onVouchersUpdated={fetchData}
+          onOpenVoucher={handleOpenVoucherModal}
         />
       )}
 
@@ -8294,6 +7920,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
           onResetPayrollSlips={handleResetPayrollSlips}
           onCentralizePayrollVoucher={handleCentralizePayrollVoucher}
           onNavigateToLibroDiario={(vId) => setActiveTab('libroDiario')}
+          onOpenVoucher={handleOpenVoucherModal}
           savedSlips={payrollSlips}
           initialTab={payrollTab}
           onTabChange={(t) => setPayrollTab(t)}
@@ -8349,6 +7976,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
       {/* TAB: CONCILIACIÓN BANCARIA (Se mantiene montado para preservar el trabajo en progreso al navegar por las pestañas) */}
       <div className={activeTab === 'conciliacionBancaria' ? 'block' : 'hidden'}>
         <ConciliacionBancariaView
+           isEmbedded={true}
           studyId={studyId}
           company={company}
           accounts={accounts}
@@ -8362,6 +7990,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
           products={products as unknown as ProductMaster[]}
           customAnalysisItems={customAnalysisItems}
           onVouchersUpdated={fetchData}
+          onOpenVoucher={handleOpenVoucherModal}
           onClose={() => setActiveTab('vouchers')}
         />
       </div>
@@ -8634,8 +8263,8 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
 
       {/* MODAL DE CONFIGURACIÓN DE ACCESO RÁPIDO ESTILO EXCEL */}
       {showQuickAccessConfig && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl w-full max-w-md overflow-hidden">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-md overflow-hidden">
             <div className="bg-slate-900 text-white p-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Pin className="w-4 h-4 text-indigo-400" />
@@ -8727,6 +8356,48 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
         onSuccess={() => {
           fetchData();
         }}
+      />
+        </div>
+
+        {/* DOCK LATERAL DERECHO */}
+        {dockPosition === 'right' && (
+          <CockpitDock
+            position="right"
+            onChangePosition={handleSetDockPosition}
+            activeModuleId={activeTab}
+            openModuleIds={openTabs.map(t => t.moduleId)}
+            onOpenModule={handleOpenModuleInTab}
+            onOpenNewTabModal={() => setShowNewTabModal(true)}
+            pinnedModuleIds={pinnedQuickAccessIds}
+          />
+        )}
+      </div>
+
+      {/* DOCK FLOTANTE AL PIE (DEBAJO DE LA SUPERFICIE DE TRABAJO) */}
+      {dockPosition === 'bottom' && (
+        <CockpitDock
+          position="bottom"
+          onChangePosition={handleSetDockPosition}
+          activeModuleId={activeTab}
+          openModuleIds={openTabs.map(t => t.moduleId)}
+          onOpenModule={handleOpenModuleInTab}
+          onOpenNewTabModal={() => setShowNewTabModal(true)}
+          pinnedModuleIds={pinnedQuickAccessIds}
+        />
+      )}
+
+      {/* CATÁLOGO DE MÓDULOS EN MODAL (+) */}
+      <NewTabModal
+        isOpen={showNewTabModal}
+        onClose={() => setShowNewTabModal(false)}
+        onSelectModule={handleOpenModuleInTab}
+        activeModuleIds={openTabs.map(t => t.moduleId)}
+      />
+
+      {/* CALCULADORA TÁCTICA FLOTANTE & CINTA DE MEMORIA */}
+      <FloatingAccountingCalculator
+        isOpen={showCalculator}
+        onClose={() => setShowCalculator(false)}
       />
     </div>
   );

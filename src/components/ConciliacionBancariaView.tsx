@@ -54,7 +54,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Landmark,
-  Save
+  Save,
+  ExternalLink
 } from 'lucide-react';
 import { ImportCSVModal, ManualMatchModal, QuickVoucherModal } from './BankReconciliationModals';
 import AutoRutMatchModal from './AutoRutMatchModal';
@@ -96,7 +97,9 @@ interface ConciliacionBancariaViewProps {
   currentUserRole?: string;
   onVouchersUpdated?: () => void;
   onAccountsUpdated?: () => void;
+  onOpenVoucher?: (voucherRef: Voucher | string | number) => void;
   onClose?: () => void;
+  isEmbedded?: boolean;
 }
 
 export default function ConciliacionBancariaView({
@@ -113,7 +116,9 @@ export default function ConciliacionBancariaView({
   products = [],
   customAnalysisItems = [],
   onVouchersUpdated,
-  onClose
+  onOpenVoucher,
+  onClose,
+  isEmbedded = true
 }: ConciliacionBancariaViewProps) {
   const [selectedBankAccountId, setSelectedBankAccountId] = useState<string>('');
   const [selectedPeriod, setSelectedPeriod] = useState<string>(() => getLatestOpenPeriod(fiscalYears));
@@ -1573,7 +1578,7 @@ export default function ConciliacionBancariaView({
   }, [manualMatchLine, allBankVouchers, modalScope, modalExactOnly, modalSearch, selectedPeriod]);
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#0b1329]/70 backdrop-blur-xs flex flex-col w-screen h-screen overflow-hidden animate-in fade-in duration-150">
+    <div className={isEmbedded ? "flex flex-col w-full h-full overflow-hidden bg-slate-900 text-slate-100 relative" : "fixed inset-0 z-50 bg-[#0b1329]/70 backdrop-blur-xs flex flex-col w-screen h-screen overflow-hidden animate-in fade-in duration-150"}>
       {/* HEADER DE VENTANA EMERGENTE - PANTALLA COMPLETA SIN DISTRACTORES */}
       <div className="bg-slate-900 text-white px-4 py-2.5 flex items-center justify-between border-b border-slate-800 shrink-0 shadow-lg z-20">
         {/* Lado Izquierdo: Icono, Título y Nombre Empresa */}
@@ -2369,9 +2374,21 @@ export default function ConciliacionBancariaView({
                         <td className="py-2 px-2 text-center font-sans">
                           {l.matchedStatus === 'Conciliado' ? (
                             <div className="flex flex-col items-center">
-                              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800">
-                                ✓ N° {l.matchedVoucherNumber || 'Asiento'}
-                              </span>
+                              {onOpenVoucher ? (
+                                <button
+                                  type="button"
+                                  onClick={() => onOpenVoucher(l.matchedVoucherId || l.matchedVoucherNumber || '')}
+                                  className="inline-flex items-center gap-1 font-bold text-[10px] text-emerald-800 hover:text-emerald-950 bg-emerald-100 hover:bg-emerald-200 px-1.5 py-0.5 rounded border border-emerald-300 transition-all cursor-pointer shadow-2xs group"
+                                  title="Abrir comprobante conciliado para consultar, modificar o anular"
+                                >
+                                  <span>✓ N° {l.matchedVoucherNumber || 'Asiento'}</span>
+                                  <ExternalLink className="w-2.5 h-2.5 text-emerald-600 group-hover:text-emerald-900" />
+                                </button>
+                              ) : (
+                                <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800">
+                                  ✓ N° {l.matchedVoucherNumber || 'Asiento'}
+                                </span>
+                              )}
                               {l.matchedVoucherPeriod && l.matchedVoucherPeriod !== selectedPeriod && (
                                 <span className="text-[9px] text-indigo-700 font-bold bg-indigo-50 px-1 rounded mt-0.5 border border-indigo-200">
                                   🔄 Mes: {l.matchedVoucherPeriod}
@@ -2540,7 +2557,21 @@ export default function ConciliacionBancariaView({
                           </span>
                         )}
                       </td>
-                      <td className="py-2 px-2 font-bold text-indigo-700 font-mono">N° {bv.voucher.voucherNumber}</td>
+                      <td className="py-2 px-2 font-bold text-indigo-700 font-mono">
+                        {onOpenVoucher ? (
+                          <button
+                            type="button"
+                            onClick={() => onOpenVoucher(bv.voucher)}
+                            className="inline-flex items-center gap-1 font-bold text-xs text-indigo-700 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-1.5 py-0.5 rounded border border-indigo-200 transition-all cursor-pointer shadow-2xs group"
+                            title="Abrir comprobante para consultar, modificar, anular o eliminar"
+                          >
+                            <span>N° {bv.voucher.voucherNumber}</span>
+                            <ExternalLink className="w-2.5 h-2.5 text-indigo-500 group-hover:text-indigo-800" />
+                          </button>
+                        ) : (
+                          <span>N° {bv.voucher.voucherNumber}</span>
+                        )}
+                      </td>
                       <td className="py-2 px-2 font-sans truncate max-w-[130px] text-slate-900 font-medium" title={bv.gloss}>
                         {bv.gloss}
                       </td>
@@ -3003,6 +3034,7 @@ export default function ConciliacionBancariaView({
         unmatchedDeposits={statementLines.filter(l => l.matchedStatus !== 'Conciliado' && (l.deposit || 0) > 0)}
         outstandingChecks={allBankVouchers.filter(bv => !bv.isMatchedInCurrent && !bv.isMatchedInOther && (bv.credit || 0) > 0)}
         depositsInTransit={allBankVouchers.filter(bv => !bv.isMatchedInCurrent && !bv.isMatchedInOther && (bv.debit || 0) > 0)}
+        onOpenVoucher={onOpenVoucher}
       />
 
       <JuniorGlossAutomationModal

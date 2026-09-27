@@ -15,6 +15,7 @@ import {
 } from '../types';
 import { getNextOpenPeriodAndDate, checkIsPeriodClosed } from '../utils/periodUtils';
 import { SearchableAuxiliarySelect } from './SearchableAuxiliarySelect';
+import { SearchableAccountSelect } from './SearchableAccountSelect';
 import { useDraggableModal } from '../hooks/useDraggableModal';
 import {
   Plus,
@@ -1672,28 +1673,21 @@ function QuickVoucherModalContent({
                 <label className="block font-bold text-slate-800 mb-1">
                   📊 Cuenta Contable de Contrapartida: <span className="text-rose-600 font-bold">*</span>
                 </label>
-                <select
-                  value={quickExpenseAccountId}
-                  onChange={(e) => {
-                    const newAccId = e.target.value;
-                    setQuickExpenseAccountId(newAccId);
+                <SearchableAccountSelect
+                  accounts={accounts}
+                  valueAccountId={quickExpenseAccountId}
+                  onSelectAccount={(acc) => {
+                    setQuickExpenseAccountId(acc.id);
                     setValidationError(null);
                     setSelectedDocIds({});
-                    const acc = accounts.find(a => a.id === newAccId);
-                    if (!acc || !acc.requiereAuxiliarRUT) {
+                    if (!acc.requiereAuxiliarRUT) {
                       setSelectedAuxiliaryRut('');
                       setSelectedAuxiliaryName('');
                     }
                   }}
-                  className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 font-medium text-xs focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="">-- Seleccionar Cuenta de Contrapartida --</option>
-                  {accounts.map(acc => (
-                    <option key={acc.id} value={acc.id}>
-                      {acc.code} - {acc.name}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="-- Seleccionar Cuenta de Contrapartida --"
+                  className="w-full"
+                />
               </div>
             ) : (
               <div className="md:col-span-2 flex flex-col justify-center bg-indigo-50/50 p-2.5 rounded-lg border border-indigo-100 text-xs">

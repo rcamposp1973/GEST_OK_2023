@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Company, Voucher, ChartOfAccount, FiscalPeriodYear } from '../types';
 import { generateSIIReportPDF } from '../utils/pdfGenerator';
 import { printAndLogOfficialBook } from '../utils/folioService';
-import { BookOpen, Printer, FileText, Download, LayoutList, CheckCircle2, AlertTriangle, Search, Filter, Calendar } from 'lucide-react';
+import { BookOpen, Printer, FileText, Download, LayoutList, CheckCircle2, AlertTriangle, Search, Filter, Calendar, ExternalLink } from 'lucide-react';
 
 interface LibroDiarioViewProps {
   studyId?: string;
@@ -565,9 +565,15 @@ export default function LibroDiarioView({
                   isAnulado ? 'bg-red-100/60 border-red-200' : !isBalanced ? 'bg-rose-50/80 border-rose-200' : 'bg-slate-50 border-slate-200'
                 }`}>
                   <div className="flex items-center gap-2.5 flex-wrap">
-                    <span className="font-mono font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-300 text-xs">
-                      Asiento N° {v.voucherNumber}
-                    </span>
+                    <button
+                      type="button"
+                      onClick={() => (onViewVoucher || onEditVoucher)?.(v)}
+                      className="font-mono font-bold text-slate-900 bg-white hover:bg-indigo-50 hover:text-indigo-700 px-2 py-0.5 rounded border border-slate-300 hover:border-indigo-300 text-xs transition-colors cursor-pointer inline-flex items-center gap-1 group shadow-2xs"
+                      title="Abrir comprobante para consultar, modificar, anular o eliminar"
+                    >
+                      <span>Asiento N° {v.voucherNumber}</span>
+                      <ExternalLink className="w-3 h-3 text-slate-400 group-hover:text-indigo-600 transition-transform group-hover:scale-110" />
+                    </button>
                     <span className="font-mono text-slate-600 text-xs flex items-center gap-1">
                       <Calendar className="w-3 h-3 text-slate-400" />
                       {v.date}
@@ -609,14 +615,17 @@ export default function LibroDiarioView({
                         </div>
                       )}
                     </div>
-                    {onEditVoucher && !isAnulado && (
+                    {(onViewVoucher || onEditVoucher) && (
                       <button
-                        onClick={() => onEditVoucher(v)}
-                        className={`text-[11px] font-semibold px-2 py-0.5 rounded transition-colors ${
-                          !isBalanced ? 'bg-rose-100 hover:bg-rose-200 text-rose-900 font-bold border border-rose-300' : 'text-slate-600 hover:text-slate-900 underline'
+                        type="button"
+                        onClick={() => (onViewVoucher || onEditVoucher)?.(v)}
+                        className={`text-[11px] font-semibold px-2 py-0.5 rounded transition-colors inline-flex items-center gap-1 cursor-pointer ${
+                          !isBalanced && !isAnulado ? 'bg-rose-100 hover:bg-rose-200 text-rose-900 font-bold border border-rose-300' : 'bg-white hover:bg-indigo-50 hover:text-indigo-800 text-slate-700 border border-slate-200 shadow-2xs'
                         }`}
+                        title="Abrir comprobante para consultar, modificar, anular o eliminar"
                       >
-                        {!isBalanced ? '⚠️ Corregir Descuadre' : 'Editar Comprobante'}
+                        <ExternalLink className="w-3 h-3 text-slate-500" />
+                        <span>{!isBalanced && !isAnulado ? '⚠️ Corregir Descuadre' : 'Ver / Modificar'}</span>
                       </button>
                     )}
                   </div>

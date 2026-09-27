@@ -172,7 +172,7 @@ export function SearchableAccountSelect({
                     className={`p-2 rounded-lg cursor-pointer flex items-center justify-between gap-2 transition-colors ${
                       isSelected
                         ? 'bg-indigo-50 text-indigo-950 font-bold border border-indigo-200'
-                        : 'hover:bg-slate-50 text-slate-700'
+                        : 'hover:bg-slate-100 text-slate-950'
                     }`}
                   >
                     <div className="flex items-center gap-2 overflow-hidden flex-1">

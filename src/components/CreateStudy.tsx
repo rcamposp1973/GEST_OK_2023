@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { db, auth } from '../lib/firebase';
 import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
-import { UserRole, StudyAdmin, StudyModulePermissions, StudySubscriptionStatus } from '../types';
-import { Building2, UserCheck, Shield, Lock, Eye, EyeOff, CreditCard, Sparkles, Check } from 'lucide-react';
+import { UserRole, StudyAdmin, StudyModulePermissions, StudySubscriptionStatus, SystemAppFormat } from '../types';
+import { Building2, UserCheck, Shield, Lock, Eye, EyeOff, CreditCard, Sparkles, Check, Layers } from 'lucide-react';
 import { formatRut } from '../utils/rutMatcher';
 import { 
   StudyPlanCode, 
@@ -10,6 +10,7 @@ import {
   getDefaultModulesForPlan,
   getOfficialPlansList 
 } from '../constants/subscriptionPlans';
+import { SYSTEM_FORMATS } from '../constants/systemFormats';
 import ModuleAccessMatrix from './ModuleAccessMatrix';
 
 interface CreateStudyProps {
@@ -17,7 +18,8 @@ interface CreateStudyProps {
 }
 
 export default function CreateStudy({ onSuccess }: CreateStudyProps) {
-  // Plan y Módulos
+  // Plan y Módulos y Formato Oficial
+  const [selectedAppFormat, setSelectedAppFormat] = useState<SystemAppFormat>('VERSION_A');
   const [selectedPlanCode, setSelectedPlanCode] = useState<StudyPlanCode>('PLAN_ESTUDIO_10');
   const [modules, setModules] = useState<StudyModulePermissions>(() => getDefaultModulesForPlan('PLAN_ESTUDIO_10'));
   const [subscriptionStatus, setSubscriptionStatus] = useState<StudySubscriptionStatus>('Vigente');
@@ -110,6 +112,7 @@ export default function CreateStudy({ onSuccess }: CreateStudyProps) {
         phone: phone.trim(),
         email: email.trim() || cleanAdminEmail,
         giro: giro.trim(),
+        appFormat: selectedAppFormat,
         planCode: selectedPlanCode,
         planName: planDef.name,
         modules: modules,
@@ -190,6 +193,62 @@ export default function CreateStudy({ onSuccess }: CreateStudyProps) {
       )}
 
       <form onSubmit={handleCreate} className="space-y-6">
+        {/* SECCIÓN 0: FORMATO OFICIAL DEL SISTEMA (A, B, C1, C2) */}
+        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-5 rounded-xl border border-indigo-500/30 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-indigo-800/60 pb-2">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-amber-300" />
+              <div>
+                <h4 className="text-sm font-bold text-white uppercase tracking-wider">
+                  0. Formato de Plataforma Asignado al Contrato
+                </h4>
+                <p className="text-[11px] text-indigo-200">
+                  Selecciona la experiencia y segmento para este cliente (Estudio Contable o Pyme, Tradicional o Agéntico 2040).
+                </p>
+              </div>
+            </div>
+            <span className="text-[10px] font-mono font-bold bg-white/20 text-indigo-100 px-2.5 py-1 rounded-lg">
+              {SYSTEM_FORMATS[selectedAppFormat]?.badgeTitle}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+            {(Object.keys(SYSTEM_FORMATS) as SystemAppFormat[]).map((fmtKey) => {
+              const fmtInfo = SYSTEM_FORMATS[fmtKey];
+              const isSelected = selectedAppFormat === fmtKey;
+              return (
+                <button
+                  key={fmtKey}
+                  type="button"
+                  onClick={() => setSelectedAppFormat(fmtKey)}
+                  className={`p-3.5 rounded-xl border text-left transition-all relative cursor-pointer ${
+                    isSelected
+                      ? 'bg-white text-slate-950 border-white shadow-lg ring-2 ring-indigo-400 scale-[1.02]'
+                      : 'bg-slate-800/80 text-slate-200 border-slate-700 hover:bg-slate-800 hover:border-slate-500'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded font-mono ${
+                      isSelected 
+                        ? 'bg-indigo-600 text-white' 
+                        : fmtInfo.isAgentic 
+                        ? 'bg-violet-500/20 text-violet-300' 
+                        : 'bg-slate-700 text-slate-300'
+                    }`}>
+                      Versión {fmtInfo.letter}
+                    </span>
+                    {isSelected && <Check className="w-4 h-4 text-indigo-600" />}
+                  </div>
+                  <h5 className="text-xs font-black tracking-tight">{fmtInfo.title.split(':')[1] || fmtInfo.title}</h5>
+                  <p className={`text-[10px] mt-1 line-clamp-2 ${isSelected ? 'text-slate-600 font-medium' : 'text-slate-400'}`}>
+                    {fmtInfo.subtitle}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* SECCIÓN 1: SELECCIÓN DE PLAN Y GRILLA PREDEFINIDA */}
         <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-4">
           <div className="flex items-center gap-2 border-b border-slate-200 pb-2.5">

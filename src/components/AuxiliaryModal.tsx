@@ -60,7 +60,7 @@ export default function AuxiliaryModal({
 }: AuxiliaryModalProps) {
   const [rut, setRut] = useState('');
   const [name, setName] = useState('');
-  const [role, setRole] = useState<'Deudor' | 'Acreedor' | 'Ambos'>('Deudor');
+  const [role, setRole] = useState<'Deudor' | 'Acreedor' | 'Personal' | 'Deudores Varios' | 'Acreedores Varios' | 'Ambos'>('Deudor');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [banco, setBanco] = useState('');
@@ -69,6 +69,9 @@ export default function AuxiliaryModal({
 
   const [defaultDebtorAccountId, setDefaultDebtorAccountId] = useState('');
   const [defaultCreditorAccountId, setDefaultCreditorAccountId] = useState('');
+  const [defaultPersonalAccountId, setDefaultPersonalAccountId] = useState('');
+  const [defaultOtherDebtorAccountId, setDefaultOtherDebtorAccountId] = useState('');
+  const [defaultOtherCreditorAccountId, setDefaultOtherCreditorAccountId] = useState('');
   const [defaultExpenseOrIncomeAccountId, setDefaultExpenseOrIncomeAccountId] = useState('');
   const [defaultGloss, setDefaultGloss] = useState('');
 
@@ -104,7 +107,7 @@ export default function AuxiliaryModal({
       if (editingAuxiliary) {
         setRut(editingAuxiliary.rut || '');
         setName(editingAuxiliary.name || '');
-        setRole(editingAuxiliary.role || 'Deudor');
+        setRole((editingAuxiliary.role as any) || 'Deudor');
         setEmail(editingAuxiliary.email || '');
         setPhone(editingAuxiliary.phone || '');
         setBanco(editingAuxiliary.banco || '');
@@ -112,6 +115,9 @@ export default function AuxiliaryModal({
         setNumeroCuenta(editingAuxiliary.numeroCuenta || '');
         setDefaultDebtorAccountId(editingAuxiliary.defaultDebtorAccountId || '');
         setDefaultCreditorAccountId(editingAuxiliary.defaultCreditorAccountId || '');
+        setDefaultPersonalAccountId(editingAuxiliary.defaultPersonalAccountId || '');
+        setDefaultOtherDebtorAccountId(editingAuxiliary.defaultOtherDebtorAccountId || '');
+        setDefaultOtherCreditorAccountId(editingAuxiliary.defaultOtherCreditorAccountId || '');
         setDefaultExpenseOrIncomeAccountId(editingAuxiliary.defaultExpenseOrIncomeAccountId || '');
         setDefaultGloss(editingAuxiliary.defaultGloss || '');
         setDefaultCostCenter(editingAuxiliary.defaultCostCenter || '');
@@ -130,6 +136,9 @@ export default function AuxiliaryModal({
         setNumeroCuenta('');
         setDefaultDebtorAccountId('');
         setDefaultCreditorAccountId('');
+        setDefaultPersonalAccountId('');
+        setDefaultOtherDebtorAccountId('');
+        setDefaultOtherCreditorAccountId('');
         setDefaultExpenseOrIncomeAccountId('');
         setDefaultGloss('');
         setDefaultCostCenter('');
@@ -193,6 +202,9 @@ export default function AuxiliaryModal({
         numeroCuenta: numeroCuenta.trim().toUpperCase(),
         defaultDebtorAccountId: defaultDebtorAccountId || undefined,
         defaultCreditorAccountId: defaultCreditorAccountId || undefined,
+        defaultPersonalAccountId: defaultPersonalAccountId || undefined,
+        defaultOtherDebtorAccountId: defaultOtherDebtorAccountId || undefined,
+        defaultOtherCreditorAccountId: defaultOtherCreditorAccountId || undefined,
         defaultExpenseOrIncomeAccountId: defaultExpenseOrIncomeAccountId || undefined,
         defaultGloss: defaultGloss.trim() || undefined,
         defaultCostCenter: defaultCostCenter ? defaultCostCenter.toUpperCase() : undefined,
@@ -302,17 +314,20 @@ export default function AuxiliaryModal({
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Rol Principal *
+                  Clasificación / Rol Principal *
                 </label>
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value as any)}
                   disabled={isReadOnly}
-                  className="w-full px-3 py-2 text-xs font-semibold bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                  className="w-full px-3 py-2 text-xs font-bold bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none text-slate-900"
                 >
-                  <option value="Deudor">Deudor (Cliente)</option>
-                  <option value="Acreedor">Acreedor (Proveedor)</option>
-                  <option value="Ambos">Ambos (Cliente y Proveedor)</option>
+                  <option value="Deudor">🏢 Deudor (Clientes del giro)</option>
+                  <option value="Acreedor">🏭 Acreedor (Proveedores del giro)</option>
+                  <option value="Personal">👥 Personal (Trabajadores / Anticipos / Préstamos)</option>
+                  <option value="Deudores Varios">🔄 Deudores Varios (No relacionados con el giro)</option>
+                  <option value="Acreedores Varios">🏦 Acreedores Varios (Bancos / Socios / Previsión)</option>
+                  <option value="Ambos">🔀 Ambos / Mixto (Cliente y Proveedor simultáneo)</option>
                 </select>
               </div>
 
@@ -355,18 +370,18 @@ export default function AuxiliaryModal({
               2. Cuentas Contables Asignadas & Datos Bancarios
             </h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Cuenta Contable Deudor / Cliente
+                  Cuenta Deudor / Clientes
                 </label>
                 <select
                   value={defaultDebtorAccountId}
                   onChange={(e) => setDefaultDebtorAccountId(e.target.value)}
                   disabled={isReadOnly}
-                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                  className="w-full px-2.5 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
                 >
-                  <option value="">(Opcional - Usar cuenta por defecto RCV)</option>
+                  <option value="">(Sin asignar / RCV por defecto)</option>
                   {accounts.map(a => (
                     <option key={a.id} value={a.id}>
                       [{a.code}] {a.name}
@@ -377,15 +392,15 @@ export default function AuxiliaryModal({
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Cuenta Contable Acreedor / Proveedor
+                  Cuenta Acreedor / Proveedores
                 </label>
                 <select
                   value={defaultCreditorAccountId}
                   onChange={(e) => setDefaultCreditorAccountId(e.target.value)}
                   disabled={isReadOnly}
-                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                  className="w-full px-2.5 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
                 >
-                  <option value="">(Opcional - Usar cuenta por defecto RCV)</option>
+                  <option value="">(Sin asignar / RCV por defecto)</option>
                   {accounts.map(a => (
                     <option key={a.id} value={a.id}>
                       [{a.code}] {a.name}
@@ -393,29 +408,82 @@ export default function AuxiliaryModal({
                   ))}
                 </select>
               </div>
-            </div>
 
-            {/* CUENTA DE INGRESO O GASTO / COSTO */}
-            <div>
-              <label className="block text-xs font-bold text-indigo-900 mb-1 flex items-center justify-between">
-                <span>Cuenta Contable de Ingreso o Costo/Gasto por Defecto</span>
-              </label>
-              <select
-                value={defaultExpenseOrIncomeAccountId}
-                onChange={(e) => setDefaultExpenseOrIncomeAccountId(e.target.value)}
-                disabled={isReadOnly}
-                className="w-full px-3 py-2 text-xs font-medium bg-indigo-50/50 border border-indigo-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
-              >
-                <option value="">-- Seleccionar Cuenta de Ingreso, Gasto o Costo --</option>
-                {accounts.map(a => (
-                  <option key={a.id} value={a.id}>
-                    [{a.code}] {a.name}
-                  </option>
-                ))}
-              </select>
-              <p className="text-[11px] text-slate-500 mt-1">
-                Al imputar documentos RCV de este auxiliar, el sistema asignará automáticamente esta cuenta contable para la contrapartida de Gasto/Ingreso.
-              </p>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Cuenta Personal (Anticipo / Préstamo)
+                </label>
+                <select
+                  value={defaultPersonalAccountId}
+                  onChange={(e) => setDefaultPersonalAccountId(e.target.value)}
+                  disabled={isReadOnly}
+                  className="w-full px-2.5 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                >
+                  <option value="">(Ej. 1104009 Anticipos / 1104003 Préstamos)</option>
+                  {accounts.map(a => (
+                    <option key={a.id} value={a.id}>
+                      [{a.code}] {a.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Cuenta Deudores Varios (No Giro)
+                </label>
+                <select
+                  value={defaultOtherDebtorAccountId}
+                  onChange={(e) => setDefaultOtherDebtorAccountId(e.target.value)}
+                  disabled={isReadOnly}
+                  className="w-full px-2.5 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                >
+                  <option value="">(Opcional - Deudores no del giro)</option>
+                  {accounts.map(a => (
+                    <option key={a.id} value={a.id}>
+                      [{a.code}] {a.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Cuenta Acreedores Varios (Socios / Bancos)
+                </label>
+                <select
+                  value={defaultOtherCreditorAccountId}
+                  onChange={(e) => setDefaultOtherCreditorAccountId(e.target.value)}
+                  disabled={isReadOnly}
+                  className="w-full px-2.5 py-2 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                >
+                  <option value="">(Opcional - Socios / Previsión / Bancos)</option>
+                  {accounts.map(a => (
+                    <option key={a.id} value={a.id}>
+                      [{a.code}] {a.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-indigo-950 mb-1">
+                  Contrapartida Gasto / Ingreso
+                </label>
+                <select
+                  value={defaultExpenseOrIncomeAccountId}
+                  onChange={(e) => setDefaultExpenseOrIncomeAccountId(e.target.value)}
+                  disabled={isReadOnly}
+                  className="w-full px-2.5 py-2 text-xs font-medium bg-indigo-50/50 border border-indigo-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                >
+                  <option value="">(Cuenta de Gasto/Ingreso por defecto)</option>
+                  {accounts.map(a => (
+                    <option key={a.id} value={a.id}>
+                      [{a.code}] {a.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {/* GLOSA SUGERIDA / PREDETERMINADA */}

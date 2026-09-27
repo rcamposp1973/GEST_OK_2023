@@ -47,6 +47,7 @@ interface PendingItemsReportModalProps {
   unmatchedDeposits: BankStatementLine[]; // Abonos banco no contabilizados
   outstandingChecks: PendingVoucherItem[]; // Cheques girados no cobrados (Crédito en libros)
   depositsInTransit: PendingVoucherItem[]; // Depósitos en tránsito (Débito en libros)
+  onOpenVoucher?: (voucherRef: any) => void;
 }
 
 export default function PendingItemsReportModal({
@@ -60,7 +61,8 @@ export default function PendingItemsReportModal({
   unmatchedCharges,
   unmatchedDeposits,
   outstandingChecks,
-  depositsInTransit
+  depositsInTransit,
+  onOpenVoucher
 }: PendingItemsReportModalProps) {
   if (!isOpen) return null;
 
@@ -292,7 +294,18 @@ export default function PendingItemsReportModal({
                       <div className="flex items-center gap-2 truncate max-w-[480px]">
                         <span className="text-slate-500 font-semibold">{l.date || l.period || period}</span>
                         <span className="font-sans text-slate-800 truncate">{l.gloss}</span>
-                        {(l.voucherNumber || l.documentNumber) && <span className="bg-slate-100 px-1 rounded text-slate-600 text-[10px]">N° {l.voucherNumber || l.documentNumber}</span>}
+                        {l.voucherNumber ? (
+                          <button
+                            type="button"
+                            onClick={() => onOpenVoucher?.(l.id || l.voucherNumber)}
+                            className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 hover:text-indigo-900 border border-indigo-200 px-1.5 py-0.2 rounded text-[10px] font-bold cursor-pointer transition-colors"
+                            title="Abrir comprobante para consultar, modificar o anular"
+                          >
+                            N° {l.voucherNumber}
+                          </button>
+                        ) : l.documentNumber ? (
+                          <span className="bg-slate-100 px-1 rounded text-slate-600 text-[10px]">Doc {l.documentNumber}</span>
+                        ) : null}
                       </div>
                       <span className="font-bold text-rose-700">-${(Number(l.credit) || 0).toLocaleString('es-CL')}</span>
                     </div>
@@ -316,7 +329,18 @@ export default function PendingItemsReportModal({
                       <div className="flex items-center gap-2 truncate max-w-[480px]">
                         <span className="text-slate-500 font-semibold">{l.date || l.period || period}</span>
                         <span className="font-sans text-slate-800 truncate">{l.gloss}</span>
-                        {(l.voucherNumber || l.documentNumber) && <span className="bg-slate-100 px-1 rounded text-slate-600 text-[10px]">N° {l.voucherNumber || l.documentNumber}</span>}
+                        {l.voucherNumber ? (
+                          <button
+                            type="button"
+                            onClick={() => onOpenVoucher?.(l.id || l.voucherNumber)}
+                            className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 hover:text-indigo-900 border border-indigo-200 px-1.5 py-0.2 rounded text-[10px] font-bold cursor-pointer transition-colors"
+                            title="Abrir comprobante para consultar, modificar o anular"
+                          >
+                            N° {l.voucherNumber}
+                          </button>
+                        ) : l.documentNumber ? (
+                          <span className="bg-slate-100 px-1 rounded text-slate-600 text-[10px]">Doc {l.documentNumber}</span>
+                        ) : null}
                       </div>
                       <span className="font-bold text-emerald-700">+${(Number(l.debit) || 0).toLocaleString('es-CL')}</span>
                     </div>

@@ -36,6 +36,7 @@ interface LiquidacionSueldosViewProps {
   onResetPayrollSlips?: (periodToReset?: string) => Promise<void>;
   onCentralizePayrollVoucher: (voucher: Omit<Voucher, 'id' | 'createdAt'>) => Promise<string>;
   onNavigateToLibroDiario?: (voucherId: string) => void;
+  onOpenVoucher?: (voucherRef: Voucher | string | number) => void;
   savedSlips?: PayrollSlip[];
   initialTab?: 'NOMINA' | 'LIQUIDACION_INDIVIDUAL' | 'CONCEPTOS' | 'RELIQUIDACIONES' | 'PARAMETROS' | 'LRD_DT' | 'PREVIRED';
   onTabChange?: (tab: 'NOMINA' | 'LIQUIDACION_INDIVIDUAL' | 'CONCEPTOS' | 'RELIQUIDACIONES' | 'PARAMETROS' | 'LRD_DT' | 'PREVIRED') => void;
@@ -63,6 +64,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
   onResetPayrollSlips,
   onCentralizePayrollVoucher,
   onNavigateToLibroDiario,
+  onOpenVoucher,
   savedSlips = [],
   initialTab = 'NOMINA',
   onTabChange,
@@ -1150,7 +1152,18 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
           {existingCentralizationVoucher && (
             <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200">
               <CheckCircle2 className="w-4 h-4" />
-              <span>Centralizado en Folio #{existingCentralizationVoucher.voucherNumber}</span>
+              {onOpenVoucher ? (
+                <button
+                  type="button"
+                  onClick={() => onOpenVoucher(existingCentralizationVoucher)}
+                  className="font-bold underline hover:text-emerald-950 cursor-pointer"
+                  title="Abrir comprobante de remuneraciones para consultar, modificar o anular"
+                >
+                  Centralizado en Folio #{existingCentralizationVoucher.voucherNumber}
+                </button>
+              ) : (
+                <span>Centralizado en Folio #{existingCentralizationVoucher.voucherNumber}</span>
+              )}
               {onNavigateToLibroDiario && (
                 <button
                   onClick={() => onNavigateToLibroDiario(existingCentralizationVoucher.id)}

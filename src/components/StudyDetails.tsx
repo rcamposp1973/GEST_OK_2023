@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
 import { collection, onSnapshot, updateDoc, doc, getDocs, addDoc, deleteDoc } from 'firebase/firestore';
-import { Study, Company, User, Plan, UserRole, StudyAdmin, StudyModulePermissions, StudySubscriptionStatus } from '../types';
+import { Study, Company, User, Plan, UserRole, StudyAdmin, StudyModulePermissions, StudySubscriptionStatus, SystemAppFormat } from '../types';
 import StudyAdminDashboard from './StudyAdminDashboard';
-import { ShieldAlert, ArrowLeft, Edit3, Save, ExternalLink, UserPlus, Shield, CheckCircle2, XCircle, Key, Phone, Mail, UserCheck, AlertTriangle, Eye, EyeOff, Trash2, CreditCard, Sparkles, Check } from 'lucide-react';
+import { ShieldAlert, ArrowLeft, Edit3, Save, ExternalLink, UserPlus, Shield, CheckCircle2, XCircle, Key, Phone, Mail, UserCheck, AlertTriangle, Eye, EyeOff, Trash2, CreditCard, Sparkles, Check, Layers, Bot, ShoppingCart } from 'lucide-react';
 import { 
   StudyPlanCode, 
   OFFICIAL_SUBSCRIPTION_PLANS, 
   getDefaultModulesForPlan 
 } from '../constants/subscriptionPlans';
+import { SYSTEM_FORMATS } from '../constants/systemFormats';
+import { useSystemFormat } from '../context/SystemFormatContext';
 import ModuleAccessMatrix from './ModuleAccessMatrix';
 import { purgeDiagonConstruccionesData } from '../utils/diagonPurge';
 
@@ -19,6 +21,7 @@ interface StudyDetailsProps {
 }
 
 export default function StudyDetails({ study: initialStudy, onBack, onLogout }: StudyDetailsProps) {
+  const { setAssignedFormat } = useSystemFormat();
   const [study, setStudy] = useState(initialStudy);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -27,9 +30,10 @@ export default function StudyDetails({ study: initialStudy, onBack, onLogout }: 
   const [studyForm, setStudyForm] = useState(initialStudy);
   const [inSupportMode, setInSupportMode] = useState(false);
 
-  // Plan & Matrix
+  // Plan & Matrix & Formato Oficial
   const currentPlanCode = (study.planCode as StudyPlanCode) || 'PLAN_ESTUDIO_10';
   const [selectedPlanCode, setSelectedPlanCode] = useState<StudyPlanCode>(currentPlanCode);
+  const [selectedAppFormat, setSelectedAppFormat] = useState<SystemAppFormat>(study.appFormat || 'VERSION_A');
   const [studyModules, setStudyModules] = useState<StudyModulePermissions>(() => {
     return study.modules || getDefaultModulesForPlan(currentPlanCode);
   });
@@ -66,6 +70,10 @@ export default function StudyDetails({ study: initialStudy, onBack, onLogout }: 
         setStudy(sData);
         setStudyForm(sData);
         if (sData.planCode) setSelectedPlanCode(sData.planCode as StudyPlanCode);
+        if (sData.appFormat) {
+          setSelectedAppFormat(sData.appFormat as SystemAppFormat);
+          setAssignedFormat(sData.appFormat as SystemAppFormat);
+        }
         if (sData.modules) setStudyModules(sData.modules);
         if (sData.subscriptionStatus) setStudySubStatus(sData.subscriptionStatus);
         if (sData.paymentNotes) setStudyPaymentNotes(sData.paymentNotes);
@@ -131,6 +139,7 @@ export default function StudyDetails({ study: initialStudy, onBack, onLogout }: 
         address: dataToSave.address || '',
         phone: dataToSave.phone || '',
         email: dataToSave.email || '',
+        appFormat: selectedAppFormat,
         planCode: selectedPlanCode,
         planName: planDef.name,
         modules: studyModules,
@@ -618,6 +627,63 @@ export default function StudyDetails({ study: initialStudy, onBack, onLogout }: 
               {OFFICIAL_SUBSCRIPTION_PLANS[selectedPlanCode]?.name || study.planName || 'Plan Personalizado'}
             </span>
           </div>
+        </div>
+
+        {/* SELECTOR OFICIAL DE FORMATO DEL SISTEMA (A, B, C1, C2) */}
+        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-4 rounded-2xl border border-indigo-500/30 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-indigo-800/60 pb-2">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-amber-300" />
+              <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+                Formato de Plataforma Asignado al Estudio / Suscripción
+              </h4>
+            </div>
+            <span className="text-[10px] font-mono font-bold bg-white/20 text-indigo-100 px-2 py-0.5 rounded">
+              {SYSTEM_FORMATS[selectedAppFormat]?.title || 'Versión A: Estudio Clásico'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1">
+            {(Object.keys(SYSTEM_FORMATS) as SystemAppFormat[]).map((fmtKey) => {
+              const fmtInfo = SYSTEM_FORMATS[fmtKey];
+              const isSelected = selectedAppFormat === fmtKey;
+              return (
+                <button
+                  key={fmtKey}
+                  type="button"
+                  disabled={!isEditingStudy}
+                  onClick={() => setSelectedAppFormat(fmtKey)}
+                  className={`p-3 rounded-xl border text-left transition-all relative cursor-pointer disabled:cursor-not-allowed ${
+                    isSelected
+                      ? 'bg-white text-slate-950 border-white shadow-md ring-2 ring-indigo-400'
+                      : 'bg-slate-800/80 text-slate-200 border-slate-700 hover:bg-slate-800 hover:border-slate-500'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded font-mono ${
+                      isSelected 
+                        ? 'bg-indigo-600 text-white' 
+                        : fmtInfo.isAgentic 
+                        ? 'bg-violet-500/20 text-violet-300' 
+                        : 'bg-slate-700 text-slate-300'
+                    }`}>
+                      Versión {fmtInfo.letter}
+                    </span>
+                    {isSelected && <Check className="w-4 h-4 text-indigo-600" />}
+                  </div>
+                  <h5 className="text-xs font-black tracking-tight">{fmtInfo.title.split(':')[1] || fmtInfo.title}</h5>
+                  <p className={`text-[10px] mt-0.5 line-clamp-2 ${isSelected ? 'text-slate-600 font-medium' : 'text-slate-400'}`}>
+                    {fmtInfo.subtitle}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+          {isEditingStudy && (
+            <p className="text-[10px] text-indigo-200 italic">
+              💡 Al seleccionar una versión agéntica (C1 o C2), el estudio dispondrá de agentes autónomos y copilotos 2040 en tiempo real.
+            </p>
+          )}
         </div>
 
         <ModuleAccessMatrix

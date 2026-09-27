@@ -39,7 +39,8 @@ import {
   Check,
   Zap,
   ShieldCheck,
-  ChevronRight
+  ChevronRight,
+  ExternalLink
 } from 'lucide-react';
 
 interface AnalisisCuentasViewProps {
@@ -51,6 +52,7 @@ interface AnalisisCuentasViewProps {
   auxiliaries?: Auxiliary[];
   rcvDocuments?: RCVDocument[];
   onVouchersUpdated?: () => void;
+  onOpenVoucher?: (voucherRef: Voucher | string | number) => void;
 }
 
 export interface ExtVoucherLine {
@@ -82,7 +84,8 @@ export default function AnalisisCuentasView({
   fiscalYears = [],
   auxiliaries = [],
   rcvDocuments = [],
-  onVouchersUpdated
+  onVouchersUpdated,
+  onOpenVoucher
 }: AnalisisCuentasViewProps) {
   // --- ESTADOS DE SELECCIÓN Y FILTRO ---
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
@@ -1115,7 +1118,17 @@ export default function AnalisisCuentasView({
                         {m.matchedLines.map((l, idx) => (
                           <tr key={idx} className="bg-white hover:bg-slate-50">
                             <td className="p-1.5 font-mono">{l.voucherDate}</td>
-                            <td className="p-1.5 font-semibold">#{l.voucherNumber}</td>
+                            <td className="p-1.5 font-semibold">
+                              <button
+                                type="button"
+                                onClick={() => onOpenVoucher?.(l.voucherId || l.voucherNumber)}
+                                className="inline-flex items-center gap-1 font-bold text-xs text-indigo-700 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-1.5 py-0.5 rounded border border-indigo-200 transition-all cursor-pointer shadow-2xs group"
+                                title="Abrir comprobante para consultar, modificar, anular o eliminar"
+                              >
+                                <span>#{l.voucherNumber}</span>
+                                <ExternalLink className="w-2.5 h-2.5 text-indigo-500 group-hover:text-indigo-800" />
+                              </button>
+                            </td>
                             <td className="p-1.5">{l.auxiliaryRut ? `${l.auxiliaryRut}` : '-'}</td>
                             <td className="p-1.5">{l.documentRef || '-'}</td>
                             <td className="p-1.5 text-slate-700 max-w-xs truncate">{l.gloss}</td>
@@ -1206,7 +1219,17 @@ export default function AnalisisCuentasView({
                             />
                           </td>
                           <td className="p-2 font-mono text-[11px] whitespace-nowrap">{l.voucherDate}</td>
-                          <td className="p-2 font-semibold">#{l.voucherNumber}</td>
+                          <td className="p-2 font-semibold">
+                            <button
+                              type="button"
+                              onClick={() => onOpenVoucher?.(l.voucherId || l.voucherNumber)}
+                              className="inline-flex items-center gap-1 font-bold text-xs text-indigo-700 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-1.5 py-0.5 rounded border border-indigo-200 transition-all cursor-pointer shadow-2xs group"
+                              title="Abrir comprobante para consultar, modificar, anular o eliminar"
+                            >
+                              <span>#{l.voucherNumber}</span>
+                              <ExternalLink className="w-2.5 h-2.5 text-indigo-500 group-hover:text-indigo-800" />
+                            </button>
+                          </td>
                           <td className="p-2 text-[11px]">
                             {l.auxiliaryRut ? (
                               <span className="font-mono bg-slate-100 px-1 rounded text-slate-700">{l.auxiliaryRut}</span>
@@ -1297,7 +1320,17 @@ export default function AnalisisCuentasView({
                             />
                           </td>
                           <td className="p-2 font-mono text-[11px] whitespace-nowrap">{l.voucherDate}</td>
-                          <td className="p-2 font-semibold">#{l.voucherNumber}</td>
+                          <td className="p-2 font-semibold">
+                            <button
+                              type="button"
+                              onClick={() => onOpenVoucher?.(l.voucherId || l.voucherNumber)}
+                              className="inline-flex items-center gap-1 font-bold text-xs text-indigo-700 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-1.5 py-0.5 rounded border border-indigo-200 transition-all cursor-pointer shadow-2xs group"
+                              title="Abrir comprobante para consultar, modificar, anular o eliminar"
+                            >
+                              <span>#{l.voucherNumber}</span>
+                              <ExternalLink className="w-2.5 h-2.5 text-indigo-500 group-hover:text-indigo-800" />
+                            </button>
+                          </td>
                           <td className="p-2 text-[11px]">
                             {l.auxiliaryRut ? (
                               <span className="font-mono bg-slate-100 px-1 rounded text-slate-700">{l.auxiliaryRut}</span>

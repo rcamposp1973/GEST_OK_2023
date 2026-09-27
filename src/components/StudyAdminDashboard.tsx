@@ -10,6 +10,8 @@ import { isTestStudy, executeTestStudyDataPurge, TestStudyPurgeStats } from '../
 import DemoFerreteriaManagerModal from './DemoFerreteriaManagerModal';
 import { DEMO_COMPANY_NAME, DEMO_COMPANY_RUT, isDemoFerreteriaCompany } from '../utils/demoFerreteriaGenerator';
 import { formatRut } from '../utils/rutMatcher';
+import { useSystemFormat } from '../context/SystemFormatContext';
+import { getSystemFormat } from '../constants/systemFormats';
 
 export interface StudyAdminDashboardProps {
   studyId: string;
@@ -32,6 +34,7 @@ export default function StudyAdminDashboard({
   onCompanyChange,
   onLogout
 }: StudyAdminDashboardProps) {
+  const { setAssignedFormat, formatInfo, isAgentic } = useSystemFormat();
   const isSuperUser = currentUserRole === UserRole.SUPER_USER;
   const isStudyAdmin = currentUserRole === UserRole.STUDY_ADMIN;
   const isAccountant = currentUserRole === UserRole.ACCOUNTANT;
@@ -219,7 +222,11 @@ export default function StudyAdminDashboard({
       // 1. Fetch study document
       const studySnap = await getDoc(studyRef);
       if (studySnap.exists()) {
-        setStudyData({ id: studySnap.id, ...studySnap.data() } as Study);
+        const sData = { id: studySnap.id, ...studySnap.data() } as Study;
+        setStudyData(sData);
+        if (sData.appFormat) {
+          setAssignedFormat(sData.appFormat);
+        }
       }
 
       const usersSnap = await getDocs(collection(studyRef, 'users'));
@@ -900,6 +907,16 @@ export default function StudyAdminDashboard({
               }`}>
                 {isAnalyst ? 'Analista' : isObserver ? 'Cliente Observador' : isAccountant ? 'Contador' : isSuperUser ? 'Super Admin (Lectura)' : 'Administración Estudio'}
               </span>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full font-mono flex items-center gap-1 ${
+                formatInfo.isAgentic
+                  ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-xs shadow-violet-500/20'
+                  : formatInfo.code === 'VERSION_B'
+                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                  : 'bg-indigo-100 text-indigo-800 border border-indigo-200'
+              }`}>
+                {formatInfo.isAgentic && <Sparkles className="w-3 h-3 text-amber-300 animate-spin" />}
+                <span>{formatInfo.badgeTitle}</span>
+              </span>
             </div>
             <h2 className="text-sm font-bold text-[#425466] mt-0.5">
               {isRestrictedWorker ? 'Mis Empresas Asignadas' : 'Panel de Gestión y Operación Contable'}
@@ -907,6 +924,12 @@ export default function StudyAdminDashboard({
             <p className="text-slate-400 text-[11px] mt-0.5 flex items-center gap-1.5">
               <span>Estudio ID:</span>
               <span className="font-mono bg-slate-50 px-2 py-0.5 rounded-md text-slate-700 border border-slate-200 font-semibold">{studyId}</span>
+              {studyData?.planName && (
+                <>
+                  <span className="text-slate-300">&bull;</span>
+                  <span className="font-semibold text-indigo-600">{studyData.planName}</span>
+                </>
+              )}
             </p>
           </div>
         </div>
@@ -978,6 +1001,34 @@ export default function StudyAdminDashboard({
           userEmail={currentUserEmail}
           onClose={() => setShowChangePassModal(false)}
         />
+      )}
+
+      {/* BANNER INFORMATIVO MODO AGÉNTICO 2040 */}
+      {isAgentic && (
+        <div className="bg-gradient-to-r from-violet-950 via-indigo-950 to-slate-900 text-white p-4 rounded-2xl border border-violet-500/30 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-xl bg-violet-600/30 border border-violet-400/40 text-amber-300 flex items-center justify-center shrink-0 mt-0.5">
+              <Sparkles className="w-5 h-5 animate-pulse" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-extrabold text-xs uppercase tracking-wider text-violet-200 font-mono">
+                  {formatInfo.title}
+                </span>
+                <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[9px] font-bold px-2 py-0.2 rounded-full">
+                  Agentes Autónomos Activos 2040
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-0.5 max-w-3xl leading-relaxed">
+                Este estudio cuenta con la suite del 2040: Auditor Autónomo continuo de vouchers y descuadres, Copiloto Tributario F29 con cruce RCV, y Conciliación Bancaria con Inteligencia Artificial.
+              </p>
+            </div>
+          </div>
+
+          <span className="text-[10px] font-mono text-violet-300 bg-white/10 px-2.5 py-1 rounded-lg shrink-0 border border-violet-400/20 self-end sm:self-center">
+            {formatInfo.badgeTitle}
+          </span>
+        </div>
       )}
 
       {/* Si es contador o analista, mostrar únicamente sus empresas asignadas */}

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { 
   Auxiliary, 
+  AuxiliaryRole,
   ChartOfAccount, 
   CostCenterMaster, 
   ExpenseItemMaster, 
@@ -42,7 +43,7 @@ export interface AuxiliaryUpgradeRow {
   isValidRut: boolean;
   isGarbageRut: boolean;
   name: string;
-  role: 'Deudor' | 'Acreedor' | 'Ambos';
+  role: AuxiliaryRole;
   estado: 'Activo' | 'Inactivo';
   email: string;
   phone: string;

@@ -735,16 +735,44 @@ export default function LandingHome({ onGoToLogin }: LandingHomeProps) {
       <section id="precios" className="py-20 bg-white border-b border-slate-200/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
-          <div className="text-center max-w-2xl mx-auto mb-14 space-y-3">
+          <div className="text-center max-w-3xl mx-auto mb-10 space-y-3">
             <span className="text-xs font-bold uppercase tracking-widest text-[#533AFD] bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
-              Planes y Precios Oficiales
+              Planes y Formatos Oficiales 2026 - 2040
             </span>
             <h2 className="text-2xl sm:text-4xl font-extrabold text-[#0D253D] tracking-tight">
-              Diseñado para contadores independientes y estudios en crecimiento
+              4 Formatos Especializados para Estudios Contables y Pymes
             </h2>
             <p className="text-sm text-[#425466]">
-              Sin costos ocultos ni cobros por factura emitida. Actualizaciones tributarias SII y soporte incluidos.
+              Elige el formato tradicional o agéntico que se adapte a tu firma o empresa. Sin costos ocultos, con actualizaciones SII continuas.
             </p>
+
+            {/* 4 Formatos Cards Resumen */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 pt-4 text-left">
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 font-mono">Versión A</span>
+                <h4 className="text-xs font-bold text-slate-900 mt-1">Estudio Clásico</h4>
+                <p className="text-[10px] text-slate-500">ERP Contable y Tributario multi-empresa completo.</p>
+              </div>
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-mono">Versión B</span>
+                <h4 className="text-xs font-bold text-slate-900 mt-1">Pyme Clásica</h4>
+                <p className="text-[10px] text-slate-500">Facturación DTE, Cobranzas, RCV y Tesorería.</p>
+              </div>
+              <div className="p-3 bg-violet-50 border border-violet-200 rounded-2xl">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-violet-600 text-white font-mono flex items-center gap-1 w-fit">
+                  <Sparkles className="w-2.5 h-2.5" /> C1 2040
+                </span>
+                <h4 className="text-xs font-bold text-violet-950 mt-1">Estudio Agéntico</h4>
+                <p className="text-[10px] text-violet-700">Auditor contable autónomo 24/7 y Copiloto SII.</p>
+              </div>
+              <div className="p-3 bg-cyan-50 border border-cyan-200 rounded-2xl">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-600 text-white font-mono flex items-center gap-1 w-fit">
+                  <Sparkles className="w-2.5 h-2.5" /> C2 2040
+                </span>
+                <h4 className="text-xs font-bold text-cyan-950 mt-1">Pyme Agéntica</h4>
+                <p className="text-[10px] text-cyan-700">CFO Virtual, Cobranza WhatsApp y Cazador de Gastos.</p>
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto items-stretch">

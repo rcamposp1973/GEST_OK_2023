@@ -580,11 +580,20 @@ export default function AuxiliariesGrid({
             <span className="bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-lg border border-indigo-100">
               Total: {uniqueAuxiliaries.length}
             </span>
-            <span className="bg-emerald-50 text-emerald-800 px-2.5 py-1 rounded-lg border border-emerald-200">
-              Deudores: {uniqueAuxiliaries.filter(a => a.role === 'Deudor' || a.role === 'Ambos').length}
+            <span className="bg-blue-50 text-blue-800 px-2.5 py-1 rounded-lg border border-blue-200" title="Clientes del giro">
+              🏢 Clientes: {uniqueAuxiliaries.filter(a => a.role === 'Deudor' || a.role === 'Ambos').length}
             </span>
-            <span className="bg-amber-50 text-amber-800 px-2.5 py-1 rounded-lg border border-amber-200">
-              Acreedores: {uniqueAuxiliaries.filter(a => a.role === 'Acreedor' || a.role === 'Ambos').length}
+            <span className="bg-amber-50 text-amber-800 px-2.5 py-1 rounded-lg border border-amber-200" title="Proveedores del giro">
+              🏭 Proveedores: {uniqueAuxiliaries.filter(a => a.role === 'Acreedor' || a.role === 'Ambos').length}
+            </span>
+            <span className="bg-emerald-50 text-emerald-800 px-2.5 py-1 rounded-lg border border-emerald-200" title="Personal / Trabajadores">
+              👥 Personal: {uniqueAuxiliaries.filter(a => a.role === 'Personal').length}
+            </span>
+            <span className="bg-cyan-50 text-cyan-800 px-2.5 py-1 rounded-lg border border-cyan-200" title="Deudores Varios (no giro)">
+              🔄 Deud. Varios: {uniqueAuxiliaries.filter(a => a.role === 'Deudores Varios').length}
+            </span>
+            <span className="bg-orange-50 text-orange-800 px-2.5 py-1 rounded-lg border border-orange-200" title="Acreedores Varios (socios, previsión, bancos)">
+              🏦 Acred. Varios: {uniqueAuxiliaries.filter(a => a.role === 'Acreedores Varios').length}
             </span>
             {garbageAuxiliaries.length > 0 && (
               <span className="bg-rose-100 text-rose-800 px-2.5 py-1 rounded-lg border border-rose-300 font-bold flex items-center gap-1">
@@ -793,10 +802,13 @@ export default function AuxiliariesGrid({
                     onChange={e => setColumnFilters(prev => ({ ...prev, role: e.target.value }))}
                     className="w-full bg-slate-950 border border-slate-700 text-slate-200 px-1 py-0.5 rounded text-[10px] outline-none focus:ring-1 focus:ring-emerald-400"
                   >
-                    <option value="ALL">Todos</option>
-                    <option value="Deudor">Deudor (Cliente)</option>
-                    <option value="Acreedor">Acreedor (Proveedor)</option>
-                    <option value="Ambos">Ambos</option>
+                    <option value="ALL">Todos los Roles</option>
+                    <option value="Deudor">🏢 Deudor (Clientes)</option>
+                    <option value="Acreedor">🏭 Acreedor (Proveedores)</option>
+                    <option value="Personal">👥 Personal (Trabajadores)</option>
+                    <option value="Deudores Varios">🔄 Deudores Varios</option>
+                    <option value="Acreedores Varios">🏦 Acreedores Varios</option>
+                    <option value="Ambos">🔀 Ambos / Mixto</option>
                   </select>
                 </th>
                 <th className="p-1 border-r border-slate-800">
@@ -954,14 +966,26 @@ export default function AuxiliariesGrid({
 
                       {/* ROL */}
                       <td className="px-2 py-2 text-center border-r border-slate-200">
-                        <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${
+                        <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] inline-flex items-center gap-1 ${
                           aux.role === 'Deudor'
-                            ? 'bg-indigo-100 text-indigo-800'
+                            ? 'bg-blue-100 text-blue-800 border border-blue-200'
                             : aux.role === 'Acreedor'
-                            ? 'bg-amber-100 text-amber-800'
-                            : 'bg-purple-100 text-purple-800'
+                            ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                            : aux.role === 'Personal'
+                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                            : aux.role === 'Deudores Varios'
+                            ? 'bg-cyan-100 text-cyan-800 border border-cyan-200'
+                            : aux.role === 'Acreedores Varios'
+                            ? 'bg-orange-100 text-orange-800 border border-orange-200'
+                            : 'bg-purple-100 text-purple-800 border border-purple-200'
                         }`}>
-                          {aux.role}
+                          {aux.role === 'Deudor' && '🏢'}
+                          {aux.role === 'Acreedor' && '🏭'}
+                          {aux.role === 'Personal' && '👥'}
+                          {aux.role === 'Deudores Varios' && '🔄'}
+                          {aux.role === 'Acreedores Varios' && '🏦'}
+                          {aux.role === 'Ambos' && '🔀'}
+                          <span>{aux.role || 'Deudor'}</span>
                         </span>
                       </td>
 

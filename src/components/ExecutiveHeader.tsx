@@ -4,6 +4,7 @@ import { generateOfficialChileanIndicators, syncOnlineChileanIndicators, DailyIn
 import { Building2, Home, LogOut, Settings, BarChart3, ChevronDown, Check, X, Key, Activity, ShieldCheck } from 'lucide-react';
 import ChangePasswordModal from './ChangePasswordModal';
 import { APP_VERSION } from '../constants/version';
+import FormatSwitcherDropdown from './FormatSwitcherDropdown';
 
 interface ExecutiveHeaderProps {
   currentUserEmail?: string | null;
@@ -135,22 +136,30 @@ export default function ExecutiveHeader({
             </button>
           </div>
 
-          {/* CENTRO: Contexto Activo (Estudio + Empresa Activa + RUT) */}
-          <div className="flex-1 max-w-xl mx-auto text-center px-3.5 py-1.5 bg-slate-50/80 hover:bg-slate-100/80 transition-colors rounded-xl border border-slate-200/80 my-0.5 md:my-0 shadow-2xs">
-            <div className="flex items-center justify-center gap-1.5 text-xs text-slate-500">
-              <span className="truncate max-w-[200px] text-slate-600 font-medium" title={activeStudy?.name || 'Estudio Contable'}>
-                {activeStudy?.name || 'Estudio Contable'}
-              </span>
-              <span className="text-slate-400">/</span>
-              <span className="font-bold text-[#0D253D] tracking-tight truncate max-w-[260px]" title={activeCompany ? activeCompany.name : 'Panel General'}>
-                {activeCompany ? activeCompany.name : 'Panel General'}
-              </span>
-              {activeCompany?.rut && (
-                <span className="text-[10px] font-mono font-bold text-slate-700 bg-white px-2 py-0.5 rounded-md border border-slate-200 shadow-2xs">
-                  {activeCompany.rut}
+          {/* CENTRO: Contexto Activo (Estudio + Empresa Activa + RUT) + Formato del Sistema */}
+          <div className="flex-1 max-w-2xl mx-auto flex items-center justify-center gap-2 px-2 my-0.5 md:my-0">
+            <div className="flex-1 text-center px-3.5 py-1.5 bg-slate-50/80 hover:bg-slate-100/80 transition-colors rounded-xl border border-slate-200/80 shadow-2xs">
+              <div className="flex items-center justify-center gap-1.5 text-xs text-slate-500">
+                <span className="truncate max-w-[180px] text-slate-600 font-medium" title={activeStudy?.name || 'Estudio Contable'}>
+                  {activeStudy?.name || 'Estudio Contable'}
                 </span>
-              )}
+                <span className="text-slate-400">/</span>
+                <span className="font-bold text-[#0D253D] tracking-tight truncate max-w-[220px]" title={activeCompany ? activeCompany.name : 'Panel General'}>
+                  {activeCompany ? activeCompany.name : 'Panel General'}
+                </span>
+                {activeCompany?.rut && (
+                  <span className="text-[10px] font-mono font-bold text-slate-700 bg-white px-2 py-0.5 rounded-md border border-slate-200 shadow-2xs">
+                    {activeCompany.rut}
+                  </span>
+                )}
+              </div>
             </div>
+
+            {/* Badge y Conmutador de Formato (Versión A, B, C1, C2) */}
+            <FormatSwitcherDropdown 
+              currentUserRole={currentUserRole} 
+              currentUserEmail={currentUserEmail} 
+            />
           </div>
 
           {/* LADO DERECHO: Indicadores Económicos Oficiales + Bloque de Usuario Organizado */}

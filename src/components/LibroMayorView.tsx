@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Company, Voucher, ChartOfAccount, FiscalPeriodYear } from '../types';
 import { generateSIIReportPDF } from '../utils/pdfGenerator';
 import { printAndLogOfficialBook } from '../utils/folioService';
-import { Layers, Printer, FileText, Download } from 'lucide-react';
+import { Layers, Printer, FileText, Download, ExternalLink } from 'lucide-react';
 
 interface LibroMayorViewProps {
   studyId?: string;
@@ -655,7 +655,22 @@ export default function LibroMayorView({
                           return (
                             <tr key={`${mov.voucherId}-${mIdx}`} className="hover:bg-slate-50/80">
                               <td className="py-2 px-3 text-slate-700">{mov.date}</td>
-                              <td className="py-2 px-3 font-bold text-indigo-700">#{mov.voucherNumber}</td>
+                              <td className="py-2 px-3">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (onViewVoucher) {
+                                      const vObj = vouchers.find(v => v.id === mov.voucherId || v.voucherNumber === mov.voucherNumber);
+                                      if (vObj) onViewVoucher(vObj);
+                                    }
+                                  }}
+                                  className="inline-flex items-center gap-1 font-bold text-xs text-indigo-700 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-1.5 py-0.5 rounded border border-indigo-200 transition-all cursor-pointer shadow-2xs group"
+                                  title="Abrir comprobante para consultar, modificar, anular o eliminar"
+                                >
+                                  <span>#{mov.voucherNumber}</span>
+                                  <ExternalLink className="w-2.5 h-2.5 text-indigo-500 group-hover:text-indigo-800" />
+                                </button>
+                              </td>
                               <td className="py-2 px-3">
                                 <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
                                   mov.voucherType === 'Ingreso' ? 'bg-emerald-100 text-emerald-800' :

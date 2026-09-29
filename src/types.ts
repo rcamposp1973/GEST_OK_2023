@@ -220,6 +220,7 @@ export interface Company {
   assignedAccountantIds?: string[];
   assignedAccountantEmails?: string[];
   customAccountColumns?: string[]; // Lista de nombres de columnas de análisis adicionales (ej: ['REQUIERE SUCURSAL', 'REQUIERE ZONA'])
+  customPaymentAccountIds?: string[]; // IDs de cuentas contables adicionales habilitadas para pagos, nóminas, recaudaciones y rendiciones (Fondos Fijos, Cajas, etc.)
   regimenTributario?: string;
   tasaPpm?: number;
   ppmRateHistory?: { rate: number; effectiveFrom: string }[];

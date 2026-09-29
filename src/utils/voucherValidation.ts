@@ -13,10 +13,27 @@ export function sanitizeVoucherLine<T extends VoucherLine>(
   if (!account) return line;
 
   const code = account.code || '';
+  const cleanCode = code.replace(/[^0-9]/g, '');
+  const lowerName = (account.name || '').toLowerCase();
   const isClientOrSupplierCode =
+    cleanCode.startsWith('1102') ||
+    cleanCode.startsWith('1103') ||
+    cleanCode.startsWith('2101') ||
+    cleanCode.startsWith('2102') ||
+    cleanCode.startsWith('2103') ||
+    cleanCode.startsWith('2104') ||
     code.startsWith('1.1.02') ||
+    code.startsWith('1.1.03') ||
     code.startsWith('2.1.01') ||
-    code.startsWith('2.1.04');
+    code.startsWith('2.1.02') ||
+    code.startsWith('2.1.03') ||
+    code.startsWith('2.1.04') ||
+    lowerName.includes('factura') ||
+    lowerName.includes('proveedor') ||
+    lowerName.includes('cliente') ||
+    lowerName.includes('honorario') ||
+    lowerName.includes('acreedor') ||
+    lowerName.includes('deudor');
 
   const reqRut = Boolean(account.requiereAuxiliarRUT || isClientOrSupplierCode);
   const reqDoc = Boolean(account.requiereDocumento || isClientOrSupplierCode);

@@ -105,4 +105,14 @@ body.cursor-progress * {
   background-color: rgba(15, 23, 42, 0.35) !important;
 }
 
+/* Fix for invisible text in input fields */
+input, textarea, select {
+  background-color: white !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+}
+input:focus, textarea:focus, select:focus {
+  outline: 2px solid #0284c7 !important; /* sky-600 */
+}
+
 

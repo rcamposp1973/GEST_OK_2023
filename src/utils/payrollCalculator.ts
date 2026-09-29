@@ -14,7 +14,7 @@ export const DEFAULT_AFP_COMMISSIONS: Record<PensionSystem, number> = {
   MODELO: 10.58, // 10% Fondo + 0.58% Comisión
   PLANVITAL: 11.16, // 10% Fondo + 1.16% Comisión
   PROVIDA: 11.45, // 10% Fondo + 1.45% Comisión
-  UNO: 10.49, // 10% Fondo + 0.49% Comisión
+  UNO: 10.46, // 10% Fondo + 0.46% Comisión (Actualizado según tabla oficial Previred 2026)
   INP: 18.84,
   JUBILADO_COTIZA: 1.44,
   JUBILADO_NO_COTIZA: 0.0
@@ -46,23 +46,23 @@ export const PREVIRED_HEALTH_CODES: Record<HealthSystem, string> = {
 };
 
 export const DEFAULT_PAYROLL_PARAMS_2026: PayrollParameters = {
-  period: '2026-09',
-  uf: 40030,
-  utm: 70730,
+  period: '2026-05',
+  uf: 40610.69,
+  utm: 70588,
   imm: 539000, // Ingreso Mínimo Mensual Reajustado 2026
-  topeImponibleAfpUf: 84.3, // Tope AFP / Salud en UF
-  topeImponibleAfcUf: 126.6, // Tope AFC en UF
-  tasaSisPercent: 1.49, // SIS Empleador
+  topeImponibleAfpUf: 90.0, // Tope AFP / Salud en UF oficial 2026 (90 UF = $3.654.962)
+  topeImponibleAfcUf: 135.2, // Tope AFC en UF oficial 2026 (135,2 UF = $5.490.565)
+  tasaSisPercent: 1.62, // SIS Empleador oficial Previred 2026 (1,62%)
   tasaMutualPercent: 0.93, // Mutual de Seguridad Básica + Ley SANNA
   afpCommissions: DEFAULT_AFP_COMMISSIONS,
   tramosAsignacionFamiliar: {
-    tramoA: 20328,
-    tramoB: 12475,
-    tramoC: 3943,
+    tramoA: 22007,
+    tramoB: 13505,
+    tramoC: 4267,
     tramoD: 0,
-    limiteA: 539328,
-    limiteB: 787746,
-    limiteC: 1228614
+    limiteA: 631976,
+    limiteB: 923067,
+    limiteC: 1439668
   }
 };
 
@@ -86,17 +86,21 @@ export function getPrevisionalParametersForPeriod(periodStr: string): PayrollPar
   // Ingreso Mínimo Mensual (IMM) según fecha y ley de reajuste vigente (Leyes N° 21.456, 21.578, etc.)
   const imm = (OFFICIAL_MONTHLY_IMM as Record<string, number>)[periodStr] || getOfficialIMM(periodStr);
 
-  // Topes Imponibles Previsionales (UF)
-  let topeImponibleAfpUf = 84.3;
-  let topeImponibleAfcUf = 126.6;
+  // Topes Imponibles Previsionales (UF) oficiales según Previred y Superintendencia de Pensiones
+  let topeImponibleAfpUf = 90.0; // Vigente 2026 según Previred
+  let topeImponibleAfcUf = 135.2; // Vigente 2026 según Previred
   if (year <= 2023) {
     topeImponibleAfpUf = 81.6;
     topeImponibleAfcUf = 122.6;
+  } else if (year <= 2025) {
+    topeImponibleAfpUf = 84.3;
+    topeImponibleAfcUf = 126.6;
   }
 
-  // Tasa SIS Empleador
-  let tasaSisPercent = 1.49;
+  // Tasa SIS Empleador (1.62% oficial 2026)
+  let tasaSisPercent = 1.62;
   if (year <= 2023) tasaSisPercent = 1.53;
+  else if (year <= 2025) tasaSisPercent = 1.49;
 
   return {
     period: periodStr,
@@ -109,13 +113,13 @@ export function getPrevisionalParametersForPeriod(periodStr: string): PayrollPar
     tasaMutualPercent: 0.93,
     afpCommissions: DEFAULT_AFP_COMMISSIONS,
     tramosAsignacionFamiliar: {
-      tramoA: year >= 2024 ? 20328 : 17316,
-      tramoB: year >= 2024 ? 12475 : 10627,
-      tramoC: year >= 2024 ? 3943 : 3360,
+      tramoA: year >= 2026 ? 22007 : year >= 2024 ? 20328 : 17316,
+      tramoB: year >= 2026 ? 13505 : year >= 2024 ? 12475 : 10627,
+      tramoC: year >= 2026 ? 4267 : year >= 2024 ? 3943 : 3360,
       tramoD: 0,
-      limiteA: year >= 2024 ? 539328 : 429899,
-      limiteB: year >= 2024 ? 787746 : 627913,
-      limiteC: year >= 2024 ? 1228614 : 979203
+      limiteA: year >= 2026 ? 631976 : year >= 2024 ? 539328 : 429899,
+      limiteB: year >= 2026 ? 923067 : year >= 2024 ? 787746 : 627913,
+      limiteC: year >= 2026 ? 1439668 : year >= 2024 ? 1228614 : 979203
     }
   };
 }
@@ -301,7 +305,24 @@ export function calculatePayrollSlip(
   const year = parseInt(yearStr, 10) || new Date().getFullYear();
   const month = parseInt(monthStr, 10) || (new Date().getMonth() + 1);
 
-  const diasTrabajados = input.diasTrabajados !== undefined ? Math.min(30, Math.max(0, input.diasTrabajados)) : 30;
+  // Días trabajados del mes (norma laboral chilena base 30 días)
+  // Considera automáticamente la fecha de ingreso del trabajador
+  let diasBase = 30;
+  if (employee.hireDate) {
+    const hirePeriod = employee.hireDate.slice(0, 7);
+    if (hirePeriod === params.period) {
+      const hireDay = parseInt(employee.hireDate.split('-')[2], 10) || 1;
+      if (hireDay <= 1) {
+        diasBase = 30; // Ingreso el día 01 del mes: mes completo 30 días
+      } else {
+        diasBase = Math.max(1, Math.min(30, 30 - hireDay + 1)); // Ingreso durante el mes: días proporcionales
+      }
+    } else if (employee.hireDate > `${params.period}-31`) {
+      diasBase = 0; // Ingreso en período futuro
+    }
+  }
+
+  const diasTrabajados = input.diasTrabajados !== undefined ? Math.min(30, Math.max(0, input.diasTrabajados)) : diasBase;
   const diasLicencia = input.diasLicencia || 0;
   const diasInasistencia = input.diasInasistencia || 0;
 

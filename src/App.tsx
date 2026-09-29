@@ -28,11 +28,13 @@ import MarketingPromoManager from './components/MarketingPromoManager';
 import TestimonialManager from './components/TestimonialManager';
 import PricingManager from './components/PricingManager';
 import SuperAdminSystemMonitor from './components/SuperAdminSystemMonitor';
+import SuperAdminIndicatorsCenter from './components/SuperAdminIndicatorsCenter';
 import LandingHome from './components/LandingHome';
 import { logAuditEvent } from './utils/auditLogger';
 import { APP_VERSION } from './constants/version';
 import { purgeDiagonConstruccionesData } from './utils/diagonPurge';
-import { Building2, PlusCircle, CreditCard, ShieldCheck, Users, ShieldAlert, History, Sparkles, LogOut, Megaphone, Activity, Quote, Trash2, Search, X } from 'lucide-react';
+import { useCrossTabSessionSync } from './utils/useCrossTabSessionSync';
+import { Building2, PlusCircle, CreditCard, ShieldCheck, Users, ShieldAlert, History, Sparkles, LogOut, Megaphone, Activity, Quote, Trash2, Search, X, TrendingUp } from 'lucide-react';
 
 function Dashboard() {
   const { currentUser } = useAuth();
@@ -44,7 +46,7 @@ function Dashboard() {
   const [studySearchQuery, setStudySearchQuery] = useState('');
   const [studyStatusFilter, setStudyStatusFilter] = useState<'ALL' | 'Vigente' | 'Sin Vigencia'>('ALL');
   const [selectedStudy, setSelectedStudy] = useState<Study | null>(null);
-  const [superAdminTab, setSuperAdminTab] = useState<'monitor' | 'studies' | 'create_study' | 'plans' | 'super_users' | 'marketing_promo' | 'testimonials' | 'pricing' | 'audit_logs' | 'presentation'>('monitor');
+  const [superAdminTab, setSuperAdminTab] = useState<'monitor' | 'studies' | 'create_study' | 'plans' | 'super_users' | 'marketing_promo' | 'testimonials' | 'pricing' | 'audit_logs' | 'presentation' | 'indicators_loader'>('monitor');
   const [role, setRole] = useState<UserRole | null>(null);
   const [activeCompany, setActiveCompany] = useState<Company | null>(null);
   const [showGlobalIndicatorsModal, setShowGlobalIndicatorsModal] = useState(false);
@@ -391,6 +393,18 @@ function Dashboard() {
                 </button>
 
                 <button
+                  onClick={() => setSuperAdminTab('indicators_loader')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                    superAdminTab === 'indicators_loader'
+                      ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20 font-extrabold'
+                      : 'text-emerald-800 bg-emerald-50/80 hover:bg-emerald-100 hover:text-emerald-950 border border-emerald-200'
+                  }`}
+                >
+                  <TrendingUp className="w-4 h-4 text-emerald-600" />
+                  <span>Carga Indicadores (Previred & Monedas)</span>
+                </button>
+
+                <button
                   onClick={() => setSuperAdminTab('studies')}
                   className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
                     superAdminTab === 'studies'
@@ -506,6 +520,9 @@ function Dashboard() {
                   setSuperAdminTab('studies');
                 }}
               />
+            )}
+            {superAdminTab === 'indicators_loader' && (
+              <SuperAdminIndicatorsCenter studies={studies} />
             )}
             {superAdminTab === 'presentation' && (
               <PresentationView />
@@ -848,30 +865,9 @@ function UnauthenticatedHome() {
 function AppContent() {
   const { currentUser } = useAuth();
 
-  useEffect(() => {
-    if (!currentUser) return;
-
-    let timeout: NodeJS.Timeout;
-    const resetTimer = () => {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => {
-        signOut(auth);
-      }, 17 * 60 * 1000);
-    };
-
-    window.addEventListener('mousemove', resetTimer);
-    window.addEventListener('keydown', resetTimer);
-    window.addEventListener('mousedown', resetTimer);
-
-    resetTimer();
-
-    return () => {
-      clearTimeout(timeout);
-      window.removeEventListener('mousemove', resetTimer);
-      window.removeEventListener('keydown', resetTimer);
-      window.removeEventListener('mousedown', resetTimer);
-    };
-  }, [currentUser]);
+  // Sincronización inteligente de sesión multi-pestaña:
+  // La actividad en CUALQUIER pestaña abierta mantiene viva la sesión en todas las pestañas.
+  useCrossTabSessionSync(currentUser);
 
   return (
     <BrowserRouter>

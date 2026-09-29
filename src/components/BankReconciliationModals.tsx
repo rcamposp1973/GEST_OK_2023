@@ -436,6 +436,7 @@ export interface QuickVoucherModalProps {
     counterAccountId: string;
     lines: VoucherLine[];
     newAuxiliaryToSave?: Auxiliary;
+    matchedDocIds?: string[];
   }) => Promise<void>;
   onPost?: () => void;
 }
@@ -1002,6 +1003,7 @@ function QuickVoucherModalContent({
       }
 
       for (const doc of targetDocs) {
+          if (doc.estadoPago === 'Pagada' || doc.estadoCobranza === 'Pagada') continue;
         const isClientDoc = isClientes;
         const rawRut = isClientDoc ? doc.rutReceptor : doc.rutEmisor;
         const rawName = isClientDoc ? doc.razonSocialReceptor : doc.razonSocialEmisor;
@@ -1069,6 +1071,7 @@ function QuickVoucherModalContent({
 
         const pending = Math.max(0, docTotal - paid);
         if (pending > 0) {
+          console.log('DEBUG: Adding pending RCV item:', { doc, pending, docTotal, paid });
           items.push({
             id: `rcv_${doc.id || doc.folio}_${normRut}`,
             docType: doc.tipoDoc ? String(doc.tipoDoc) : (isHonorarios ? 'BHE' : '33'),
@@ -1138,6 +1141,28 @@ function QuickVoucherModalContent({
     return Object.values(selectedDocIds).reduce((s, val) => s + (val || 0), 0);
   }, [selectedDocIds]);
 
+  // Helper to format friendly document reference with clear document type
+  const formatFriendlyDocumentRef = (docType?: string, docNumber?: string): string => {
+    const num = (docNumber || '').trim();
+    if (!num) return 'S/N';
+    const cleanType = String(docType || '').trim().toUpperCase();
+    let prefix = 'Factura';
+    if (cleanType === '33' || cleanType.includes('FACTURA') || cleanType === 'FAC') prefix = 'Factura';
+    else if (cleanType === '34' || cleanType.includes('EXENTA') || cleanType === 'FE') prefix = 'Factura Exenta';
+    else if (cleanType === '39' || cleanType.includes('BOLETA') || cleanType === 'BOL') prefix = 'Boleta';
+    else if (cleanType === '41') prefix = 'Boleta Exenta';
+    else if (cleanType === '46') prefix = 'Factura Compra';
+    else if (cleanType === '56' || cleanType.includes('DEBITO') || cleanType.includes('DÉBITO')) prefix = 'Nota Débito';
+    else if (cleanType === '61' || cleanType.includes('CREDITO') || cleanType.includes('CRÉDITO')) prefix = 'Nota Crédito';
+    else if (cleanType === 'BHE' || cleanType === '70' || cleanType.includes('HONORAR')) prefix = 'BHE';
+    else if (cleanType) prefix = cleanType;
+
+    if (num.toUpperCase().includes(prefix.toUpperCase()) || num.toUpperCase().includes('FACTURA') || num.toUpperCase().includes('BHE')) {
+      return num;
+    }
+    return `${prefix} N° ${num}`;
+  };
+
   // Toggle open document selection
   const handleToggleDocSelect = (item: OpenAccountItem) => {
     setSelectedDocIds(prev => {
@@ -1157,7 +1182,7 @@ function QuickVoucherModalContent({
           setSelectedAuxiliaryName(item.auxiliaryName || '');
         }
         if (item.docNumber) {
-          setDocumentRef(item.docNumber);
+          setDocumentRef(formatFriendlyDocumentRef(item.docType, item.docNumber));
         }
         if (item.dueDate) {
           setDueDate(item.dueDate);
@@ -1196,7 +1221,7 @@ function QuickVoucherModalContent({
       if (firstItem && firstItem.auxiliaryRut) {
         setSelectedAuxiliaryRut(firstItem.auxiliaryRut);
         setSelectedAuxiliaryName(firstItem.auxiliaryName);
-        setDocumentRef(firstItem.docNumber);
+        setDocumentRef(formatFriendlyDocumentRef(firstItem.docType, firstItem.docNumber));
       }
     }
   };
@@ -1433,9 +1458,18 @@ function QuickVoucherModalContent({
         const amt = selectedDocIds[docId] || 0;
         if (amt <= 0) return;
 
-        const docRefValue = docItem ? docItem.docNumber : documentRef;
+        const rawDocNum = docItem ? docItem.docNumber : documentRef;
+        const formattedDocRef = formatFriendlyDocumentRef(docItem?.docType, rawDocNum);
         const auxRutValue = selectedAccount.requiereAuxiliarRUT ? (docItem ? docItem.auxiliaryRut : selectedAuxiliaryRut) : undefined;
         const auxNameValue = selectedAccount.requiereAuxiliarRUT ? (docItem ? docItem.auxiliaryName : selectedAuxiliaryName) : undefined;
+
+        // Determine explicit documentType for standard SII categorization
+        let explicitDocType = docItem?.docType || (isHonorarios ? 'BHE' : '33');
+        if (explicitDocType === 'Factura' || explicitDocType === 'FAC') explicitDocType = '33';
+        else if (explicitDocType === 'Factura Exenta') explicitDocType = '34';
+        else if (explicitDocType === 'Nota de Crédito' || explicitDocType === 'NC') explicitDocType = '61';
+
+        const docTypeLabel = docItem?.docType === 'BHE' || isHonorarios ? 'Boleta de Honorarios' : 'Factura';
 
         lines.push({
           id: `line_counter_${index + 1}`,
@@ -1446,18 +1480,28 @@ function QuickVoucherModalContent({
           credit: isCharge ? 0 : amt,
           auxiliaryRut: auxRutValue ? auxRutValue.toUpperCase() : undefined,
           auxiliaryName: auxNameValue ? auxNameValue.toUpperCase() : undefined,
-          documentRef: docRefValue ? docRefValue.toUpperCase() : undefined,
+          documentType: explicitDocType,
+          documentRef: formattedDocRef.toUpperCase(),
           dueDate: docItem?.dueDate || dueDate || undefined,
           costCenter: costCenter ? costCenter.toUpperCase() : undefined,
           expenseItem: expenseItem ? expenseItem.toUpperCase() : undefined,
           project: project ? project.toUpperCase() : undefined,
           product: product ? product.toUpperCase() : undefined,
           customAnalyses: Object.keys(customAnalyses).length > 0 ? customAnalyses : undefined,
-          gloss: `Pago ${docItem?.docType || 'Doc'} N° ${docRefValue} - ${defaultGloss}`.toUpperCase()
+          gloss: `PAGO ${docTypeLabel.toUpperCase()} N° ${docItem?.docNumber || rawDocNum} - ${defaultGloss}`.toUpperCase()
         });
       });
     } else {
       // Single line for Counterpart Account
+      const isFacturasPagar = selectedAccount.code?.replace(/[^0-9]/g, '').startsWith('2102') || selectedAccount.code?.startsWith('2.1.02') || selectedAccount.name.toLowerCase().includes('factura');
+      const counterpartDocType = isHonorarios ? 'BHE' : (isProveedores || isClientes || isFacturasPagar || selectedAccount.name.toLowerCase().includes('proveedor') || selectedAccount.name.toLowerCase().includes('factura') ? '33' : '33');
+      let manualDocRef = (documentRef || quickVoucherLine.documentNumber || 'S/N').trim();
+      if (counterpartDocType && /^\d+$/.test(manualDocRef)) {
+        manualDocRef = formatFriendlyDocumentRef(counterpartDocType, manualDocRef);
+      } else if (counterpartDocType && (!manualDocRef || manualDocRef === 'S/N' || manualDocRef === 'BANCO')) {
+        manualDocRef = formatFriendlyDocumentRef(counterpartDocType, String(vouchers.length + 1));
+      }
+
       lines.push({
         id: 'line_counter_1',
         accountId: selectedAccount.id,
@@ -1467,7 +1511,8 @@ function QuickVoucherModalContent({
         credit: isCharge ? 0 : bankAmount,
         auxiliaryRut: selectedAccount.requiereAuxiliarRUT && selectedAuxiliaryRut ? selectedAuxiliaryRut.toUpperCase() : undefined,
         auxiliaryName: selectedAccount.requiereAuxiliarRUT && selectedAuxiliaryName ? selectedAuxiliaryName.toUpperCase() : undefined,
-        documentRef: (documentRef || quickVoucherLine.documentNumber || 'S/N').toUpperCase(),
+        documentType: counterpartDocType || (isHonorarios ? 'BHE' : '33'),
+        documentRef: manualDocRef.toUpperCase(),
         dueDate: dueDate || undefined,
         costCenter: costCenter ? costCenter.toUpperCase() : undefined,
         expenseItem: expenseItem ? expenseItem.toUpperCase() : undefined,
@@ -1485,14 +1530,20 @@ function QuickVoucherModalContent({
       return;
     }
 
+    const firstSelectedDoc = selectedDocsList.length > 0 ? openItems.find(i => i.id === selectedDocsList[0]) : null;
+    const paymentGloss = firstSelectedDoc 
+      ? `PAGO ${firstSelectedDoc.docType === 'BHE' ? 'BHE' : 'FACTURA'} N° ${firstSelectedDoc.docNumber} - ${defaultGloss}`
+      : defaultGloss;
+
     if (onPostVoucherWithLines) {
       await onPostVoucherWithLines({
         period: quickVoucherPeriod,
         date: voucherDate || effectiveShiftInfo?.date || quickVoucherLine.date,
-        gloss: defaultGloss,
+        gloss: paymentGloss.toUpperCase(),
         counterAccountId: selectedAccount.id,
         lines,
-        newAuxiliaryToSave: newAuxToSave
+        newAuxiliaryToSave: newAuxToSave,
+        matchedDocIds: selectedDocsList
       });
     } else if (onPost) {
       onPost();

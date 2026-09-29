@@ -5,6 +5,8 @@ import { Company, ChartOfAccount, Auxiliary, RCVDocument, Voucher, PaymentBatch,
 import { checkIsPeriodClosed } from '../utils/periodUtils';
 import { logAuditEvent } from '../utils/auditLogger';
 import { sanitizeVoucherLines } from '../utils/voucherValidation';
+import { getOrganizedPaymentAccounts, isDefaultBankAccount, isFondoFijoOrCaja } from '../utils/paymentAccountUtils';
+import PaymentAccountsConfigModal from './PaymentAccountsConfigModal';
 
 interface NominasPagoViewProps {
   studyId: string;
@@ -69,39 +71,32 @@ export default function NominasPagoView({
   const [manualNumCta, setManualNumCta] = useState<string>('');
   const [manualEmail, setManualEmail] = useState<string>('');
 
+  // Configurable Payment Accounts (Bancos, Fondos Fijos, Rendiciones, etc.)
+  const [customPaymentAccountIds, setCustomPaymentAccountIds] = useState<string[]>(
+    company.customPaymentAccountIds || []
+  );
+  const [showConfigModal, setShowConfigModal] = useState<boolean>(false);
+  const [showAllAccounts, setShowAllAccounts] = useState<boolean>(false);
+
   const companyRef = doc(db, 'studies', studyId, 'companies', company.id);
 
-  // Bank accounts available from chart of accounts (prioritizing accounts with requiereConciliacionBancaria = true)
-  const bankAccounts = useMemo(() => {
-    const list = accounts.filter(acc => {
-      if (acc.estado === 'Inactivo') return false;
-      const code = (acc.code || '').replace(/-/g, '.');
-      const name = (acc.name || '').toLowerCase();
+  // Organized accounts (Default banks vs Custom enabled vs All others)
+  const {
+    defaultBanks,
+    customEnabled,
+    allOtherAccounts,
+    availableForSelection,
+    allActiveAccounts
+  } = useMemo(() => {
+    return getOrganizedPaymentAccounts(accounts, customPaymentAccountIds);
+  }, [accounts, customPaymentAccountIds]);
 
-      return (
-        acc.requiereConciliacionBancaria ||
-        (code.startsWith('1.1.01') && (name.includes('banco') || name.includes('cuenta corriente') || name.includes('caja') || name.includes('tesoreria')))
-      );
-    });
-
-    if (list.length === 0) {
-      return accounts.filter(acc => {
-        if (acc.estado === 'Inactivo') return false;
-        const code = (acc.code || '').replace(/-/g, '.');
-        const name = (acc.name || '').toLowerCase();
-        return code.startsWith('1.1.01') || name.includes('banco') || name.includes('caja');
-      });
-    }
-
-    return list;
-  }, [accounts]);
-
-  // Set default bank account if available
+  // Set default account if available
   useEffect(() => {
-    if (bankAccounts.length > 0 && !selectedBankAccountId) {
-      setSelectedBankAccountId(bankAccounts[0].id);
+    if (availableForSelection.length > 0 && (!selectedBankAccountId || !accounts.some(a => a.id === selectedBankAccountId))) {
+      setSelectedBankAccountId(availableForSelection[0].id);
     }
-  }, [bankAccounts, selectedBankAccountId]);
+  }, [availableForSelection, selectedBankAccountId, accounts]);
 
   // Auxiliaries Map
   const auxMap = useMemo(() => {
@@ -143,21 +138,8 @@ export default function NominasPagoView({
       }
     });
 
-    // Build set of RUTs and Folios paid or canceled via NCs or Vouchers
+    // Check Vouchers for payments on Proveedores (2.1.01 / Proveedores)
     const canceledOrPaidDocKeys = new Set<string>();
-
-    // A) Check RCV Credit Notes (tipoDoc 61)
-    rcvDocuments.forEach(d => {
-      if (String(d.tipoDoc) === '61' || String(d.tipoDoc).includes('61')) {
-        const rut = (d.rutEmisor || '').toUpperCase().replace(/\./g, '').trim();
-        const folio = String(d.folio || '').trim();
-        const refFolio = String(d.refFolioOrig || '').trim();
-        if (folio) canceledOrPaidDocKeys.add(`${rut}__${folio}`);
-        if (refFolio) canceledOrPaidDocKeys.add(`${rut}__${refFolio}`);
-      }
-    });
-
-    // B) Check Vouchers for payments on Proveedores (2.1.01 / Proveedores)
     vouchers.forEach(v => {
       if (v.status === 'Anulado') return;
       v.lines.forEach(line => {
@@ -182,11 +164,15 @@ export default function NominasPagoView({
       .filter(doc => {
         if (doc.tipoRegistro !== 'Compra' && doc.tipoRegistro !== 'Honorarios') return false;
         if (paidRcvDocIds.has(doc.id)) return false;
-        if (String(doc.tipoDoc) === '61') return false;
 
         const cleanRut = (doc.rutEmisor || '').toUpperCase().replace(/\./g, '').trim();
         const folio = String(doc.folio || '').trim();
-        if (canceledOrPaidDocKeys.has(`${cleanRut}__${folio}`)) return false;
+        const isNC = isNotaCredito(doc.tipoDoc);
+
+        // If it's a regular invoice already marked as paid in vouchers, skip it
+        if (!isNC && canceledOrPaidDocKeys.has(`${cleanRut}__${folio}`)) {
+          return false;
+        }
 
         return true;
       })
@@ -363,6 +349,9 @@ export default function NominasPagoView({
         };
       });
 
+      const isFondoOrCaja = isFondoFijoOrCaja(selectedBankAcc);
+      const isBank = isDefaultBankAccount(selectedBankAcc);
+
       const bankLine = {
         id: `line_bank_${supplierLines.length + 1}`,
         accountId: selectedBankAcc.id,
@@ -371,7 +360,11 @@ export default function NominasPagoView({
         debit: 0,
         credit: totalBatchAmount,
         documentRef: `Nómina N° ${nextBatchNumber}`,
-        gloss: `Egreso Bancario Nómina N° ${nextBatchNumber}`
+        gloss: isFondoOrCaja
+          ? `Egreso Fondo Fijo/Caja Nómina N° ${nextBatchNumber}`
+          : isBank
+          ? `Egreso Bancario Nómina N° ${nextBatchNumber}`
+          : `Egreso Nómina N° ${nextBatchNumber} (${selectedBankAcc.name})`
       };
 
       const rawVoucherLines = [...supplierLines, bankLine];
@@ -619,18 +612,67 @@ export default function NominasPagoView({
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Cuenta Bancaria de Origen:</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-semibold text-slate-700">Cuenta de Pago (Origen):</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowConfigModal(true)}
+                    className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-1 cursor-pointer"
+                    title="Habilitar o agregar Fondos Fijos, Cajas Chicas u otras cuentas del plan"
+                  >
+                    <span>⚙️</span> Habilitar Cuentas
+                  </button>
+                </div>
                 <select
                   value={selectedBankAccountId}
                   onChange={(e) => setSelectedBankAccountId(e.target.value)}
                   className="w-full bg-white border border-slate-300 rounded-md px-3 py-1.5 font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 >
-                  {bankAccounts.map(acc => (
-                    <option key={acc.id} value={acc.id}>
-                      {acc.code} - {acc.name}
-                    </option>
-                  ))}
+                  <optgroup label="🏦 Cuentas Bancarias y Tesorería (Predeterminadas)">
+                    {defaultBanks.map(acc => (
+                      <option key={acc.id} value={acc.id}>
+                        {acc.code} - {acc.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                  
+                  {customEnabled.length > 0 && (
+                    <optgroup label="💼 Fondos Fijos, Cajas y Cuentas Habilitadas">
+                      {customEnabled.map(acc => (
+                        <option key={acc.id} value={acc.id}>
+                          {acc.code} - {acc.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+
+                  {showAllAccounts && (
+                    <optgroup label="📋 Todas las demás Cuentas del Plan">
+                      {allOtherAccounts.map(acc => (
+                        <option key={acc.id} value={acc.id}>
+                          {acc.code} - {acc.name} ({acc.type})
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
+
+                <div className="mt-1 flex items-center justify-between text-[11px]">
+                  <span className="text-slate-500">
+                    {defaultBanks.some(b => b.id === selectedBankAccountId)
+                      ? '🏦 Cuenta Bancaria'
+                      : customEnabled.some(c => c.id === selectedBankAccountId)
+                      ? '💼 Fondo Fijo / Cuenta Habilitada'
+                      : '📋 Cuenta Contable Personalizada'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowAllAccounts(!showAllAccounts)}
+                    className="text-indigo-600 hover:text-indigo-800 underline cursor-pointer"
+                  >
+                    {showAllAccounts ? 'Ocultar resto del plan' : 'Ver todo el plan de cuentas'}
+                  </button>
+                </div>
               </div>
 
               <div>
@@ -1229,6 +1271,18 @@ export default function NominasPagoView({
           </div>
         </div>
       )}
+
+      {/* Modal de Configuración de Cuentas de Pago y Rendiciones */}
+      <PaymentAccountsConfigModal
+        studyId={studyId}
+        company={company}
+        accounts={accounts}
+        isOpen={showConfigModal}
+        onClose={() => setShowConfigModal(false)}
+        onAccountsUpdated={(updatedIds) => {
+          setCustomPaymentAccountIds(updatedIds);
+        }}
+      />
     </div>
   );
 }

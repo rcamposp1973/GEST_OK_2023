@@ -63,6 +63,7 @@ import { CockpitTabBar } from './cockpit/CockpitTabBar';
 import { CockpitDock } from './cockpit/CockpitDock';
 import { NewTabModal } from './cockpit/NewTabModal';
 import { FloatingAccountingCalculator } from './cockpit/FloatingAccountingCalculator';
+import { KeyboardShortcutsModal } from './KeyboardShortcutsModal';
 import { 
   FileText, BookOpen, Layers, Users, Sliders, Scale, Printer, 
   FolderTree, CreditCard, Receipt, TrendingUp, Landmark, ShoppingCart, 
@@ -79,19 +80,40 @@ const QUICK_ACCESS_ITEMS = [
   { id: 'libroMayor', label: 'Libro Mayor', group: 'FINANZAS', icon: Layers, tab: 'libroMayor' },
   { id: 'balance8', label: 'Balance 8 Columnas', group: 'FINANZAS', icon: Scale, tab: 'balance8' },
   { id: 'balanceIFRS', label: 'Balance IFRS / FECU', group: 'FINANZAS', icon: BarChart3, tab: 'balanceIFRS' },
+  { id: 'estadoResultados', label: 'Estado de Resultados IFRS', group: 'FINANZAS', icon: TrendingUp, tab: 'estadoResultados' },
   { id: 'analisisAuxiliares', label: 'Auxiliares Cuentas Corrientes', group: 'FINANZAS', icon: Users, tab: 'analisisAuxiliares' },
-  { id: 'rcv', label: 'Carga RCV Compra/Venta', group: 'IMPORTACIONES', icon: Download, tab: 'rcv' },
+  { id: 'analisisCuentas', label: 'Análisis de Cuentas', group: 'FINANZAS', icon: Sliders, tab: 'analisisCuentas' },
+  { id: 'reportesAnaliticos', label: 'Reportes Analíticos', group: 'FINANZAS', icon: TableIcon, tab: 'reportesAnaliticos' },
+  { id: 'activoFijo', label: 'Activo Fijo & Depreciación', group: 'FINANZAS', icon: Building2, tab: 'activoFijo' },
+  { id: 'auditorEstadosFinancieros', label: 'Auditor Estados Financieros', group: 'FINANZAS', icon: ShieldCheck, tab: 'auditorEstadosFinancieros' },
+  { id: 'rcv', label: 'Carga RCV Compra/Venta', group: 'CARGA (SII)', icon: Download, tab: 'rcv' },
+  { id: 'rcvParams', label: 'Parámetros Contables RCV', group: 'CARGA (SII)', icon: Settings, tab: 'rcvParams' },
+  { id: 'cargaMasiva', label: 'Carga Masiva Comprobantes', group: 'CARGA (SII)', icon: FileSpreadsheet, tab: 'cargaMasiva' },
+  { id: 'plantillasCarga', label: 'Plantillas de Carga', group: 'CARGA (SII)', icon: FileSpreadsheet, tab: 'plantillasCarga' },
   { id: 'formulario29', label: 'Impuestos F29', group: 'IMPUESTOS', icon: Receipt, tab: 'formulario29' },
+  { id: 'f29Codes', label: 'Parámetros y Códigos F.29', group: 'IMPUESTOS', icon: Sliders, tab: 'f29Codes' },
+  { id: 'ddjj', label: 'Declaraciones Juradas SII', group: 'IMPUESTOS', icon: ShieldCheck, tab: 'ddjj' },
+  { id: 'controlFolios', label: 'Timbraje y Folios SII', group: 'IMPUESTOS', icon: Printer, tab: 'controlFolios' },
   { id: 'operativaComercial', label: 'Gestión Comercial', group: 'OPERACIONES', icon: ShoppingCart, tab: 'operativaComercial' },
   { id: 'emisionDte', label: 'Emisión DTE / Facturas', group: 'OPERACIONES', icon: FileSpreadsheet, tab: 'emisionDte' },
+  { id: 'stockKardex', label: 'Control de Stock & Kardex', group: 'OPERACIONES', icon: Package, tab: 'stockKardex' },
+  { id: 'warehouses', label: 'Bodegas y Almacenes', group: 'OPERACIONES', icon: WarehouseIcon, tab: 'warehouses' },
+  { id: 'productsServices', label: 'Catálogo Productos / Servicios', group: 'OPERACIONES', icon: Boxes, tab: 'productsServices' },
   { id: 'conciliacionBancaria', label: 'Conciliación Bancaria', group: 'TESORERIA', icon: CreditCard, tab: 'conciliacionBancaria' },
   { id: 'libroBancoColaborativo', label: 'Libro Banco (Aclaraciones)', group: 'TESORERIA', icon: Landmark, tab: 'libroBancoColaborativo' },
   { id: 'nominasPago', label: 'Nóminas de Pago', group: 'TESORERIA', icon: Landmark, tab: 'nominasPago' },
+  { id: 'cobranza', label: 'Cobranza & Cartera', group: 'TESORERIA', icon: TrendingUp, tab: 'cobranza' },
+  { id: 'flujoDeCaja', label: 'Flujo de Caja Real', group: 'TESORERIA', icon: TrendingUp, tab: 'flujoDeCaja' },
   { id: 'employees', label: 'Ficha de Empleados', group: 'PERSONAL', icon: Briefcase, tab: 'employees' },
-  { id: 'activoFijo', label: 'Activo Fijo & Depreciación', group: 'FINANZAS', icon: Building2, tab: 'activoFijo' },
-  { id: 'ddjj', label: 'Declaraciones Juradas SII', group: 'IMPUESTOS', icon: ShieldCheck, tab: 'ddjj' },
+  { id: 'liquidaciones', label: 'Liquidaciones de Sueldos', group: 'PERSONAL', icon: Calculator, tab: 'liquidaciones' },
   { id: 'indicadoresFinancieros', label: 'Indicadores & KPIs', group: 'INDICADORES', icon: TrendingUp, tab: 'indicadoresFinancieros' },
+  { id: 'exchange', label: 'Indicadores Económicos (UF/USD/UTM)', group: 'INDICADORES', icon: Calendar, tab: 'exchange' },
   { id: 'accounts', label: 'Plan de Cuentas', group: 'CONFIGURACIONES', icon: FolderTree, tab: 'accounts' },
+  { id: 'auxiliaries', label: 'Maestro de Auxiliares', group: 'CONFIGURACIONES', icon: Users, tab: 'auxiliaries' },
+  { id: 'periods', label: 'Períodos Contables', group: 'CONFIGURACIONES', icon: Calendar, tab: 'periods' },
+  { id: 'tablasAnalisis', label: 'Catálogos de Análisis', group: 'CONFIGURACIONES', icon: FolderTree, tab: 'tablasAnalisis' },
+  { id: 'agenticStudy2040', label: 'Auditoría Agéntica 2040', group: 'FINANZAS', icon: Sparkles, tab: 'agenticStudy2040' },
+  { id: 'agenticPyme2040', label: 'Hub Agéntico Pyme 2040', group: 'FINANZAS', icon: Sparkles, tab: 'agenticPyme2040' },
   { id: 'juniorAI', label: 'Copilot Contable IA', group: 'FINANZAS', icon: Sparkles, tab: 'smartNotebooks' }
 ] as const;
 
@@ -109,42 +131,38 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
   const { currentFormat, formatInfo, isAgentic, isPymeFormat, isStudyFormat } = useSystemFormat();
 
   const { withProcess } = useProcess();
-  type RibbonGroup = 'FINANZAS' | 'OPERACIONES' | 'TESORERIA' | 'PERSONAL' | 'IMPORTACIONES' | 'IMPUESTOS' | 'INDICADORES' | 'CONFIGURACIONES';
+  type RibbonGroup = 'FINANZAS' | 'OPERACIONES' | 'TESORERIA' | 'PERSONAL' | 'CARGA (SII)' | 'IMPUESTOS' | 'INDICADORES' | 'CONFIGURACIONES' | 'FAVORITOS';
   const [activeRibbonGroup, setActiveRibbonGroup] = useState<RibbonGroup>('FINANZAS');
   const [activeTab, setActiveTab] = useState<'accounts' | 'auxiliaries' | 'periods' | 'rcv' | 'exchange' | 'rcvParams' | 'f29Codes' | 'vouchers' | 'libroDiario' | 'libroMayor' | 'balance8' | 'balanceIFRS' | 'analisisAuxiliares' | 'analisisCuentas' | 'reportesAnaliticos' | 'estadoResultados' | 'indicadoresFinancieros' | 'auditorEstadosFinancieros' | 'smartNotebooks' | 'flujoDeCaja' | 'nominasPago' | 'cobranza' | 'conciliacionBancaria' | 'libroBancoColaborativo' | 'cargaMasiva' | 'formulario29' | 'plantillasCarga' | 'emisionDte' | 'tablasAnalisis' | 'controlFolios' | 'productsServices' | 'operativaComercial' | 'stockKardex' | 'warehouses' | 'employees' | 'liquidaciones' | 'activoFijo' | 'ddjj' | 'agenticStudy2040' | 'agenticPyme2040'>('vouchers');
   const [auxSubTab, setAuxSubTab] = useState<'deudores' | 'acreedores'>('deudores');
   const [employeeSubTab, setEmployeeSubTab] = useState<'employees' | 'contracts' | 'attendance' | 'advances' | 'severance' | 'certificates'>('employees');
   const [payrollTab, setPayrollTab] = useState<'NOMINA' | 'LIQUIDACION_INDIVIDUAL' | 'LRD_DT' | 'PREVIRED' | 'PARAMETROS' | 'CONCEPTOS' | 'RELIQUIDACIONES'>('NOMINA');
 
-  // Command Palette Cmd+K
+  // Command Palette Cmd+K and Global Shortcuts Modal
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
+  const [showKeyboardShortcutsModal, setShowKeyboardShortcutsModal] = useState<boolean>(false);
   const [showFiniquitoModal, setShowFiniquitoModal] = useState<boolean>(false);
   const [showDemoManagerModal, setShowDemoManagerModal] = useState<boolean>(false);
   const isDemoCompany = isDemoFerreteriaCompany(company);
-
-  // Escuchar Cmd+K o Ctrl+K
-  useEffect(() => {
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        setIsCommandPaletteOpen(prev => !prev);
-      }
-    };
-    window.addEventListener('keydown', handleGlobalKeyDown);
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, []);
 
   const [pinnedQuickAccessIds, setPinnedQuickAccessIds] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('gestok_quick_access_pinned');
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Ensure uniqueness
-        return Array.from(new Set(parsed));
+        const list = Array.from(new Set(parsed)) as string[];
+        if (!list.includes('estadoResultados')) list.push('estadoResultados');
+        if (!list.includes('balanceIFRS')) list.push('balanceIFRS');
+        return list;
       }
     } catch {}
-    // Default unique list
-    return ['calculator', 'vouchers', 'libroDiario', 'libroMayor', 'analisisAuxiliares', 'balance8', 'conciliacionBancaria', 'rcv', 'formulario29'];
+    // Default complete list with Estado de Resultados and core modules
+    return [
+      'vouchers', 'libroDiario', 'libroMayor', 'balance8', 'balanceIFRS', 
+      'estadoResultados', 'analisisAuxiliares', 'analisisCuentas', 
+      'conciliacionBancaria', 'rcv', 'formulario29', 'liquidaciones', 
+      'operativaComercial', 'calculator'
+    ];
   });
 
   const [showQuickAccessConfig, setShowQuickAccessConfig] = useState<boolean>(false);
@@ -188,6 +206,10 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
       setShowCalculator(prev => !prev);
       return;
     }
+    const modItem = COCKPIT_MODULE_CATALOG.find(m => m.id === moduleId);
+    if (modItem?.category) {
+      setActiveRibbonGroup(modItem.category);
+    }
     setOpenTabs(prev => {
       const existingTab = prev.find(t => t.moduleId === moduleId);
       if (existingTab) {
@@ -195,7 +217,6 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
         setActiveTab(existingTab.moduleId as any);
         return prev;
       }
-      const modItem = COCKPIT_MODULE_CATALOG.find(m => m.id === moduleId);
       const newTab: WorkspaceTab = {
         id: `tab_${moduleId}_${Date.now()}`,
         moduleId: moduleId,
@@ -215,6 +236,10 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
     if (found) {
       setActiveTabId(found.id);
       setActiveTab(found.moduleId as any);
+      const modItem = COCKPIT_MODULE_CATALOG.find(m => m.id === found.moduleId);
+      if (modItem?.category) {
+        setActiveRibbonGroup(modItem.category);
+      }
     }
   };
 
@@ -230,50 +255,6 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
       return filtered;
     });
   };
-
-  // Keyboard navigation for Cockpit (Ctrl+Tab, Ctrl+W, F11, Ctrl+D)
-  useEffect(() => {
-    const handleCockpitShortcuts = (e: KeyboardEvent) => {
-      // Ctrl+Tab to cycle tabs
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Tab') {
-        e.preventDefault();
-        setOpenTabs(currentTabs => {
-          if (currentTabs.length <= 1) return currentTabs;
-          const currentIndex = currentTabs.findIndex(t => t.id === activeTabId);
-          const nextIndex = e.shiftKey
-            ? (currentIndex - 1 + currentTabs.length) % currentTabs.length
-            : (currentIndex + 1) % currentTabs.length;
-          const nextTab = currentTabs[nextIndex];
-          setActiveTabId(nextTab.id);
-          setActiveTab(nextTab.moduleId as any);
-          return currentTabs;
-        });
-      }
-      // Ctrl+W to close active tab
-      else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'w') {
-        const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
-        if (tag !== 'input' && tag !== 'textarea') {
-          e.preventDefault();
-          handleCloseTab(activeTabId);
-        }
-      }
-      // F11 or Ctrl+B to toggle Zen mode
-      else if (e.key === 'F11' || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b')) {
-        e.preventDefault();
-        setIsZenMode(prev => !prev);
-      }
-      // Ctrl+D to toggle dock
-      else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
-        const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
-        if (tag !== 'input' && tag !== 'textarea') {
-          e.preventDefault();
-          handleSetDockPosition(dockPosition === 'hidden' ? 'left' : dockPosition === 'left' ? 'bottom' : 'hidden');
-        }
-      }
-    };
-    window.addEventListener('keydown', handleCockpitShortcuts);
-    return () => window.removeEventListener('keydown', handleCockpitShortcuts);
-  }, [activeTabId, dockPosition]);
 
   // Keep openTabs in sync if activeTab is changed from child component handlers
   useEffect(() => {
@@ -1256,13 +1237,47 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
         }
       }, 100);
 
-      const fySnap = await getDocs(collection(companyRef, 'fiscalPeriods'));
+      // Carga paralela de alto rendimiento (Promise.all) para evitar cuellos de botella de red secuenciales
+      const [
+        fySnap,
+        rcvSnap,
+        vouchSnap,
+        bankRecSnap,
+        ccSnap,
+        expSnap,
+        nonSiiSnap,
+        projSnap,
+        whSnap,
+        prodSnap,
+        customItemsSnap,
+        rcvParamsSnap,
+        commDocsSnap,
+        empSnap,
+        slipsSnap,
+        invMovSnap
+      ] = await Promise.all([
+        getDocs(collection(companyRef, 'fiscalPeriods')),
+        getDocs(collection(companyRef, 'rcvDocuments')),
+        getDocs(collection(companyRef, 'vouchers')),
+        getDocs(collection(companyRef, 'bankReconciliations')),
+        getDocs(collection(companyRef, 'costCenters')),
+        getDocs(collection(companyRef, 'expenseItems')),
+        getDocs(collection(companyRef, 'nonSiiDocTypes')),
+        getDocs(collection(companyRef, 'projects')),
+        getDocs(collection(companyRef, 'warehouses')),
+        getDocs(collection(companyRef, 'products')),
+        getDocs(collection(companyRef, 'customAnalysisItems')),
+        getDoc(doc(companyRef, 'config', 'rcvParams')),
+        getDocs(collection(companyRef, 'commercialDocuments')),
+        getDocs(collection(companyRef, 'employees')),
+        getDocs(collection(companyRef, 'payrollSlips')),
+        getDocs(collection(companyRef, 'inventoryMovements'))
+      ]);
+
       const loadedFys = fySnap.docs.map(d => ({ ...d.data(), id: d.id } as FiscalPeriodYear));
       setFiscalYears(loadedFys);
 
-      const rcvSnap = await getDocs(collection(companyRef, 'rcvDocuments'));
-      
-      // Eliminación estricta y automática de cualquier documento de prueba / ficticio remanente
+      // Limpieza de documentos demo
       const demoDocs = rcvSnap.docs.filter(d => {
         const data = d.data();
         return (
@@ -1275,43 +1290,25 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
       });
 
       if (demoDocs.length > 0) {
-        for (const demoDoc of demoDocs) {
-          try {
-            await deleteDoc(doc(companyRef, 'rcvDocuments', demoDoc.id));
-          } catch (e) {
-            console.warn("Error borrando documento demo:", e);
-          }
-        }
+        Promise.all(demoDocs.map(d => deleteDoc(doc(companyRef, 'rcvDocuments', d.id)))).catch(e => console.warn(e));
       }
 
       const cleanRcvDocs = rcvSnap.docs
         .filter(d => !demoDocs.some(dd => dd.id === d.id))
         .map(d => ({ ...d.data(), id: d.id } as RCVDocument));
-
       setRcvDocuments(cleanRcvDocs);
 
-      const vouchSnap = await getDocs(collection(companyRef, 'vouchers'));
       const fetchedVouchers = vouchSnap.docs.map(d => ({ ...d.data(), id: d.id } as Voucher));
       fetchedVouchers.sort((a, b) => (b.voucherNumber || 0) - (a.voucherNumber || 0));
       setVouchers(fetchedVouchers);
 
-      const bankRecSnap = await getDocs(collection(companyRef, 'bankReconciliations'));
       setBankReconciliations(bankRecSnap.docs.map(d => ({ ...d.data(), id: d.id } as BankReconciliation)));
-
-      const ccSnap = await getDocs(collection(companyRef, 'costCenters'));
       setCostCenters(ccSnap.docs.map(d => ({ ...d.data(), id: d.id } as CostCenterMaster)));
-
-      const expSnap = await getDocs(collection(companyRef, 'expenseItems'));
       setExpenseItems(expSnap.docs.map(d => ({ ...d.data(), id: d.id } as ExpenseItemMaster)));
-
-      const nonSiiSnap = await getDocs(collection(companyRef, 'nonSiiDocTypes'));
       setNonSiiDocTypes(nonSiiSnap.docs.map(d => ({ ...d.data(), id: d.id } as NonSiiDocTypeMaster)));
-
-      const projSnap = await getDocs(collection(companyRef, 'projects'));
       setProjects(projSnap.docs.map(d => ({ ...d.data(), id: d.id } as ProjectMaster)));
 
       // BODEGAS (Multi-Bodega ERP)
-      const whSnap = await getDocs(collection(companyRef, 'warehouses'));
       let fetchedWh = whSnap.docs.map(d => ({ ...d.data(), id: d.id } as Warehouse));
       if (fetchedWh.length === 0) {
         const defaultWh: Warehouse = {
@@ -1325,13 +1322,12 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
           estado: 'Activo',
           createdAt: new Date().toISOString()
         };
-        await setDoc(doc(companyRef, 'warehouses', 'wh-central'), defaultWh);
+        setDoc(doc(companyRef, 'warehouses', 'wh-central'), defaultWh).catch(console.warn);
         fetchedWh = [defaultWh];
       }
       setWarehouses(fetchedWh);
 
       // PRODUCTOS Y SERVICIOS
-      const prodSnap = await getDocs(collection(companyRef, 'products'));
       if (prodSnap.empty) {
         const defaultWhId = fetchedWh[0]?.id || 'wh-central';
         const initialProducts: ProductService[] = [
@@ -1370,31 +1366,26 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
             createdAt: new Date().toISOString()
           }
         ];
-        for (const p of initialProducts) {
-          await setDoc(doc(companyRef, 'products', p.id), p);
-        }
+        initialProducts.forEach(p => {
+          setDoc(doc(companyRef, 'products', p.id), p).catch(console.warn);
+        });
         setProducts(initialProducts);
       } else {
         setProducts(prodSnap.docs.map(d => ({ ...d.data(), id: d.id } as ProductService)));
       }
 
-      const customItemsSnap = await getDocs(collection(companyRef, 'customAnalysisItems'));
       setCustomAnalysisItems(customItemsSnap.docs.map(d => ({ ...d.data(), id: d.id } as CustomAnalysisTableItem)));
 
-      const rcvParamsSnap = await getDoc(doc(companyRef, 'config', 'rcvParams'));
       if (rcvParamsSnap.exists()) {
         setRcvParams(rcvParamsSnap.data() as RCVAccountingParams);
       }
 
-      const commDocsSnap = await getDocs(collection(companyRef, 'commercialDocuments'));
       const fetchedCommDocs = commDocsSnap.docs.map(d => ({ ...d.data(), id: d.id } as CommercialDocument));
       fetchedCommDocs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       setCommercialDocuments(fetchedCommDocs);
 
-      const empSnap = await getDocs(collection(companyRef, 'employees'));
       setEmployees(empSnap.docs.map(d => ({ ...d.data(), id: d.id } as Employee)));
 
-      const slipsSnap = await getDocs(collection(companyRef, 'payrollSlips'));
       let fetchedSlips = slipsSnap.docs.map(d => ({ ...d.data(), id: d.id } as PayrollSlip));
       const cleanRut = (company.rut || '').replace(/[^0-9kK]/g, '');
       if (cleanRut === '777109294') {
@@ -1402,7 +1393,6 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
       }
       setPayrollSlips(fetchedSlips);
 
-      const invMovSnap = await getDocs(collection(companyRef, 'inventoryMovements'));
       const fetchedInvMov = invMovSnap.docs.map(d => ({ ...d.data(), id: d.id } as InventoryMovement));
       fetchedInvMov.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       setInventoryMovements(fetchedInvMov);
@@ -1419,11 +1409,11 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
   useEffect(() => {
     fetchData();
 
-    // Suscripciones en tiempo real para reflejar inmediatamente cambios de cuentas, auxiliares, parámetros y comprobantes
+    // Suscripciones en tiempo real ligeras y enfocadas exclusivamente en datos contables dinámicos
     const unsubAccounts = onSnapshot(collection(companyRef, 'chartOfAccounts'), (accSnap) => {
-      const fetchedAccounts = accSnap.docs.map(d => ({ ...d.data(), id: d.id } as ChartOfAccount));
-      fetchedAccounts.sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
-      setAccounts(fetchedAccounts);
+      const fetched = accSnap.docs.map(d => ({ ...d.data(), id: d.id } as ChartOfAccount));
+      fetched.sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
+      setAccounts(fetched);
     }, (err) => console.warn("Realtime listener error accounts:", err));
 
     const unsubAux = onSnapshot(collection(companyRef, 'auxiliaries'), (auxSnap) => {
@@ -1431,9 +1421,9 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
     }, (err) => console.warn("Realtime listener error auxiliaries:", err));
 
     const unsubVouchers = onSnapshot(collection(companyRef, 'vouchers'), (vouchSnap) => {
-      const fetchedVouchers = vouchSnap.docs.map(d => ({ ...d.data(), id: d.id } as Voucher));
-      fetchedVouchers.sort((a, b) => (b.voucherNumber || 0) - (a.voucherNumber || 0));
-      setVouchers(fetchedVouchers);
+      const fetched = vouchSnap.docs.map(d => ({ ...d.data(), id: d.id } as Voucher));
+      fetched.sort((a, b) => (b.voucherNumber || 0) - (a.voucherNumber || 0));
+      setVouchers(fetched);
     }, (err) => console.warn("Realtime listener error vouchers:", err));
 
     const unsubRcv = onSnapshot(collection(companyRef, 'rcvDocuments'), (rcvSnap) => {
@@ -1453,49 +1443,6 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
       setRcvDocuments(cleanRcvDocs);
     }, (err) => console.warn("Realtime listener error rcv:", err));
 
-    const unsubCC = onSnapshot(collection(companyRef, 'costCenters'), (snap) => {
-      setCostCenters(snap.docs.map(d => ({ ...d.data(), id: d.id } as CostCenterMaster)));
-    }, (err) => console.warn("Realtime listener error costCenters:", err));
-
-    const unsubExp = onSnapshot(collection(companyRef, 'expenseItems'), (snap) => {
-      setExpenseItems(snap.docs.map(d => ({ ...d.data(), id: d.id } as ExpenseItemMaster)));
-    }, (err) => console.warn("Realtime listener error expenseItems:", err));
-
-    const unsubNonSii = onSnapshot(collection(companyRef, 'nonSiiDocTypes'), (snap) => {
-      setNonSiiDocTypes(snap.docs.map(d => ({ ...d.data(), id: d.id } as NonSiiDocTypeMaster)));
-    }, (err) => console.warn("Realtime listener error nonSiiDocTypes:", err));
-
-    const unsubProj = onSnapshot(collection(companyRef, 'projects'), (snap) => {
-      setProjects(snap.docs.map(d => ({ ...d.data(), id: d.id } as ProjectMaster)));
-    }, (err) => console.warn("Realtime listener error projects:", err));
-
-    const unsubProd = onSnapshot(collection(companyRef, 'products'), (snap) => {
-      setProducts(snap.docs.map(d => ({ ...d.data(), id: d.id } as ProductService)));
-    }, (err) => console.warn("Realtime listener error products:", err));
-
-    const unsubCustomItems = onSnapshot(collection(companyRef, 'customAnalysisItems'), (snap) => {
-      setCustomAnalysisItems(snap.docs.map(d => ({ ...d.data(), id: d.id } as CustomAnalysisTableItem)));
-    }, (err) => console.warn("Realtime listener error customAnalysisItems:", err));
-
-    const unsubParams = onSnapshot(doc(companyRef, 'config', 'rcvParams'), (rcvParamsSnap) => {
-      if (rcvParamsSnap.exists()) {
-        setRcvParams(rcvParamsSnap.data() as RCVAccountingParams);
-      }
-    }, (err) => console.warn("Realtime listener error params:", err));
-
-    const unsubEmp = onSnapshot(collection(companyRef, 'employees'), (snap) => {
-      setEmployees(snap.docs.map(d => ({ ...d.data(), id: d.id } as Employee)));
-    }, (err) => console.warn("Realtime listener error employees:", err));
-
-    const unsubSlips = onSnapshot(collection(companyRef, 'payrollSlips'), (snap) => {
-      let fetchedSlips = snap.docs.map(d => ({ ...d.data(), id: d.id } as PayrollSlip));
-      const cleanRut = (company.rut || '').replace(/[^0-9kK]/g, '');
-      if (cleanRut === '777109294') {
-        fetchedSlips = [];
-      }
-      setPayrollSlips(fetchedSlips);
-    }, (err) => console.warn("Realtime listener error payrollSlips:", err));
-
     const unsubFiscal = onSnapshot(collection(companyRef, 'fiscalPeriods'), (fySnap) => {
       setFiscalYears(fySnap.docs.map(d => ({ ...d.data(), id: d.id } as FiscalPeriodYear)));
     }, (err) => console.warn("Realtime listener error fiscal:", err));
@@ -1505,16 +1452,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
       unsubAux();
       unsubVouchers();
       unsubRcv();
-      unsubCC();
-      unsubExp();
-      unsubNonSii();
-      unsubProj();
-      unsubProd();
-      unsubCustomItems();
-      unsubParams();
       unsubFiscal();
-      unsubEmp();
-      unsubSlips();
     };
   }, [studyId, company.id]);
 
@@ -1638,10 +1576,10 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
       case '111': return '111 (Nota Débito Exportación)';
       case '112': return '112 (Nota Crédito Exportación)';
       case '914': return '914 (Declaración de Ingreso DIN)';
-      case '9999': return '9999 (Documento OTRO / Interno)';
-      case 'OTRO': return 'OTRO (Documento Interno - Código 9999)';
+      case '9999': return '9999 (Documento Interno)';
+      case 'OTRO': return 'Documento Interno (9999)';
       default:
-        if (clean.toUpperCase() === 'OTRO' || clean === '9999') return '9999 (Documento OTRO / Interno)';
+        if (clean.toUpperCase() === 'OTRO' || clean === '9999') return 'Documento Interno (9999)';
         if (clean.toLowerCase().includes('factura elect')) return '33 (Factura Electrónica)';
         if (clean.toLowerCase().includes('factura exenta') || clean.toLowerCase().includes('no afecta')) return '34 (Factura Exenta)';
         if (clean.toLowerCase().includes('boleta elect')) return '39 (Boleta Electrónica)';
@@ -3512,6 +3450,253 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
     }
   };
 
+  // Handle actions triggered from KeyboardShortcutsModal or Global Shortcuts
+  const handleShortcutAction = (actionKey: string) => {
+    switch (actionKey) {
+      case 'OPEN_COMMAND_PALETTE':
+        setIsCommandPaletteOpen(true);
+        break;
+      case 'SAVE_ACTIVE_FORM': {
+        const formElement = document.querySelector('form[data-voucher-form="true"]') as HTMLFormElement | null;
+        if (formElement) {
+          formElement.requestSubmit();
+        } else {
+          const rcvForm = document.querySelector('form[data-rcv-edit-form="true"]') as HTMLFormElement | null;
+          if (rcvForm) {
+            rcvForm.requestSubmit();
+          }
+        }
+        window.dispatchEvent(new CustomEvent('gestok-save-form'));
+        break;
+      }
+      case 'NEW_VOUCHER':
+        handleOpenModuleInTab('vouchers');
+        setTimeout(() => handleOpenCreateVoucher(), 60);
+        break;
+      case 'TOGGLE_CALCULATOR':
+        setShowCalculator(prev => !prev);
+        break;
+      case 'NAV_VOUCHERS':
+        handleOpenModuleInTab('vouchers');
+        break;
+      case 'NAV_LIBRO_DIARIO':
+        handleOpenModuleInTab('libroDiario');
+        break;
+      case 'NAV_LIBRO_MAYOR':
+        handleOpenModuleInTab('libroMayor');
+        break;
+      case 'NAV_BALANCE_8':
+        handleOpenModuleInTab('balance8');
+        break;
+      case 'NAV_AUXILIARES':
+        handleOpenModuleInTab('analisisAuxiliares');
+        break;
+      case 'NAV_CONCILIACION':
+        handleOpenModuleInTab('conciliacionBancaria');
+        break;
+      case 'NAV_RCV':
+        handleOpenModuleInTab('rcv');
+        break;
+      case 'NAV_F29':
+        handleOpenModuleInTab('formulario29');
+        break;
+      case 'NAV_LIQUIDACIONES':
+        handleOpenModuleInTab('liquidaciones');
+        break;
+      case 'NAV_ESTADO_RESULTADOS':
+        handleOpenModuleInTab('estadoResultados');
+        break;
+      case 'NEXT_TAB':
+        setOpenTabs(currentTabs => {
+          if (currentTabs.length <= 1) return currentTabs;
+          const currentIndex = currentTabs.findIndex(t => t.id === activeTabId);
+          const nextIndex = (currentIndex + 1) % currentTabs.length;
+          const nextTab = currentTabs[nextIndex];
+          setActiveTabId(nextTab.id);
+          setActiveTab(nextTab.moduleId as any);
+          return currentTabs;
+        });
+        break;
+      case 'PREV_TAB':
+        setOpenTabs(currentTabs => {
+          if (currentTabs.length <= 1) return currentTabs;
+          const currentIndex = currentTabs.findIndex(t => t.id === activeTabId);
+          const prevIndex = (currentIndex - 1 + currentTabs.length) % currentTabs.length;
+          const prevTab = currentTabs[prevIndex];
+          setActiveTabId(prevTab.id);
+          setActiveTab(prevTab.moduleId as any);
+          return currentTabs;
+        });
+        break;
+      case 'NEW_TAB':
+        setShowNewTabModal(true);
+        break;
+      case 'CLOSE_TAB':
+        handleCloseTab(activeTabId);
+        break;
+      case 'TOGGLE_ZEN_MODE':
+        setIsZenMode(prev => !prev);
+        break;
+      case 'TOGGLE_DOCK':
+        handleSetDockPosition(dockPosition === 'hidden' ? 'left' : dockPosition === 'left' ? 'bottom' : 'hidden');
+        break;
+      default:
+        break;
+    }
+  };
+
+  // Global Keyboard Shortcuts (Navigation between tabs, Save voucher, Search, Help modal)
+  useEffect(() => {
+    const handleGlobalShortcuts = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      const tag = activeEl?.tagName?.toLowerCase();
+      const isEditable = tag === 'input' || tag === 'textarea' || (activeEl as HTMLElement)?.isContentEditable;
+
+      // 1. Omnisearch / Command Palette: Cmd+K / Ctrl+K
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsCommandPaletteOpen(prev => !prev);
+        return;
+      }
+
+      // 2. Guía de Atajos: F1 o Shift+? / Alt+H
+      if (e.key === 'F1' || (e.altKey && e.key.toLowerCase() === 'h') || (e.shiftKey && e.key === '?' && !isEditable)) {
+        e.preventDefault();
+        e.stopPropagation();
+        setShowKeyboardShortcutsModal(prev => !prev);
+        return;
+      }
+
+      // 3. Guardar Comprobante / Formulario Activo: F2 o Cmd+S / Ctrl+S
+      if (e.key === 'F2' || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's')) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (voucherForm && distributingLineIdx === null && editingAnalysisLineIdx === null) {
+          const formElement = document.querySelector('form[data-voucher-form="true"]') as HTMLFormElement | null;
+          if (formElement) formElement.requestSubmit();
+        } else if (editingRcvDoc) {
+          const rcvForm = document.querySelector('form[data-rcv-edit-form="true"]') as HTMLFormElement | null;
+          if (rcvForm) rcvForm.requestSubmit();
+        }
+        window.dispatchEvent(new CustomEvent('gestok-save-form'));
+        return;
+      }
+
+      // 4. Crear Nuevo Comprobante: Alt+N
+      if (e.altKey && e.key.toLowerCase() === 'n') {
+        e.preventDefault();
+        e.stopPropagation();
+        handleOpenModuleInTab('vouchers');
+        setTimeout(() => handleOpenCreateVoucher(), 60);
+        return;
+      }
+
+      // 5. Calculadora Táctica: Alt+C
+      if (e.altKey && e.key.toLowerCase() === 'c') {
+        e.preventDefault();
+        e.stopPropagation();
+        setShowCalculator(prev => !prev);
+        return;
+      }
+
+      // 6. Abrir Selector de Nueva Pestaña: Alt+T
+      if (e.altKey && e.key.toLowerCase() === 't') {
+        e.preventDefault();
+        e.stopPropagation();
+        setShowNewTabModal(true);
+        return;
+      }
+
+      // 7. Navegación directa por módulos: Alt + 1..9, 0
+      if (e.altKey && !e.ctrlKey && !e.metaKey) {
+        if (e.key === '1') { e.preventDefault(); handleOpenModuleInTab('vouchers'); return; }
+        if (e.key === '2') { e.preventDefault(); handleOpenModuleInTab('libroDiario'); return; }
+        if (e.key === '3') { e.preventDefault(); handleOpenModuleInTab('libroMayor'); return; }
+        if (e.key === '4') { e.preventDefault(); handleOpenModuleInTab('balance8'); return; }
+        if (e.key === '5') { e.preventDefault(); handleOpenModuleInTab('analisisAuxiliares'); return; }
+        if (e.key === '6') { e.preventDefault(); handleOpenModuleInTab('conciliacionBancaria'); return; }
+        if (e.key === '7') { e.preventDefault(); handleOpenModuleInTab('rcv'); return; }
+        if (e.key === '8') { e.preventDefault(); handleOpenModuleInTab('formulario29'); return; }
+        if (e.key === '9') { e.preventDefault(); handleOpenModuleInTab('liquidaciones'); return; }
+        if (e.key === '0') { e.preventDefault(); handleOpenModuleInTab('estadoResultados'); return; }
+
+        // Alt+ArrowRight / Alt+ArrowLeft para cambiar de pestaña
+        if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          setOpenTabs(currentTabs => {
+            if (currentTabs.length <= 1) return currentTabs;
+            const currentIndex = currentTabs.findIndex(t => t.id === activeTabId);
+            const nextIndex = (currentIndex + 1) % currentTabs.length;
+            const nextTab = currentTabs[nextIndex];
+            setActiveTabId(nextTab.id);
+            setActiveTab(nextTab.moduleId as any);
+            return currentTabs;
+          });
+          return;
+        }
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          setOpenTabs(currentTabs => {
+            if (currentTabs.length <= 1) return currentTabs;
+            const currentIndex = currentTabs.findIndex(t => t.id === activeTabId);
+            const prevIndex = (currentIndex - 1 + currentTabs.length) % currentTabs.length;
+            const prevTab = currentTabs[prevIndex];
+            setActiveTabId(prevTab.id);
+            setActiveTab(prevTab.moduleId as any);
+            return currentTabs;
+          });
+          return;
+        }
+      }
+
+      // 8. Ctrl+Tab / Ctrl+Shift+Tab to cycle tabs
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Tab') {
+        e.preventDefault();
+        setOpenTabs(currentTabs => {
+          if (currentTabs.length <= 1) return currentTabs;
+          const currentIndex = currentTabs.findIndex(t => t.id === activeTabId);
+          const nextIndex = e.shiftKey
+            ? (currentIndex - 1 + currentTabs.length) % currentTabs.length
+            : (currentIndex + 1) % currentTabs.length;
+          const nextTab = currentTabs[nextIndex];
+          setActiveTabId(nextTab.id);
+          setActiveTab(nextTab.moduleId as any);
+          return currentTabs;
+        });
+        return;
+      }
+
+      // 9. Ctrl+W to close active tab (when not in input)
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'w') {
+        if (!isEditable) {
+          e.preventDefault();
+          handleCloseTab(activeTabId);
+        }
+        return;
+      }
+
+      // 10. F11 or Ctrl+B to toggle Zen mode
+      if (e.key === 'F11' || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b')) {
+        e.preventDefault();
+        setIsZenMode(prev => !prev);
+        return;
+      }
+
+      // 11. Ctrl+D to toggle dock
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
+        if (!isEditable) {
+          e.preventDefault();
+          handleSetDockPosition(dockPosition === 'hidden' ? 'left' : dockPosition === 'left' ? 'bottom' : 'hidden');
+        }
+        return;
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalShortcuts);
+    return () => window.removeEventListener('keydown', handleGlobalShortcuts);
+  }, [activeTabId, dockPosition, voucherForm, distributingLineIdx, editingAnalysisLineIdx, editingRcvDoc]);
+
   const handleOpenEditVoucher = (v: Voucher) => {
     setVoucherForm({
       id: v.id,
@@ -3586,8 +3771,34 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
         for (const rcvDoc of linkedRcvDocs) {
           await updateDoc(doc(companyRef, 'rcvDocuments', rcvDoc.id), {
             estadoContabilizado: false,
+            estadoPago: 'Pendiente',
+            estadoCobranza: 'Pendiente',
             voucherId: null
           });
+        }
+
+        // Si estaba conciliado, desvincularlo de la conciliación bancaria para que no quede amarrado a un comprobante anulado
+        try {
+          const recsSnap = await getDocs(collection(companyRef, 'bankReconciliations'));
+          for (const docSnap of recsSnap.docs) {
+            const recData = docSnap.data() as BankReconciliation;
+            if (recData.lines?.some(l => l.matchedVoucherId === v.id)) {
+              const updatedLines = recData.lines.map(l => {
+                if (l.matchedVoucherId === v.id) {
+                  const cleanLine: any = { ...l, matchedStatus: 'Pendiente' };
+                  delete cleanLine.matchedVoucherId;
+                  delete cleanLine.matchedVoucherNumber;
+                  delete cleanLine.matchedVoucherPeriod;
+                  return cleanLine;
+                }
+                return l;
+              });
+              const safeLines = JSON.parse(JSON.stringify(updatedLines, (k, val) => val === undefined ? null : val));
+              await updateDoc(doc(companyRef, 'bankReconciliations', docSnap.id), { lines: safeLines });
+            }
+          }
+        } catch (recErr) {
+          console.warn('Advertencia al desvincular de conciliación bancaria:', recErr);
         }
 
         // Audit Log
@@ -3605,20 +3816,67 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
         if (selectedVoucher?.id === v.id) {
           setSelectedVoucher({ ...v, status: 'Anulado', anuladoReason: trimmedReason });
         }
+        alert(`✅ Comprobante N° ${v.voucherNumber} anulado con éxito.`);
       } else if (type === 'eliminar') {
         // 1. Revert associated RCV document if any
         const linkedRcvDocs = rcvDocuments.filter(d => d.voucherId === v.id || (v.createdFromRcvId && d.id === v.createdFromRcvId));
+        
+        // 2. Check for conciliation
+        const recsSnap = await getDocs(collection(companyRef, 'bankReconciliations'));
+        const isConciliated = recsSnap.docs.some(docSnap => {
+            const data = docSnap.data() as BankReconciliation;
+            return data.lines?.some(l => l.matchedVoucherId === v.id);
+        });
+
+        if (isConciliated && !window.confirm(`⚠️ EL COMPROBANTE N° ${v.voucherNumber} ESTÁ CONCILIADO EN EL MÓDULO BANCARIO.\n\nAl eliminarlo, se romperá la vinculación en la conciliación bancaria y la partida quedará como Pendiente para volver a conciliar.\n\n¿Deseas continuar?`)) {
+            return;
+        }
+
+        // 3. If conciliated, find and break the link safely without undefined fields in Firestore array
+        if (isConciliated) {
+            for (const docSnap of recsSnap.docs) {
+                const recData = docSnap.data() as BankReconciliation;
+                if (recData.lines?.some(l => l.matchedVoucherId === v.id)) {
+                    const updatedLines = recData.lines.map(l => {
+                      if (l.matchedVoucherId === v.id) {
+                        const cleanLine: any = { ...l, matchedStatus: 'Pendiente' };
+                        delete cleanLine.matchedVoucherId;
+                        delete cleanLine.matchedVoucherNumber;
+                        delete cleanLine.matchedVoucherPeriod;
+                        return cleanLine;
+                      }
+                      return l;
+                    });
+                    const safeLines = JSON.parse(JSON.stringify(updatedLines, (k, val) => val === undefined ? null : val));
+                    await updateDoc(doc(companyRef, 'bankReconciliations', docSnap.id), { lines: safeLines });
+                }
+            }
+        }
+
+        // 4. Revert any linked RCV documents (liberar para contabilizar y resetear estado de pago)
         for (const rcvDoc of linkedRcvDocs) {
           await updateDoc(doc(companyRef, 'rcvDocuments', rcvDoc.id), {
             estadoContabilizado: false,
+            estadoPago: 'Pendiente',
+            estadoCobranza: 'Pendiente',
             voucherId: null
           });
         }
 
-        // 2. Eliminar comprobante definitivamente de Firestore
+        // También verificar si otros documentos RCV quedaron vinculados como pagados por este voucher
+        const otherPaidDocs = rcvDocuments.filter(d => d.voucherId === v.id && !linkedRcvDocs.some(ld => ld.id === d.id));
+        for (const rcvDoc of otherPaidDocs) {
+          await updateDoc(doc(companyRef, 'rcvDocuments', rcvDoc.id), {
+            estadoPago: 'Pendiente',
+            estadoCobranza: 'Pendiente',
+            voucherId: null
+          });
+        }
+
+        // 5. Eliminar comprobante definitivamente de Firestore
         await deleteDoc(doc(companyRef, 'vouchers', v.id));
 
-        // 3. Audit Log
+        // 6. Audit Log
         logAuditEvent({
           userId: auth.currentUser?.uid || 'anon',
           userEmail: auth.currentUser?.email || '',
@@ -3637,6 +3895,8 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
         if (selectedVoucher?.id === v.id) {
           setSelectedVoucher(null);
         }
+
+        alert(`✅ Comprobante N° ${v.voucherNumber} eliminado con éxito.${isConciliated ? ' Se desvinculó de la conciliación bancaria y la partida quedó disponible como pendiente.' : ''}`);
       } else if (type === 'reactivar') {
         await updateDoc(doc(companyRef, 'vouchers', v.id), {
           status: 'Valido',
@@ -3669,13 +3929,27 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
         if (selectedVoucher?.id === v.id) {
           setSelectedVoucher({ ...v, status: 'Valido', anuladoReason: null });
         }
+        alert(`✅ Comprobante N° ${v.voucherNumber} reactivado como Válido.`);
       }
 
       setVoucherActionModal(null);
       await fetchData();
     } catch (err: any) {
       console.error(`Error al procesar acción ${type}:`, err);
-      alert(`Error al procesar la acción: ${err.message}`);
+      let friendlyMessage = 'Ocurrió un error al procesar la acción sobre el comprobante.';
+      const rawMsg = String(err?.message || err || '');
+      if (rawMsg.includes('permission-denied') || rawMsg.includes('insufficient permissions')) {
+        friendlyMessage = '🔒 Permisos Insuficientes: No cuentas con permisos de Administrador para eliminar o modificar comprobantes contables.';
+      } else if (rawMsg.includes('not-found') || rawMsg.includes('No document to update')) {
+        friendlyMessage = '⚠️ El comprobante contable o registro vinculado ya no existe en el sistema.';
+      } else if (rawMsg.includes('network') || rawMsg.includes('unavailable') || rawMsg.includes('failed to fetch')) {
+        friendlyMessage = '📡 Error de Conexión: No se pudo conectar con el servidor. Revisa tu conexión a internet e inténtalo nuevamente.';
+      } else if (rawMsg.includes('unsupported field value') || rawMsg.includes('undefined')) {
+        friendlyMessage = '⚠️ Error en los datos del comprobante o de la conciliación bancaria asociada. Por favor actualiza la vista e intenta nuevamente.';
+      } else if (rawMsg) {
+        friendlyMessage = `⚠️ No fue posible ${type === 'eliminar' ? 'eliminar' : type === 'anular' ? 'anular' : 'reactivar'} el comprobante N° ${v.voucherNumber}.\n\nDetalle: ${rawMsg}`;
+      }
+      alert(friendlyMessage);
     } finally {
       setActionLoading(false);
     }
@@ -4021,31 +4295,6 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
       notify.error('Error al guardar comprobante: ' + err.message);
     }
   };
-
-  // Atajo de teclado F2 para Grabar / Guardar Comprobante Contable o Formularios de Edición
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'F2') {
-        if (voucherForm && distributingLineIdx === null && editingAnalysisLineIdx === null) {
-          e.preventDefault();
-          e.stopPropagation();
-          const formElement = document.querySelector('form[data-voucher-form="true"]') as HTMLFormElement | null;
-          if (formElement) {
-            formElement.requestSubmit();
-          }
-        } else if (editingRcvDoc) {
-          e.preventDefault();
-          e.stopPropagation();
-          const rcvForm = document.querySelector('form[data-rcv-edit-form="true"]') as HTMLFormElement | null;
-          if (rcvForm) {
-            rcvForm.requestSubmit();
-          }
-        }
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [voucherForm, distributingLineIdx, editingAnalysisLineIdx, editingRcvDoc]);
 
   // Delete Single RCV Document (Purchases, Sales, Honorarios, etc.)
   const handleDeleteSingleRcvDoc = async (docId: string, tipo: string, folio: string) => {
@@ -4669,7 +4918,10 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
   ]);
 
   return (
-    <div className="fixed inset-0 z-40 bg-slate-950 text-slate-100 flex flex-col w-screen h-screen overflow-hidden select-none animate-in fade-in duration-150">
+    <div 
+      style={{ top: isZenMode ? '0px' : 'calc(var(--executive-header-height, 52px) + 2px)' }}
+      className="fixed inset-x-0 bottom-0 z-40 bg-slate-950 text-slate-100 flex flex-col w-screen overflow-hidden select-none animate-in fade-in duration-150"
+    >
       {/* CABECERA COCKPIT CON PESTAÑAS INTEGRADAS, SELECTORES OPERATIVOS Y CONTROL ZEN */}
       <CockpitTabBar
         company={company}
@@ -4690,6 +4942,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
         checkIsPeriodClosed={checkIsPeriodClosed}
         onOpenExcelImport={() => setShowExcelImportModal(true)}
         onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+        onOpenShortcutsModal={() => setShowKeyboardShortcutsModal(true)}
         onOpenCalculator={() => setShowCalculator(true)}
         onOpenQuickAccessConfig={() => setShowQuickAccessConfig(true)}
         isZenMode={isZenMode}
@@ -5163,7 +5416,14 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
               </div>
             </div>
 
-            <div className="pt-4 border-t border-slate-200 flex justify-end">
+            <div className="pt-4 border-t border-slate-200 flex justify-between items-center gap-3">
+              <button
+                type="button"
+                onClick={() => handleOpenModuleInTab('rcv')}
+                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+              >
+                &larr; Volver a Carga RCV
+              </button>
               <button
                 type="submit"
                 className="w-full sm:w-auto px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-colors shadow-sm flex items-center justify-center gap-2"
@@ -5387,7 +5647,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
             if (t === 'vouchers' || t === 'libroDiario' || t === 'libroMayor' || t === 'balance8') {
               setActiveRibbonGroup('FINANZAS');
             } else if (t === 'rcv') {
-              setActiveRibbonGroup('IMPORTACIONES');
+              setActiveRibbonGroup('CARGA (SII)');
             } else if (t === 'formulario29') {
               setActiveRibbonGroup('IMPUESTOS');
             } else if (t === 'conciliacionBancaria') {
@@ -5489,6 +5749,18 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
                   title="Cargar archivos CSV o TXT descargados manualmente desde el portal del SII"
                 >
                   <span>{showManualUpload ? '✕ Ocultar Carga CSV' : '📥 Cargar CSV/TXT Manual'}</span>
+                </button>
+              </div>
+
+              <div className="pt-3.5">
+                <button
+                  type="button"
+                  onClick={() => handleOpenModuleInTab('rcvParams')}
+                  className="bg-amber-50 hover:bg-amber-100 text-amber-900 font-semibold text-xs px-3 py-2 rounded-lg border border-amber-300 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap shadow-xs"
+                  title="Configurar cuentas e imputaciones por defecto para la centralización del RCV"
+                >
+                  <Settings className="w-3.5 h-3.5 text-amber-700" />
+                  <span>Parámetros RCV</span>
                 </button>
               </div>
             </div>
@@ -6204,12 +6476,14 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
               </button>
               <button
                 onClick={handleOpenCreateVoucher}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-4 py-2 rounded-lg flex items-center gap-1.5 transition-colors shadow-sm"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-4 py-2 rounded-lg flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+                title="Crear nuevo comprobante contable (Alt+N)"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
-                Nuevo Comprobante
+                <span>Nuevo Comprobante</span>
+                <kbd className="hidden sm:inline-block ml-1 px-1.5 py-0.2 bg-indigo-800 text-indigo-100 rounded text-[10px] font-mono border border-indigo-400/40 font-bold">Alt+N</kbd>
               </button>
             </div>
           </div>
@@ -7771,6 +8045,9 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
             setActiveTab('auditorEstadosFinancieros');
             setActiveRibbonGroup('INDICADORES');
           }}
+          onOpenEstadoResultados={() => {
+            handleOpenModuleInTab('estadoResultados');
+          }}
         />
       )}
 
@@ -7834,6 +8111,9 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
           onOpenAuditor={() => {
             setActiveTab('auditorEstadosFinancieros');
             setActiveRibbonGroup('INDICADORES');
+          }}
+          onOpenBalanceIFRS={() => {
+            handleOpenModuleInTab('balanceIFRS');
           }}
         />
       )}
@@ -8183,19 +8463,58 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
         isOpen={isCommandPaletteOpen}
         onClose={() => setIsCommandPaletteOpen(false)}
         onNavigateToView={(viewKey) => {
-          if (viewKey === 'PLAN_CUENTAS') setActiveTab('accounts');
-          else if (viewKey === 'LIBRO_DIARIO') setActiveTab('libroDiario');
-          else if (viewKey === 'LIBRO_MAYOR') setActiveTab('libroMayor');
-          else if (viewKey === 'BALANCE_8_COLUMNAS') setActiveTab('balance8');
-          else if (viewKey === 'CONCILIACION_BANCARIA') setActiveTab('conciliacionBancaria');
-          else if (viewKey === 'REMUNERACIONES') setActiveTab('liquidaciones');
-          else if (viewKey === 'ACTIVO_FIJO') setActiveTab('activoFijo');
-          else if (viewKey === 'DDJJ_SII') setActiveTab('ddjj');
-          else if (viewKey === 'AUXILIARES') setActiveTab('auxiliaries');
+          if (viewKey === 'PLAN_CUENTAS') handleOpenModuleInTab('accounts');
+          else if (viewKey === 'VOUCHERS') handleOpenModuleInTab('vouchers');
+          else if (viewKey === 'LIBRO_DIARIO') handleOpenModuleInTab('libroDiario');
+          else if (viewKey === 'LIBRO_MAYOR') handleOpenModuleInTab('libroMayor');
+          else if (viewKey === 'BALANCE_8_COLUMNAS') handleOpenModuleInTab('balance8');
+          else if (viewKey === 'BALANCE_IFRS') handleOpenModuleInTab('balanceIFRS');
+          else if (viewKey === 'ESTADO_RESULTADOS') handleOpenModuleInTab('estadoResultados');
+          else if (viewKey === 'ANALISIS_AUXILIARES') handleOpenModuleInTab('analisisAuxiliares');
+          else if (viewKey === 'ANALISIS_CUENTAS') handleOpenModuleInTab('analisisCuentas');
+          else if (viewKey === 'REPORTES_ANALITICOS') handleOpenModuleInTab('reportesAnaliticos');
+          else if (viewKey === 'ACTIVO_FIJO') handleOpenModuleInTab('activoFijo');
+          else if (viewKey === 'AUDITOR_ESTADOS_FINANCIEROS') handleOpenModuleInTab('auditorEstadosFinancieros');
+          else if (viewKey === 'CALCULADORA') handleOpenModuleInTab('calculator');
+          else if (viewKey === 'AGENTIC_STUDY') handleOpenModuleInTab('agenticStudy2040');
+          else if (viewKey === 'AGENTIC_PYME') handleOpenModuleInTab('agenticPyme2040');
+          else if (viewKey === 'CONCILIACION_BANCARIA') handleOpenModuleInTab('conciliacionBancaria');
+          else if (viewKey === 'LIBRO_BANCO_COLABORATIVO') handleOpenModuleInTab('libroBancoColaborativo');
+          else if (viewKey === 'NOMINAS_PAGO') handleOpenModuleInTab('nominasPago');
+          else if (viewKey === 'COBRANZA') handleOpenModuleInTab('cobranza');
+          else if (viewKey === 'FLUJO_CAJA') handleOpenModuleInTab('flujoDeCaja');
+          else if (viewKey === 'OPERATIVA_COMERCIAL') handleOpenModuleInTab('operativaComercial');
+          else if (viewKey === 'EMISION_DTE') handleOpenModuleInTab('emisionDte');
+          else if (viewKey === 'STOCK_KARDEX') handleOpenModuleInTab('stockKardex');
+          else if (viewKey === 'WAREHOUSES') handleOpenModuleInTab('warehouses');
+          else if (viewKey === 'PRODUCTS_SERVICES') handleOpenModuleInTab('productsServices');
+          else if (viewKey === 'RCV_SII') handleOpenModuleInTab('rcv');
+          else if (viewKey === 'RCV_PARAMS') handleOpenModuleInTab('rcvParams');
+          else if (viewKey === 'CARGA_MASIVA') handleOpenModuleInTab('cargaMasiva');
+          else if (viewKey === 'PLANTILLAS_CARGA') handleOpenModuleInTab('plantillasCarga');
+          else if (viewKey === 'FORMULARIO_29') handleOpenModuleInTab('formulario29');
+          else if (viewKey === 'F29_CODES') handleOpenModuleInTab('f29Codes');
+          else if (viewKey === 'DDJJ_SII') handleOpenModuleInTab('ddjj');
+          else if (viewKey === 'CONTROL_FOLIOS') handleOpenModuleInTab('controlFolios');
+          else if (viewKey === 'EMPLOYEES') handleOpenModuleInTab('employees');
+          else if (viewKey === 'REMUNERACIONES') handleOpenModuleInTab('liquidaciones');
+          else if (viewKey === 'INDICADORES_FINANCIEROS') handleOpenModuleInTab('indicadoresFinancieros');
+          else if (viewKey === 'INDICADORES_ECONOMICOS') handleOpenModuleInTab('exchange');
+          else if (viewKey === 'AUXILIARES') handleOpenModuleInTab('auxiliaries');
+          else if (viewKey === 'PERIODOS') handleOpenModuleInTab('periods');
+          else if (viewKey === 'TABLAS_ANALISIS') handleOpenModuleInTab('tablasAnalisis');
+          else handleOpenModuleInTab(viewKey);
         }}
         accounts={accounts}
         auxiliaries={auxiliaries}
         vouchers={vouchers}
+      />
+
+      {/* GUÍA DE ATAJOS DE TECLADO GLOBALES (HOTKEYS) */}
+      <KeyboardShortcutsModal
+        isOpen={showKeyboardShortcutsModal}
+        onClose={() => setShowKeyboardShortcutsModal(false)}
+        onSelectAction={handleShortcutAction}
       />
 
       {/* MODAL FINIQUITOS LEGALES */}
@@ -8263,7 +8582,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
 
       {/* MODAL DE CONFIGURACIÓN DE ACCESO RÁPIDO ESTILO EXCEL */}
       {showQuickAccessConfig && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[9999] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-md overflow-hidden">
             <div className="bg-slate-900 text-white p-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -8368,6 +8687,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
             openModuleIds={openTabs.map(t => t.moduleId)}
             onOpenModule={handleOpenModuleInTab}
             onOpenNewTabModal={() => setShowNewTabModal(true)}
+            onOpenQuickAccessConfig={() => setShowQuickAccessConfig(true)}
             pinnedModuleIds={pinnedQuickAccessIds}
           />
         )}
@@ -8382,6 +8702,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
           openModuleIds={openTabs.map(t => t.moduleId)}
           onOpenModule={handleOpenModuleInTab}
           onOpenNewTabModal={() => setShowNewTabModal(true)}
+          onOpenQuickAccessConfig={() => setShowQuickAccessConfig(true)}
           pinnedModuleIds={pinnedQuickAccessIds}
         />
       )}

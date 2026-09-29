@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { db } from '../lib/firebase';
 import { collection, getDocs, doc, writeBatch, updateDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { ChartOfAccount, Company } from '../types';
 import { compareAccountCodes } from '../utils/sortingUtils';
+import { CreateAccountModal } from './CreateAccountModal';
 import * as XLSX from 'xlsx';
 import {
   FileSpreadsheet,
@@ -105,8 +106,10 @@ export default function PlanDeCuentasGrid({ studyId, company, onRefreshCompany }
   // Columnas dinámicas de análisis adicional (persisten en la empresa)
   const [customColumns, setCustomColumns] = useState<string[]>(company.customAccountColumns || []);
   const [showAddColumnModal, setShowAddColumnModal] = useState(false);
+  const [showCreateAccountModal, setShowCreateAccountModal] = useState(false);
   const [newColumnName, setNewColumnName] = useState('');
   const [isAddingColumn, setIsAddingColumn] = useState(false);
+  const tableContainerRef = useRef<HTMLDivElement>(null);
 
   // Cuentas modificadas o creadas localmente pendientes de guardar
   const [dirtyRowIds, setDirtyRowIds] = useState<Set<string>>(new Set());
@@ -221,6 +224,13 @@ export default function PlanDeCuentasGrid({ studyId, company, onRefreshCompany }
 
     setAccounts(prev => [newAcc, ...prev]);
     setDirtyRowIds(prev => new Set(prev).add(tempId));
+
+    // Scroll inmediato al principio para visualizar la nueva fila en edición
+    setTimeout(() => {
+      if (tableContainerRef.current) {
+        tableContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }, 50);
   };
 
   // Duplicar una fila existente
@@ -769,7 +779,21 @@ export default function PlanDeCuentasGrid({ studyId, company, onRefreshCompany }
       if (columnFilters.ifrs && !acc.codigoIFRS?.toLowerCase().includes(columnFilters.ifrs.toLowerCase())) return false;
 
       return matchesSearch && matchesType && matchesImputable;
-    }).sort((a, b) => compareAccountCodes(a.code, b.code));
+    }).sort((a, b) => {
+      const aIsNew = a.id.startsWith('new_') || a.id.startsWith('imported_');
+      const bIsNew = b.id.startsWith('new_') || b.id.startsWith('imported_');
+
+      // Las cuentas en creación se mantienen SIEMPRE al principio del listado
+      if (aIsNew && !bIsNew) return -1;
+      if (!aIsNew && bIsNew) return 1;
+      if (aIsNew && bIsNew) {
+        // Si ambas son nuevas, la más recientemente agregada va primero
+        return (b.createdAt || '').localeCompare(a.createdAt || '');
+      }
+
+      // Las cuentas grabadas se ordenan por su código contable
+      return compareAccountCodes(a.code, b.code);
+    });
   }, [accounts, searchTerm, filterType, filterImputable, columnFilters]);
 
   return (
@@ -840,13 +864,24 @@ export default function PlanDeCuentasGrid({ studyId, company, onRefreshCompany }
 
         {/* Lado Derecho: Botones de Acción */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Botón Agregar Fila */}
+          {/* Botón Nueva Cuenta (Ventana Modal Completa) */}
+          <button
+            onClick={() => setShowCreateAccountModal(true)}
+            className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
+            title="Crear cuenta contable en ventana emergente con todos los atributos"
+          >
+            <PlusCircle className="w-3.5 h-3.5" />
+            <span>Nueva Cuenta (Ventana)</span>
+          </button>
+
+          {/* Botón Agregar Fila Rápida (Al principio) */}
           <button
             onClick={handleAddRow}
-            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-lg border border-slate-300 shadow-2xs flex items-center gap-1.5 transition-colors"
+            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-lg border border-slate-300 shadow-2xs flex items-center gap-1.5 transition-colors cursor-pointer"
+            title="Agregar fila vacía al principio del listado para ingreso rápido"
           >
             <Plus className="w-3.5 h-3.5 text-indigo-600" />
-            <span>Nueva Fila</span>
+            <span>+ Fila Rápida (Arriba)</span>
           </button>
 
           {/* Botón Agregar Columna de Análisis */}
@@ -913,7 +948,7 @@ export default function PlanDeCuentasGrid({ studyId, company, onRefreshCompany }
 
       {/* TABLA ESTILO HOJA DE CÁLCULO EXCEL */}
       <div className="bg-white rounded-xl border border-slate-300 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto max-h-[600px]">
+        <div ref={tableContainerRef} className="overflow-x-auto max-h-[600px]">
           <table className="w-full text-xs text-left border-collapse font-sans select-none">
             <thead>
               {/* TÍTULOS DE ATRIBUTOS (17 COLUMNAS OFICIALES) */}
@@ -1087,18 +1122,33 @@ export default function PlanDeCuentasGrid({ studyId, company, onRefreshCompany }
                 filteredAccounts.map((acc, index) => {
                   const isDirty = dirtyRowIds.has(acc.id);
                   const isTitleAccount = acc.isImputable === false;
+                  const isNew = acc.id.startsWith('new_') || acc.id.startsWith('imported_');
 
                   return (
                     <tr
                       key={acc.id}
                       className={`hover:bg-amber-50/40 transition-colors ${
-                        isDirty ? 'bg-amber-50/60 font-medium' : isTitleAccount ? 'bg-slate-100/70 font-semibold' : 'bg-white'
+                        isNew
+                          ? 'bg-emerald-50/90 border-l-4 border-l-emerald-600 font-semibold shadow-2xs'
+                          : isDirty
+                          ? 'bg-amber-50/60 font-medium'
+                          : isTitleAccount
+                          ? 'bg-slate-100/70 font-semibold'
+                          : 'bg-white'
                       }`}
                     >
                       {/* Índice */}
                       <td className="px-2 py-1.5 text-center font-mono text-[10px] text-slate-400 bg-slate-50 border-r border-slate-200">
-                        {index + 1}
-                        {isDirty && <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500 ml-1" title="Cambio no guardado" />}
+                        {isNew ? (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-600 text-white shadow-2xs" title="Cuenta nueva en creación (se reubicará por código al guardar)">
+                            NUEVA
+                          </span>
+                        ) : (
+                          <>
+                            {index + 1}
+                            {isDirty && <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500 ml-1" title="Cambio no guardado" />}
+                          </>
+                        )}
                       </td>
 
                       {/* A: COD_CTA */}
@@ -1467,6 +1517,20 @@ export default function PlanDeCuentasGrid({ studyId, company, onRefreshCompany }
           </div>
         </div>
       )}
+
+      {/* VENTANA MODAL PARA CREAR NUEVA CUENTA CON TODOS LOS ATRIBUTOS */}
+      <CreateAccountModal
+        isOpen={showCreateAccountModal}
+        onClose={() => setShowCreateAccountModal(false)}
+        onAccountCreated={(createdAcc) => {
+          showNotice('success', `Cuenta "${createdAcc.code} - ${createdAcc.name}" creada e insertada exitosamente en el plan de cuentas.`);
+          fetchAccounts();
+        }}
+        existingCodes={accounts.map(a => a.code)}
+        studyId={studyId}
+        companyId={company.id}
+        customColumns={customColumns}
+      />
     </div>
   );
 }

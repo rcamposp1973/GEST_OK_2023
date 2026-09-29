@@ -55,6 +55,19 @@ export default function ExecutiveHeader({
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [showChangePassModal, setShowChangePassModal] = useState(false);
   const [latestRate, setLatestRate] = useState<DailyIndicator | null>(null);
+  const headerRef = React.useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const updateHeaderHeight = () => {
+      if (headerRef.current) {
+        const height = headerRef.current.offsetHeight;
+        document.documentElement.style.setProperty('--executive-header-height', `${height}px`);
+      }
+    };
+    updateHeaderHeight();
+    window.addEventListener('resize', updateHeaderHeight);
+    return () => window.removeEventListener('resize', updateHeaderHeight);
+  }, []);
 
   useEffect(() => {
     const loadIndicators = async () => {
@@ -98,7 +111,7 @@ export default function ExecutiveHeader({
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md text-[#0D253D] border-b border-slate-200/80 shadow-xs flex-shrink-0">
+      <header ref={headerRef} className="sticky top-0 z-50 bg-white/95 backdrop-blur-md text-[#0D253D] border-b border-slate-200/80 shadow-xs flex-shrink-0">
         <div className="max-w-[1800px] mx-auto px-4 py-2 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 min-h-[52px]">
           
           {/* LADO IZQUIERDO: Logo oficial Pulso Contable / Gest_OK con Gradiente y Onda */}

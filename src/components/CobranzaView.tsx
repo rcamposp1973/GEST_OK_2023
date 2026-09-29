@@ -5,6 +5,8 @@ import { Company, ChartOfAccount, Auxiliary, RCVDocument, Voucher, CollectionRec
 import { checkIsPeriodClosed } from '../utils/periodUtils';
 import { logAuditEvent } from '../utils/auditLogger';
 import { sanitizeVoucherLines } from '../utils/voucherValidation';
+import { getOrganizedPaymentAccounts, isDefaultBankAccount, isFondoFijoOrCaja } from '../utils/paymentAccountUtils';
+import PaymentAccountsConfigModal from './PaymentAccountsConfigModal';
 
 interface CobranzaViewProps {
   studyId: string;
@@ -63,37 +65,30 @@ export default function CobranzaView({
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<{ [id: string]: number }>({});
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
+  // Configurable Payment/Collection Accounts
+  const [customPaymentAccountIds, setCustomPaymentAccountIds] = useState<string[]>(
+    company.customPaymentAccountIds || []
+  );
+  const [showConfigModal, setShowConfigModal] = useState<boolean>(false);
+  const [showAllAccounts, setShowAllAccounts] = useState<boolean>(false);
+
   const companyRef = doc(db, 'studies', studyId, 'companies', company.id);
 
-  // Bank & Cash accounts from chart of accounts (prioritizing accounts with requiereConciliacionBancaria = true)
-  const depositAccounts = useMemo(() => {
-    const list = accounts.filter(acc => {
-      if (acc.estado === 'Inactivo') return false;
-      const code = (acc.code || '').replace(/-/g, '.');
-      const name = (acc.name || '').toLowerCase();
-      return (
-        acc.requiereConciliacionBancaria ||
-        (code.startsWith('1.1.01') && (name.includes('banco') || name.includes('cuenta corriente') || name.includes('caja') || name.includes('tesoreria') || name.includes('transbank')))
-      );
-    });
-
-    if (list.length === 0) {
-      return accounts.filter(acc => {
-        if (acc.estado === 'Inactivo') return false;
-        const code = (acc.code || '').replace(/-/g, '.');
-        const name = (acc.name || '').toLowerCase();
-        return code.startsWith('1.1.01') || name.includes('banco') || name.includes('caja');
-      });
-    }
-
-    return list;
-  }, [accounts]);
+  // Organized accounts (Default banks vs Custom enabled vs All others)
+  const {
+    defaultBanks,
+    customEnabled,
+    allOtherAccounts,
+    availableForSelection
+  } = useMemo(() => {
+    return getOrganizedPaymentAccounts(accounts, customPaymentAccountIds);
+  }, [accounts, customPaymentAccountIds]);
 
   useEffect(() => {
-    if (depositAccounts.length > 0 && !selectedDepositAccountId) {
-      setSelectedDepositAccountId(depositAccounts[0].id);
+    if (availableForSelection.length > 0 && (!selectedDepositAccountId || !accounts.some(a => a.id === selectedDepositAccountId))) {
+      setSelectedDepositAccountId(availableForSelection[0].id);
     }
-  }, [depositAccounts, selectedDepositAccountId]);
+  }, [availableForSelection, selectedDepositAccountId, accounts]);
 
   // Fetch Collections
   const fetchCollections = async () => {
@@ -114,7 +109,7 @@ export default function CobranzaView({
     fetchCollections();
   }, [company.id]);
 
-  // Invoices from RCV (Ventas) pending collection
+  // Invoices & Credit Notes from RCV (Ventas) pending collection
   const invoicesWithAging = useMemo(() => {
     const collectedDocIds = new Set<string>();
     collectionRecords.forEach(rec => {
@@ -125,21 +120,8 @@ export default function CobranzaView({
       }
     });
 
-    // Build set of RUTs and Folios collected or canceled via NCs or Vouchers
+    // Check Vouchers for collections/credits on Clientes (1.1.02 / Clientes)
     const canceledOrCollectedDocKeys = new Set<string>();
-
-    // A) Check RCV Credit Notes (tipoDoc 61) for Sales
-    rcvDocuments.forEach(d => {
-      if (d.tipoRegistro === 'Venta' && (String(d.tipoDoc) === '61' || String(d.tipoDoc).includes('61'))) {
-        const rut = (d.rutReceptor || d.rutEmisor || '').toUpperCase().replace(/\./g, '').trim();
-        const folio = String(d.folio || '').trim();
-        const refFolio = String(d.refFolioOrig || '').trim();
-        if (folio) canceledOrCollectedDocKeys.add(`${rut}__${folio}`);
-        if (refFolio) canceledOrCollectedDocKeys.add(`${rut}__${refFolio}`);
-      }
-    });
-
-    // B) Check Vouchers for collections/credits on Clientes (1.1.02 / Clientes)
     vouchers.forEach(v => {
       if (v.status === 'Anulado') return;
       v.lines.forEach(line => {
@@ -166,15 +148,22 @@ export default function CobranzaView({
       .filter(doc => {
         if (doc.tipoRegistro !== 'Venta') return false;
         if (collectedDocIds.has(doc.id)) return false;
-        if (String(doc.tipoDoc) === '61') return false;
 
-        const rut = (doc.rutReceptor || doc.rutEmisor || '').toUpperCase().replace(/\./g, '').trim();
+        const customerRut = (doc.rutReceptor || doc.rutEmisor || '').toUpperCase().replace(/\./g, '').trim();
         const folio = String(doc.folio || '').trim();
-        if (canceledOrCollectedDocKeys.has(`${rut}__${folio}`)) return false;
+        const isNC = isNotaCredito(doc.tipoDoc);
+
+        // If it's a regular invoice already marked as paid in vouchers, skip it
+        if (!isNC && canceledOrCollectedDocKeys.has(`${customerRut}__${folio}`)) {
+          return false;
+        }
 
         return true;
       })
       .map(doc => {
+        const isNC = isNotaCredito(doc.tipoDoc);
+        const customerRut = (doc.rutReceptor || doc.rutEmisor || '').toUpperCase().replace(/\./g, '').trim();
+        const customerName = doc.razonSocialReceptor || doc.razonSocialEmisor || 'Cliente sin razón social';
         const issueDate = new Date(doc.fechaEmision);
         const diffTime = Math.abs(today.getTime() - issueDate.getTime());
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -183,7 +172,11 @@ export default function CobranzaView({
         let agingLabel = '0-30 días (Vigente)';
         let badgeColor = 'bg-emerald-100 text-emerald-800 border-emerald-200';
 
-        if (diffDays > 90) {
+        if (isNC) {
+          agingCategory = 'NC';
+          agingLabel = 'Nota de Crédito (Rebaja)';
+          badgeColor = 'bg-rose-100 text-rose-800 border-rose-300 font-bold';
+        } else if (diffDays > 90) {
           agingCategory = '+90';
           agingLabel = '+90 días (Vencido)';
           badgeColor = 'bg-rose-100 text-rose-800 border-rose-200 font-bold';
@@ -199,6 +192,8 @@ export default function CobranzaView({
 
         return {
           ...doc,
+          customerRut,
+          customerName,
           diffDays,
           agingCategory,
           agingLabel,
@@ -220,19 +215,22 @@ export default function CobranzaView({
     let sumOver90 = 0;
 
     invoicesWithAging.forEach(inv => {
-      totalPending += inv.montoTotal;
+      const isNC = isNotaCredito(inv.tipoDoc);
+      const effAmount = isNC ? -inv.montoTotal : inv.montoTotal;
+      totalPending += effAmount;
+
       if (inv.agingCategory === '0-30') {
         count0_30++;
-        sum0_30 += inv.montoTotal;
+        sum0_30 += effAmount;
       } else if (inv.agingCategory === '31-60') {
         count31_60++;
-        sum31_60 += inv.montoTotal;
+        sum31_60 += effAmount;
       } else if (inv.agingCategory === '61-90') {
         count61_90++;
-        sum61_90 += inv.montoTotal;
-      } else {
+        sum61_90 += effAmount;
+      } else if (inv.agingCategory === '+90') {
         countOver90++;
-        sumOver90 += inv.montoTotal;
+        sumOver90 += effAmount;
       }
     });
 
@@ -252,9 +250,9 @@ export default function CobranzaView({
       if (agingFilter !== 'Todos' && inv.agingCategory !== agingFilter) return false;
       if (customerSearch.trim()) {
         const q = customerSearch.toLowerCase();
-        const rutMatch = inv.rutEmisor.toLowerCase().includes(q);
-        const nameMatch = inv.razonSocialEmisor.toLowerCase().includes(q);
-        const folioMatch = inv.folio.toLowerCase().includes(q);
+        const rutMatch = (inv.customerRut || inv.rutEmisor || '').toLowerCase().includes(q);
+        const nameMatch = (inv.customerName || inv.razonSocialEmisor || '').toLowerCase().includes(q);
+        const folioMatch = String(inv.folio || '').toLowerCase().includes(q);
         if (!rutMatch && !nameMatch && !folioMatch) return false;
       }
       // Column search filters
@@ -268,10 +266,10 @@ export default function CobranzaView({
       if (colFilterFolio.trim() && !String(inv.folio).toLowerCase().includes(colFilterFolio.toLowerCase().trim())) {
         return false;
       }
-      if (colFilterRut.trim() && !inv.rutEmisor.toLowerCase().includes(colFilterRut.toLowerCase().trim())) {
+      if (colFilterRut.trim() && !(inv.customerRut || inv.rutEmisor || '').toLowerCase().includes(colFilterRut.toLowerCase().trim())) {
         return false;
       }
-      if (colFilterRazon.trim() && !inv.razonSocialEmisor.toLowerCase().includes(colFilterRazon.toLowerCase().trim())) {
+      if (colFilterRazon.trim() && !(inv.customerName || inv.razonSocialEmisor || '').toLowerCase().includes(colFilterRazon.toLowerCase().trim())) {
         return false;
       }
       if (colFilterDays.trim() && !String(inv.diffDays).includes(colFilterDays.trim())) {
@@ -307,8 +305,8 @@ export default function CobranzaView({
       if (selectedInvoiceIds[inv.id] !== undefined) {
         items.push({
           rcvDocId: inv.id,
-          rut: inv.rutEmisor,
-          razonSocial: inv.razonSocialEmisor,
+          rut: inv.customerRut || inv.rutReceptor || inv.rutEmisor,
+          razonSocial: inv.customerName || inv.razonSocialReceptor || inv.razonSocialEmisor,
           tipoDoc: inv.tipoDoc,
           folio: inv.folio,
           montoTotal: inv.montoTotal,
@@ -380,6 +378,9 @@ export default function CobranzaView({
         };
       });
 
+      const isFondoOrCaja = isFondoFijoOrCaja(depositAcc);
+      const isBank = isDefaultBankAccount(depositAcc);
+
       const bankLine = {
         id: `line_bank_${customerLines.length + 1}`,
         accountId: depositAcc.id,
@@ -388,7 +389,11 @@ export default function CobranzaView({
         debit: totalAmount,
         credit: 0,
         documentRef: `Recaudación N° ${nextRecordNumber}`,
-        gloss: `Ingreso Bancario Recaudación N° ${nextRecordNumber} (${paymentMethod})`
+        gloss: isFondoOrCaja
+          ? `Ingreso Fondo Fijo/Caja Recaudación N° ${nextRecordNumber} (${paymentMethod})`
+          : isBank
+          ? `Ingreso Bancario Recaudación N° ${nextRecordNumber} (${paymentMethod})`
+          : `Ingreso Recaudación N° ${nextRecordNumber} (${depositAcc.name} - ${paymentMethod})`
       };
 
       const rawVoucherLines = [bankLine, ...customerLines];
@@ -861,20 +866,34 @@ export default function CobranzaView({
                   filteredPending.map(inv => {
                     const isSelected = selectedInvoiceIds[inv.id] !== undefined;
                     const isNC = isNotaCredito(inv.tipoDoc);
+                    const custRut = inv.customerRut || inv.rutReceptor || inv.rutEmisor;
+                    const custName = inv.customerName || inv.razonSocialReceptor || inv.razonSocialEmisor;
+
                     return (
-                      <tr key={inv.id} className={isSelected ? (isNC ? 'bg-amber-50/70' : 'bg-indigo-50/60') : 'hover:bg-slate-50'}>
+                      <tr
+                        key={inv.id}
+                        className={
+                          isSelected
+                            ? isNC
+                              ? 'bg-rose-50/80 border-rose-200'
+                              : 'bg-indigo-50/60'
+                            : isNC
+                            ? 'bg-rose-50/25 hover:bg-rose-50/50'
+                            : 'hover:bg-slate-50'
+                        }
+                      >
                         <td className="py-2 px-3 text-center">
                           <input
                             type="checkbox"
                             checked={isSelected}
                             onChange={() => toggleSelectInvoice(inv.id, inv.montoTotal)}
-                            className="rounded text-indigo-600 focus:ring-indigo-500"
+                            className="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                           />
                         </td>
                         <td className="py-2 px-2.5 text-slate-700">{inv.fechaEmision}</td>
                         <td className="py-2 px-2.5 font-sans font-semibold">
                           {isNC ? (
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold border border-amber-300 text-[10px]">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-bold border border-rose-300 text-[10px]">
                               <span>📜</span> NC {inv.tipoDoc}
                             </span>
                           ) : (
@@ -884,15 +903,17 @@ export default function CobranzaView({
                           )}
                         </td>
                         <td className="py-2 px-2.5 font-bold text-indigo-700">{inv.folio}</td>
-                        <td className="py-2 px-3 font-semibold text-slate-800">{inv.rutEmisor}</td>
-                        <td className="py-2 px-3 font-sans truncate max-w-xs text-slate-900 font-medium">{inv.razonSocialEmisor}</td>
+                        <td className="py-2 px-3 font-semibold text-slate-800">{custRut}</td>
+                        <td className="py-2 px-3 font-sans truncate max-w-xs text-slate-900 font-medium" title={custName}>
+                          {custName}
+                        </td>
                         <td className="py-2 px-2.5 text-center font-bold text-slate-700">{inv.diffDays} d</td>
                         <td className="py-2 px-3">
                           <span className={`px-2 py-0.5 rounded-full text-[10px] border ${inv.badgeColor}`}>
                             {inv.agingLabel}
                           </span>
                         </td>
-                        <td className={`py-2 px-3 text-right font-black ${isNC ? 'text-amber-700' : 'text-slate-900'}`}>
+                        <td className={`py-2 px-3 text-right font-black ${isNC ? 'text-rose-700 font-bold' : 'text-slate-900'}`}>
                           {isNC ? '-' : ''}${inv.montoTotal.toLocaleString('es-CL')}
                         </td>
                       </tr>
@@ -1112,18 +1133,67 @@ export default function CobranzaView({
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Cuenta de Destino (Depósito):</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block font-bold text-slate-700">Cuenta de Destino (Depósito/Caja):</label>
+                    <button
+                      type="button"
+                      onClick={() => setShowConfigModal(true)}
+                      className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-1 cursor-pointer"
+                      title="Habilitar o agregar Fondos Fijos, Cajas Chicas u otras cuentas del plan"
+                    >
+                      <span>⚙️</span> Habilitar Cuentas
+                    </button>
+                  </div>
                   <select
                     value={selectedDepositAccountId}
                     onChange={(e) => setSelectedDepositAccountId(e.target.value)}
-                    className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 font-medium"
+                    className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   >
-                    {depositAccounts.map(acc => (
-                      <option key={acc.id} value={acc.id}>
-                        {acc.code} - {acc.name}
-                      </option>
-                    ))}
+                    <optgroup label="🏦 Cuentas Bancarias y Tesorería (Predeterminadas)">
+                      {defaultBanks.map(acc => (
+                        <option key={acc.id} value={acc.id}>
+                          {acc.code} - {acc.name}
+                        </option>
+                      ))}
+                    </optgroup>
+
+                    {customEnabled.length > 0 && (
+                      <optgroup label="💼 Fondos Fijos, Cajas y Cuentas Habilitadas">
+                        {customEnabled.map(acc => (
+                          <option key={acc.id} value={acc.id}>
+                            {acc.code} - {acc.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+
+                    {showAllAccounts && (
+                      <optgroup label="📋 Todas las demás Cuentas del Plan">
+                        {allOtherAccounts.map(acc => (
+                          <option key={acc.id} value={acc.id}>
+                            {acc.code} - {acc.name} ({acc.type})
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
                   </select>
+
+                  <div className="mt-1 flex items-center justify-between text-[11px]">
+                    <span className="text-slate-500">
+                      {defaultBanks.some(b => b.id === selectedDepositAccountId)
+                        ? '🏦 Cuenta Bancaria'
+                        : customEnabled.some(c => c.id === selectedDepositAccountId)
+                        ? '💼 Fondo Fijo / Cuenta Habilitada'
+                        : '📋 Cuenta Contable Personalizada'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowAllAccounts(!showAllAccounts)}
+                      className="text-indigo-600 hover:text-indigo-800 underline cursor-pointer"
+                    >
+                      {showAllAccounts ? 'Ocultar resto del plan' : 'Ver todo el plan de cuentas'}
+                    </button>
+                  </div>
                 </div>
 
                 <div>
@@ -1141,7 +1211,7 @@ export default function CobranzaView({
                 <span className="text-[11px] font-bold text-slate-700 uppercase block mb-1">Efecto Contable Automático:</span>
                 <div className="font-mono text-[11px] text-slate-800 space-y-1">
                   <div className="text-emerald-700 font-bold">
-                    [DEBE] Cuenta Bancaria / Caja Seleccionada: +${selectedItemsToCollect.total.toLocaleString('es-CL')}
+                    [DEBE] Cuenta Seleccionada: +${selectedItemsToCollect.total.toLocaleString('es-CL')}
                   </div>
                   <div className="text-indigo-700 font-bold">
                     [HABER] 1-1-02-01 Clientes por Cobrar: -${selectedItemsToCollect.total.toLocaleString('es-CL')}
@@ -1168,6 +1238,18 @@ export default function CobranzaView({
           </div>
         </div>
       )}
+
+      {/* Modal de Configuración de Cuentas de Pago y Recaudación */}
+      <PaymentAccountsConfigModal
+        studyId={studyId}
+        company={company}
+        accounts={accounts}
+        isOpen={showConfigModal}
+        onClose={() => setShowConfigModal(false)}
+        onAccountsUpdated={(updatedIds) => {
+          setCustomPaymentAccountIds(updatedIds);
+        }}
+      />
     </div>
   );
 }

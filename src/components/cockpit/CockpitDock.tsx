@@ -12,7 +12,7 @@ interface CockpitDockProps {
   openModuleIds: string[];
   onOpenModule: (moduleId: string) => void;
   onOpenNewTabModal: () => void;
-  onOpenQuickAccessConfig: () => void;
+  onOpenQuickAccessConfig?: () => void;
   pinnedModuleIds?: string[];
   onTogglePinModule?: (moduleId: string) => void;
 }
@@ -24,6 +24,8 @@ const DEFAULT_DOCK_MODULE_IDS = [
   'libroMayor',
   'analisisAuxiliares',
   'balance8',
+  'balanceIFRS',
+  'estadoResultados',
   'conciliacionBancaria',
   'rcv',
   'operativaComercial',
@@ -196,7 +198,7 @@ export const CockpitDock: React.FC<CockpitDockProps> = ({
   return (
     <aside 
       aria-label={position === 'left' ? 'Barra lateral de herramientas izquierda' : 'Barra lateral de herramientas derecha'}
-      className={`relative shrink-0 w-[48px] bg-[#0D253D] border-slate-700/80 text-slate-100 flex flex-col items-center justify-between py-2.5 z-30 select-none shadow-md ${
+      className={`relative shrink-0 w-[48px] bg-[#0D253D] border-slate-700/80 text-slate-100 flex flex-col items-center justify-between py-2.5 z-40 select-none shadow-md ${
         position === 'left' ? 'border-r' : 'border-l order-last'
       }`}
     >

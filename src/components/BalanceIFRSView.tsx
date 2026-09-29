@@ -12,7 +12,8 @@ import {
   Eye,
   EyeOff,
   Layers,
-  ShieldCheck
+  ShieldCheck,
+  TrendingUp
 } from 'lucide-react';
 
 interface BalanceIFRSViewProps {
@@ -21,6 +22,7 @@ interface BalanceIFRSViewProps {
   accounts: ChartOfAccount[];
   fiscalYears: FiscalPeriodYear[];
   onOpenAuditor?: () => void;
+  onOpenEstadoResultados?: () => void;
 }
 
 interface IFRSAccountLine {
@@ -45,7 +47,8 @@ export default function BalanceIFRSView({
   vouchers,
   accounts,
   fiscalYears,
-  onOpenAuditor
+  onOpenAuditor,
+  onOpenEstadoResultados
 }: BalanceIFRSViewProps) {
   const [periodFilter, setPeriodFilter] = useState<string>('Todos');
   const [dateFrom, setDateFrom] = useState<string>('');
@@ -545,6 +548,16 @@ export default function BalanceIFRSView({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          {onOpenEstadoResultados && (
+            <button
+              onClick={onOpenEstadoResultados}
+              className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors shadow-2xs border border-emerald-600"
+              title="Abrir Estado de Resultados IFRS por Función"
+            >
+              <TrendingUp className="w-3.5 h-3.5 text-emerald-200" />
+              <span>Ver Estado de Resultados</span>
+            </button>
+          )}
           {onOpenAuditor && (
             <button
               onClick={onOpenAuditor}

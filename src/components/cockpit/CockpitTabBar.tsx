@@ -1,8 +1,8 @@
 import React, { useRef, useState } from 'react';
 import { 
-  X, Plus, Maximize2, Minimize2, ArrowLeft, Lock, Unlock, 
-  Download, Search, Sparkles, Pin, LayoutGrid, MoreHorizontal,
-  ChevronLeft, ChevronRight, Calculator
+  X, Plus, Maximize2, ArrowLeft, Lock, Unlock, 
+  Download, Search, Pin, LayoutGrid,
+  ChevronLeft, ChevronRight, Calculator, Keyboard
 } from 'lucide-react';
 import { WorkspaceTab, DockPosition, CATEGORY_COLORS, COCKPIT_MODULE_CATALOG } from './cockpitTypes';
 import { Company, FiscalPeriodYear } from '../../types';
@@ -25,6 +25,7 @@ interface CockpitTabBarProps {
   // Acciones globales
   onOpenExcelImport: () => void;
   onOpenCommandPalette: () => void;
+  onOpenShortcutsModal?: () => void;
   onOpenCalculator: () => void;
   onOpenQuickAccessConfig: () => void;
   // Zen Mode
@@ -51,21 +52,19 @@ export const CockpitTabBar: React.FC<CockpitTabBarProps> = ({
   checkIsPeriodClosed,
   onOpenExcelImport,
   onOpenCommandPalette,
+  onOpenShortcutsModal,
   onOpenCalculator,
   onOpenQuickAccessConfig,
   isZenMode,
-  onToggleZenMode,
-  dockPosition,
-  onChangeDockPosition
+  onToggleZenMode
 }) => {
   const tabsScrollRef = useRef<HTMLDivElement>(null);
   const [isHoveringZenHeader, setIsHoveringZenHeader] = useState(false);
-  const [showDockMenu, setShowDockMenu] = useState(false);
 
   const scrollTabs = (direction: 'left' | 'right') => {
     if (tabsScrollRef.current) {
       tabsScrollRef.current.scrollBy({
-        left: direction === 'left' ? -200 : 200,
+        left: direction === 'left' ? -240 : 240,
         behavior: 'smooth'
       });
     }
@@ -75,7 +74,7 @@ export const CockpitTabBar: React.FC<CockpitTabBarProps> = ({
 
   return (
     <>
-      {/* TRIGGER BAR EN MODO ZEN (Línea interactiva superior cuando la cabecera está oculta) */}
+      {/* TRIGGER BAR EN MODO ZEN */}
       {isZenMode && (
         <div 
           onMouseEnter={() => setIsHoveringZenHeader(true)}
@@ -86,11 +85,11 @@ export const CockpitTabBar: React.FC<CockpitTabBarProps> = ({
         </div>
       )}
 
-      {/* CABECERA PRINCIPAL Y BARRA DE PESTAÑAS */}
+      {/* CABECERA PRINCIPAL CON 2 FILAS CLARAS: ENCABEZADO Y BARRA DE PESTAÑAS DEDICADA */}
       <header
         onMouseEnter={() => isZenMode && setIsHoveringZenHeader(true)}
         onMouseLeave={() => isZenMode && setIsHoveringZenHeader(false)}
-        className={`bg-slate-900 border-b border-slate-800 text-white select-none shrink-0 transition-transform duration-200 z-40 ${
+        className={`bg-slate-900 border-b border-slate-800 text-white select-none shrink-0 transition-transform duration-200 z-50 sticky top-0 ${
           isZenMode 
             ? isHoveringZenHeader
               ? 'fixed top-0 inset-x-0 shadow-2xl translate-y-0 opacity-100'
@@ -98,21 +97,22 @@ export const CockpitTabBar: React.FC<CockpitTabBarProps> = ({
             : 'relative'
         }`}
       >
-        <div className="px-3 py-1.5 flex items-center justify-between gap-3 h-[46px]">
+        {/* FILA 1: TÍTULO DEL SISTEMA, EMPRESA Y CONTROLES OPERATIVOS */}
+        <div className="px-3 py-1 flex items-center justify-between gap-3 h-[40px] bg-slate-900 border-b border-slate-800/80">
           
           {/* LADO IZQUIERDO: Volver + Empresa + RUT */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2.5 shrink-0">
             <button
               onClick={onBackToCompanies}
-              className="px-2 py-1 bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white rounded-lg text-xs font-semibold border border-slate-700/80 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+              className="px-2.5 py-1 bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white rounded-lg text-xs font-semibold border border-slate-700/80 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
               title="Volver a la selección de empresas"
             >
               <ArrowLeft className="w-3.5 h-3.5 text-slate-400" />
               <span className="hidden sm:inline">Empresas</span>
             </button>
 
-            <div className="flex items-center gap-1.5 border-l border-slate-800 pl-2">
-              <span className="text-xs font-bold text-white truncate max-w-[140px] sm:max-w-[190px]" title={company.name}>
+            <div className="flex items-center gap-2 border-l border-slate-800 pl-2.5">
+              <span className="text-xs font-bold text-white truncate max-w-[180px] sm:max-w-[320px]" title={company.name}>
                 {company.name}
               </span>
               <span className="text-[10px] font-mono text-slate-400 bg-slate-800/80 px-1.5 py-0.5 rounded border border-slate-700/60 hidden md:inline">
@@ -121,87 +121,8 @@ export const CockpitTabBar: React.FC<CockpitTabBarProps> = ({
             </div>
           </div>
 
-          {/* CENTRO: BARRA DE PESTAÑAS MULTI-TAREA */}
-          <div className="flex-1 flex items-center gap-1 overflow-hidden min-w-0">
-            {/* Botón scroll izquierda */}
-            <button
-              onClick={() => scrollTabs('left')}
-              className="p-1 text-slate-500 hover:text-white hover:bg-slate-800 rounded transition-colors shrink-0 hidden sm:block"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" />
-            </button>
-
-            {/* Contenedor desplazable de pestañas abiertas */}
-            <div
-              ref={tabsScrollRef}
-              className="flex-1 flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth py-0.5"
-            >
-              {openTabs.map(tab => {
-                const isActive = activeTabId === tab.id;
-                const mod = COCKPIT_MODULE_CATALOG.find(m => m.id === tab.moduleId);
-                const Icon = mod?.icon;
-                const catColors = CATEGORY_COLORS[tab.category] || CATEGORY_COLORS.FINANZAS;
-
-                return (
-                  <div
-                    key={tab.id}
-                    onClick={() => onSelectTab(tab.id)}
-                    className={`group relative flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 border ${
-                      isActive
-                        ? 'bg-slate-800 text-white border-indigo-500/60 shadow-md shadow-indigo-500/10 ring-1 ring-indigo-500/40'
-                        : 'bg-slate-850/60 text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 border-slate-800'
-                    }`}
-                  >
-                    {/* Borde sutil superior en pestaña activa */}
-                    {isActive && (
-                      <div className="absolute inset-x-2 top-0 h-0.5 bg-indigo-400 rounded-full" />
-                    )}
-
-                    {Icon && (
-                      <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-indigo-400' : catColors.text}`} />
-                    )}
-
-                    <span className="truncate max-w-[130px]">{tab.title}</span>
-
-                    {/* Botón cerrar pestaña */}
-                    {tab.closable && openTabs.length > 1 && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onCloseTab(tab.id);
-                        }}
-                        className="w-4 h-4 rounded-full hover:bg-slate-700/80 hover:text-white text-slate-500 flex items-center justify-center transition-colors ml-0.5 cursor-pointer"
-                        title="Cerrar pestaña (Ctrl+W)"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-
-              {/* Botón (+) Abrir nueva pestaña */}
-              <button
-                onClick={onOpenNewTabModal}
-                className="w-7 h-7 rounded-lg bg-slate-800/80 hover:bg-indigo-600/40 text-slate-400 hover:text-white border border-slate-750 flex items-center justify-center transition-all shrink-0 cursor-pointer shadow-xs group"
-                title="Abrir nueva pestaña de trabajo (+)"
-              >
-                <Plus className="w-4 h-4 group-hover:scale-110 transition-transform" />
-              </button>
-            </div>
-
-            {/* Botón scroll derecha */}
-            <button
-              onClick={() => scrollTabs('right')}
-              className="p-1 text-slate-500 hover:text-white hover:bg-slate-800 rounded transition-colors shrink-0 hidden sm:block"
-            >
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
           {/* LADO DERECHO: SELECTORES OPERATIVOS Y ACCIONES */}
           <div className="flex items-center gap-1.5 shrink-0 text-xs">
-            
             {/* Año */}
             <div className="flex items-center gap-1 bg-slate-800/90 border border-slate-700/80 rounded-lg px-2 py-0.5 shadow-2xs">
               <span className="text-[10px] font-bold text-slate-400">Año:</span>
@@ -216,7 +137,7 @@ export const CockpitTabBar: React.FC<CockpitTabBarProps> = ({
               </select>
             </div>
 
-            {/* Mes Operativo con Indicador de Candado */}
+            {/* Mes Operativo con Candado */}
             <div className="flex items-center gap-1.5 bg-slate-800/90 border border-slate-700/80 rounded-lg px-2 py-0.5 shadow-2xs">
               <span className="flex items-center gap-1" title={periodCheck.isClosed ? "Período Cerrado" : "Período Abierto"}>
                 {periodCheck.isClosed ? (
@@ -260,12 +181,26 @@ export const CockpitTabBar: React.FC<CockpitTabBarProps> = ({
             {/* Command Palette Trigger */}
             <button
               onClick={onOpenCommandPalette}
-              className="p-1.5 bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white rounded-lg border border-slate-700/80 transition-colors cursor-pointer hidden lg:flex items-center gap-1"
-              title="Paleta de Comandos (Ctrl+K)"
+              className="px-2 py-1 bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white rounded-lg border border-slate-700/80 transition-colors cursor-pointer hidden md:flex items-center gap-1.5"
+              title="Buscar aplicación, cuenta o auxiliar (Ctrl+K)"
             >
               <Search className="w-3.5 h-3.5 text-slate-400" />
+              <span className="text-[11px] font-medium hidden lg:inline">Buscar</span>
               <kbd className="text-[10px] font-mono text-slate-400 px-1 py-0.2 rounded bg-slate-900 border border-slate-750">
                 ⌘K
+              </kbd>
+            </button>
+
+            {/* Keyboard Shortcuts Guide Trigger */}
+            <button
+              onClick={onOpenShortcutsModal}
+              className="px-2 py-1 bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white rounded-lg border border-slate-700/80 transition-colors cursor-pointer hidden lg:flex items-center gap-1.5"
+              title="Guía de Atajos de Teclado (F1 o Shift+?)"
+            >
+              <Keyboard className="w-3.5 h-3.5 text-indigo-400" />
+              <span className="text-[11px] font-medium hidden xl:inline">Atajos</span>
+              <kbd className="text-[10px] font-mono text-indigo-300 px-1 py-0.2 rounded bg-indigo-950 border border-indigo-800">
+                F1
               </kbd>
             </button>
 
@@ -276,17 +211,7 @@ export const CockpitTabBar: React.FC<CockpitTabBarProps> = ({
               title="Calculadora Táctica y Cinta de Memoria"
             >
               <Calculator className="w-3.5 h-3.5 text-amber-400" />
-              <span className="text-[10px] font-bold hidden md:inline">Calculadora</span>
-            </button>
-
-            {/* Personalizar Acceso Rápido */}
-            <button
-              onClick={onOpenQuickAccessConfig}
-              className="p-1.5 bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white rounded-lg border border-slate-700/80 transition-colors cursor-pointer flex items-center gap-1"
-              title="Personalizar barra de acceso rápido (para cada usuario)"
-            >
-              <Pin className="w-3.5 h-3.5 text-indigo-400" />
-              <span className="text-[10px] font-bold">Personalizar</span>
+              <span className="text-[10px] font-bold hidden sm:inline">Calculadora</span>
             </button>
 
             {/* Importar Excel */}
@@ -299,57 +224,16 @@ export const CockpitTabBar: React.FC<CockpitTabBarProps> = ({
               <span>Importar</span>
             </button>
 
-            {/* Selector de Dock */}
-            <div className="relative">
-              <button
-                onClick={() => setShowDockMenu(!showDockMenu)}
-                className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
-                  dockPosition !== 'hidden'
-                    ? 'bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border-slate-700/80'
-                    : 'bg-slate-850 text-slate-500 border-slate-800'
-                }`}
-                title="Configuración de ubicación del Dock de herramientas"
-              >
-                <LayoutGrid className="w-3.5 h-3.5" />
-              </button>
+            {/* Personalizar Acceso Rápido */}
+            <button
+              onClick={onOpenQuickAccessConfig}
+              className="p-1.5 bg-slate-800 hover:bg-slate-750 text-indigo-300 hover:text-white rounded-lg border border-slate-700/80 transition-colors cursor-pointer"
+              title="Personalizar barra de acceso rápido"
+            >
+              <Pin className="w-3.5 h-3.5" />
+            </button>
 
-              {showDockMenu && (
-                <div className="absolute right-0 top-full mt-1.5 z-50 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-1.5 text-xs text-slate-200 min-w-[170px] space-y-0.5">
-                  <div className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800">
-                    Posición del Dock
-                  </div>
-                  <button
-                    onClick={() => { onChangeDockPosition('left'); setShowDockMenu(false); }}
-                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-slate-800 transition-colors ${dockPosition === 'left' ? 'text-indigo-400 font-bold bg-indigo-500/10' : ''}`}
-                  >
-                    <span>⬅️ Lateral Izquierdo</span>
-                    {dockPosition === 'left' && <span className="text-[10px]">Activo</span>}
-                  </button>
-                  <button
-                    onClick={() => { onChangeDockPosition('right'); setShowDockMenu(false); }}
-                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-slate-800 transition-colors ${dockPosition === 'right' ? 'text-indigo-400 font-bold bg-indigo-500/10' : ''}`}
-                  >
-                    <span>➡️ Lateral Derecho</span>
-                    {dockPosition === 'right' && <span className="text-[10px]">Activo</span>}
-                  </button>
-                  <button
-                    onClick={() => { onChangeDockPosition('bottom'); setShowDockMenu(false); }}
-                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-slate-800 transition-colors ${dockPosition === 'bottom' ? 'text-indigo-400 font-bold bg-indigo-500/10' : ''}`}
-                  >
-                    <span>⬇️ Flotante al Pie</span>
-                    {dockPosition === 'bottom' && <span className="text-[10px]">Activo</span>}
-                  </button>
-                  <button
-                    onClick={() => { onChangeDockPosition('hidden'); setShowDockMenu(false); }}
-                    className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-slate-800 text-rose-300 transition-colors border-t border-slate-800 mt-1"
-                  >
-                    <span>👁️ Ocultar Dock</span>
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* MODO ZEN / PANTALLA COMPLETA */}
+            {/* MODO ZEN */}
             <button
               onClick={onToggleZenMode}
               className={`p-1.5 rounded-lg border transition-all cursor-pointer flex items-center gap-1 ${
@@ -357,7 +241,7 @@ export const CockpitTabBar: React.FC<CockpitTabBarProps> = ({
                   ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 hover:bg-amber-500/30'
                   : 'bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border-slate-700/80'
               }`}
-              title={isZenMode ? 'Salir de Modo Enfoque / Fijar Pestañas' : 'Modo Enfoque Pantalla Completa (F11 / Zen)'}
+              title={isZenMode ? 'Salir de Modo Enfoque' : 'Modo Enfoque Pantalla Completa'}
             >
               {isZenMode ? (
                 <>
@@ -368,8 +252,100 @@ export const CockpitTabBar: React.FC<CockpitTabBarProps> = ({
                 <Maximize2 className="w-3.5 h-3.5" />
               )}
             </button>
-
           </div>
+        </div>
+
+        {/* FILA 2: BARRA DE PESTAÑAS DE TRABAJO (AMPLIA, DESTACADA Y 100% VISIBLE) */}
+        <div className="px-2 py-1 flex items-center justify-between gap-2 h-[38px] bg-slate-950 border-b border-slate-800">
+          
+          {/* Scroll izquierda */}
+          <button
+            onClick={() => scrollTabs('left')}
+            className="p-1 text-slate-400 hover:text-white hover:bg-slate-850 rounded transition-colors shrink-0 cursor-pointer"
+            title="Desplazar pestañas a la izquierda"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+
+          {/* Contenedor desplazable de pestañas */}
+          <div
+            ref={tabsScrollRef}
+            className="flex-1 flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth py-0.5"
+          >
+            {openTabs.map(tab => {
+              const isActive = activeTabId === tab.id;
+              const mod = COCKPIT_MODULE_CATALOG.find(m => m.id === tab.moduleId);
+              const Icon = mod?.icon;
+              const catColors = CATEGORY_COLORS[tab.category] || CATEGORY_COLORS.FINANZAS;
+
+              return (
+                <div
+                  key={tab.id}
+                  onClick={() => onSelectTab(tab.id)}
+                  className={`group relative flex items-center gap-1.5 px-2 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 border ${
+                    isActive
+                      ? 'bg-slate-800 text-white border-indigo-400/80 shadow-md ring-1 ring-indigo-400/30 font-bold'
+                      : 'bg-slate-900/90 text-slate-300 hover:text-white hover:bg-slate-850 border-slate-800'
+                  }`}
+                  title={`${tab.title} (${tab.category})`}
+                >
+                  {/* Borde superior en pestaña activa */}
+                  {isActive && (
+                    <div className="absolute inset-x-2 top-0 h-0.5 bg-indigo-400 rounded-full" />
+                  )}
+
+                  {Icon && (
+                    <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-indigo-400' : catColors.text}`} />
+                  )}
+
+                  <span className="truncate max-w-[160px] sm:max-w-[220px]">{tab.title}</span>
+
+                  {/* Botón cerrar pestaña */}
+                  {tab.closable && openTabs.length > 1 && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onCloseTab(tab.id);
+                      }}
+                      className="w-4 h-4 rounded-full hover:bg-rose-500/30 hover:text-rose-200 text-slate-400 flex items-center justify-center transition-colors ml-0.5 cursor-pointer"
+                      title="Cerrar pestaña (Ctrl+W)"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* Botón (+) Abrir nueva pestaña */}
+            <button
+              onClick={onOpenNewTabModal}
+              className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-indigo-600/30 text-indigo-300 hover:text-white border border-indigo-500/40 hover:border-indigo-400 flex items-center gap-1.5 text-xs font-semibold transition-all shrink-0 cursor-pointer shadow-xs group"
+              title="Abrir nueva pestaña (+)"
+            >
+              <Plus className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+              <span>Nueva Pestaña</span>
+            </button>
+          </div>
+
+          {/* Scroll derecha */}
+          <button
+            onClick={() => scrollTabs('right')}
+            className="p-1 text-slate-400 hover:text-white hover:bg-slate-850 rounded transition-colors shrink-0 cursor-pointer"
+            title="Desplazar pestañas a la derecha"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+
+          {/* Botón Catálogo Completo */}
+          <button
+            onClick={onOpenNewTabModal}
+            className="px-2.5 py-1 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 hover:text-white border border-indigo-500/40 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer hidden md:flex"
+            title="Ver catálogo de todas las aplicaciones del sistema"
+          >
+            <LayoutGrid className="w-3.5 h-3.5" />
+            <span>Todas las Aplicaciones</span>
+          </button>
         </div>
       </header>
     </>

@@ -1,4 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { db } from '../lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import { 
   FileSpreadsheet, Calculator, Download, CheckCircle2, AlertCircle, 
   Printer, ArrowRight, DollarSign, Shield, HeartPulse, Building2, 
@@ -138,9 +140,41 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
     onTabChange?.(tab);
   };
 
-  // Parámetros previsionales del período seleccionado (actualizados automáticamente con datos históricos oficiales de Previred / SII)
+  // Estado local para parámetros cargados centralizadamente desde Firestore (Super Administrador)
+  const [firestorePrevisionalParams, setFirestorePrevisionalParams] = useState<PayrollParameters | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchCentralizedIndicators = async () => {
+      try {
+        const cached = localStorage.getItem(`gestok_previred_params_${periodStr}`);
+        if (cached && isMounted) {
+          try {
+            setFirestorePrevisionalParams(JSON.parse(cached));
+          } catch {}
+        }
+        const snap = await getDoc(doc(db, 'previsionalIndicators', periodStr));
+        if (snap.exists() && isMounted) {
+          const data = snap.data() as PayrollParameters;
+          setFirestorePrevisionalParams(data);
+          try {
+            localStorage.setItem(`gestok_previred_params_${periodStr}`, JSON.stringify(data));
+          } catch {}
+        }
+      } catch (err) {
+        console.warn('Could not fetch centralized previsional indicators:', err);
+      }
+    };
+    fetchCentralizedIndicators();
+    return () => { isMounted = false; };
+  }, [periodStr]);
+
+  // Parámetros previsionales del período seleccionado (actualizados automáticamente con datos oficiales de Previred / SII o del Super Administrador)
   const periodParams: PayrollParameters = useMemo(() => {
-    const base = getPrevisionalParametersForPeriod(periodStr);
+    const base = firestorePrevisionalParams 
+      ? { ...firestorePrevisionalParams }
+      : getPrevisionalParametersForPeriod(periodStr);
+
     const currentMonthStr = new Date().toISOString().slice(0, 7);
     if (liveUfOverride && periodStr === currentMonthStr) {
       base.uf = liveUfOverride;
@@ -149,7 +183,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
       base.utm = liveUtmOverride;
     }
     return base;
-  }, [periodStr, liveUfOverride, liveUtmOverride]);
+  }, [periodStr, firestorePrevisionalParams, liveUfOverride, liveUtmOverride]);
 
   // --- Regla de Control de Períodos de Remuneraciones ---
   // 1. Obtener lista ordenada de períodos procesados y guardados en savedSlips (desde 2026 en adelante)
@@ -213,9 +247,23 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
     }
 
     const existingForPeriod = savedSlips.filter(s => s.period === periodStr);
+    const periodStart = `${periodStr}-01`;
+    const periodEnd = `${periodStr}-31`;
+
+    // Filtrar trabajadores elegibles para este período:
+    // 1. Trabajadores que ya tengan una liquidación guardada en este período
+    // 2. Trabajadores activos cuya fecha de ingreso (hireDate) sea menor o igual al fin de este período
+    //    (Un trabajador que ingresa el 01-01-2026 se incluye al 100% con 30 días trabajados en Enero 2026)
+    // 3. Excluye trabajadores con fecha de ingreso en meses futuros o finiquitados con anterioridad
+    const eligibleEmployees = employees.filter(emp => {
+      if (existingForPeriod.some(s => s.employeeId === emp.id)) return true;
+      if (emp.active === false) return false;
+      if (emp.hireDate && emp.hireDate > periodEnd) return false;
+      if (emp.terminationDate && emp.terminationDate < periodStart) return false;
+      return true;
+    });
     
-    // Si no hay guardados o hay empleados nuevos, generamos el cálculo base para todos los activos
-    return employees.filter(e => e.active).map(emp => {
+    return eligibleEmployees.map(emp => {
       const existing = existingForPeriod.find(s => s.employeeId === emp.id);
       const input = monthInputs[emp.id] || {};
       

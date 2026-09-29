@@ -15,7 +15,8 @@ import {
   Sparkles,
   Percent,
   Calculator,
-  ShieldCheck
+  ShieldCheck,
+  Scale
 } from 'lucide-react';
 
 interface EstadoResultadosViewProps {
@@ -24,6 +25,7 @@ interface EstadoResultadosViewProps {
   accounts: ChartOfAccount[];
   fiscalYears: FiscalPeriodYear[];
   onOpenAuditor?: () => void;
+  onOpenBalanceIFRS?: () => void;
 }
 
 interface MonthlyAccountItem {
@@ -46,7 +48,8 @@ export default function EstadoResultadosView({
   vouchers,
   accounts,
   fiscalYears,
-  onOpenAuditor
+  onOpenAuditor,
+  onOpenBalanceIFRS
 }: EstadoResultadosViewProps) {
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [showZeroBalances, setShowZeroBalances] = useState<boolean>(false);
@@ -451,6 +454,17 @@ export default function EstadoResultadosView({
               Matriz 12 Meses
             </button>
           </div>
+
+          {onOpenBalanceIFRS && (
+            <button
+              onClick={onOpenBalanceIFRS}
+              className="px-3 py-1.5 bg-indigo-700 hover:bg-indigo-800 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors shadow-2xs border border-indigo-600"
+              title="Abrir Balance Clasificado IFRS / FECU"
+            >
+              <Scale className="w-3.5 h-3.5 text-indigo-200" />
+              <span>Ver Balance IFRS</span>
+            </button>
+          )}
 
           {onOpenAuditor && (
             <button

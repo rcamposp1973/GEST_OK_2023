@@ -463,6 +463,12 @@ function AutoRutMatchModalContent({
           gloss: glossText
         };
 
+        const rawDocNum = item.docNumber || finalBankDocRef;
+        const typePrefix = item.isHonorario ? 'BHE' : 'Factura';
+        const formattedDocRef = rawDocNum && !rawDocNum.toUpperCase().includes('FACTURA') && !rawDocNum.toUpperCase().includes('BHE') && /^\d+$/.test(rawDocNum)
+          ? `${typePrefix} N° ${rawDocNum}`
+          : rawDocNum;
+
         const auxLine: VoucherLine = {
           id: `line-aux-${Date.now()}-${Math.random()}`,
           accountId: item.targetAccountId,
@@ -474,7 +480,7 @@ function AutoRutMatchModalContent({
           auxiliaryRut: auxRut,
           auxiliaryName: entityName,
           documentType: item.docType || (item.isHonorario ? 'BHE' : '33'),
-          documentRef: item.docNumber || finalBankDocRef,
+          documentRef: formattedDocRef,
           dueDate: item.dueDate || item.effectiveDate
         };
 

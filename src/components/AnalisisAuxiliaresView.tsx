@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Company, ChartOfAccount, Auxiliary, RCVDocument, Voucher, FiscalPeriodYear } from '../types';
 import { generateSIIReportPDF } from '../utils/pdfGenerator';
+import VoucherDocumentCorrectorModal from './VoucherDocumentCorrectorModal';
 import { 
   Building2, 
   Users, 
@@ -22,7 +23,8 @@ import {
   Clock, 
   Sparkles,
   DollarSign,
-  ExternalLink
+  ExternalLink,
+  Wrench
 } from 'lucide-react';
 
 interface AnalisisAuxiliaresViewProps {
@@ -185,46 +187,138 @@ function matchesAuxiliarySearch(
   return false;
 }
 
-function parseDocRef(refStr: string, defaultVoucherNum?: number | string): { docType: string; docNumber: string } {
+export const formatAuxDocType = (dt: string): string => {
+  if (dt === '33') return 'Factura (33)';
+  if (dt === '34') return 'Factura Exenta (34)';
+  if (dt === '39') return 'Boleta (39)';
+  if (dt === '41') return 'Boleta Exenta (41)';
+  if (dt === '46') return 'Factura Compra (46)';
+  if (dt === '56') return 'Nota Débito (56)';
+  if (dt === '61') return 'Nota Crédito (61)';
+  if (dt === 'BHE' || dt === '70') return 'Boleta Honorarios (BHE)';
+  if (dt === 'NOMINA') return 'Nómina';
+  if (dt === '9999' || dt === 'OTRO') return 'Doc. Interno';
+  return dt;
+};
+
+function parseDocRef(
+  refStr: string, 
+  defaultVoucherNum?: number | string,
+  lineDocType?: string,
+  gloss?: string,
+  accCategory?: string
+): { docType: string; docNumber: string } {
   const clean = (refStr || '').trim();
-  if (!clean) {
-    return { docType: '9999', docNumber: defaultVoucherNum ? String(defaultVoucherNum) : 'S/N' };
+  const cleanGloss = (gloss || '').trim();
+  const cleanLineDocType = (lineDocType || '').trim().toUpperCase();
+
+  // 1. Prioritize lineDocType if defined on the voucher line
+  let docType = '';
+  if (cleanLineDocType) {
+    if (cleanLineDocType === '33' || cleanLineDocType.includes('FACTURA') || cleanLineDocType === 'FAC') {
+      docType = cleanLineDocType.includes('EXENTA') ? '34' : '33';
+    } else if (cleanLineDocType === '34' || cleanLineDocType.includes('EXENTA') || cleanLineDocType === 'FE') {
+      docType = '34';
+    } else if (cleanLineDocType === 'BHE' || cleanLineDocType === '70' || cleanLineDocType.includes('HONORAR')) {
+      docType = 'BHE';
+    } else if (cleanLineDocType === '61' || cleanLineDocType.includes('CREDITO') || cleanLineDocType.includes('CRÉDITO') || cleanLineDocType === 'NC') {
+      docType = '61';
+    } else if (cleanLineDocType === '56' || cleanLineDocType.includes('DEBITO') || cleanLineDocType.includes('DÉBITO') || cleanLineDocType === 'ND') {
+      docType = '56';
+    } else if (cleanLineDocType === '39' || cleanLineDocType.includes('BOLETA') || cleanLineDocType === 'BOL') {
+      docType = '39';
+    } else if (cleanLineDocType === '41') {
+      docType = '41';
+    } else if (cleanLineDocType === '46') {
+      docType = '46';
+    } else if (cleanLineDocType === 'NOMINA') {
+      docType = 'NOMINA';
+    } else if (cleanLineDocType === '9999' || cleanLineDocType === 'OTRO' || cleanLineDocType.includes('INTERNO')) {
+      docType = '';
+    } else {
+      const d = cleanLineDocType.replace(/\D/g, '');
+      if (d) docType = d;
+    }
   }
 
-  if (clean.toUpperCase().includes('OTRO') || clean.includes('9999')) {
-    const digits = clean.replace(/[^0-9]/g, '');
-    return { docType: '9999', docNumber: digits || clean.replace(/^(OTRO|9999)[\s#\-N°]*/i, '') || String(defaultVoucherNum || '1') };
+  // 2. Detection from gloss first if refStr is generic (like Doc. Interno, OTRO, BANCO, S/N)
+  const isGenericRef = !clean || /^(?:doc(?:umento)?\.?\s*interno|otro|banco|s\/n|sn|9999|sin\s*documento|\d+)$/i.test(clean);
+
+  if (!docType && cleanGloss) {
+    if (/factura\s*exenta/i.test(cleanGloss)) {
+      docType = '34';
+    } else if (/factura|fac\b|dte\s*33/i.test(cleanGloss)) {
+      docType = '33';
+    } else if (/boleta\s*honorario|\bbhe\b/i.test(cleanGloss)) {
+      docType = 'BHE';
+    } else if (/nota\s*de?\s*cr[eé]dito|\bnc\b/i.test(cleanGloss)) {
+      docType = '61';
+    } else if (/nota\s*de?\s*d[eé]bito|\bnd\b/i.test(cleanGloss)) {
+      docType = '56';
+    }
   }
 
-  const dteTypeMatch = clean.match(/(?:tipo\s*doc|doc|dte|nc|nd)?\s*\b(33|34|39|41|46|56|61|110)\b/i);
-  let docType = '9999';
-  if (dteTypeMatch) {
-    docType = dteTypeMatch[1];
-  } else if (/factura\s*exenta/i.test(clean) || /fe\b/i.test(clean)) {
-    docType = '34';
-  } else if (/factura/i.test(clean) || /fac\b/i.test(clean)) {
-    docType = '33';
-  } else if (/boleta\s*honorario/i.test(clean) || /\bbhe\b/i.test(clean) || /\bbhr\b/i.test(clean)) {
-    docType = 'BHE';
-  } else if (/boleta/i.test(clean) || /bol\b/i.test(clean)) {
-    docType = '39';
-  } else if (/nota\s*de?\s*cr[eé]dito/i.test(clean) || /\bnc\b/i.test(clean)) {
-    docType = '61';
-  } else if (/nota\s*de?\s*d[eé]bito/i.test(clean) || /\bnd\b/i.test(clean)) {
-    docType = '56';
-  } else if (/n[oó]mina/i.test(clean)) {
-    docType = 'NOMINA';
+  // 3. Detection from refStr
+  if (!docType && clean) {
+    if (/boleta\s*honorario/i.test(clean) || /\bbhe\b/i.test(clean) || /\bbhr\b/i.test(clean)) {
+      docType = 'BHE';
+    } else {
+      const dteTypeMatch = clean.match(/(?:tipo\s*doc|doc|dte|nc|nd)?\s*\b(33|34|39|41|46|56|61|110)\b/i);
+      if (dteTypeMatch) {
+        docType = dteTypeMatch[1];
+      } else if (/factura\s*exenta/i.test(clean) || /fe\b/i.test(clean)) {
+        docType = '34';
+      } else if (/factura/i.test(clean) || /fac\b/i.test(clean)) {
+        docType = '33';
+      } else if (/boleta/i.test(clean) || /bol\b/i.test(clean)) {
+        docType = '39';
+      } else if (/nota\s*de?\s*cr[eé]dito/i.test(clean) || /\bnc\b/i.test(clean)) {
+        docType = '61';
+      } else if (/nota\s*de?\s*d[eé]bito/i.test(clean) || /\bnd\b/i.test(clean)) {
+        docType = '56';
+      } else if (/n[oó]mina/i.test(clean)) {
+        docType = 'NOMINA';
+      }
+    }
   }
 
-  const numMatch = clean.match(/(?:n°|#|nº|folio|num|nro\.?|doc\.?)\s*:?\s*(\d+)/i) 
-    || clean.match(/\b(\d+)\b(?!.*\b\d+\b)/);
+  // 4. Default for commercial accounts (Proveedores / Clientes)
+  if (!docType) {
+    if (accCategory === 'ACREEDOR' || accCategory === 'DEUDOR') {
+      docType = '33'; // Factura Electrónica por defecto en cuentas de clientes/proveedores
+    } else if (clean.toUpperCase().includes('OTRO') || clean.includes('9999')) {
+      docType = '9999';
+    } else {
+      docType = '9999';
+    }
+  }
 
+  // Extract document number
   let docNumber = defaultVoucherNum ? String(defaultVoucherNum) : '1';
-  if (numMatch) {
-    docNumber = numMatch[1];
-  } else {
-    const digits = clean.replace(/[^0-9]/g, '');
-    if (digits) docNumber = digits;
+
+  if (isGenericRef && cleanGloss) {
+    const glossNumMatch = cleanGloss.match(/(?:factura|fac|f\.|dte|boleta|bhe|n[oó]mina|doc\.?|folio|n°|nº|#)\s*:?\s*(\d+)/i)
+      || cleanGloss.match(/\b(\d{2,10})\b/);
+    if (glossNumMatch) {
+      docNumber = glossNumMatch[1];
+    }
+  }
+
+  if (docNumber === '1' || docNumber === String(defaultVoucherNum)) {
+    const numMatch = clean.match(/(?:n°|#|nº|folio|num|nro\.?|doc\.?)\s*:?\s*(\d+)/i) 
+      || clean.match(/\b(\d+)\b(?!.*\b\d+\b)/)
+      || cleanGloss.match(/(?:n°|#|nº|folio|num|nro\.?|factura)\s*:?\s*(\d+)/i);
+
+    if (numMatch) {
+      docNumber = numMatch[1];
+    } else {
+      const digits = clean.replace(/[^0-9]/g, '');
+      if (digits) {
+        docNumber = digits;
+      } else if (clean && !isGenericRef) {
+        docNumber = clean;
+      }
+    }
   }
 
   return { docType, docNumber };
@@ -247,9 +341,6 @@ export function getAccountAuxiliaryCategory(
     rawCode.startsWith('1104') || 
     rawCode.startsWith('1.1.04') || 
     code.startsWith('1104') ||
-    rawCode.startsWith('2102') || 
-    rawCode.startsWith('2.1.02') || 
-    code.startsWith('2102') ||
     rawCode.startsWith('2103') || 
     rawCode.startsWith('2.1.03') || 
     name.includes('trabajador') || 
@@ -281,13 +372,17 @@ export function getAccountAuxiliaryCategory(
     return 'DEUDOR';
   }
 
-  // 3. Acreedores / Proveedores del giro (2101xxx, Facturas por pagar)
+  // 3. Acreedores / Proveedores del giro (2101xxx, 2102xxx, Facturas por pagar)
   if (
     rawCode.startsWith('2101') || 
     rawCode.startsWith('2.1.01') || 
     code.startsWith('2101') ||
+    rawCode.startsWith('2102') || 
+    rawCode.startsWith('2.1.02') || 
+    code.startsWith('2102') ||
     name.includes('proveedor') || 
     name.includes('facturas por pagar') || 
+    name.includes('factura por pagar') ||
     name.includes('acreedores comerciales')
   ) {
     return 'ACREEDOR';
@@ -368,6 +463,7 @@ export default function AnalisisAuxiliaresView({
 
   // Filtro de Saldo: 'soloPendientes' (ocultar saldo $0) vs 'todos' (incluye saldo $0)
   const [balanceFilter, setBalanceFilter] = useState<'soloPendientes' | 'todos'>('soloPendientes');
+  const [showCorrectorModal, setShowCorrectorModal] = useState<boolean>(false);
 
   // Filtro de Fechas
   const [dateFilterMode, setDateFilterMode] = useState<'corte' | 'rango'>('corte');
@@ -592,7 +688,7 @@ export default function AnalisisAuxiliaresView({
           return;
         }
 
-        const parsed = parseDocRef(line.documentRef || '', v.voucherNumber);
+        const parsed = parseDocRef(line.documentRef || '', v.voucherNumber, line.documentType, line.gloss || v.gloss, accCategory);
 
         // Filtro tipo doc
         if (docTypeFilter !== 'todos') {
@@ -875,7 +971,7 @@ export default function AnalisisAuxiliaresView({
           return;
         }
 
-        const parsed = parseDocRef(line.documentRef || '', v.voucherNumber);
+        const parsed = parseDocRef(line.documentRef || '', v.voucherNumber, line.documentType, line.gloss || v.gloss, accCategory);
 
         if (docTypeFilter !== 'todos') {
           if (docTypeFilter === '9999' && parsed.docType !== '9999' && parsed.docType !== 'OTRO') return;
@@ -1142,7 +1238,7 @@ export default function AnalisisAuxiliaresView({
               acc.accountCategory,
               rut.rut,
               `"${rut.name}"`,
-              doc.docType === '9999' ? 'OTRO (9999)' : doc.docType,
+              formatAuxDocType(doc.docType),
               doc.docNumber,
               doc.issueDate,
               doc.totalDebits,
@@ -1165,7 +1261,7 @@ export default function AnalisisAuxiliaresView({
               aux.role,
               acc.accountCode,
               `"${acc.accountName}"`,
-              doc.docType === '9999' ? 'OTRO (9999)' : doc.docType,
+              formatAuxDocType(doc.docType),
               doc.docNumber,
               doc.issueDate,
               doc.totalDebits,
@@ -1205,7 +1301,7 @@ export default function AnalisisAuxiliaresView({
               `[${acc.accountCode}]`,
               rut.rut,
               rut.name,
-              doc.docType === '9999' ? 'OTRO' : doc.docType,
+              formatAuxDocType(doc.docType),
               doc.docNumber,
               doc.issueDate,
               doc.totalDebits.toLocaleString('es-CL'),
@@ -1233,7 +1329,7 @@ export default function AnalisisAuxiliaresView({
               aux.rut,
               aux.name,
               `[${acc.accountCode}]`,
-              doc.docType === '9999' ? 'OTRO' : doc.docType,
+              formatAuxDocType(doc.docType),
               doc.docNumber,
               doc.issueDate,
               doc.totalDebits.toLocaleString('es-CL'),
@@ -1298,6 +1394,15 @@ export default function AnalisisAuxiliaresView({
               <span>2. Análisis por RUT / Auxiliar</span>
             </button>
           </div>
+
+          <button
+            onClick={() => setShowCorrectorModal(true)}
+            className="px-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all shadow-md shadow-blue-500/20 cursor-pointer animate-pulse hover:animate-none"
+            title="Auto-corregir egresos con 'Documento Interno' en cuenta 2102001 y cancelar facturas correspondientes"
+          >
+            <Wrench className="w-3.5 h-3.5 text-blue-100" />
+            <span>Corregir Egresos (2102001)</span>
+          </button>
 
           <button
             onClick={handleDownloadSIIReport}
@@ -1594,7 +1699,7 @@ export default function AnalisisAuxiliaresView({
               <option value="39">39 (Boleta Electrónica)</option>
               <option value="46">46 (Factura de Compra)</option>
               <option value="BHE">BHE (Boleta de Honorarios)</option>
-              <option value="9999">9999 / OTRO (Comprobante / Documento Interno)</option>
+              <option value="9999">Documento Interno / Otros (9999)</option>
               <option value="NOMINA">NÓMINA (Remuneraciones / Anticipos)</option>
             </select>
           </div>
@@ -1824,7 +1929,7 @@ export default function AnalisisAuxiliaresView({
                                               </td>
                                               <td className="py-2 px-2.5 font-sans font-medium">
                                                 <span className="bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded border border-slate-200 text-[10px] font-bold">
-                                                  {doc.docType === '9999' ? 'OTRO (9999)' : doc.docType}
+                                                  {formatAuxDocType(doc.docType)}
                                                 </span>
                                               </td>
                                               <td className="py-2 px-2.5 font-bold text-indigo-700">
@@ -2117,7 +2222,7 @@ export default function AnalisisAuxiliaresView({
                                               </td>
                                               <td className="py-2 px-2.5 font-sans font-medium">
                                                 <span className="bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded border border-slate-200 text-[10px] font-bold">
-                                                  {doc.docType === '9999' ? 'OTRO (9999)' : doc.docType}
+                                                  {formatAuxDocType(doc.docType)}
                                                 </span>
                                               </td>
                                               <td className="py-2 px-2.5 font-bold text-indigo-700">
@@ -2217,6 +2322,25 @@ export default function AnalisisAuxiliaresView({
             )}
           </div>
         </div>
+      )}
+
+      {/* MODAL AUTO-CORRECTOR DE EGRESOS & CANCELACIÓN FACTURAS 2102001 */}
+      {showCorrectorModal && (
+        <VoucherDocumentCorrectorModal
+          isOpen={showCorrectorModal}
+          onClose={() => setShowCorrectorModal(false)}
+          studyId={studyId}
+          companyId={company.id || ''}
+          companyName={company.name}
+          companyRut={company.rut}
+          vouchers={vouchers}
+          accounts={accounts}
+          rcvDocuments={rcvDocuments}
+          auxiliaries={auxiliaries}
+          onSuccess={async () => {
+            setShowCorrectorModal(false);
+          }}
+        />
       )}
     </div>
   );

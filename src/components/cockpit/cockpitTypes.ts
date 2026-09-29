@@ -13,7 +13,7 @@ export type ModuleCategory =
   | 'OPERACIONES' 
   | 'TESORERIA' 
   | 'PERSONAL' 
-  | 'IMPORTACIONES' 
+  | 'CARGA (SII)' 
   | 'IMPUESTOS' 
   | 'INDICADORES' 
   | 'CONFIGURACIONES';
@@ -117,6 +117,15 @@ export const COCKPIT_MODULE_CATALOG: CockpitModuleItem[] = [
     icon: BarChart3,
     colorScheme: 'indigo',
     description: 'Estados financieros bajo norma internacional IFRS / FECU'
+  },
+  {
+    id: 'estadoResultados',
+    label: 'Estado de Resultados IFRS',
+    shortLabel: 'Resultados',
+    category: 'FINANZAS',
+    icon: TrendingUp,
+    colorScheme: 'indigo',
+    description: 'Estado de resultados IFRS por función y matriz mensual comparativa de 12 meses'
   },
   {
     id: 'reportesAnaliticos',
@@ -250,22 +259,31 @@ export const COCKPIT_MODULE_CATALOG: CockpitModuleItem[] = [
     description: 'Maestro de ítems, precios y codificación comercial'
   },
 
-  // --- IMPORTACIONES / SII ---
+  // --- CARGA (SII) ---
   {
     id: 'rcv',
     label: 'Carga RCV Compra/Venta',
     shortLabel: 'RCV SII',
-    category: 'IMPORTACIONES',
+    category: 'CARGA (SII)',
     icon: Download,
     colorScheme: 'amber',
     shortcut: 'Alt+R',
     description: 'Sincronización directa y contabilización de compras y ventas SII'
   },
   {
+    id: 'rcvParams',
+    label: 'Parámetros Contables RCV',
+    shortLabel: 'Parám. RCV',
+    category: 'CARGA (SII)',
+    icon: Settings,
+    colorScheme: 'amber',
+    description: 'Configuración de cuentas e imputaciones por defecto para compras, ventas y honorarios'
+  },
+  {
     id: 'cargaMasiva',
     label: 'Carga Masiva Comprobantes',
     shortLabel: 'Carga Masiva',
-    category: 'IMPORTACIONES',
+    category: 'CARGA (SII)',
     icon: FileSpreadsheet,
     colorScheme: 'amber',
     description: 'Importación masiva de asientos desde plantillas Excel'
@@ -274,7 +292,7 @@ export const COCKPIT_MODULE_CATALOG: CockpitModuleItem[] = [
     id: 'plantillasCarga',
     label: 'Plantillas de Carga',
     shortLabel: 'Plantillas',
-    category: 'IMPORTACIONES',
+    category: 'CARGA (SII)',
     icon: FileSpreadsheet,
     colorScheme: 'amber',
     description: 'Estructuras y modelos descargables para importaciones'
@@ -290,6 +308,15 @@ export const COCKPIT_MODULE_CATALOG: CockpitModuleItem[] = [
     colorScheme: 'rose',
     shortcut: 'Alt+F',
     description: 'Cálculo de débito, crédito fiscal, PPM y propuesta Formulario 29'
+  },
+  {
+    id: 'f29Codes',
+    label: 'Parámetros y Códigos F.29',
+    shortLabel: 'Parám. F29',
+    category: 'IMPUESTOS',
+    icon: Sliders,
+    colorScheme: 'rose',
+    description: 'Maestro y activación de códigos utilizados en la pre-declaración del Formulario 29'
   },
   {
     id: 'ddjj',
@@ -340,6 +367,15 @@ export const COCKPIT_MODULE_CATALOG: CockpitModuleItem[] = [
     colorScheme: 'cyan',
     description: 'Ratios de liquidez, solvencia, rentabilidad y endeudamiento'
   },
+  {
+    id: 'exchange',
+    label: 'Indicadores Económicos (UF / USD / UTM)',
+    shortLabel: 'UF / Divisas',
+    category: 'INDICADORES',
+    icon: Calendar,
+    colorScheme: 'cyan',
+    description: 'Valores oficiales del Banco Central y SII: UF, Dólar Observado, UTM, Euro e IPC'
+  },
 
   // --- CONFIGURACIONES ---
   {
@@ -381,11 +417,20 @@ export const COCKPIT_MODULE_CATALOG: CockpitModuleItem[] = [
   {
     id: 'agenticStudy2040',
     label: 'Auditoría Agéntica 2040',
-    shortLabel: 'Agéntico 2040',
+    shortLabel: 'Agéntico Estudio',
     category: 'FINANZAS',
     icon: Sparkles,
     colorScheme: 'purple',
-    description: 'Centro de control agéntico autónomo'
+    description: 'Centro de control agéntico autónomo para estudios'
+  },
+  {
+    id: 'agenticPyme2040',
+    label: 'Hub Agéntico Pyme 2040',
+    shortLabel: 'Agéntico Pyme',
+    category: 'FINANZAS',
+    icon: Sparkles,
+    colorScheme: 'purple',
+    description: 'Centro de control y supervisión agéntica autónoma para empresas Pyme'
   }
 ];
 
@@ -393,8 +438,8 @@ export const CATEGORY_COLORS: Record<ModuleCategory, { bg: string; text: string;
   FINANZAS: { bg: 'bg-indigo-500/15', text: 'text-indigo-400', border: 'border-indigo-500/30', glow: 'shadow-indigo-500/20' },
   OPERACIONES: { bg: 'bg-emerald-500/15', text: 'text-emerald-400', border: 'border-emerald-500/30', glow: 'shadow-emerald-500/20' },
   TESORERIA: { bg: 'bg-cyan-500/15', text: 'text-cyan-400', border: 'border-cyan-500/30', glow: 'shadow-cyan-500/20' },
-  PERSONAL: { bg: 'bg-blue-500/15', text: 'text-blue-400', border: 'border-blue-500/30', glow: 'shadow-blue-500/20' },
-  IMPORTACIONES: { bg: 'bg-amber-500/15', text: 'text-amber-400', border: 'border-amber-500/30', glow: 'shadow-amber-500/20' },
+  PERSONAL: { bg: 'bg-blue-500/15', text: 'text-blue-400', border: 'border-slate-500/30', glow: 'shadow-blue-500/20' },
+  'CARGA (SII)': { bg: 'bg-amber-500/15', text: 'text-amber-400', border: 'border-amber-500/30', glow: 'shadow-amber-500/20' },
   IMPUESTOS: { bg: 'bg-rose-500/15', text: 'text-rose-400', border: 'border-rose-500/30', glow: 'shadow-rose-500/20' },
   INDICADORES: { bg: 'bg-teal-500/15', text: 'text-teal-400', border: 'border-teal-500/30', glow: 'shadow-teal-500/20' },
   CONFIGURACIONES: { bg: 'bg-slate-500/15', text: 'text-slate-400', border: 'border-slate-500/30', glow: 'shadow-slate-500/20' },

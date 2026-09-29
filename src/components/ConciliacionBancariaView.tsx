@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { db, auth } from '../lib/firebase';
-import { collection, getDocs, getDoc, addDoc, doc, setDoc, query, where } from 'firebase/firestore';
+import { collection, getDocs, getDoc, addDoc, doc, setDoc, updateDoc, query, where } from 'firebase/firestore';
 import {
   Company,
   ChartOfAccount,
@@ -1219,6 +1219,7 @@ export default function ConciliacionBancariaView({
     counterAccountId: string;
     lines: VoucherLine[];
     newAuxiliaryToSave?: Auxiliary;
+    matchedDocIds?: string[];
   }) => {
     if (!quickVoucherLine || !selectedBankAccount) {
       notify.error('Información del movimiento bancario no disponible.');
@@ -1316,12 +1317,19 @@ export default function ConciliacionBancariaView({
       const totalDebit = cleanedVoucherLines.reduce((s, l) => s + (Number(l.debit) || 0), 0);
       const totalCredit = cleanedVoucherLines.reduce((s, l) => s + (Number(l.credit) || 0), 0);
 
+      const isDocumentPayment = customData?.gloss?.toUpperCase().includes('PAGO') || customData?.lines?.some(l => l.documentRef && (l.documentRef.includes('FACTURA') || l.documentRef.includes('BHE') || l.documentRef.includes('BOLETA') || l.documentRef.includes('DOC')));
+      const finalGloss = customData?.gloss 
+        ? customData.gloss 
+        : (isDocumentPayment 
+            ? `PAGO DOCUMENTO - ${quickVoucherLine.description}` 
+            : `Ajuste Conciliación Bancaria - ${quickGloss || quickVoucherLine.description}`);
+
       const newVoucherData = {
         voucherNumber: nextVoucherNumber,
         date: targetDate,
         period: targetPeriod,
         type: isCharge ? 'Egreso' : 'Ingreso',
-        gloss: `Ajuste Conciliación Bancaria - ${customData?.gloss || quickGloss || quickVoucherLine.description}`,
+        gloss: finalGloss.toUpperCase(),
         lines: cleanedVoucherLines,
         totalDebit,
         totalCredit,
@@ -1331,6 +1339,30 @@ export default function ConciliacionBancariaView({
 
       const sanitizedVoucher = sanitizeForFirestore(newVoucherData);
       const docRef = await addDoc(collection(companyRef, 'vouchers'), sanitizedVoucher);
+
+      // Si se seleccionaron facturas / documentos del RCV, marcarlos como Pagados en Firestore
+      if (customData?.matchedDocIds && customData.matchedDocIds.length > 0) {
+        for (const mId of customData.matchedDocIds) {
+          const matchingRcv = rcvDocuments.find(d => 
+            d.id === mId || 
+            `rcv_${d.id || d.folio}_${(d.rutEmisor || d.rutReceptor || '').replace(/[^0-9kK]/g, '').toUpperCase()}` === mId ||
+            `unified_${(d.rutEmisor || d.rutReceptor || '').replace(/[^0-9kK]/g, '').toUpperCase()}__${String(d.folio || '').replace(/\D/g, '')}` === mId
+          );
+          if (matchingRcv) {
+            try {
+              await updateDoc(doc(companyRef, 'rcvDocuments', matchingRcv.id), {
+                estadoPago: 'Pagada',
+                estadoCobranza: 'Pagada',
+                saldoPendiente: 0,
+                voucherId: docRef.id,
+                updatedAt: new Date().toISOString()
+              });
+            } catch (rcvErr) {
+              console.warn('No se pudo actualizar estado de pago en RCV:', rcvErr);
+            }
+          }
+        }
+      }
 
       const inCurrent = statementLines.some(l => l.id === quickVoucherLine.id);
       if (inCurrent) {

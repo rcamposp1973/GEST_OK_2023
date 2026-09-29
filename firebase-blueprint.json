@@ -56,6 +56,16 @@
         "whatsappCustomMessage": { "type": "string" }
       },
       "required": ["enabled"]
+    },
+    "userPreferences": {
+      "title": "UserPreferences",
+      "description": "Preferencias de usuario, incluyendo orden de módulos",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "moduleOrder": { "type": "object" }
+      },
+      "required": ["userId", "moduleOrder"]
     }
   },
   "firestore": {
@@ -78,6 +88,10 @@
     "/system_config/{configId}": {
       "schema": "systemConfig",
       "description": "Parámetros globales de landing y configuración de promociones"
+    },
+    "/userPreferences/{userId}": {
+      "schema": "userPreferences",
+      "description": "Preferencias específicas del usuario"
     }
   }
 }

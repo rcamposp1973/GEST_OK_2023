@@ -307,7 +307,7 @@ export default function ClientExecutiveManagementView({
           }`}
         >
           <Landmark className="w-3.5 h-3.5 text-amber-500" />
-          <span>Libro Banco & Cartola (Aclarar Movs)</span>
+          <span>Libro Banco - Cartola</span>
           {bankMetrics.accountSummaries.reduce((sum, a) => sum + a.pendingCartolaLines.length, 0) > 0 && (
             <span className="ml-1 px-1.5 py-0.5 bg-rose-500 text-white text-[10px] font-black rounded-full leading-none">
               {bankMetrics.accountSummaries.reduce((sum, a) => sum + a.pendingCartolaLines.length, 0)}
@@ -557,7 +557,7 @@ export default function ClientExecutiveManagementView({
                   className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg shadow-xs flex items-center gap-1 transition-all cursor-pointer"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                  <span>Aclarar Movimientos en Libro Banco</span>
+                  <span>Libro Banco - Cartola</span>
                   <ChevronRight className="w-3.5 h-3.5" />
                 </button>
                 <span className={`text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 ${

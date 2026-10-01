@@ -59,7 +59,7 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
 
     // TESORERIA
     { type: 'NAV', key: 'CONCILIACION_BANCARIA', title: 'Conciliación Bancaria Inteligente', subtitle: 'Cuadratura de cartolas bancarias y calce automático', icon: Landmark },
-    { type: 'NAV', key: 'LIBRO_BANCO_COLABORATIVO', title: 'Libro Banco (Aclaraciones)', subtitle: 'Portal colaborativo cliente-contador para movimientos no aclarados', icon: Landmark },
+    { type: 'NAV', key: 'LIBRO_BANCO_COLABORATIVO', title: 'Libro Banco - Cartola', subtitle: 'Control acumulado de cartola bancaria y contabilización de movimientos', icon: Landmark },
     { type: 'NAV', key: 'NOMINAS_PAGO', title: 'Nóminas de Pago', subtitle: 'Gestión y emisión de nóminas bancarias de pago', icon: CreditCard },
     { type: 'NAV', key: 'COBRANZA', title: 'Cobranza & Cartera', subtitle: 'Gestión de cobro a clientes y antigüedad de saldos', icon: TrendingUp },
     { type: 'NAV', key: 'FLUJO_CAJA', title: 'Flujo de Caja Real', subtitle: 'Proyección y control de ingresos y egresos de caja', icon: TrendingUp },

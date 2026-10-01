@@ -100,7 +100,7 @@ const QUICK_ACCESS_ITEMS = [
   { id: 'warehouses', label: 'Bodegas y Almacenes', group: 'OPERACIONES', icon: WarehouseIcon, tab: 'warehouses' },
   { id: 'productsServices', label: 'Catálogo Productos / Servicios', group: 'OPERACIONES', icon: Boxes, tab: 'productsServices' },
   { id: 'conciliacionBancaria', label: 'Conciliación Bancaria', group: 'TESORERIA', icon: CreditCard, tab: 'conciliacionBancaria' },
-  { id: 'libroBancoColaborativo', label: 'Libro Banco (Aclaraciones)', group: 'TESORERIA', icon: Landmark, tab: 'libroBancoColaborativo' },
+  { id: 'libroBancoColaborativo', label: 'Libro Banco - Cartola', group: 'TESORERIA', icon: Landmark, tab: 'libroBancoColaborativo' },
   { id: 'nominasPago', label: 'Nóminas de Pago', group: 'TESORERIA', icon: Landmark, tab: 'nominasPago' },
   { id: 'cobranza', label: 'Cobranza & Cartera', group: 'TESORERIA', icon: TrendingUp, tab: 'cobranza' },
   { id: 'flujoDeCaja', label: 'Flujo de Caja Real', group: 'TESORERIA', icon: TrendingUp, tab: 'flujoDeCaja' },
@@ -113,8 +113,8 @@ const QUICK_ACCESS_ITEMS = [
   { id: 'periods', label: 'Períodos Contables', group: 'CONFIGURACIONES', icon: Calendar, tab: 'periods' },
   { id: 'tablasAnalisis', label: 'Catálogos de Análisis', group: 'CONFIGURACIONES', icon: FolderTree, tab: 'tablasAnalisis' },
   { id: 'agenticStudy2040', label: 'Auditoría Agéntica 2040', group: 'FINANZAS', icon: Sparkles, tab: 'agenticStudy2040' },
-  { id: 'agenticPyme2040', label: 'Hub Agéntico Pyme 2040', group: 'FINANZAS', icon: Sparkles, tab: 'agenticPyme2040' },
-  { id: 'juniorAI', label: 'Copilot Contable IA', group: 'FINANZAS', icon: Sparkles, tab: 'smartNotebooks' }
+  { id: 'agenticPyme2040', label: 'Hub Agéntico Pyme 2040', group: 'FINANZAS', icon: Sparkles, tab: 'agenticPyme2040' }
+  // { id: 'juniorAI', label: 'Copilot Contable IA', group: 'FINANZAS', icon: Sparkles, tab: 'smartNotebooks' }
 ] as const;
 
 interface CompanyAccountingDashboardProps {
@@ -8649,8 +8649,8 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
         </div>
       )}
 
-      {/* COPILOTO CONTABLE INTELIGENTE (MULTI-TENANT EMPRESA ACTUAL) */}
-      <InternalCompanyAccountingCopilot
+      {/* COPILOTO CONTABLE INTELIGENTE (MULTI-TENANT EMPRESA ACTUAL) - TEMPORALMENTE DESACTIVADO HASTA TRABAJAR EN ÉL */}
+      {/* <InternalCompanyAccountingCopilot
         studyId={studyId}
         company={company}
         accounts={accounts}
@@ -8662,7 +8662,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
           setActiveTab(tab as any);
         }}
         onVouchersUpdated={fetchData}
-      />
+      /> */}
 
       {/* Modal de Demostración y Reset 2025 para FERRETERIA DON ALI KT LTDA */}
       <DemoFerreteriaManagerModal

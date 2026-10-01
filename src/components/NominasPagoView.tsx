@@ -307,15 +307,20 @@ export default function NominasPagoView({
       return;
     }
 
-    if (!selectedBankAccountId) {
-      alert('Seleccione la cuenta bancaria de origen para el pago.');
-      return;
-    }
+    const isBankUsed = Math.abs(totalBatchAmount) > 0;
+    let selectedBankAcc: ChartOfAccount | undefined;
 
-    const selectedBankAcc = accounts.find(a => a.id === selectedBankAccountId);
-    if (!selectedBankAcc) {
-      alert('Cuenta bancaria no encontrada.');
-      return;
+    if (isBankUsed) {
+      if (!selectedBankAccountId) {
+        alert('Seleccione la cuenta bancaria de origen para el pago.');
+        return;
+      }
+
+      selectedBankAcc = accounts.find(a => a.id === selectedBankAccountId);
+      if (!selectedBankAcc) {
+        alert('Cuenta bancaria no encontrada.');
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -323,7 +328,7 @@ export default function NominasPagoView({
       const nextBatchNumber = (paymentBatches.length > 0 ? Math.max(...paymentBatches.map(b => b.batchNumber || 0)) : 0) + 1;
       const nextVoucherNumber = (vouchers.length > 0 ? Math.max(...vouchers.map(v => v.voucherNumber || 0)) : 0) + 1;
 
-      // 1. Prepare Voucher Lines for Egreso (Individual lines per document with RUT, Name and DocumentRef)
+      // 1. Prepare Voucher Lines for Egreso/Traspaso (Individual lines per document with RUT, Name and DocumentRef)
       const supplierAcc = accounts.find(a => a.code.startsWith('2.1.01') || a.code.startsWith('2-1-01') || a.name.toLowerCase().includes('proveedor')) || {
         id: 'acc_prov_default',
         code: '2.1.01.001',
@@ -349,36 +354,48 @@ export default function NominasPagoView({
         };
       });
 
-      const isFondoOrCaja = isFondoFijoOrCaja(selectedBankAcc);
-      const isBank = isDefaultBankAccount(selectedBankAcc);
+      const rawVoucherLines: any[] = [...supplierLines];
 
-      const bankLine = {
-        id: `line_bank_${supplierLines.length + 1}`,
-        accountId: selectedBankAcc.id,
-        accountCode: selectedBankAcc.code,
-        accountName: selectedBankAcc.name,
-        debit: 0,
-        credit: totalBatchAmount,
-        documentRef: `Nómina N° ${nextBatchNumber}`,
-        gloss: isFondoOrCaja
-          ? `Egreso Fondo Fijo/Caja Nómina N° ${nextBatchNumber}`
-          : isBank
-          ? `Egreso Bancario Nómina N° ${nextBatchNumber}`
-          : `Egreso Nómina N° ${nextBatchNumber} (${selectedBankAcc.name})`
-      };
+      if (isBankUsed && selectedBankAcc) {
+        const isFondoOrCaja = isFondoFijoOrCaja(selectedBankAcc);
+        const isBank = isDefaultBankAccount(selectedBankAcc);
 
-      const rawVoucherLines = [...supplierLines, bankLine];
+        const bankLine = {
+          id: `line_bank_${supplierLines.length + 1}`,
+          accountId: selectedBankAcc.id,
+          accountCode: selectedBankAcc.code,
+          accountName: selectedBankAcc.name,
+          debit: totalBatchAmount < 0 ? Math.abs(totalBatchAmount) : 0,
+          credit: totalBatchAmount > 0 ? totalBatchAmount : 0,
+          documentRef: `Nómina N° ${nextBatchNumber}`,
+          gloss: isFondoOrCaja
+            ? `Egreso Fondo Fijo/Caja Nómina N° ${nextBatchNumber}`
+            : isBank
+            ? `Egreso Bancario Nómina N° ${nextBatchNumber}`
+            : `Egreso Nómina N° ${nextBatchNumber} (${selectedBankAcc.name})`
+        };
+        rawVoucherLines.push(bankLine);
+      }
+
       const voucherLines = sanitizeVoucherLines(rawVoucherLines, accounts);
       const totalDebitVal = voucherLines.reduce((s, l) => s + (l.debit || 0), 0);
       const totalCreditVal = voucherLines.reduce((s, l) => s + (l.credit || 0), 0);
+
+      const voucherType: 'Ingreso' | 'Egreso' | 'Traspaso' = !isBankUsed
+        ? 'Traspaso'
+        : totalBatchAmount > 0
+        ? 'Egreso'
+        : 'Ingreso';
 
       // 2. Create Voucher in Firestore
       const newVoucherData = {
         voucherNumber: nextVoucherNumber,
         date: batchDate,
         period: batchPeriod,
-        type: 'Egreso',
-        gloss: `Nómina de Pago N° ${nextBatchNumber} - ${batchGloss}`,
+        type: voucherType,
+        gloss: !isBankUsed
+          ? `Compensación de Documentos Proveedores N° ${nextBatchNumber} - ${batchGloss}`
+          : `Nómina de Pago N° ${nextBatchNumber} - ${batchGloss}`,
         lines: voucherLines,
         totalDebit: totalDebitVal,
         totalCredit: totalCreditVal,
@@ -393,9 +410,9 @@ export default function NominasPagoView({
         batchNumber: nextBatchNumber,
         date: batchDate,
         period: batchPeriod,
-        bankAccountId: selectedBankAcc.id,
-        bankAccountCode: selectedBankAcc.code,
-        bankAccountName: selectedBankAcc.name,
+        bankAccountId: isBankUsed && selectedBankAcc ? selectedBankAcc.id : '',
+        bankAccountCode: isBankUsed && selectedBankAcc ? selectedBankAcc.code : 'N/A',
+        bankAccountName: isBankUsed && selectedBankAcc ? selectedBankAcc.name : 'Compensación de Documentos (Sin Banco)',
         totalAmount: totalBatchAmount,
         itemsCount: totalItemsCount,
         status: 'Procesado',
@@ -407,7 +424,11 @@ export default function NominasPagoView({
 
       await addDoc(collection(companyRef, 'paymentBatches'), newBatchData);
 
-      alert(`✅ Nómina N° ${nextBatchNumber} procesada con éxito.\nSe generó automáticamente el Comprobante de Egreso N° ${nextVoucherNumber} por $${totalBatchAmount.toLocaleString('es-CL')}.`);
+      if (!isBankUsed) {
+        alert(`✅ Compensación N° ${nextBatchNumber} procesada con éxito.\nSe generó automáticamente el Comprobante de Traspaso N° ${nextVoucherNumber} (sin línea de banco). Documentos compensados en cartera de proveedores.`);
+      } else {
+        alert(`✅ Nómina N° ${nextBatchNumber} procesada con éxito.\nSe generó automáticamente el Comprobante de ${voucherType} N° ${nextVoucherNumber} por $${totalBatchAmount.toLocaleString('es-CL')}.`);
+      }
 
       // Reset form
       setIsCreating(false);

@@ -59,7 +59,8 @@ export default function CobranzaView({
   const [showCollectModal, setShowCollectModal] = useState<boolean>(false);
   const [collectDate, setCollectDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [collectPeriod, setCollectPeriod] = useState<string>(new Date().toISOString().slice(0, 7));
-  const [paymentMethod, setPaymentMethod] = useState<'Transferencia' | 'Efectivo' | 'Cheque' | 'Transbank' | 'Otro'>('Transferencia');
+  const [paymentMethod, setPaymentMethod] = useState<'Transferencia' | 'Efectivo' | 'Cheque' | 'Transbank' | 'Compensación' | 'Otro'>('Transferencia');
+  const [compensationMode, setCompensationMode] = useState<'SIN_BANCO' | 'MIXTO'>('SIN_BANCO');
   const [selectedDepositAccountId, setSelectedDepositAccountId] = useState<string>('');
   const [collectGloss, setCollectGloss] = useState<string>('Recaudación y cobro de facturas de venta');
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<{ [id: string]: number }>({});
@@ -314,17 +315,52 @@ export default function CobranzaView({
         });
       }
     });
-    const total = items.reduce((s, it) => {
-      const isNC = isNotaCredito(it.tipoDoc);
-      return s + (isNC ? -Math.abs(it.montoCobrado) : Math.abs(it.montoCobrado));
-    }, 0);
-    return { items, total };
+
+    const facturas = items.filter(it => !isNotaCredito(it.tipoDoc));
+    const notasCredito = items.filter(it => isNotaCredito(it.tipoDoc));
+
+    const totalFacturas = facturas.reduce((s, it) => s + Math.abs(it.montoCobrado), 0);
+    const totalNC = notasCredito.reduce((s, it) => s + Math.abs(it.montoCobrado), 0);
+    const netDifference = totalFacturas - totalNC;
+
+    const hasInvoices = facturas.length > 0;
+    const hasNC = notasCredito.length > 0;
+    const isCompensation = hasInvoices && hasNC;
+    const isExactMatch = isCompensation && totalFacturas === totalNC;
+    const compensatedAmount = isCompensation ? Math.min(totalFacturas, totalNC) : 0;
+
+    return {
+      items,
+      facturas,
+      notasCredito,
+      totalFacturas,
+      totalNC,
+      netDifference,
+      hasInvoices,
+      hasNC,
+      isCompensation,
+      isExactMatch,
+      compensatedAmount,
+      total: isCompensation && totalFacturas === totalNC ? 0 : netDifference
+    };
   }, [invoicesWithAging, selectedInvoiceIds]);
 
-  // Handle Process Collection & Generate Ingreso Voucher
+  // Sync default gloss and payment method when selection changes to/from NC compensation
+  useEffect(() => {
+    if (showCollectModal && selectedItemsToCollect.isCompensation) {
+      const ncFolios = selectedItemsToCollect.notasCredito.map(n => `NC ${n.folio}`).join(', ');
+      const facFolios = selectedItemsToCollect.facturas.map(f => `FAC ${f.folio}`).join(', ');
+      const clientName = selectedItemsToCollect.items[0]?.razonSocial || 'Cliente';
+      setCollectGloss(`Compensación ${ncFolios} con ${facFolios} - ${clientName}`);
+      setPaymentMethod('Compensación');
+      setCompensationMode('SIN_BANCO');
+    }
+  }, [showCollectModal, selectedItemsToCollect.isCompensation]);
+
+  // Handle Process Collection & Generate Voucher (Traspaso o Ingreso)
   const handleProcessCollection = async () => {
     if (selectedItemsToCollect.items.length === 0) {
-      alert('Seleccione al menos una factura a cobrar.');
+      alert('Seleccione al menos un documento para procesar.');
       return;
     }
 
@@ -334,15 +370,30 @@ export default function CobranzaView({
       return;
     }
 
-    if (!selectedDepositAccountId) {
-      alert('Seleccione la cuenta bancaria o caja de destino.');
-      return;
-    }
+    const isComp = selectedItemsToCollect.isCompensation;
+    const isExact = selectedItemsToCollect.isExactMatch;
+    
+    // DETECCIÓN INTELIGENTE: Si es calce exacto de NC con Factura, o el usuario seleccionó modo SIN_BANCO,
+    // o el monto neto es 0, o el medio de pago es Compensación, LA LÍNEA DE BANCO NO SE UTILIZA.
+    const isBankUsed = !(
+      isExact || 
+      (isComp && compensationMode === 'SIN_BANCO') || 
+      selectedItemsToCollect.total === 0 || 
+      paymentMethod === 'Compensación'
+    );
 
-    const depositAcc = accounts.find(a => a.id === selectedDepositAccountId);
-    if (!depositAcc) {
-      alert('Cuenta contable no encontrada.');
-      return;
+    let depositAcc: ChartOfAccount | undefined;
+    if (isBankUsed) {
+      if (!selectedDepositAccountId) {
+        alert('Seleccione la cuenta bancaria o caja de destino para el saldo.');
+        return;
+      }
+
+      depositAcc = accounts.find(a => a.id === selectedDepositAccountId);
+      if (!depositAcc) {
+        alert('Cuenta contable no encontrada.');
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -350,18 +401,33 @@ export default function CobranzaView({
       const nextRecordNumber = (collectionRecords.length > 0 ? Math.max(...collectionRecords.map(r => r.recordNumber || 0)) : 0) + 1;
       const nextVoucherNumber = (vouchers.length > 0 ? Math.max(...vouchers.map(v => v.voucherNumber || 0)) : 0) + 1;
 
-      const customerReceivableAcc = accounts.find(a => a.code.startsWith('1-1-02') || a.name.toLowerCase().includes('cliente')) || {
+      // Buscar cuenta de Clientes por Cobrar
+      const customerReceivableAcc = accounts.find(a => 
+        a.code.startsWith('1-1-02') || a.code.startsWith('1.1.02') || 
+        a.code.startsWith('1102') || a.code.startsWith('1104') || 
+        a.code.startsWith('1.1.04') ||
+        a.name.toLowerCase().includes('cliente')
+      ) || {
         id: 'acc_cli_default',
-        code: '1-1-02-01',
+        code: '1.1.02.01',
         name: 'Clientes por Cobrar'
       };
 
-      const totalAmount = selectedItemsToCollect.total;
-
-      // 1. Voucher Lines for Ingreso (Individual lines per document with RUT, Name and DocumentRef)
+      // 1. Líneas contables de Clientes por Cobrar por cada documento
       const customerLines = selectedItemsToCollect.items.map((it, idx) => {
         const isNC = isNotaCredito(it.tipoDoc);
-        const amount = Math.abs(it.montoCobrado);
+        let amount = Math.abs(it.montoCobrado);
+
+        // Si es compensación pura sin banco y los montos difieren, topar al monto compensable
+        if (!isBankUsed && isComp && !isExact) {
+          const compCap = selectedItemsToCollect.compensatedAmount;
+          if (isNC && selectedItemsToCollect.totalNC > compCap) {
+            amount = compCap;
+          } else if (!isNC && selectedItemsToCollect.totalFacturas > compCap) {
+            amount = compCap;
+          }
+        }
+
         const docRefStr = `${it.tipoDoc} N° ${it.folio}`;
 
         return {
@@ -374,40 +440,73 @@ export default function CobranzaView({
           debit: isNC ? amount : 0,
           credit: isNC ? 0 : amount,
           documentRef: docRefStr,
-          gloss: `Cobro ${isNC ? 'NC' : 'Factura'} ${docRefStr} (${it.razonSocial})`
+          gloss: isComp
+            ? `${isNC ? 'APLICACIÓN NC' : 'COMPENSACIÓN FACTURA'} ${docRefStr} (${it.razonSocial})`
+            : `COBRO ${isNC ? 'NC' : 'FACTURA'} ${docRefStr} (${it.razonSocial})`
         };
       });
 
-      const isFondoOrCaja = isFondoFijoOrCaja(depositAcc);
-      const isBank = isDefaultBankAccount(depositAcc);
+      // 2. Línea de Banco: SOLO SI EL BANCO REALMENTE SE UTILIZA
+      const rawVoucherLines: any[] = [...customerLines];
 
-      const bankLine = {
-        id: `line_bank_${customerLines.length + 1}`,
-        accountId: depositAcc.id,
-        accountCode: depositAcc.code,
-        accountName: depositAcc.name,
-        debit: totalAmount,
-        credit: 0,
-        documentRef: `Recaudación N° ${nextRecordNumber}`,
-        gloss: isFondoOrCaja
-          ? `Ingreso Fondo Fijo/Caja Recaudación N° ${nextRecordNumber} (${paymentMethod})`
-          : isBank
-          ? `Ingreso Bancario Recaudación N° ${nextRecordNumber} (${paymentMethod})`
-          : `Ingreso Recaudación N° ${nextRecordNumber} (${depositAcc.name} - ${paymentMethod})`
-      };
+      if (isBankUsed && depositAcc) {
+        const netCashAmount = selectedItemsToCollect.total;
+        if (Math.abs(netCashAmount) > 0) {
+          const isFondoOrCaja = isFondoFijoOrCaja(depositAcc);
+          const isBank = isDefaultBankAccount(depositAcc);
+          const isDebit = netCashAmount > 0;
+          const absNet = Math.abs(netCashAmount);
 
-      const rawVoucherLines = [bankLine, ...customerLines];
+          const bankLine = {
+            id: `line_bank_${customerLines.length + 1}`,
+            accountId: depositAcc.id,
+            accountCode: depositAcc.code,
+            accountName: depositAcc.name,
+            debit: isDebit ? absNet : 0,
+            credit: isDebit ? 0 : absNet,
+            documentRef: `Recaudación N° ${nextRecordNumber}`,
+            gloss: isFondoOrCaja
+              ? `Ingreso Fondo Fijo/Caja Recaudación N° ${nextRecordNumber} (${paymentMethod})`
+              : isBank
+              ? `Ingreso Bancario Recaudación N° ${nextRecordNumber} (${paymentMethod})`
+              : `Ingreso Recaudación N° ${nextRecordNumber} (${depositAcc.name} - ${paymentMethod})`
+          };
+
+          rawVoucherLines.unshift(bankLine);
+        }
+      }
+
       const voucherLines = sanitizeVoucherLines(rawVoucherLines, accounts);
       const totalDebitVal = voucherLines.reduce((s, l) => s + (l.debit || 0), 0);
       const totalCreditVal = voucherLines.reduce((s, l) => s + (l.credit || 0), 0);
 
-      // 2. Create Voucher in Firestore
+      // 3. Tipo de comprobante: Traspaso (si no hay banco), Ingreso (si entró dinero al banco), Egreso (si salió dinero)
+      let voucherType: 'Ingreso' | 'Egreso' | 'Traspaso' = 'Traspaso';
+      if (isBankUsed && selectedItemsToCollect.total > 0) {
+        voucherType = 'Ingreso';
+      } else if (isBankUsed && selectedItemsToCollect.total < 0) {
+        voucherType = 'Egreso';
+      } else {
+        voucherType = 'Traspaso';
+      }
+
+      let autoGloss = collectGloss.trim();
+      if (isComp) {
+        const ncFolios = selectedItemsToCollect.notasCredito.map(n => `NC ${n.folio}`).join(', ');
+        const facFolios = selectedItemsToCollect.facturas.map(f => `FAC ${f.folio}`).join(', ');
+        const clientName = selectedItemsToCollect.items[0]?.razonSocial || 'Cliente';
+        autoGloss = `Compensación ${ncFolios} con ${facFolios} - ${clientName}`;
+      } else if (!autoGloss || autoGloss === 'Recaudación y cobro de facturas de venta') {
+        autoGloss = `Recaudación N° ${nextRecordNumber} (${paymentMethod}) - Cobro de Facturas`;
+      }
+
+      // 4. Crear Comprobante en Firestore
       const newVoucherData = {
         voucherNumber: nextVoucherNumber,
         date: collectDate,
         period: collectPeriod,
-        type: 'Ingreso',
-        gloss: `Recaudación N° ${nextRecordNumber} (${paymentMethod}) - ${collectGloss}`,
+        type: voucherType,
+        gloss: autoGloss,
         lines: voucherLines,
         totalDebit: totalDebitVal,
         totalCredit: totalCreditVal,
@@ -417,17 +516,25 @@ export default function CobranzaView({
 
       const vRef = await addDoc(collection(companyRef, 'vouchers'), newVoucherData);
 
-      // 3. Create Collection Record in Firestore
+      // 5. Crear Registro de Cobranza / Compensación
+      const finalPaymentMethod = !isBankUsed
+        ? 'Compensación / Nota de Crédito'
+        : paymentMethod;
+
+      const recordAmount = isComp && !isBankUsed
+        ? selectedItemsToCollect.compensatedAmount
+        : Math.abs(selectedItemsToCollect.total);
+
       const newRecordData: Omit<CollectionRecord, 'id'> = {
         recordNumber: nextRecordNumber,
         date: collectDate,
         period: collectPeriod,
-        paymentMethod,
-        depositAccountId: depositAcc.id,
-        depositAccountCode: depositAcc.code,
-        depositAccountName: depositAcc.name,
-        totalAmount,
-        gloss: collectGloss,
+        paymentMethod: finalPaymentMethod,
+        depositAccountId: isBankUsed && depositAcc ? depositAcc.id : '',
+        depositAccountCode: isBankUsed && depositAcc ? depositAcc.code : 'N/A',
+        depositAccountName: isBankUsed && depositAcc ? depositAcc.name : 'Compensación de Documentos (Sin Banco)',
+        totalAmount: recordAmount,
+        gloss: autoGloss,
         status: 'Valido',
         voucherId: vRef.id,
         items: selectedItemsToCollect.items,
@@ -436,7 +543,11 @@ export default function CobranzaView({
 
       await addDoc(collection(companyRef, 'collections'), newRecordData);
 
-      alert(`✅ Recaudación N° ${nextRecordNumber} registrada con éxito.\nSe generó automáticamente el Comprobante de Ingreso N° ${nextVoucherNumber} por $${totalAmount.toLocaleString('es-CL')}.`);
+      if (!isBankUsed) {
+        alert(`✅ Aplicación de Nota de Crédito registrada con éxito.\nSe generó automáticamente el Comprobante de Traspaso N° ${nextVoucherNumber} por $${recordAmount.toLocaleString('es-CL')} (sin línea de banco). Los documentos fueron compensados en cartera.`);
+      } else {
+        alert(`✅ Recaudación N° ${nextRecordNumber} registrada con éxito.\nSe generó automáticamente el Comprobante de ${voucherType} N° ${nextVoucherNumber} por $${recordAmount.toLocaleString('es-CL')}.`);
+      }
 
       setShowCollectModal(false);
       setSelectedInvoiceIds({});
@@ -444,7 +555,7 @@ export default function CobranzaView({
       if (onVouchersUpdated) onVouchersUpdated();
     } catch (err: any) {
       console.error('Error processing collection:', err);
-      alert('Error al registrar cobranza: ' + err.message);
+      alert('Error al registrar operación: ' + err.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -707,15 +818,28 @@ export default function CobranzaView({
               </button>
             </div>
 
-            {/* Actions: Export Aging CSV & Search Input & Registrar Cobro */}
+            {/* Actions: Export Aging CSV & Search Input & Registrar Cobro / Aplicar NC */}
             <div className="flex items-center gap-2 flex-wrap">
               {Object.keys(selectedInvoiceIds).length > 0 && (
                 <button
                   onClick={() => setShowCollectModal(true)}
-                  className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                  className={`px-3 py-1 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer ${
+                    selectedItemsToCollect.isCompensation
+                      ? 'bg-indigo-700 hover:bg-indigo-800'
+                      : 'bg-emerald-600 hover:bg-emerald-700'
+                  }`}
+                  title={
+                    selectedItemsToCollect.isCompensation
+                      ? 'Aplicar Nota de Crédito a Factura (Compensación sin banco)'
+                      : 'Registrar Cobro e Ingreso'
+                  }
                 >
-                  <span>⚡</span>
-                  <span>Registrar Cobro ({Object.keys(selectedInvoiceIds).length})</span>
+                  <span>{selectedItemsToCollect.isCompensation ? '⚖️' : '⚡'}</span>
+                  <span>
+                    {selectedItemsToCollect.isCompensation
+                      ? `Aplicar NC a Factura (${Object.keys(selectedInvoiceIds).length})`
+                      : `Registrar Cobro (${Object.keys(selectedInvoiceIds).length})`}
+                  </span>
                 </button>
               )}
 
@@ -956,10 +1080,26 @@ export default function CobranzaView({
                     <tr key={rec.id} className="hover:bg-slate-50">
                       <td className="py-2 px-3 font-bold text-emerald-700">REC-N° {rec.recordNumber}</td>
                       <td className="py-2 px-3 text-slate-700">{rec.date}</td>
-                      <td className="py-2 px-3 font-sans font-bold text-slate-800">{rec.paymentMethod}</td>
+                      <td className="py-2 px-3 font-sans font-bold text-slate-800">
+                        {rec.paymentMethod === 'Compensación / Nota de Crédito' || rec.paymentMethod === 'Compensación' ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-indigo-50 text-indigo-800 border border-indigo-200 text-[10px] font-bold">
+                            ⚖️ Compensación NC
+                          </span>
+                        ) : (
+                          rec.paymentMethod
+                        )}
+                      </td>
                       <td className="py-2 px-3 font-sans text-slate-900">
-                        <span className="font-mono font-bold mr-1">{rec.depositAccountCode}</span>
-                        {rec.depositAccountName}
+                        {rec.depositAccountCode === 'N/A' || !rec.depositAccountId ? (
+                          <span className="text-slate-500 italic text-[11px] flex items-center gap-1 font-medium">
+                            <span className="text-indigo-600">⚖️</span> Sin Banco (Compensación)
+                          </span>
+                        ) : (
+                          <>
+                            <span className="font-mono font-bold mr-1">{rec.depositAccountCode}</span>
+                            {rec.depositAccountName}
+                          </>
+                        )}
                       </td>
                       <td className="py-2 px-3 font-sans text-slate-600 truncate max-w-xs">{rec.gloss}</td>
                       <td className="py-2 px-3 text-center font-bold text-slate-800">{rec.items?.length || 1}</td>
@@ -1081,31 +1221,124 @@ export default function CobranzaView({
         </div>
       )}
 
-      {/* COLLECT MODAL */}
+      {/* COLLECT & COMPENSATION MODAL */}
       {showCollectModal && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full flex flex-col overflow-hidden">
-            <div className="p-4 bg-emerald-700 text-white flex justify-between items-center">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full flex flex-col overflow-hidden max-h-[90vh]">
+            {/* Header */}
+            <div className={`p-4 text-white flex justify-between items-center ${
+              selectedItemsToCollect.isCompensation ? 'bg-slate-900 border-b border-indigo-500/30' : 'bg-emerald-700'
+            }`}>
               <div>
-                <h4 className="text-base font-black tracking-tight uppercase">
-                  Registrar Cobro y Emisión de Ingreso
+                <h4 className="text-base font-black tracking-tight uppercase flex items-center gap-2">
+                  <span>{selectedItemsToCollect.isCompensation ? '⚖️' : '⚡'}</span>
+                  <span>
+                    {selectedItemsToCollect.isCompensation
+                      ? 'Aplicar Nota de Crédito a Factura (Compensación)'
+                      : 'Registrar Cobro y Emisión de Ingreso'}
+                  </span>
                 </h4>
-                <p className="text-xs text-emerald-100">
-                  {selectedItemsToCollect.items.length} facturas seleccionadas por un total de ${selectedItemsToCollect.total.toLocaleString('es-CL')}
+                <p className="text-xs text-slate-200 mt-0.5">
+                  {selectedItemsToCollect.isCompensation ? (
+                    <>
+                      Compensación en Cartera: {selectedItemsToCollect.notasCredito.length} NC (${selectedItemsToCollect.totalNC.toLocaleString('es-CL')}) vs {selectedItemsToCollect.facturas.length} Factura(s) (${selectedItemsToCollect.totalFacturas.toLocaleString('es-CL')})
+                    </>
+                  ) : (
+                    <>
+                      {selectedItemsToCollect.items.length} facturas seleccionadas por un total de ${selectedItemsToCollect.total.toLocaleString('es-CL')}
+                    </>
+                  )}
                 </p>
               </div>
               <button
                 onClick={() => setShowCollectModal(false)}
-                className="text-emerald-100 hover:text-white text-lg font-bold px-2 py-1"
+                className="text-slate-300 hover:text-white text-lg font-bold px-2 py-1 cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <div className="p-4 space-y-4 text-xs">
+            <div className="p-4 space-y-4 text-xs overflow-y-auto">
+              {/* Intelligent Banner for NC Compensation */}
+              {selectedItemsToCollect.isCompensation && (
+                <div className="p-3.5 bg-indigo-50/90 border border-indigo-200 rounded-xl space-y-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">💡</span>
+                    <span className="font-black text-indigo-950 text-xs">
+                      Detección Inteligente: Cruce de Nota de Crédito con Factura
+                    </span>
+                    <span className={`ml-auto px-2 py-0.5 rounded text-[10px] font-bold border ${
+                      selectedItemsToCollect.isExactMatch
+                        ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                        : 'bg-amber-100 text-amber-800 border-amber-300'
+                    }`}>
+                      {selectedItemsToCollect.isExactMatch ? 'Calce Exacto (100% Compensado)' : 'Montos Parcialmente Distintos'}
+                    </span>
+                  </div>
+
+                  <p className="text-[11px] text-indigo-900 leading-relaxed">
+                    Se detectó la aplicación de <strong>{selectedItemsToCollect.notasCredito.length} Nota(s) de Crédito (${selectedItemsToCollect.totalNC.toLocaleString('es-CL')})</strong> a <strong>{selectedItemsToCollect.facturas.length} Factura(s) de Venta (${selectedItemsToCollect.totalFacturas.toLocaleString('es-CL')})</strong>.
+                    {selectedItemsToCollect.isExactMatch ? (
+                      <span className="block mt-1 font-semibold text-emerald-800">
+                        ✅ Los montos calzan al 100%. La línea de Banco NO se utiliza. Se emitirá automáticamente un <strong>Comprobante de Traspaso</strong> cruzando la Factura contra la Nota de Crédito en la cuenta Clientes.
+                      </span>
+                    ) : (
+                      <span className="block mt-1 font-medium text-slate-700">
+                        Los montos de NC y Factura no son iguales. Selecciona a continuación si deseas solo compensar la NC sin usar banco (Traspaso), o cobrar la diferencia a través de la cuenta bancaria (Ingreso).
+                      </span>
+                    )}
+                  </p>
+
+                  {/* Mode selector if not exact match */}
+                  {!selectedItemsToCollect.isExactMatch && (
+                    <div className="pt-2 border-t border-indigo-200 flex flex-col sm:flex-row gap-2">
+                      <label className={`flex items-start gap-2 p-2 rounded-lg border cursor-pointer text-xs flex-1 transition-colors ${
+                        compensationMode === 'SIN_BANCO'
+                          ? 'bg-white border-indigo-600 shadow-xs font-bold text-indigo-950'
+                          : 'bg-indigo-50/50 border-slate-200 text-slate-600 hover:bg-white'
+                      }`}>
+                        <input
+                          type="radio"
+                          name="compMode"
+                          checked={compensationMode === 'SIN_BANCO'}
+                          onChange={() => setCompensationMode('SIN_BANCO')}
+                          className="mt-0.5 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                        />
+                        <div>
+                          <div>⚡ Solo Aplicar NC (Sin Banco - Traspaso)</div>
+                          <div className="text-[10px] font-normal text-slate-500">
+                            Compensa hasta ${selectedItemsToCollect.compensatedAmount.toLocaleString('es-CL')}. Banco NO se utiliza.
+                          </div>
+                        </div>
+                      </label>
+
+                      <label className={`flex items-start gap-2 p-2 rounded-lg border cursor-pointer text-xs flex-1 transition-colors ${
+                        compensationMode === 'MIXTO'
+                          ? 'bg-white border-indigo-600 shadow-xs font-bold text-indigo-950'
+                          : 'bg-indigo-50/50 border-slate-200 text-slate-600 hover:bg-white'
+                      }`}>
+                        <input
+                          type="radio"
+                          name="compMode"
+                          checked={compensationMode === 'MIXTO'}
+                          onChange={() => setCompensationMode('MIXTO')}
+                          className="mt-0.5 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                        />
+                        <div>
+                          <div>🏦 Cobro Mixto (NC + Saldo en Banco)</div>
+                          <div className="text-[10px] font-normal text-slate-500">
+                            Aplica NC y deposita la diferencia (${Math.abs(selectedItemsToCollect.netDifference).toLocaleString('es-CL')}) en Banco.
+                          </div>
+                        </div>
+                      </label>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Fecha de Recaudación:</label>
+                  <label className="block font-bold text-slate-700 mb-1">Fecha de Operación / Comprobante:</label>
                   <input
                     type="date"
                     value={collectDate}
@@ -1118,85 +1351,113 @@ export default function CobranzaView({
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Medio de Pago:</label>
-                  <select
-                    value={paymentMethod}
-                    onChange={(e) => setPaymentMethod(e.target.value as any)}
-                    className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 font-medium"
-                  >
-                    <option value="Transferencia">Transferencia Bancaria</option>
-                    <option value="Efectivo">Efectivo / Caja</option>
-                    <option value="Cheque">Cheque al Día / Fecha</option>
-                    <option value="Transbank">Transbank / WebPay</option>
-                    <option value="Otro">Otro</option>
-                  </select>
+                  <label className="block font-bold text-slate-700 mb-1">Medio de Operación:</label>
+                  {selectedItemsToCollect.isCompensation && (selectedItemsToCollect.isExactMatch || compensationMode === 'SIN_BANCO') ? (
+                    <div className="w-full bg-indigo-50 border border-indigo-200 rounded px-3 py-1.5 font-bold text-indigo-900 flex items-center justify-between">
+                      <span>⚖️ Compensación / Nota de Crédito</span>
+                      <span className="text-[10px] text-indigo-600 font-semibold">(Sin flujo de caja)</span>
+                    </div>
+                  ) : (
+                    <select
+                      value={paymentMethod}
+                      onChange={(e) => setPaymentMethod(e.target.value as any)}
+                      className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 font-medium"
+                    >
+                      <option value="Transferencia">Transferencia Bancaria</option>
+                      <option value="Efectivo">Efectivo / Caja</option>
+                      <option value="Cheque">Cheque al Día / Fecha</option>
+                      <option value="Transbank">Transbank / WebPay</option>
+                      {selectedItemsToCollect.isCompensation && (
+                        <option value="Compensación">Compensación / Nota de Crédito</option>
+                      )}
+                      <option value="Otro">Otro</option>
+                    </select>
+                  )}
                 </div>
 
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block font-bold text-slate-700">Cuenta de Destino (Depósito/Caja):</label>
-                    <button
-                      type="button"
-                      onClick={() => setShowConfigModal(true)}
-                      className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-1 cursor-pointer"
-                      title="Habilitar o agregar Fondos Fijos, Cajas Chicas u otras cuentas del plan"
-                    >
-                      <span>⚙️</span> Habilitar Cuentas
-                    </button>
+                {/* Cuenta de Destino: Ocultar o deshabilitar si es compensación pura sin banco */}
+                {selectedItemsToCollect.isCompensation && (selectedItemsToCollect.isExactMatch || compensationMode === 'SIN_BANCO') ? (
+                  <div className="sm:col-span-2 p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold text-slate-700 flex items-center gap-1.5">
+                        <span>🏦</span>
+                        <span>Cuenta Bancaria o Caja:</span>
+                      </span>
+                      <span className="text-[10px] font-bold text-indigo-700 bg-indigo-100 border border-indigo-200 px-2 py-0.5 rounded">
+                        🚫 BANCO NO SE UTILIZA
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-600">
+                      Operación de compensación pura entre documentos en la cuenta Clientes. No genera línea de banco ni afecta saldos de tesorería.
+                    </p>
                   </div>
-                  <select
-                    value={selectedDepositAccountId}
-                    onChange={(e) => setSelectedDepositAccountId(e.target.value)}
-                    className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                  >
-                    <optgroup label="🏦 Cuentas Bancarias y Tesorería (Predeterminadas)">
-                      {defaultBanks.map(acc => (
-                        <option key={acc.id} value={acc.id}>
-                          {acc.code} - {acc.name}
-                        </option>
-                      ))}
-                    </optgroup>
-
-                    {customEnabled.length > 0 && (
-                      <optgroup label="💼 Fondos Fijos, Cajas y Cuentas Habilitadas">
-                        {customEnabled.map(acc => (
+                ) : (
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block font-bold text-slate-700">Cuenta de Destino (Depósito/Caja):</label>
+                      <button
+                        type="button"
+                        onClick={() => setShowConfigModal(true)}
+                        className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-1 cursor-pointer"
+                        title="Habilitar o agregar Fondos Fijos, Cajas Chicas u otras cuentas del plan"
+                      >
+                        <span>⚙️</span> Habilitar Cuentas
+                      </button>
+                    </div>
+                    <select
+                      value={selectedDepositAccountId}
+                      onChange={(e) => setSelectedDepositAccountId(e.target.value)}
+                      className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    >
+                      <optgroup label="🏦 Cuentas Bancarias y Tesorería (Predeterminadas)">
+                        {defaultBanks.map(acc => (
                           <option key={acc.id} value={acc.id}>
                             {acc.code} - {acc.name}
                           </option>
                         ))}
                       </optgroup>
-                    )}
 
-                    {showAllAccounts && (
-                      <optgroup label="📋 Todas las demás Cuentas del Plan">
-                        {allOtherAccounts.map(acc => (
-                          <option key={acc.id} value={acc.id}>
-                            {acc.code} - {acc.name} ({acc.type})
-                          </option>
-                        ))}
-                      </optgroup>
-                    )}
-                  </select>
+                      {customEnabled.length > 0 && (
+                        <optgroup label="💼 Fondos Fijos, Cajas y Cuentas Habilitadas">
+                          {customEnabled.map(acc => (
+                            <option key={acc.id} value={acc.id}>
+                              {acc.code} - {acc.name}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
 
-                  <div className="mt-1 flex items-center justify-between text-[11px]">
-                    <span className="text-slate-500">
-                      {defaultBanks.some(b => b.id === selectedDepositAccountId)
-                        ? '🏦 Cuenta Bancaria'
-                        : customEnabled.some(c => c.id === selectedDepositAccountId)
-                        ? '💼 Fondo Fijo / Cuenta Habilitada'
-                        : '📋 Cuenta Contable Personalizada'}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setShowAllAccounts(!showAllAccounts)}
-                      className="text-indigo-600 hover:text-indigo-800 underline cursor-pointer"
-                    >
-                      {showAllAccounts ? 'Ocultar resto del plan' : 'Ver todo el plan de cuentas'}
-                    </button>
+                      {showAllAccounts && (
+                        <optgroup label="📋 Todas las demás Cuentas del Plan">
+                          {allOtherAccounts.map(acc => (
+                            <option key={acc.id} value={acc.id}>
+                              {acc.code} - {acc.name} ({acc.type})
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                    </select>
+
+                    <div className="mt-1 flex items-center justify-between text-[11px]">
+                      <span className="text-slate-500">
+                        {defaultBanks.some(b => b.id === selectedDepositAccountId)
+                          ? '🏦 Cuenta Bancaria'
+                          : customEnabled.some(c => c.id === selectedDepositAccountId)
+                          ? '💼 Fondo Fijo / Cuenta Habilitada'
+                          : '📋 Cuenta Contable Personalizada'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowAllAccounts(!showAllAccounts)}
+                        className="text-indigo-600 hover:text-indigo-800 underline cursor-pointer"
+                      >
+                        {showAllAccounts ? 'Ocultar resto del plan' : 'Ver todo el plan de cuentas'}
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
 
-                <div>
+                <div className={selectedItemsToCollect.isCompensation && (selectedItemsToCollect.isExactMatch || compensationMode === 'SIN_BANCO') ? 'sm:col-span-2' : ''}>
                   <label className="block font-bold text-slate-700 mb-1">Glosa del Comprobante:</label>
                   <input
                     type="text"
@@ -1207,32 +1468,80 @@ export default function CobranzaView({
                 </div>
               </div>
 
-              <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
-                <span className="text-[11px] font-bold text-slate-700 uppercase block mb-1">Efecto Contable Automático:</span>
-                <div className="font-mono text-[11px] text-slate-800 space-y-1">
-                  <div className="text-emerald-700 font-bold">
-                    [DEBE] Cuenta Seleccionada: +${selectedItemsToCollect.total.toLocaleString('es-CL')}
-                  </div>
-                  <div className="text-indigo-700 font-bold">
-                    [HABER] 1-1-02-01 Clientes por Cobrar: -${selectedItemsToCollect.total.toLocaleString('es-CL')}
+              {/* Efecto Contable Automático */}
+              {selectedItemsToCollect.isCompensation && (selectedItemsToCollect.isExactMatch || compensationMode === 'SIN_BANCO') ? (
+                <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                  <span className="text-[11px] font-bold text-indigo-900 uppercase block mb-1">
+                    Efecto Contable Automático (Comprobante de Traspaso):
+                  </span>
+                  <div className="font-mono text-[11px] text-slate-800 space-y-1">
+                    <div className="text-rose-700 font-bold">
+                      [DEBE] Clientes por Cobrar (Rebaja de Nota de Crédito): +${(selectedItemsToCollect.isExactMatch ? selectedItemsToCollect.totalNC : selectedItemsToCollect.compensatedAmount).toLocaleString('es-CL')}
+                    </div>
+                    <div className="text-indigo-700 font-bold">
+                      [HABER] Clientes por Cobrar (Cancelación Factura de Venta): -${(selectedItemsToCollect.isExactMatch ? selectedItemsToCollect.totalFacturas : selectedItemsToCollect.compensatedAmount).toLocaleString('es-CL')}
+                    </div>
+                    <div className="text-emerald-800 text-[10px] pt-1 font-sans font-semibold border-t border-slate-200 mt-1 flex items-center gap-1.5">
+                      <span>⚖️</span>
+                      <span>Partida doble cuadrada al 100%. Línea de Banco omitida (Banco no se utiliza).</span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : selectedItemsToCollect.isCompensation ? (
+                <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                  <span className="text-[11px] font-bold text-slate-700 uppercase block mb-1">
+                    Efecto Contable Automático (Cobro Mixto con Banco):
+                  </span>
+                  <div className="font-mono text-[11px] text-slate-800 space-y-1">
+                    <div className="text-rose-700 font-bold">
+                      [DEBE] Clientes por Cobrar (Rebaja Nota de Crédito): +${selectedItemsToCollect.totalNC.toLocaleString('es-CL')}
+                    </div>
+                    <div className="text-emerald-700 font-bold">
+                      [DEBE] Banco Seleccionado (Saldo Depositado): +${Math.abs(selectedItemsToCollect.total).toLocaleString('es-CL')}
+                    </div>
+                    <div className="text-indigo-700 font-bold">
+                      [HABER] Clientes por Cobrar (Cancelación Facturas): -${selectedItemsToCollect.totalFacturas.toLocaleString('es-CL')}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                  <span className="text-[11px] font-bold text-slate-700 uppercase block mb-1">
+                    Efecto Contable Automático (Comprobante de Ingreso):
+                  </span>
+                  <div className="font-mono text-[11px] text-slate-800 space-y-1">
+                    <div className="text-emerald-700 font-bold">
+                      [DEBE] Cuenta Bancaria / Caja: +${selectedItemsToCollect.total.toLocaleString('es-CL')}
+                    </div>
+                    <div className="text-indigo-700 font-bold">
+                      [HABER] Clientes por Cobrar: -${selectedItemsToCollect.total.toLocaleString('es-CL')}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="p-3 bg-slate-100 border-t border-slate-200 flex justify-end gap-2">
               <button
                 onClick={() => setShowCollectModal(false)}
-                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded"
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleProcessCollection}
                 disabled={isSubmitting}
-                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded shadow-xs"
+                className={`px-5 py-2 text-white font-black text-xs rounded shadow-xs cursor-pointer ${
+                  selectedItemsToCollect.isCompensation && (selectedItemsToCollect.isExactMatch || compensationMode === 'SIN_BANCO')
+                    ? 'bg-indigo-600 hover:bg-indigo-700'
+                    : 'bg-emerald-600 hover:bg-emerald-700'
+                }`}
               >
-                {isSubmitting ? 'Procesando...' : 'Confirmar Cobro e Ingreso Contable'}
+                {isSubmitting
+                  ? 'Procesando...'
+                  : selectedItemsToCollect.isCompensation && (selectedItemsToCollect.isExactMatch || compensationMode === 'SIN_BANCO')
+                  ? 'Confirmar Aplicación de NC (Comprobante de Traspaso)'
+                  : 'Confirmar Cobro e Ingreso Contable'}
               </button>
             </div>
           </div>

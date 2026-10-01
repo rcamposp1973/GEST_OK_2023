@@ -90,6 +90,9 @@ export default function InternalCompanyAccountingCopilot({
   onNavigateTab,
   onVouchersUpdated
 }: InternalCopilotProps) {
+  // Desactivado temporalmente a solicitud del usuario hasta trabajar con él
+  return null;
+
   const [isOpen, setIsOpen] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);

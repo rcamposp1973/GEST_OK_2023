@@ -177,12 +177,12 @@ export const COCKPIT_MODULE_CATALOG: CockpitModuleItem[] = [
   },
   {
     id: 'libroBancoColaborativo',
-    label: 'Libro Banco (Aclaraciones)',
-    shortLabel: 'Libro Banco',
+    label: 'Libro Banco - Cartola',
+    shortLabel: 'Libro Banco - Cartola',
     category: 'TESORERIA',
     icon: Landmark,
     colorScheme: 'cyan',
-    description: 'Cartola de movimientos bancarios y aclaración colaborativa'
+    description: 'Cartola de movimientos bancarios y contabilización de movimientos'
   },
   {
     id: 'nominasPago',

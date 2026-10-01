@@ -114,10 +114,17 @@ export function sanitizeVoucherLines<T extends VoucherLine>(
     if (acc.code) accountMap.set(acc.code, acc);
   });
 
-  return lines.map(line => {
-    const acc = accountMap.get(line.accountId) || accountMap.get(line.accountCode);
-    return sanitizeVoucherLine(line, acc);
-  });
+  return lines
+    .filter(line => {
+      // Excluir líneas vacías o en cero (ej. líneas de banco innecesarias con $0 al compensar NCs)
+      const d = Number(line.debit) || 0;
+      const c = Number(line.credit) || 0;
+      return d > 0 || c > 0;
+    })
+    .map(line => {
+      const acc = accountMap.get(line.accountId) || accountMap.get(line.accountCode);
+      return sanitizeVoucherLine(line, acc);
+    });
 }
 
 export interface LineValidationResult {

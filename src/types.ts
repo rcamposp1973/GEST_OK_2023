@@ -585,7 +585,7 @@ export interface CollectionRecord {
   recordNumber: number;
   date: string; // YYYY-MM-DD
   period: string; // YYYY-MM
-  paymentMethod: 'Transferencia' | 'Efectivo' | 'Cheque' | 'Transbank' | 'Otro';
+  paymentMethod: 'Transferencia' | 'Efectivo' | 'Cheque' | 'Transbank' | 'Compensación' | 'Compensación / Nota de Crédito' | 'Otro' | string;
   depositAccountId: string;
   depositAccountCode: string;
   depositAccountName: string;

@@ -218,6 +218,9 @@ export default function EmisionDteView({
         '41': 'Boleta Exenta Electrónica',
         '56': 'Nota de Débito Electrónica',
         '61': 'Nota de Crédito Electrónica',
+        '110': 'Factura de Exportación Electrónica',
+        '111': 'Nota de Débito de Exportación Electrónica',
+        '112': 'Nota de Crédito de Exportación Electrónica',
       };
 
       const newFetchedDocs: DTEDocument[] = [];

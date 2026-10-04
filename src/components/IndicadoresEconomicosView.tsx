@@ -70,78 +70,83 @@ export default function IndicadoresEconomicosView({ studyId, selectedYear }: Ind
       // Filtrar por año
       list = list.filter(r => r.date && r.date.startsWith(`${yearToLoad}-`));
 
-      // Si no existen datos o están vacíos para este año, generar indicadores base oficiales
-      if (list.length === 0) {
-        const rawGenerated = generateOfficialChileanIndicators(`${yearToLoad}-01-01`);
-        const generated: ExchangeRate[] = rawGenerated
-          .filter(item => item.date.startsWith(`${yearToLoad}-`))
-          .map(item => ({
-            id: item.date,
-            date: item.date,
-            uf: item.uf,
-            dolar: item.dolar,
-            utm: item.utm,
-            euro: item.euro,
-            yen: item.yen,
-            ipc: item.ipc,
-            ipcAcomulado: item.ipcAcomulado
-          }));
+      // Generar la serie oficial completa de todo el año
+      const fullYearGenerated = generateOfficialChileanIndicators(`${yearToLoad}-01-01`).filter(item => item.date.startsWith(`${yearToLoad}-`));
+      const existingMap = new Map(list.map(r => [r.date, r]));
+      let needsBatchUpdate = false;
+      const completeList: ExchangeRate[] = [];
 
-        // Guardar lote en Firestore
-        const batch = writeBatch(db);
-        generated.forEach(item => {
-          const docRef = doc(db, 'studies', studyId, 'exchangeRates', item.date);
-          batch.set(docRef, item);
-        });
-        await batch.commit();
-        list = generated;
-        setStatusMessage({
-          type: 'info',
-          text: `Se inicializaron automáticamente los indicadores oficiales del Banco Central y SII para el año ${yearToLoad}.`
-        });
-      } else {
-        // Verificar y corregir posibles inconsistencias intra-mes en UTM e IPC
-        const fullGenerated = generateOfficialChileanIndicators(`${yearToLoad}-01-01`);
-        const genMap = new Map(fullGenerated.map(g => [g.date, g]));
-        let hasInconsistencies = false;
-
-        const healedList = list.map(item => {
-          const expected = genMap.get(item.date);
-          if (expected) {
-            // Si la UTM o IPC difiere dentro del mes o la UF tiene un salto anómalo mayor a $300 en un solo día
-            const isUtmMismatch = Math.abs((item.utm || 0) - expected.utm) > 500;
-            const isUfAnomaly = Math.abs((item.uf || 0) - expected.uf) > 300;
-            if (isUtmMismatch || isUfAnomaly) {
-              hasInconsistencies = true;
-              return {
-                ...item,
-                uf: expected.uf,
-                utm: expected.utm,
-                ipc: expected.ipc,
-                ipcAcomulado: expected.ipcAcomulado,
-                dolar: item.dolar || expected.dolar,
-                euro: item.euro || expected.euro,
-                yen: item.yen || expected.yen
-              };
-            }
-          }
-          return item;
-        });
-
-        if (hasInconsistencies) {
-          const batch = writeBatch(db);
-          healedList.forEach(item => {
-            const docRef = doc(db, 'studies', studyId, 'exchangeRates', item.date);
-            batch.set(docRef, item);
+      fullYearGenerated.forEach(expected => {
+        const existing = existingMap.get(expected.date);
+        if (!existing) {
+          // Día faltante (ej. día 3 de octubre en adelante) -> agregar valor oficial
+          needsBatchUpdate = true;
+          completeList.push({
+            id: expected.date,
+            date: expected.date,
+            uf: expected.uf,
+            dolar: expected.dolar,
+            utm: expected.utm,
+            euro: expected.euro,
+            yen: expected.yen,
+            ipc: expected.ipc,
+            ipcAcomulado: expected.ipcAcomulado
           });
-          await batch.commit();
-          list = healedList;
+        } else {
+          // Verificar si el valor existente difiere de la tabla oficial
+          const isUfMismatch = Math.abs((existing.uf || 0) - expected.uf) > 0.001;
+          const isDolarMismatch = Math.abs((existing.dolar || 0) - expected.dolar) > 0.001;
+          const isEuroMismatch = Math.abs((existing.euro || 0) - expected.euro) > 0.001;
+          const isUtmMismatch = Math.abs((existing.utm || 0) - expected.utm) > 0.001;
+
+          if (isUfMismatch || isDolarMismatch || isEuroMismatch || isUtmMismatch) {
+            needsBatchUpdate = true;
+            completeList.push({
+              ...existing,
+              uf: expected.uf,
+              dolar: expected.dolar,
+              euro: expected.euro,
+              utm: expected.utm,
+              yen: expected.yen,
+              ipc: expected.ipc !== undefined ? expected.ipc : existing.ipc,
+              ipcAcomulado: expected.ipcAcomulado !== undefined ? expected.ipcAcomulado : existing.ipcAcomulado
+            });
+          } else {
+            completeList.push(existing);
+          }
+        }
+      });
+
+      // Establecer de inmediato la lista completa en la interfaz para visualización instantánea
+      completeList.sort((a, b) => a.date.localeCompare(b.date));
+      setRates(completeList);
+
+      if (needsBatchUpdate && studyId) {
+        try {
+          const itemsToSave = completeList.filter(item => {
+            const ex = existingMap.get(item.date);
+            if (!ex) return true;
+            return Math.abs((ex.uf || 0) - (item.uf || 0)) > 0.001 ||
+                   Math.abs((ex.dolar || 0) - (item.dolar || 0)) > 0.001 ||
+                   Math.abs((ex.euro || 0) - (item.euro || 0)) > 0.001 ||
+                   Math.abs((ex.utm || 0) - (item.utm || 0)) > 0.001;
+          });
+
+          // Guardar en lotes de máximo 250 docs para cumplir con límites de Firestore
+          const chunkSize = 250;
+          for (let i = 0; i < itemsToSave.length; i += chunkSize) {
+            const chunk = itemsToSave.slice(i, i + chunkSize);
+            const batch = writeBatch(db);
+            chunk.forEach(item => {
+              const docRef = doc(db, 'studies', studyId, 'exchangeRates', item.date);
+              batch.set(docRef, item);
+            });
+            await batch.commit();
+          }
+        } catch (saveErr) {
+          console.warn("Auto-healing indicators database background save:", saveErr);
         }
       }
-
-      // Ordenar por fecha ascendente
-      list.sort((a, b) => a.date.localeCompare(b.date));
-      setRates(list);
     } catch (err: any) {
       console.error("Error cargando indicadores económicos:", err);
       setStatusMessage({
@@ -169,7 +174,7 @@ export default function IndicadoresEconomicosView({ studyId, selectedYear }: Ind
             message: `Consultando APIs oficiales del Banco Central y SII...`,
             stage: `Conectando con fuentes de datos chilenas`
           });
-          const dailyList = await syncOnlineChileanIndicators();
+          const dailyList = await syncOnlineChileanIndicators(currentYear);
           const yearList = dailyList.filter(d => d.date.startsWith(`${currentYear}-`));
 
           updateProgress({
@@ -179,22 +184,27 @@ export default function IndicadoresEconomicosView({ studyId, selectedYear }: Ind
             stage: `Año ${currentYear}`
           });
           
-          const batch = writeBatch(db);
-          yearList.forEach(item => {
-            const docRef = doc(db, 'studies', studyId, 'exchangeRates', item.date);
-            batch.set(docRef, {
-              id: item.date,
-              date: item.date,
-              uf: item.uf,
-              dolar: item.dolar,
-              utm: item.utm,
-              euro: item.euro,
-              yen: item.yen,
-              ipc: item.ipc,
-              ipcAcomulado: item.ipcAcomulado
+          // Guardar en lotes de 250 docs
+          const chunkSize = 250;
+          for (let i = 0; i < yearList.length; i += chunkSize) {
+            const chunk = yearList.slice(i, i + chunkSize);
+            const batch = writeBatch(db);
+            chunk.forEach(item => {
+              const docRef = doc(db, 'studies', studyId, 'exchangeRates', item.date);
+              batch.set(docRef, {
+                id: item.date,
+                date: item.date,
+                uf: item.uf,
+                dolar: item.dolar,
+                utm: item.utm,
+                euro: item.euro,
+                yen: item.yen,
+                ipc: item.ipc,
+                ipcAcomulado: item.ipcAcomulado
+              });
             });
-          });
-          await batch.commit();
+            await batch.commit();
+          }
 
           setStatusMessage({
             type: 'success',

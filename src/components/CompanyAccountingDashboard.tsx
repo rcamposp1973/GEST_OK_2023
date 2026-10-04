@@ -1708,14 +1708,14 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
 
         for (let r = 0; r < Math.min(tableRows.length, 10); r++) {
           const rowText = tableRows[r].join(' ').toLowerCase();
-          const mesAnoMatch = rowText.match(/(?:mes|periodo|per[ií]odo)\s*0?(\d{1,2})\s*(?:del\s*a[ñn]o|de|\/|-)\s*(202[5-7])/i) ||
-                              rowText.match(/(?:a[ñn]o|ejercicio)\s*(202[5-7])\s*(?:mes|periodo|per[ií]odo)\s*0?(\d{1,2})/i);
+          const mesAnoMatch = rowText.match(/(?:mes|periodo|per[ií]odo)\s*0?(\d{1,2})\s*(?:del\s*a[ñn]o|de|\/|-)\s*(20[2-3][0-9])/i) ||
+                              rowText.match(/(?:a[ñn]o|ejercicio)\s*(20[2-3][0-9])\s*(?:mes|periodo|per[ií]odo)\s*0?(\d{1,2})/i);
           if (mesAnoMatch) {
             const m = mesAnoMatch[1].length === 4 ? mesAnoMatch[2] : mesAnoMatch[1];
             const y = mesAnoMatch[1].length === 4 ? mesAnoMatch[1] : mesAnoMatch[2];
             const mNum = parseInt(m, 10);
             const yNum = parseInt(y, 10);
-            if (yNum >= 2025 && yNum <= 2027 && mNum >= 1 && mNum <= 12) {
+            if (yNum >= 2020 && yNum <= 2030 && mNum >= 1 && mNum <= 12) {
               detectedFromFile = `${yNum}-${String(mNum).padStart(2, '0')}`;
               break;
             }
@@ -1723,11 +1723,11 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
         }
 
         if (!detectedFromFile) {
-          const fnMatch = file.name.match(/(?:rcv|ventas?|compras?|honorarios?|mes|periodo|f29)?[_\-]?(202[5-7])[-_]?(0[1-9]|1[0-2])(?!\d)/i);
+          const fnMatch = file.name.match(/(?:rcv|ventas?|compras?|honorarios?|mes|periodo|f29)?[_\-]?(20[2-3][0-9])[-_]?(0[1-9]|1[0-2])(?!\d)/i);
           if (fnMatch) {
             const yNum = parseInt(fnMatch[1], 10);
             const mNum = parseInt(fnMatch[2], 10);
-            if (yNum >= 2025 && yNum <= 2027 && mNum >= 1 && mNum <= 12) {
+            if (yNum >= 2020 && yNum <= 2030 && mNum >= 1 && mNum <= 12) {
               detectedFromFile = `${yNum}-${String(mNum).padStart(2, '0')}`;
             }
           }
@@ -1974,7 +1974,25 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
           if (tipoRegistro === 'Honorarios' || rawTipoLower.includes('bhe') || rawTipoLower.includes('honorario')) {
             tipoDoc = 'BHE';
             nombreTipoDoc = 'Boleta de Honorarios Electrónica';
-          } else if (rawTipoLower.includes('33') || rawTipoLower.includes('factura elect') || (rawTipoLower.includes('factura') && !rawTipoLower.includes('exent') && !rawTipoLower.includes('compra'))) {
+          } else if (rawTipoLower.includes('110') || rawTipoLower.includes('factura de export') || rawTipoLower.includes('factura export') || (rawTipoLower.includes('export') && !rawTipoLower.includes('debito') && !rawTipoLower.includes('credito') && !rawTipoLower.includes('crédito') && !rawTipoLower.includes('débito'))) {
+            tipoDoc = '110';
+            nombreTipoDoc = 'Factura de Exportación Electrónica (110)';
+          } else if (rawTipoLower.includes('111') || (rawTipoLower.includes('debito') && rawTipoLower.includes('export')) || (rawTipoLower.includes('débito') && rawTipoLower.includes('export'))) {
+            tipoDoc = '111';
+            nombreTipoDoc = 'Nota de Débito de Exportación (111)';
+          } else if (rawTipoLower.includes('112') || (rawTipoLower.includes('credito') && rawTipoLower.includes('export')) || (rawTipoLower.includes('crédito') && rawTipoLower.includes('export'))) {
+            tipoDoc = '112';
+            nombreTipoDoc = 'Nota de Crédito de Exportación (112)';
+          } else if (rawTipoLower.includes('101')) {
+            tipoDoc = '101';
+            nombreTipoDoc = 'Factura de Exportación Papel (101)';
+          } else if (rawTipoLower.includes('104')) {
+            tipoDoc = '104';
+            nombreTipoDoc = 'Nota de Débito de Exportación (104)';
+          } else if (rawTipoLower.includes('106')) {
+            tipoDoc = '106';
+            nombreTipoDoc = 'Nota de Crédito de Exportación (106)';
+          } else if (rawTipoLower.includes('33') || rawTipoLower.includes('factura elect') || (rawTipoLower.includes('factura') && !rawTipoLower.includes('exent') && !rawTipoLower.includes('compra') && !rawTipoLower.includes('export'))) {
             tipoDoc = '33';
             nombreTipoDoc = 'Factura Electrónica';
           } else if (rawTipoLower.includes('34') || rawTipoLower.includes('exent') || rawTipoLower.includes('no afect')) {
@@ -1998,9 +2016,9 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
           } else if (rawTipoLower.includes('43') || rawTipoLower.includes('liquidacion') || rawTipoLower.includes('liquidación')) {
             tipoDoc = '43';
             nombreTipoDoc = 'Liquidación Factura';
-          } else if (rawTipoLower.includes('110') || rawTipoLower.includes('export')) {
-            tipoDoc = '110';
-            nombreTipoDoc = 'Factura de Exportación';
+          } else if (rawTipoLower.includes('914') || rawTipoLower.includes('din')) {
+            tipoDoc = '914';
+            nombreTipoDoc = 'Declaración de Ingreso DIN';
           } else {
             const digits = rawTipoDoc.replace(/[^0-9]/g, '');
             tipoDoc = digits || '33';
@@ -2037,7 +2055,8 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
             montoTotal = montoLiquido;
             montoExento = 0;
           } else {
-            const isAfecto = tipoDoc === '33' || tipoDoc === '30' || tipoDoc === '39' || tipoDoc === '35' || tipoDoc === '56' || tipoDoc === '61' || tipoDoc === '46';
+            const isExport = tipoDoc === '110' || tipoDoc === '111' || tipoDoc === '112' || tipoDoc === '101' || tipoDoc === '104' || tipoDoc === '106';
+            const isAfecto = !isExport && (tipoDoc === '33' || tipoDoc === '30' || tipoDoc === '39' || tipoDoc === '35' || tipoDoc === '56' || tipoDoc === '61' || tipoDoc === '46');
 
             if (isAfecto) {
               if (montoNeto === 0 && montoIva === 0 && montoTotal > 0) {
@@ -2098,8 +2117,10 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
           parsedDocs.push({
             tipoRegistro,
             period: periodStr,
-            rutEmisor,
-            razonSocialEmisor,
+            rutEmisor: tipoRegistro === 'Venta' ? company.rut : rutEmisor,
+            razonSocialEmisor: tipoRegistro === 'Venta' ? company.name : razonSocialEmisor,
+            rutReceptor: tipoRegistro === 'Venta' ? rutEmisor : undefined,
+            razonSocialReceptor: tipoRegistro === 'Venta' ? razonSocialEmisor : undefined,
             tipoDoc,
             nombreTipoDoc,
             folio,
@@ -2319,10 +2340,12 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
 
       // Verificar que cuente con certificado digital o clave del SII
       if (!certB64 && !repClave) {
+        setShowManualUpload(true);
         alert(
-          `⚠️ Credenciales Requeridas para Consulta SII:\n\n` +
-          `Para consultar automáticamente el Registro de Compras, Ventas y Honorarios del SII, la empresa debe tener ingresado su Certificado Digital (.pfx) o la Clave del SII del Representante Legal.\n\n` +
-          `También puede importar directamente los archivos oficiales CSV/TXT mediante el botón "Cargar CSV/TXT Manual".`
+          `⚠️ Credenciales Requeridas para Consulta Automática del SII:\n\n` +
+          `Para consultar automáticamente el Registro de Compras, Ventas y Honorarios del SII desde el servidor, la empresa debe tener ingresado su Certificado Digital (.pfx) o la Clave del SII del Representante Legal.\n\n` +
+          `📌 PASO FÁCIL Y RECOMENDADO:\n` +
+          `Como tienes abierta la pestaña del SII, descarga el archivo Detalle en CSV/TXT y súbelo en la sección "Cargar CSV/TXT Manual" que acabamos de desplegar abajo.`
         );
         setIsRescatandoRcvApi(false);
         return;
@@ -2994,7 +3017,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
       const hasConfiguredOtrosAcc = Boolean(rcvParams?.otrosImpuestosAccountId && accounts.some(a => a.id === rcvParams.otrosImpuestosAccountId));
       const finalNetoCredit = hasConfiguredOtrosAcc ? netoAmount : (netoAmount + otrosImpuestosAmount);
 
-      const isNotaCredito = docItem.tipoDoc === '61' || String(docItem.tipoDoc).includes('61');
+      const isNotaCredito = docItem.tipoDoc === '61' || String(docItem.tipoDoc).includes('61') || docItem.tipoDoc === '112' || String(docItem.tipoDoc).includes('112') || docItem.tipoDoc === '106';
       const partyRut = resolvedPartyRut;
       const partyName = resolvedPartyName;
 
@@ -5804,6 +5827,13 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
                     className="w-full text-xs text-slate-500 file:mr-2.5 file:py-1.5 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100 cursor-pointer"
                   />
                 </div>
+              </div>
+
+              <div className="bg-blue-50/70 border border-blue-200 text-blue-950 p-3 rounded-lg text-xs flex items-center gap-2">
+                <span className="text-base">💡</span>
+                <p>
+                  <strong>Instrucciones rápidas:</strong> En el portal del SII presiona el botón azul <strong>"Descargar Detalles"</strong> (o <em>"Descargar Resúmenes"</em>) y selecciónalo aquí en <strong>2. Ventas SII</strong> o <strong>1. Compras SII</strong> para procesar de inmediato todas las Facturas de Exportación (110), Facturas (33), Boletas y Notas de Crédito.
+                </p>
               </div>
 
               {rcvImportSummary && (

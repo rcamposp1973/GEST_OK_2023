@@ -73,7 +73,18 @@ export default function ExecutiveHeader({
     const loadIndicators = async () => {
       const series = await syncOnlineChileanIndicators();
       if (series.length > 0) {
-        setLatestRate(series[series.length - 1]);
+        const todayStr = new Date().toISOString().split('T')[0];
+        const matchToday = series.find(s => s.date === todayStr);
+        if (matchToday) {
+          setLatestRate(matchToday);
+        } else {
+          const pastRecords = series.filter(s => s.date <= todayStr);
+          if (pastRecords.length > 0) {
+            setLatestRate(pastRecords[pastRecords.length - 1]);
+          } else {
+            setLatestRate(series[0]);
+          }
+        }
       }
     };
     loadIndicators();

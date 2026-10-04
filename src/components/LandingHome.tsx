@@ -42,7 +42,6 @@ import { collection, addDoc, onSnapshot, deleteDoc, doc } from 'firebase/firesto
 import { LandingTestimonial, LandingPricingPlan } from '../types';
 import { DEFAULT_INITIAL_TESTIMONIALS } from './TestimonialManager';
 import { DEFAULT_INITIAL_PRICING_PLANS } from './PricingManager';
-import PublicLandingAiAssistant from './PublicLandingAiAssistant';
 
 interface LandingHomeProps {
   onGoToLogin: (initialEmail?: string) => void;
@@ -208,7 +207,7 @@ export default function LandingHome({ onGoToLogin }: LandingHomeProps) {
       <header className="sticky top-0 z-50 bg-white/85 backdrop-blur-md border-b border-slate-200/80 transition-all">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
           
-          {/* Logo y Marca Pulso Contable / Gest_OK */}
+          {/* Logo y Marca Pulso Contable */}
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#533AFD] to-sky-400 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
               <Activity className="w-5 h-5 stroke-[2.5]" />
@@ -216,9 +215,6 @@ export default function LandingHome({ onGoToLogin }: LandingHomeProps) {
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xl font-extrabold tracking-tight text-[#0D253D]">Pulso Contable</span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-[#533AFD] border border-indigo-100 font-mono">
-                  Gest_OK
-                </span>
               </div>
               <p className="text-[11px] text-[#64748D] hidden sm:block">
                 Contabilidad, Impuestos & Gestión Financiera
@@ -237,13 +233,6 @@ export default function LandingHome({ onGoToLogin }: LandingHomeProps) {
 
           {/* Acciones de Autenticación */}
           <div className="flex items-center gap-2.5">
-            <button
-              onClick={() => onGoToLogin()}
-              className="px-3.5 py-2 text-xs font-bold text-[#0D253D] hover:text-[#533AFD] hover:bg-slate-100/60 rounded-full transition cursor-pointer"
-            >
-              Iniciar Sesión
-            </button>
-
             <button
               id="btn-acceso-clientes"
               onClick={() => onGoToLogin()}
@@ -1118,9 +1107,6 @@ export default function LandingHome({ onGoToLogin }: LandingHomeProps) {
           </div>
         </div>
       </footer>
-
-      {/* Asistente Virtual de IA para Visitantes */}
-      <PublicLandingAiAssistant />
 
     </div>
   );

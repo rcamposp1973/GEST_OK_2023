@@ -268,6 +268,8 @@ export default function Formulario29View({
 
     let ventasAfectasNeto = 0;
     let debitoFacturasEmitidas = 0;
+    let ventasExportacionTotal = 0;
+    let docsExportCount = 0;
     let ventasBoletasNeto = 0;
     let debitoBoletasEmitidas = 0;
     let debitoNotasDebito = 0;
@@ -281,53 +283,65 @@ export default function Formulario29View({
       (company.giro && (company.giro.toUpperCase().includes('CONSTRUCTORA') || company.giro.toUpperCase().includes('CONSTRUCCION') || company.giro.toUpperCase().includes('EDIFICACION')));
 
     ventasDocs.forEach(doc => {
-      const t = doc.tipoDoc;
+      const t = String(doc.tipoDoc || '').trim();
       const net = doc.montoNeto || 0;
       const iva = doc.montoIva || 0;
       const exento = doc.montoExento || 0;
       const total = doc.montoTotal || 0;
 
-      ventasExentasTotal += exento;
+      const isExport = t === '110' || t === '111' || t === '112' || t === '101' || t === '104' || t === '106' || String(doc.nombreTipoDoc || '').toLowerCase().includes('export');
 
-      // Detección de Franquicia CEEC Empresas Constructoras (Art. 21 DL 910)
-      // En facturas de constructoras con CEEC: Total = (Neto + IVA) - CEEC (donde CEEC es habitualmente 65% del IVA)
-      if (isConstructora && (t === '33' || t === 'Factura Electrónica' || t === '30')) {
-        const expectedTotal = net + iva + exento;
-        if (doc.montoCeec && doc.montoCeec > 0) {
-          ceecCreditoConstructora += doc.montoCeec;
-        } else if (total > 0 && total < expectedTotal) {
-          const docCeec = expectedTotal - total;
-          ceecCreditoConstructora += docCeec;
-        } else if ((doc as any).montoRetencion && (doc as any).montoRetencion > 0 && total < expectedTotal) {
-          ceecCreditoConstructora += (doc as any).montoRetencion;
+      if (isExport) {
+        docsExportCount++;
+        const expAmt = exento || total || net;
+        if (t === '112' || t === '106' || String(doc.nombreTipoDoc || '').toLowerCase().includes('credito')) {
+          ventasExportacionTotal -= expAmt;
+        } else {
+          ventasExportacionTotal += expAmt;
         }
-      }
+      } else {
+        ventasExentasTotal += exento;
 
-      if (t === '33' || t === '30' || t === 'Factura' || t === 'Factura Electrónica') {
-        ventasAfectasNeto += net;
-        debitoFacturasEmitidas += iva;
-      } else if (t === '39' || t === '41' || t === 'Boleta' || t === 'Boleta Electrónica') {
-        ventasBoletasNeto += net;
-        debitoBoletasEmitidas += iva;
-      } else if (t === '56' || t === 'Nota de Débito' || t === 'Nota de Débito Electrónica') {
-        debitoNotasDebito += iva;
-        ventasAfectasNeto += net;
-      } else if (t === '61' || t === 'Nota de Crédito' || t === 'Nota de Crédito Electrónica') {
-        creditoNotasCreditoEmitidas += iva;
-        ventasAfectasNeto -= net;
-        if (isConstructora) {
+        // Detección de Franquicia CEEC Empresas Constructoras (Art. 21 DL 910)
+        // En facturas de constructoras con CEEC: Total = (Neto + IVA) - CEEC (donde CEEC es habitualmente 65% del IVA)
+        if (isConstructora && (t === '33' || t === 'Factura Electrónica' || t === '30')) {
+          const expectedTotal = net + iva + exento;
           if (doc.montoCeec && doc.montoCeec > 0) {
-            ceecCreditoConstructora -= doc.montoCeec;
-          } else if (total > 0 && total < (net + iva)) {
-            const docCeec = (net + iva) - total;
-            ceecCreditoConstructora -= docCeec;
+            ceecCreditoConstructora += doc.montoCeec;
+          } else if (total > 0 && total < expectedTotal) {
+            const docCeec = expectedTotal - total;
+            ceecCreditoConstructora += docCeec;
+          } else if ((doc as any).montoRetencion && (doc as any).montoRetencion > 0 && total < expectedTotal) {
+            ceecCreditoConstructora += (doc as any).montoRetencion;
           }
         }
-      } else if (t === '34' || t === 'Factura Exenta') {
-        ventasExentasTotal += net;
-      } else {
-        ventasAfectasNeto += net;
-        debitoFacturasEmitidas += iva;
+
+        if (t === '33' || t === '30' || t === 'Factura' || t === 'Factura Electrónica') {
+          ventasAfectasNeto += net;
+          debitoFacturasEmitidas += iva;
+        } else if (t === '39' || t === '41' || t === 'Boleta' || t === 'Boleta Electrónica') {
+          ventasBoletasNeto += net;
+          debitoBoletasEmitidas += iva;
+        } else if (t === '56' || t === 'Nota de Débito' || t === 'Nota de Débito Electrónica') {
+          debitoNotasDebito += iva;
+          ventasAfectasNeto += net;
+        } else if (t === '61' || t === 'Nota de Crédito' || t === 'Nota de Crédito Electrónica') {
+          creditoNotasCreditoEmitidas += iva;
+          ventasAfectasNeto -= net;
+          if (isConstructora) {
+            if (doc.montoCeec && doc.montoCeec > 0) {
+              ceecCreditoConstructora -= doc.montoCeec;
+            } else if (total > 0 && total < (net + iva)) {
+              const docCeec = (net + iva) - total;
+              ceecCreditoConstructora -= docCeec;
+            }
+          }
+        } else if (t === '34' || t === 'Factura Exenta') {
+          ventasExentasTotal += net;
+        } else {
+          ventasAfectasNeto += net;
+          debitoFacturasEmitidas += iva;
+        }
       }
     });
 
@@ -336,6 +350,8 @@ export default function Formulario29View({
     return {
       ventasAfectasNeto,
       debitoFacturasEmitidas,
+      ventasExportacionTotal: Math.max(0, ventasExportacionTotal),
+      docsExportCount,
       ventasBoletasNeto,
       debitoBoletasEmitidas,
       debitoNotasDebito,
@@ -486,8 +502,8 @@ export default function Formulario29View({
       };
     }
 
-    // Base Imponible de Ingresos Brutos = Ventas Afectas Netas + Ventas Exentas
-    const baseImponibleVentas = Math.max(0, debitoFiscalData.ventasAfectasNeto + debitoFiscalData.ventasBoletasNeto + debitoFiscalData.ventasExentasTotal);
+    // Base Imponible de Ingresos Brutos = Ventas Afectas Netas + Ventas Boletas + Ventas Exentas + Ventas de Exportación (Art. 84 letra a LIR)
+    const baseImponibleVentas = Math.max(0, debitoFiscalData.ventasAfectasNeto + debitoFiscalData.ventasBoletasNeto + debitoFiscalData.ventasExentasTotal + (debitoFiscalData.ventasExportacionTotal || 0));
     const tasaPPM = taxSettings.ppmRate || 0.25;
     const montoPPM = Math.round(baseImponibleVentas * (tasaPPM / 100));
 
@@ -1181,6 +1197,21 @@ export default function Formulario29View({
                     <td className="py-2 px-3 font-sans text-slate-800">Facturas Emitidas (Afectas)</td>
                     <td className="py-2 px-3 text-right text-slate-600">${debitoFiscalData.ventasAfectasNeto.toLocaleString('es-CL')}</td>
                     <td className="py-2 px-3 text-right font-bold text-slate-900">${debitoFiscalData.debitoFacturasEmitidas.toLocaleString('es-CL')}</td>
+                  </tr>
+                  <tr className="hover:bg-indigo-50/40 bg-indigo-50/10">
+                    <td className="py-2 px-3 font-bold text-indigo-700">[020 / 585]</td>
+                    <td className="py-2 px-3 font-sans text-slate-800">
+                      <div className="flex items-center gap-1.5">
+                        <span>Facturas y Documentos de Exportación (DTE 110, 111, 112)</span>
+                        {(debitoFiscalData.docsExportCount || 0) > 0 && (
+                          <span className="text-[10px] bg-indigo-100 text-indigo-800 px-1.5 py-0.2 rounded-full font-bold">
+                            {debitoFiscalData.docsExportCount} docs
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-2 px-3 text-right text-indigo-900 font-bold">${(debitoFiscalData.ventasExportacionTotal || 0).toLocaleString('es-CL')}</td>
+                    <td className="py-2 px-3 text-right text-slate-400">$0 (Exento IVA)</td>
                   </tr>
                   <tr className="hover:bg-slate-50">
                     <td className="py-2 px-3 font-bold text-indigo-700">[110 / 111]</td>

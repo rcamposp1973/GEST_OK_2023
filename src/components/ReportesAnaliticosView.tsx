@@ -825,12 +825,14 @@ export default function ReportesAnaliticosView({
         const y = d.getFullYear();
         const m = d.getMonth() + 1;
 
-        // Factores de signo: Nota de Crédito (61) resta
-        const isNC = doc.tipoDoc === '61' || (doc.tipoDocumento && doc.tipoDocumento.includes('61'));
+        // Factores de signo: Nota de Crédito (61, 112, 106) resta
+        const isNC = doc.tipoDoc === '61' || doc.tipoDoc === '112' || doc.tipoDoc === '106' || (doc.tipoDocumento && (doc.tipoDocumento.includes('61') || doc.tipoDocumento.includes('112')));
         const factor = isNC ? -1 : 1;
-        const netVal = (Number(doc.montoNeto) || 0) * factor;
+        const isExportOrExempt = doc.tipoDoc === '110' || doc.tipoDoc === '111' || doc.tipoDoc === '112' || doc.tipoDoc === '34' || doc.tipoDoc === '41' || doc.tipoDoc === '101' || doc.tipoDoc === '104' || doc.tipoDoc === '106';
+        const effectiveSaleBase = Number(doc.montoNeto) || (isExportOrExempt ? (Number(doc.montoExento) || Number(doc.montoTotal) || 0) : (Number(doc.montoTotal) - (Number(doc.montoIva) || 0)));
+        const netVal = effectiveSaleBase * factor;
         const ivaVal = (Number(doc.montoIva) || 0) * factor;
-        const totVal = (Number(doc.montoTotal) || 0) * factor;
+        const totVal = (Number(doc.montoTotal) || (effectiveSaleBase + (Number(doc.montoIva) || 0))) * factor;
 
         if (y === selectedYear) {
           actualMonthlySales[m] += netVal;
@@ -866,6 +868,10 @@ export default function ReportesAnaliticosView({
           else if (dteCode === '56') dteName = 'Nota de Débito (56)';
           else if (dteCode === '61') dteName = 'Nota de Crédito (61)';
           else if (dteCode === '110') dteName = 'Factura Exportación (110)';
+          else if (dteCode === '111') dteName = 'Nota Débito Exportación (111)';
+          else if (dteCode === '112') dteName = 'Nota Crédito Exportación (112)';
+          else if (dteCode === '101') dteName = 'Factura Exportación Papel (101)';
+          else if (dteCode === '914') dteName = 'Declaración de Ingreso DIN (914)';
 
           if (!dteTypeMap.has(dteCode)) {
             dteTypeMap.set(dteCode, { code: dteCode, name: dteName, netAmount: 0, docCount: 0 });

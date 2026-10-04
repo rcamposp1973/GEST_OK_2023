@@ -6,6 +6,7 @@ import { sanitizeVoucherLines } from '../utils/voucherValidation';
 import { generateDteXml, downloadDteXml, simulateSiiConnectionTest, SiiConnectionDiagnostic } from '../utils/siiDteGenerator';
 import { fetchRcvFromSii } from '../utils/siiRcvClient';
 import { formatRut } from '../utils/rutMatcher';
+import { getOfficialDolar, getOfficialEuro } from '../utils/chileanEconomicIndicators';
 
 interface EmisionDteViewProps {
   studyId: string;
@@ -68,8 +69,23 @@ export default function EmisionDteView({
 
   // Form DTE state
   const [siiEnvironmentMode, setSiiEnvironmentMode] = useState<'SANDBOX' | 'PRODUCTION'>('SANDBOX');
-  const [tipoDTE, setTipoDTE] = useState<'33' | '34' | '39' | '52' | '56' | '61'>('33');
+  const [tipoDTE, setTipoDTE] = useState<'33' | '34' | '39' | '52' | '56' | '61' | '110' | '111' | '112'>('33');
   const [selectedAuxiliaryId, setSelectedAuxiliaryId] = useState<string>('');
+
+  // Export Specific State (DTE 110, 111, 112)
+  const isExportDoc = tipoDTE === '110' || tipoDTE === '111' || tipoDTE === '112';
+  const [exportMoneda, setExportMoneda] = useState<'USD' | 'EUR' | 'CLP' | 'UF'>('USD');
+  const [exportTipoCambio, setExportTipoCambio] = useState<number>(() => getOfficialDolar(new Date().toISOString().split('T')[0]) || 983.84);
+  const [exportClausula, setExportClausula] = useState<string>('FOB');
+  const [exportModalidad, setExportModalidad] = useState<string>('A Firme');
+  const [exportViaTransp, setExportViaTransp] = useState<string>('Marítimo');
+  const [exportPuertoEmbarque, setExportPuertoEmbarque] = useState<string>('Valparaíso');
+  const [exportPuertoDestino, setExportPuertoDestino] = useState<string>('Miami / EE.UU.');
+  const [exportPaisReceptor, setExportPaisReceptor] = useState<string>('ESTADOS UNIDOS');
+  const [exportFormaPago, setExportFormaPago] = useState<string>('Cobranza Bancaria / Transferencia');
+  const [exportBultos, setExportBultos] = useState<number>(10);
+  const [exportPesoNeto, setExportPesoNeto] = useState<number>(1500);
+  const [exportPesoBruto, setExportPesoBruto] = useState<number>(1650);
 
   // Encabezado DTE
   const [fechaEmisionDte, setFechaEmisionDte] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -80,6 +96,21 @@ export default function EmisionDteView({
   });
   const [vendedorDte, setVendedorDte] = useState<string>('');
   const [centroCostoDte, setCentroCostoDte] = useState<string>('');
+
+  // Auto-update exchange rate on date or currency change
+  useEffect(() => {
+    if (isExportDoc) {
+      if (exportMoneda === 'USD') {
+        const rate = getOfficialDolar(fechaEmisionDte);
+        if (rate > 0) setExportTipoCambio(rate);
+      } else if (exportMoneda === 'EUR') {
+        const rate = getOfficialEuro(fechaEmisionDte);
+        if (rate > 0) setExportTipoCambio(rate);
+      } else {
+        setExportTipoCambio(1);
+      }
+    }
+  }, [fechaEmisionDte, exportMoneda, isExportDoc]);
 
   // Receptor fields
   const [receptorRut, setReceptorRut] = useState<string>('');
@@ -644,16 +675,19 @@ export default function EmisionDteView({
   };
 
   // Calculate totals
-  const subtotalNetoAfecto = items
-    .filter(i => !i.esExento && tipoDTE !== '34')
+  const subtotalNetoAfecto = (isExportDoc || tipoDTE === '34') ? 0 : items
+    .filter(i => !i.esExento)
     .reduce((acc, i) => acc + i.subtotal, 0);
 
-  const subtotalExento = items
+  const subtotalExento = isExportDoc
+    ? Math.round(items.reduce((acc, i) => acc + i.subtotal, 0) * (exportMoneda !== 'CLP' ? (exportTipoCambio || 1) : 1))
+    : items
     .filter(i => i.esExento || tipoDTE === '34')
     .reduce((acc, i) => acc + i.subtotal, 0);
 
-  const montoIva = tipoDTE === '34' ? 0 : Math.round(subtotalNetoAfecto * 0.19);
-  const montoTotal = subtotalNetoAfecto + montoIva + subtotalExento;
+  const totalMonedaExtranjera = isExportDoc ? items.reduce((acc, i) => acc + i.subtotal, 0) : 0;
+  const montoIva = (isExportDoc || tipoDTE === '34' || tipoDTE === '52') ? 0 : Math.round(subtotalNetoAfecto * 0.19);
+  const montoTotal = isExportDoc ? subtotalExento : (subtotalNetoAfecto + montoIva + subtotalExento);
 
   // Generate Folio
   const getNextFolio = (tipo: string) => {
@@ -690,6 +724,9 @@ export default function EmisionDteView({
       '52': 'Guía de Despacho Electrónica',
       '56': 'Nota de Débito Electrónica',
       '61': 'Nota de Crédito Electrónica',
+      '110': 'Factura de Exportación Electrónica',
+      '111': 'Nota de Débito de Exportación',
+      '112': 'Nota de Crédito de Exportación',
     };
 
     const isSandbox = siiEnvironmentMode === 'SANDBOX';
@@ -711,12 +748,12 @@ export default function EmisionDteView({
         acteco: '702000',
       },
       receptor: {
-        rut: receptorRut,
+        rut: isExportDoc && !receptorRut ? '55.555.555-5' : receptorRut,
         razonSocial: receptorRazonSocial,
-        giro: receptorGiro || 'SERVICIOS INTEGRALES',
-        direccion: receptorDireccion || 'AV. COMERCIAL 456',
-        comuna: receptorLocation.comuna,
-        ciudad: receptorLocation.ciudad, // GUARANTEED NON-EMPTY!
+        giro: receptorGiro || (isExportDoc ? 'EXTRANJERO' : 'SERVICIOS INTEGRALES'),
+        direccion: receptorDireccion || (isExportDoc ? 'EXTRANJERO' : 'AV. COMERCIAL 456'),
+        comuna: receptorLocation.comuna || (isExportDoc ? 'EXTRANJERO' : 'SANTIAGO'),
+        ciudad: receptorLocation.ciudad || (isExportDoc ? 'EXTRANJERO' : 'SANTIAGO'), // GUARANTEED NON-EMPTY!
         contacto: receptorContacto || '',
         email: receptorEmail,
       },
@@ -724,10 +761,25 @@ export default function EmisionDteView({
         rut: config.rutRepresentante,
         nombre: config.nombreRepresentante,
       },
+      exportData: isExportDoc ? {
+        moneda: exportMoneda,
+        tipoCambio: exportTipoCambio,
+        montoOtraMoneda: totalMonedaExtranjera,
+        clausulaVenta: exportClausula,
+        modalidadVenta: exportModalidad,
+        viaTransporte: exportViaTransp,
+        puertoEmbarque: exportPuertoEmbarque,
+        puertoDestino: exportPuertoDestino,
+        paisReceptor: exportPaisReceptor,
+        formaPagoExport: exportFormaPago,
+        bultos: exportBultos,
+        pesoNeto: exportPesoNeto,
+        pesoBruto: exportPesoBruto,
+      } : undefined,
       items: [...items],
-      formaPago,
+      formaPago: isExportDoc ? exportFormaPago : formaPago,
       montoNeto: subtotalNetoAfecto,
-      montoIva: (tipoDTE === '34' || tipoDTE === '52') ? 0 : montoIva,
+      montoIva: (isExportDoc || tipoDTE === '34' || tipoDTE === '52') ? 0 : montoIva,
       montoExento: subtotalExento,
       montoTotal,
       estadoSII: isSandbox ? 'Aceptado_SII' : 'Aceptado_SII',
@@ -757,7 +809,7 @@ export default function EmisionDteView({
         { id: 'default', code: '2.1.01.001', name: 'IVA Débito Fiscal 19%' };
 
       // Generate Voucher Lines based on document type (Factura vs NC)
-      const isNotaCredito = tipoDTE === '61';
+      const isNotaCredito = tipoDTE === '61' || tipoDTE === '112';
       const lines: VoucherLine[] = [];
 
       if (!isNotaCredito) {
@@ -898,14 +950,18 @@ export default function EmisionDteView({
         id: '',
         tipoRegistro: 'Venta',
         period: periodStr,
-        rutEmisor: receptorRut, // En RCV Venta, la contraparte es el cliente
-        razonSocialEmisor: receptorRazonSocial,
+        rutEmisor: company.rut || '', // En RCV Venta emisor es la empresa
+        razonSocialEmisor: company.name || '',
+        rutReceptor: isExportDoc && !receptorRut ? '55.555.555-5' : receptorRut,
+        razonSocialReceptor: receptorRazonSocial,
         tipoDoc: tipoDTE,
+        tipoDocumento: tipoDTE,
+        nombreTipoDoc: labelMap[tipoDTE] || `DTE ${tipoDTE}`,
         folio: String(nextFolio),
         fechaEmision: dateStr,
-        montoNeto: subtotalNetoAfecto,
-        montoIva,
-        montoExento: subtotalExento,
+        montoNeto: isExportDoc ? 0 : subtotalNetoAfecto,
+        montoIva: isExportDoc ? 0 : montoIva,
+        montoExento: isExportDoc ? montoTotal : subtotalExento,
         montoTotal,
         estadoContabilizado: true,
         voucherId: vRef.id,
@@ -1091,6 +1147,9 @@ export default function EmisionDteView({
                         { type: '33', label: '33 - Factura Electrónica', desc: 'Afecta a IVA 19%' },
                         { type: '34', label: '34 - Factura Exenta', desc: 'Exenta / No Gravada' },
                         { type: '39', label: '39 - Boleta Electrónica', desc: 'Venta Consumidor Final' },
+                        { type: '110', label: '110 - Factura Exportación', desc: 'Venta Exterior (Exenta IVA)' },
+                        { type: '111', label: '111 - Nota Débito Export.', desc: 'Aumento Exportación' },
+                        { type: '112', label: '112 - Nota Crédito Export.', desc: 'Rebaja/Anula Exportación' },
                         { type: '52', label: '52 - Guía de Despacho', desc: 'Traslado de Mercadería' },
                         { type: '61', label: '61 - Nota de Crédito', desc: 'Anula / Modifica Venta' },
                         { type: '56', label: '56 - Nota de Débito', desc: 'Aumenta Valor Venta' },
@@ -1101,7 +1160,7 @@ export default function EmisionDteView({
                           onClick={() => setTipoDTE(opt.type as any)}
                           className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                             tipoDTE === opt.type
-                              ? 'bg-indigo-50 border-indigo-600 text-indigo-950 font-bold ring-2 ring-indigo-500/20'
+                              ? 'bg-indigo-50 border-indigo-600 text-indigo-950 font-bold ring-2 ring-indigo-500/20 shadow-xs'
                               : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
                           }`}
                         >
@@ -1111,6 +1170,158 @@ export default function EmisionDteView({
                       ))}
                     </div>
                   </div>
+
+                  {/* DATOS DE EXPORTACIÓN Y ADUANA (SI APLICA) */}
+                  {isExportDoc && (
+                    <div className="bg-linear-to-br from-indigo-900 to-slate-900 text-white p-5 rounded-2xl border border-indigo-700 shadow-md space-y-4">
+                      <div className="flex items-center justify-between border-b border-indigo-800 pb-2">
+                        <h3 className="text-sm font-bold text-indigo-200 uppercase tracking-wider flex items-center gap-2">
+                          <span>🌐 Datos de Exportación & Aduana (DTE {tipoDTE})</span>
+                        </h3>
+                        <span className="text-xs bg-indigo-500/30 text-indigo-300 px-2 py-0.5 rounded-full font-mono">
+                          Norma SII Art. 12 Letra D
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                        <div>
+                          <label className="block font-semibold text-indigo-200 mb-1">Moneda de Operación</label>
+                          <select
+                            value={exportMoneda}
+                            onChange={(e) => setExportMoneda(e.target.value as any)}
+                            className="w-full bg-slate-800 border border-indigo-600 rounded-lg p-2.5 font-bold text-white focus:ring-2 focus:ring-indigo-400 focus:outline-none"
+                          >
+                            <option value="USD">USD - Dólar Observado USA</option>
+                            <option value="EUR">EUR - Euro Unión Europea</option>
+                            <option value="CLP">CLP - Pesos Chilenos</option>
+                            <option value="UF">UF - Unidad de Fomento</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block font-semibold text-indigo-200 mb-1">Tipo de Cambio Oficial (CLP)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={exportTipoCambio}
+                            onChange={(e) => setExportTipoCambio(parseFloat(e.target.value) || 1)}
+                            className="w-full bg-slate-800 border border-indigo-600 rounded-lg p-2.5 font-mono font-bold text-emerald-400 focus:ring-2 focus:ring-indigo-400 focus:outline-none"
+                            placeholder="983.84"
+                          />
+                          <span className="text-[10px] text-indigo-300 block mt-0.5">
+                            T/C Banco Central para {fechaEmisionDte}
+                          </span>
+                        </div>
+
+                        <div>
+                          <label className="block font-semibold text-indigo-200 mb-1">Cláusula de Venta (Incoterm)</label>
+                          <select
+                            value={exportClausula}
+                            onChange={(e) => setExportClausula(e.target.value)}
+                            className="w-full bg-slate-800 border border-indigo-600 rounded-lg p-2.5 font-medium text-white focus:ring-2 focus:ring-indigo-400 focus:outline-none"
+                          >
+                            <option value="FOB">FOB - Free on Board</option>
+                            <option value="CIF">CIF - Cost, Insurance and Freight</option>
+                            <option value="CFR">CFR - Cost and Freight</option>
+                            <option value="EXW">EXW - Ex Works</option>
+                            <option value="FCA">FCA - Free Carrier</option>
+                            <option value="CIP">CIP - Carriage and Insurance Paid</option>
+                            <option value="DDP">DDP - Delivered Duty Paid</option>
+                            <option value="DAP">DAP - Delivered at Place</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block font-semibold text-indigo-200 mb-1">Modalidad de Venta</label>
+                          <select
+                            value={exportModalidad}
+                            onChange={(e) => setExportModalidad(e.target.value)}
+                            className="w-full bg-slate-800 border border-indigo-600 rounded-lg p-2.5 font-medium text-white focus:ring-2 focus:ring-indigo-400 focus:outline-none"
+                          >
+                            <option value="A Firme">A Firme (Definitiva)</option>
+                            <option value="Bajo Condición">Bajo Condición</option>
+                            <option value="Consignación Libre">Consignación Libre</option>
+                            <option value="Consignación con Mínimo">Consignación con Mínimo a Firme</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block font-semibold text-indigo-200 mb-1">Vía de Transporte</label>
+                          <select
+                            value={exportViaTransp}
+                            onChange={(e) => setExportViaTransp(e.target.value)}
+                            className="w-full bg-slate-800 border border-indigo-600 rounded-lg p-2.5 font-medium text-white focus:ring-2 focus:ring-indigo-400 focus:outline-none"
+                          >
+                            <option value="Marítimo">Marítimo</option>
+                            <option value="Aéreo">Aéreo</option>
+                            <option value="Terrestre">Terrestre / Carretera</option>
+                            <option value="Ferroviario">Ferroviario</option>
+                            <option value="Multimodal">Multimodal</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block font-semibold text-indigo-200 mb-1">País Destino / Receptor</label>
+                          <input
+                            type="text"
+                            value={exportPaisReceptor}
+                            onChange={(e) => setExportPaisReceptor(e.target.value)}
+                            className="w-full bg-slate-800 border border-indigo-600 rounded-lg p-2.5 font-medium text-white focus:ring-2 focus:ring-indigo-400 focus:outline-none"
+                            placeholder="ESTADOS UNIDOS"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block font-semibold text-indigo-200 mb-1">Puerto de Embarque</label>
+                          <input
+                            type="text"
+                            value={exportPuertoEmbarque}
+                            onChange={(e) => setExportPuertoEmbarque(e.target.value)}
+                            className="w-full bg-slate-800 border border-indigo-600 rounded-lg p-2.5 font-medium text-white focus:ring-2 focus:ring-indigo-400 focus:outline-none"
+                            placeholder="Valparaíso / San Antonio"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block font-semibold text-indigo-200 mb-1">Puerto de Destino</label>
+                          <input
+                            type="text"
+                            value={exportPuertoDestino}
+                            onChange={(e) => setExportPuertoDestino(e.target.value)}
+                            className="w-full bg-slate-800 border border-indigo-600 rounded-lg p-2.5 font-medium text-white focus:ring-2 focus:ring-indigo-400 focus:outline-none"
+                            placeholder="Miami / Rotterdam / Hamburgo"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block font-semibold text-indigo-200 mb-1">Bultos / Peso Neto</label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <input
+                              type="number"
+                              value={exportBultos}
+                              onChange={(e) => setExportBultos(parseInt(e.target.value) || 0)}
+                              placeholder="Bultos"
+                              className="w-full bg-slate-800 border border-indigo-600 rounded-lg p-2.5 font-medium text-white focus:ring-2 focus:ring-indigo-400 focus:outline-none"
+                            />
+                            <input
+                              type="number"
+                              value={exportPesoNeto}
+                              onChange={(e) => setExportPesoNeto(parseFloat(e.target.value) || 0)}
+                              placeholder="Kg Neto"
+                              className="w-full bg-slate-800 border border-indigo-600 rounded-lg p-2.5 font-medium text-white focus:ring-2 focus:ring-indigo-400 focus:outline-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {exportMoneda !== 'CLP' && totalMonedaExtranjera > 0 && (
+                        <div className="bg-indigo-950/80 border border-indigo-500/40 p-3 rounded-xl flex items-center justify-between text-xs">
+                          <span>Total Divisa Extranjera: <strong className="text-amber-300 font-mono text-sm">{exportMoneda} ${totalMonedaExtranjera.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></span>
+                          <span>Conversión Contable RCV / SII: <strong className="text-emerald-300 font-mono text-sm">${montoTotal.toLocaleString('es-CL')} CLP</strong></span>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* 2. ENCABEZADO Y CONDICIONES DE VENTA (SII MIPYME) */}
                   <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">

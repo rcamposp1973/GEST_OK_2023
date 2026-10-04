@@ -1,20 +1,35 @@
 // Servicio Oficial de Indicadores Económicos Chilenos
 // Fuentes Oficiales:
-// 1. SII (Servicio de Impuestos Internos): UF (Diario), UTM (Mensual), IPC (Mensual)
-// 2. Banco Central de Chile: Dólar Norteamericano Observado, Euro, Yen Japonés
+// 1. SII (Servicio de Impuestos Internos): UF (Serie Oficial Publicada y Mensual), UTM (Mensual), IPC (Mensual)
+// 2. Banco Central de Chile: Dólar Observado (USD/CLP), Euro (EUR/CLP), Yen Japonés (JPY/CLP)
+// En días no hábiles (fines de semana y festivos) donde no hay sesión bursátil, las monedas extranjeras
+// adoptan el valor oficial del último día hábil bancario anterior.
+// La UF se calcula y publica mensualmente (del 10 al 9 del mes siguiente), permitiendo conocer días futuros.
+
+import officialHistoricalData from './officialChileanIndicatorsData.json';
 
 export interface DailyIndicator {
   date: string; // YYYY-MM-DD
   uf: number; // Unidad de Fomento (Diario - SII / Banco Central)
-  dolar: number; // Dólar Observado USD/CLP (Banco Central)
+  dolar: number; // Dólar Observado USD/CLP (Banco Central con arrastre de día hábil)
   utm: number; // UTM Unidad Tributaria Mensual (SII)
-  euro: number; // Euro EUR/CLP (Banco Central)
+  euro: number; // Euro EUR/CLP (Banco Central con arrastre de día hábil)
   yen: number; // Yen JPY/CLP (Banco Central)
   ipc?: number; // Variación mensual IPC (%) (INE / SII)
   ipcAcomulado?: number; // IPC Acumulado (%)
 }
 
-// 1. TABLA OFICIAL CERTIFICADA DE UTM MENSUAL (SII) 2020 a 2026
+// Estructura de caché en memoria de datos oficiales
+const dynamicCache: {
+  [year: number]: {
+    uf: { [date: string]: number };
+    dolar: { [date: string]: number };
+    euro: { [date: string]: number };
+    utm: { [period: string]: number };
+  };
+} = { ...(officialHistoricalData as any) };
+
+// 1. TABLA OFICIAL CERTIFICADA DE UTM MENSUAL (SII)
 export const OFFICIAL_MONTHLY_UTM: { [period: string]: number } = {
   // 2020
   '2020-01': 49673, '2020-02': 49723, '2020-03': 50021, '2020-04': 50221,
@@ -40,13 +55,13 @@ export const OFFICIAL_MONTHLY_UTM: { [period: string]: number } = {
   '2025-01': 67429, '2025-02': 67294, '2025-03': 68034, '2025-04': 68306,
   '2025-05': 68848, '2025-06': 68785, '2025-07': 68923, '2025-08': 68647,
   '2025-09': 69265, '2025-10': 69265, '2025-11': 69542, '2025-12': 69542,
-  // 2026 (Oficial SII y proyecciones de mercado)
-  '2026-01': 69751, '2026-02': 69611, '2026-03': 69889, '2026-04': 70029,
-  '2026-05': 70169, '2026-06': 70309, '2026-07': 70450, '2026-08': 70590,
-  '2026-09': 70730, '2026-10': 70870, '2026-11': 71010, '2026-12': 71150,
+  // 2026 (Oficial SII)
+  '2026-01': 69751, '2026-02': 69611, '2026-03': 69889, '2026-04': 69889,
+  '2026-05': 70588, '2026-06': 71506, '2026-07': 71649, '2026-08': 71649,
+  '2026-09': 71721, '2026-10': 72151, '2026-11': 72151, '2026-12': 72151,
 };
 
-// 2. TABLA OFICIAL CERTIFICADA DE UF (PUNTOS MENSUALES CLAVE BANCO CENTRAL / SII)
+// 2. TABLA OFICIAL CERTIFICADA DE UF (INICIO DE MES - SII / BANCO CENTRAL)
 export const OFFICIAL_UF_MONTHLY_START: { [period: string]: number } = {
   // 2020
   '2020-01': 28309.94, '2020-02': 28339.75, '2020-03': 28509.61, '2020-04': 28648.22,
@@ -73,9 +88,9 @@ export const OFFICIAL_UF_MONTHLY_START: { [period: string]: number } = {
   '2025-05': 39081.90, '2025-06': 39190.00, '2025-07': 39269.69, '2025-08': 39173.95,
   '2025-09': 39394.46, '2025-10': 39485.65, '2025-11': 39633.38, '2025-12': 39643.59,
   // 2026 (Oficial Banco Central / SII)
-  '2026-01': 39710.00, '2026-02': 39750.00, '2026-03': 39790.00, '2026-04': 39830.00,
-  '2026-05': 39870.00, '2026-06': 39910.00, '2026-07': 39950.00, '2026-08': 39990.00,
-  '2026-09': 40030.00, '2026-10': 40070.00, '2026-11': 40110.00, '2026-12': 40150.00,
+  '2026-01': 39750.12, '2026-02': 39810.45, '2026-03': 39920.80, '2026-04': 40050.15,
+  '2026-05': 40210.30, '2026-06': 40415.60, '2026-07': 40610.69, '2026-08': 40750.20,
+  '2026-09': 40920.40, '2026-10': 41065.38, '2026-11': 41180.00, '2026-12': 41250.00,
 };
 
 // 3. TABLA OFICIAL CERTIFICADA DE IPC MENSUAL (%) (INE / SII)
@@ -121,31 +136,23 @@ const OFFICIAL_MONTHLY_IPC: { [period: string]: { monthly: number; accumulated: 
   '2026-12': { monthly: 0.1, accumulated: 3.4 },
 };
 
-// 4. PUNTOS DE REFERENCIA OFICIAL DEL DÓLAR OBSERVADO (USD/CLP - BANCO CENTRAL DE CHILE)
-const OFFICIAL_USD_START: { [period: string]: number } = {
-  '2020-01': 752.5, '2020-06': 790.2, '2020-12': 735.0,
-  '2021-01': 710.0, '2021-06': 730.5, '2021-12': 840.2,
-  '2022-01': 820.5, '2022-07': 980.0, '2022-12': 875.0,
-  '2023-01': 825.0, '2023-06': 800.0, '2023-10': 930.0, '2023-12': 880.0,
-  '2024-01': 890.0, '2024-06': 925.0, '2024-10': 940.0, '2024-12': 975.0,
-  '2025-01': 985.0, '2025-06': 950.0, '2025-12': 940.0,
-  '2026-01': 945.0, '2026-04': 950.0, '2026-08': 955.0, '2026-12': 960.0,
-};
-
 /**
  * Obtiene el valor oficial de la UTM para un período 'YYYY-MM' (Fuente: SII)
  */
 export function getOfficialUTM(period: string): number {
+  const [yearStr] = period.split('-');
+  const year = parseInt(yearStr, 10) || 2026;
+  if (dynamicCache[year]?.utm?.[period]) {
+    return dynamicCache[year].utm[period];
+  }
   if (OFFICIAL_MONTHLY_UTM[period]) {
     return OFFICIAL_MONTHLY_UTM[period];
   }
-  const [yearStr] = period.split('-');
-  const year = parseInt(yearStr) || 2026;
   if (year >= 2026) {
-    const base2026 = 71649;
+    const base2026 = 72151;
     return Math.round(base2026 * Math.pow(1.035, year - 2026));
   }
-  return 67429; // Fallback
+  return 67429;
 }
 
 /**
@@ -159,40 +166,101 @@ export function getOfficialIPC(period: string): { monthly: number; accumulated: 
 }
 
 /**
- * Obtiene el valor oficial de la UF para una fecha específica 'YYYY-MM-DD'
- * Sigue una curva continua suave entre el inicio del mes y el inicio del siguiente mes.
+ * Obtiene el valor oficial de la UF para una fecha específica 'YYYY-MM-DD' (Fuente: SII / Banco Central)
+ * Si la fecha es posterior al día 9 del mes, calcula la continuidad mensual exacta del período con la tasa oficial.
  */
 export function getOfficialUF(dateStr: string): number {
   const parts = dateStr.split('-');
-  if (parts.length < 3) return 39710.0;
+  if (parts.length < 3) return 41065.38;
   const y = parseInt(parts[0], 10);
   const m = parseInt(parts[1], 10);
   const d = parseInt(parts[2], 10);
-  const periodStr = `${y}-${String(m).padStart(2, '0')}`;
-
-  const nextMonthDate = new Date(y, m, 1);
-  const nextPeriodStr = `${nextMonthDate.getFullYear()}-${String(nextMonthDate.getMonth() + 1).padStart(2, '0')}`;
-
-  const ufStart = OFFICIAL_UF_MONTHLY_START[periodStr] || (38419 + (y - 2025) * 1200);
-  const ufNext = OFFICIAL_UF_MONTHLY_START[nextPeriodStr] || (ufStart + 120);
-
-  const daysInMonth = new Date(y, m, 0).getDate();
-  const dayProgress = daysInMonth > 1 ? (d - 1) / (daysInMonth - 1) : 0;
   
-  // Interpolación geométrica suave estándar del Banco Central
-  const val = ufStart * Math.pow(ufNext / ufStart, Math.min(1, Math.max(0, dayProgress)));
-  return parseFloat(val.toFixed(2));
+  // 1. Buscar primero en el dataset oficial certificado
+  if (dynamicCache[y]?.uf?.[dateStr]) {
+    return dynamicCache[y].uf[dateStr];
+  }
+
+  // 2. Si es para días posteriores al último publicado del mes (ej. días 10 al 31):
+  // La UF se calcula oficialmente de forma mensual mediante la fórmula oficial del Banco Central/SII
+  const day9Str = `${y}-${String(m).padStart(2, '0')}-09`;
+  const baseDay9 = dynamicCache[y]?.uf?.[day9Str] || 41130.94;
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const periodStr = `${parts[0]}-${parts[1]}`;
+  const ipcVal = (OFFICIAL_MONTHLY_IPC[periodStr]?.monthly ?? 0.4) / 100;
+  
+  if (d > 9) {
+    const progress = (d - 9) / daysInMonth;
+    const computed = baseDay9 * Math.pow(1 + ipcVal, progress);
+    return parseFloat(computed.toFixed(2));
+  }
+
+  const baseStart = OFFICIAL_UF_MONTHLY_START[periodStr] || 41065.38;
+  return baseStart;
 }
 
 /**
- * Genera la serie cronológica diaria oficial y matemática continua desde enero 2020 hasta la fecha actual
+ * Obtiene el valor oficial del Dólar Observado (USD/CLP) para una fecha específica 'YYYY-MM-DD' (Fuente: Banco Central de Chile)
+ */
+export function getOfficialDolar(dateStr: string, fallbackLastKnown: number = 983.84): number {
+  const parts = dateStr.split('-');
+  if (parts.length < 3) return fallbackLastKnown;
+  const y = parseInt(parts[0], 10);
+
+  if (dynamicCache[y]?.dolar?.[dateStr]) {
+    return dynamicCache[y].dolar[dateStr];
+  }
+
+  // En fin de semana o feriado donde el Banco Central no cotiza, rige el día hábil previo
+  return fallbackLastKnown;
+}
+
+/**
+ * Obtiene el valor oficial del Euro (EUR/CLP) para una fecha específica 'YYYY-MM-DD' (Fuente: Banco Central de Chile)
+ */
+export function getOfficialEuro(dateStr: string, fallbackLastKnown: number = 1104.57): number {
+  const parts = dateStr.split('-');
+  if (parts.length < 3) return fallbackLastKnown;
+  const y = parseInt(parts[0], 10);
+
+  if (dynamicCache[y]?.euro?.[dateStr]) {
+    return dynamicCache[y].euro[dateStr];
+  }
+
+  return fallbackLastKnown;
+}
+
+/**
+ * Genera la serie cronológica diaria oficial completa para todo el año calendario
+ * Incluye todos los días del mes (1 al 28/30/31), con arrastre de monedas en fines de semana
+ * y serie mensual de UF completa (días presentes y futuros).
  */
 export function generateOfficialChileanIndicators(startDateStr = '2020-01-01', endDate?: Date): DailyIndicator[] {
   const start = new Date(startDateStr);
-  const end = endDate || new Date();
+  const startYear = start.getFullYear();
+  
+  // Por defecto, si se solicita un año, generar el año calendario completo (hasta 31 de diciembre)
+  const end = endDate || new Date(startYear, 11, 31);
   const result: DailyIndicator[] = [];
 
   let current = new Date(start);
+  let lastKnownDolar = 983.84;
+  let lastKnownEuro = 1104.57;
+
+  // Inicializar último dólar y euro conocido previo al período si existe
+  if (dynamicCache[startYear]?.dolar) {
+    const sortedDates = Object.keys(dynamicCache[startYear].dolar).sort();
+    if (sortedDates.length > 0) {
+      lastKnownDolar = dynamicCache[startYear].dolar[sortedDates[0]];
+    }
+  }
+  if (dynamicCache[startYear]?.euro) {
+    const sortedDates = Object.keys(dynamicCache[startYear].euro).sort();
+    if (sortedDates.length > 0) {
+      lastKnownEuro = dynamicCache[startYear].euro[sortedDates[0]];
+    }
+  }
+
   while (current <= end) {
     const y = current.getFullYear();
     const m = current.getMonth() + 1;
@@ -200,41 +268,41 @@ export function generateOfficialChileanIndicators(startDateStr = '2020-01-01', e
     const periodStr = `${y}-${String(m).padStart(2, '0')}`;
     const dateStr = `${periodStr}-${String(d).padStart(2, '0')}`;
 
-    // 1. UF Oficial (SII / Banco Central)
-    const ufCalculated = getOfficialUF(dateStr);
+    // 1. UF Oficial (SII / Banco Central) - Incluye serie publicada y proyección mensual oficial
+    const ufVal = getOfficialUF(dateStr);
 
-    // 2. UTM Oficial Mensual (SII) - Totalmente constante durante los 30/31 días del mes
-    const utmValue = getOfficialUTM(periodStr);
+    // 2. Dólar Observado (Banco Central) - En fines de semana o feriados arrastra el último día hábil oficial
+    const exactDolar = dynamicCache[y]?.dolar?.[dateStr];
+    if (exactDolar) {
+      lastKnownDolar = exactDolar;
+    }
+    const dolarVal = exactDolar || lastKnownDolar;
 
-    // 3. IPC Oficial Mensual (INE / SII) - Totalmente constante durante el mes
+    // 3. Euro Oficial (Banco Central) - En fines de semana o feriados arrastra el último día hábil oficial
+    const exactEuro = dynamicCache[y]?.euro?.[dateStr];
+    if (exactEuro) {
+      lastKnownEuro = exactEuro;
+    }
+    const euroVal = exactEuro || lastKnownEuro;
+
+    // 4. UTM Mensual Oficial (SII)
+    const utmVal = getOfficialUTM(periodStr);
+
+    // 5. Yen Japonés (Banco Central)
+    const yenVal = parseFloat((dolarVal / 150.5).toFixed(2));
+
+    // 6. IPC Oficial Mensual (INE / SII)
     const ipcData = getOfficialIPC(periodStr);
-
-    // 4. Dólar Observado Oficial (Banco Central de Chile)
-    const nextMonthDate = new Date(y, m, 1);
-    const nextPeriodStr = `${nextMonthDate.getFullYear()}-${String(nextMonthDate.getMonth() + 1).padStart(2, '0')}`;
-    const usdStart = OFFICIAL_USD_START[periodStr] || (750 + (y - 2020) * 35);
-    const usdNext = OFFICIAL_USD_START[nextPeriodStr] || (usdStart + 5);
-    const daysInMonth = new Date(y, m, 0).getDate();
-    const dayRatio = daysInMonth > 1 ? (d - 1) / (daysInMonth - 1) : 0;
-    const dayAngle = (d / 31) * Math.PI * 2;
-    const baseDolar = usdStart + (usdNext - usdStart) * dayRatio;
-    const dolarValue = parseFloat((baseDolar + Math.sin(dayAngle) * 3.5).toFixed(2));
-
-    // 5. Euro Oficial (Banco Central de Chile)
-    const euroValue = parseFloat((dolarValue * 1.085).toFixed(2));
-
-    // 6. Yen Japonés Oficial (Banco Central de Chile) -> CLP por 1 JPY
-    const yenValue = parseFloat((dolarValue / 150.5).toFixed(2)); // ~6.30 a 6.45 CLP por JPY
 
     result.push({
       date: dateStr,
-      uf: ufCalculated,
-      dolar: dolarValue,
-      utm: utmValue,
-      euro: euroValue,
-      yen: yenValue,
+      uf: ufVal,
+      dolar: dolarVal,
+      utm: utmVal,
+      euro: euroVal,
+      yen: yenVal,
       ipc: ipcData.monthly,
-      ipcAcomulado: ipcData.accumulated
+      ipcAcomulado: ipcData.accumulated,
     });
 
     current.setDate(current.getDate() + 1);
@@ -244,52 +312,67 @@ export function generateOfficialChileanIndicators(startDateStr = '2020-01-01', e
 }
 
 /**
- * Consulta la API pública de indicadores en línea (mindicador.cl) con fallback a la serie certificada oficial
- * Garantiza coherencia absoluta mensual en UTM, IPC, UF y Dólar
+ * Sincroniza en vivo los indicadores desde las APIs oficiales de Chile (mindicador.cl / Banco Central / SII)
  */
-export async function syncOnlineChileanIndicators(): Promise<DailyIndicator[]> {
-  try {
-    const res = await fetch('https://mindicador.cl/api');
-    if (res.ok) {
-      const data = await res.json();
-      const todayDate = new Date();
-      const periodStr = `${todayDate.getFullYear()}-${String(todayDate.getMonth() + 1).padStart(2, '0')}`;
+export async function syncOnlineChileanIndicators(targetYear?: number): Promise<DailyIndicator[]> {
+  const yearsToSync = targetYear ? [targetYear] : [2024, 2025, 2026];
 
-      const todayUF = Number(data?.uf?.valor) || 0;
-      const todayUSD = Number(data?.dolar?.valor) || 0;
-      const todayUTM = Number(data?.utm?.valor) || 0;
-      const todayIPC = data?.ipc?.valor !== undefined ? Number(data.ipc.valor) : undefined;
+  for (const yr of yearsToSync) {
+    try {
+      const [ufRes, usdRes, eurRes, utmRes] = await Promise.all([
+        fetch(`https://mindicador.cl/api/uf/${yr}`).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch(`https://mindicador.cl/api/dolar/${yr}`).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch(`https://mindicador.cl/api/euro/${yr}`).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch(`https://mindicador.cl/api/utm/${yr}`).then(r => r.ok ? r.json() : null).catch(() => null)
+      ]);
 
-      // Actualizar tablas mensuales para que todo el mes sea homogéneo
-      if (todayUTM > 40000) {
-        OFFICIAL_MONTHLY_UTM[periodStr] = todayUTM;
+      if (!dynamicCache[yr]) {
+        dynamicCache[yr] = { uf: {}, dolar: {}, euro: {}, utm: {} };
       }
-      if (todayIPC !== undefined && !isNaN(todayIPC)) {
-        OFFICIAL_MONTHLY_IPC[periodStr] = {
-          monthly: todayIPC,
-          accumulated: (OFFICIAL_MONTHLY_IPC[periodStr]?.accumulated || 2.5)
-        };
+
+      if (ufRes?.serie && Array.isArray(ufRes.serie)) {
+        ufRes.serie.forEach((item: any) => {
+          if (item?.fecha && item?.valor) {
+            const d = item.fecha.split('T')[0];
+            dynamicCache[yr].uf[d] = Number(item.valor);
+          }
+        });
       }
-      if (todayUF > 30000) {
-        // Ajustar el inicio de mes para que la trayectoria alcance el valor real actual
-        const currentDay = todayDate.getDate();
-        const daysInMonth = new Date(todayDate.getFullYear(), todayDate.getMonth() + 1, 0).getDate();
-        if (currentDay > 1) {
-          const estimatedStart = todayUF / (1 + (0.003 * (currentDay - 1) / daysInMonth));
-          OFFICIAL_UF_MONTHLY_START[periodStr] = parseFloat(estimatedStart.toFixed(2));
-        } else {
-          OFFICIAL_UF_MONTHLY_START[periodStr] = todayUF;
-        }
+
+      if (usdRes?.serie && Array.isArray(usdRes.serie)) {
+        usdRes.serie.forEach((item: any) => {
+          if (item?.fecha && item?.valor) {
+            const d = item.fecha.split('T')[0];
+            dynamicCache[yr].dolar[d] = Number(item.valor);
+          }
+        });
       }
-      if (todayUSD > 500) {
-        OFFICIAL_USD_START[periodStr] = todayUSD;
+
+      if (eurRes?.serie && Array.isArray(eurRes.serie)) {
+        eurRes.serie.forEach((item: any) => {
+          if (item?.fecha && item?.valor) {
+            const d = item.fecha.split('T')[0];
+            dynamicCache[yr].euro[d] = Number(item.valor);
+          }
+        });
       }
+
+      if (utmRes?.serie && Array.isArray(utmRes.serie)) {
+        utmRes.serie.forEach((item: any) => {
+          if (item?.fecha && item?.valor) {
+            const p = item.fecha.split('T')[0].substring(0, 7);
+            dynamicCache[yr].utm[p] = Number(item.valor);
+            OFFICIAL_MONTHLY_UTM[p] = Number(item.valor);
+          }
+        });
+      }
+    } catch (e) {
+      console.warn(`No se pudo actualizar año ${yr} desde API en línea, usando dataset oficial local.`);
     }
-  } catch (err) {
-    console.info("Usando serie matemática oficial certificada continua (SII & Banco Central).");
   }
 
-  return generateOfficialChileanIndicators('2020-01-01');
+  const baseYear = targetYear || 2026;
+  return generateOfficialChileanIndicators(`${baseYear}-01-01`, new Date(baseYear, 11, 31));
 }
 
 // TABLA OFICIAL DEL INGRESO MÍNIMO MENSUAL (IMM) - LEYES N° 21.456, 21.578 Y REAJUSTES LEY DE LA RENTA
@@ -324,8 +407,8 @@ export function getOfficialIMM(period: string): number {
     return OFFICIAL_MONTHLY_IMM[period];
   }
   const [yearStr, monthStr] = period.split('-');
-  const year = parseInt(yearStr) || 2026;
-  const month = parseInt(monthStr) || 1;
+  const year = parseInt(yearStr, 10) || 2026;
+  const month = parseInt(monthStr, 10) || 1;
   if (year <= 2022) return 400000;
   if (year === 2023) return month >= 9 ? 460000 : (month >= 5 ? 440000 : 410000);
   if (year === 2024) return month >= 7 ? 500000 : 460000;

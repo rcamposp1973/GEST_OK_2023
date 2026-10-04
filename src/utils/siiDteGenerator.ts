@@ -12,10 +12,12 @@ export function generateDteXml(doc: DTEDocument, config: DTEConfig): string {
   const docId = `DTE-T${doc.tipoDTE}-F${doc.folio}`;
   const nowIso = new Date().toISOString();
 
+  const isExport = doc.tipoDTE === '110' || doc.tipoDTE === '111' || doc.tipoDTE === '112';
+
   let itemsXml = '';
   doc.items.forEach((item, index) => {
     const nroLin = index + 1;
-    const esExentoTag = item.esExento || doc.tipoDTE === '34' ? '<IndExe>1</IndExe>' : '';
+    const esExentoTag = item.esExento || doc.tipoDTE === '34' || isExport ? '<IndExe>1</IndExe>' : '';
     itemsXml += `
       <Detalle>
         <NroLinDet>${nroLin}</NroLinDet>
@@ -32,12 +34,38 @@ export function generateDteXml(doc: DTEDocument, config: DTEConfig): string {
     refXml = `
       <Referencia>
         <NroLinRef>1</NroLinRef>
-        <TpoDocRef>33</TpoDocRef>
+        <TpoDocRef>${isExport ? '110' : '33'}</TpoDocRef>
         <FolioRef>${doc.refFolioOrig.replace(/\D/g, '') || '1'}</FolioRef>
         <FchRef>${doc.fechaEmision}</FchRef>
         <CodRef>1</CodRef>
         <RazonRef>Anulación o modificación de documento original</RazonRef>
       </Referencia>`;
+  }
+
+  let exportXml = '';
+  if (isExport && doc.exportData) {
+    const exp = doc.exportData;
+    exportXml = `
+      <Transporte>
+        <DirDest>${escapeXml(doc.receptor.direccion || 'EXTRANJERO')}</DirDest>
+        <CmnaDest>${escapeXml(receptorComuna)}</CmnaDest>
+        <CiudadDest>${escapeXml(receptorCiudad)}</CiudadDest>
+        <Aduana>
+          <CodModVenta>${exp.modalidadVenta === 'Bajo Condición' ? 2 : exp.modalidadVenta === 'Consignación Libre' ? 3 : exp.modalidadVenta === 'Consignación con Mínimo' ? 4 : 1}</CodModVenta>
+          <CodClauVenta>${exp.clausulaVenta || 'FOB'}</CodClauVenta>
+          <TotalClauVenta>${exp.montoOtraMoneda || doc.montoTotal}</TotalClauVenta>
+          <CodViaTransp>${exp.viaTransporte === 'Aéreo' ? 2 : exp.viaTransporte === 'Terrestre' ? 3 : exp.viaTransporte === 'Ferroviario' ? 4 : 1}</CodViaTransp>
+          <CodPtoEmbarque>${escapeXml(exp.puertoEmbarque || 'VALPARAISO')}</CodPtoEmbarque>
+          <CodPtoDesemb>${escapeXml(exp.puertoDestino || 'EXTRANJERO')}</CodPtoDesemb>
+          <CodPaisRecep>${escapeXml(exp.paisReceptor || 'USA')}</CodPaisRecep>
+          <CodPaisDestin>${escapeXml(exp.paisReceptor || 'USA')}</CodPaisDestin>
+        </Aduana>
+      </Transporte>
+      <OtraMoneda>
+        <TpoMoneda>${exp.moneda || 'USD'}</TpoMoneda>
+        <TpoCambio>${exp.tipoCambio || 1}</TpoCambio>
+        <MntTotOtrMnda>${exp.montoOtraMoneda || doc.montoTotal}</MntTotOtrMnda>
+      </OtraMoneda>`;
   }
 
   const xmlContent = `<?xml version="1.0" encoding="ISO-8859-1"?>
@@ -49,6 +77,7 @@ export function generateDteXml(doc: DTEDocument, config: DTEConfig): string {
         <Folio>${doc.folio}</Folio>
         <FchEmis>${doc.fechaEmision}</FchEmis>
         <FmaPago>${doc.formaPago === 'Contado' ? 1 : doc.formaPago === 'Transferencia' ? 2 : 3}</FmaPago>
+        ${isExport ? '<IndServicio>3</IndServicio>' : ''}
       </IdDoc>
       <Emisor>
         <RUTEmisor>${doc.emisor.rut}</RUTEmisor>
@@ -68,13 +97,14 @@ export function generateDteXml(doc: DTEDocument, config: DTEConfig): string {
         <CiudadRecep>${escapeXml(receptorCiudad)}</CiudadRecep>
       </Receptor>
       <Totales>
-        <MntNeto>${doc.montoNeto}</MntNeto>
-        <MntExe>${doc.montoExento}</MntExe>
-        <TasaIVA>19</TasaIVA>
-        <IVA>${doc.montoIva}</IVA>
+        <MntNeto>${isExport ? 0 : doc.montoNeto}</MntNeto>
+        <MntExe>${isExport ? doc.montoTotal : doc.montoExento}</MntExe>
+        <TasaIVA>${isExport ? 0 : 19}</TasaIVA>
+        <IVA>${isExport ? 0 : doc.montoIva}</IVA>
         <MntTotal>${doc.montoTotal}</MntTotal>
       </Totales>
     </Encabezado>
+    ${exportXml}
     ${itemsXml}
     ${refXml}
     <TED version="1.0">

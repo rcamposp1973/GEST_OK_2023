@@ -145,7 +145,7 @@ export interface DTEDocumentItem {
 
 export interface DTEDocument {
   id: string;
-  tipoDTE: '33' | '34' | '39' | '41' | '52' | '56' | '61' | string; // 33: Factura, 34: Exenta, 39: Boleta, 41: Boleta Exenta, 52: Guía Despacho, 56: ND, 61: NC
+  tipoDTE: '33' | '34' | '39' | '41' | '52' | '56' | '61' | '110' | '111' | '112' | string; // 33: Factura, 34: Exenta, 39: Boleta, 41: Boleta Exenta, 52: Guía Despacho, 56: ND, 61: NC, 110: Factura Exportación, 111: ND Exportación, 112: NC Exportación
   tipoDTELabel: string;
   folio: number;
   fechaEmision: string; // YYYY-MM-DD
@@ -172,6 +172,21 @@ export interface DTEDocument {
   representanteLegal?: {
     rut: string;
     nombre?: string;
+  };
+  exportData?: {
+    moneda?: string; // USD, EUR, etc.
+    tipoCambio?: number;
+    montoOtraMoneda?: number;
+    clausulaVenta?: 'FOB' | 'CIF' | 'CFR' | 'EXW' | 'CIP' | 'CPT' | 'DAP' | 'DPU' | 'DDP' | 'FCA' | 'FAS' | string;
+    modalidadVenta?: 'A Firme' | 'Bajo Condición' | 'Consignación Libre' | 'Consignación con Mínimo' | string;
+    viaTransporte?: 'Marítimo' | 'Aéreo' | 'Terrestre' | 'Ferroviario' | 'Multimodal' | string;
+    puertoEmbarque?: string;
+    puertoDestino?: string;
+    paisReceptor?: string;
+    formaPagoExport?: string;
+    bultos?: number;
+    pesoNeto?: number;
+    pesoBruto?: number;
   };
   items: DTEDocumentItem[];
   formaPago: 'Contado' | 'Crédito 30 días' | 'Crédito 60 días' | 'Transferencia' | 'Sin Costo / Entrega Gratuita' | 'Consignación' | string;
@@ -716,6 +731,8 @@ export interface F29TaxSettings {
 export interface F29DebitoFiscal {
   ventasAfectasNeto: number;
   debitoFacturasEmitidas: number; // Cód 503 / 502
+  ventasExportacionTotal?: number; // Cód 020 / 585 (Facturas de Exportación DTE 110/111/112)
+  docsExportCount?: number; // Cantidad de documentos de exportación
   ventasBoletasNeto: number;
   debitoBoletasEmitidas: number; // Cód 110 / 111
   debitoNotasDebito: number; // Cód 512 / 513
@@ -1034,7 +1051,7 @@ export interface CommercialDocument {
   id: string;
   companyId: string;
   operationType: 'VENTA' | 'COMPRA'; // Venta (Clientes) o Compra (Proveedores)
-  documentType: 'COTIZACION' | 'ORDEN_VENTA' | 'FACTURA_VENTA' | 'ORDEN_COMPRA' | 'RECEPCION_COMPRA' | 'FACTURA_COMPRA' | 'GUIA_DESPACHO';
+  documentType: 'COTIZACION' | 'ORDEN_VENTA' | 'FACTURA_VENTA' | 'FACTURA_EXPORTACION' | 'ORDEN_COMPRA' | 'RECEPCION_COMPRA' | 'FACTURA_COMPRA' | 'GUIA_DESPACHO';
   folio: number | string;
   date: string; // YYYY-MM-DD
   dueDate?: string; // YYYY-MM-DD

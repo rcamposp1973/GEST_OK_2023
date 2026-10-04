@@ -205,48 +205,85 @@ app.post("/api/sii/rescatar-rcv", async (req, res) => {
             if (ventasRes.ok) {
               const dataVentas: any = await ventasRes.json();
               
-              // A: Facturas / DTEs individuales de Venta
-              const detalleVentas = dataVentas?.ventas?.detalleVentas || dataVentas?.detalleVentas || [];
+              // A: Facturas / DTEs individuales de Venta (soporte exhaustivo camelCase, PascalCase y arrays)
+              const detalleVentas = (
+                dataVentas?.ventas?.detalleVentas ||
+                dataVentas?.detalleVentas ||
+                dataVentas?.Ventas?.DetalleVentas ||
+                dataVentas?.DetalleVentas ||
+                dataVentas?.Ventas?.detalleVentas ||
+                dataVentas?.data?.detalleVentas ||
+                dataVentas?.data?.DetalleVentas ||
+                dataVentas?.detalle ||
+                dataVentas?.Detalle ||
+                (Array.isArray(dataVentas) ? dataVentas : [])
+              );
+
               for (const item of detalleVentas) {
-                const tipoDte = String(item.tipoDTE || item.tipoDte || item.tipoDoc || '33');
-                const folio = String(item.folio || '0');
-                const fechaEmisionRaw = item.fechaEmision || item.fecha || `${yearNum}-${formattedMonth}-01`;
-                const fechaEmision = fechaEmisionRaw.includes('T') ? fechaEmisionRaw.split('T')[0] : fechaEmisionRaw;
-                const montoNeto = Number(item.montoNeto || 0);
-                const montoIva = Number(item.montoIvaRecuperable ?? item.montoIva ?? 0);
-                const montoExento = Number(item.montoExento || 0);
-                const montoTotal = Number(item.montoTotal || (montoNeto + montoIva + montoExento));
+                const tipoDte = String(item.tipoDTE || item.tipoDte || item.TipoDTE || item.TipoDte || item.TipoDoc || item.tipoDoc || item.codigoDte || item.CodigoDTE || '33');
+                const folio = String(item.folio || item.Folio || '0');
+                const fechaEmisionRaw = item.fechaEmision || item.FechaEmision || item.fecha || item.Fecha || `${yearNum}-${formattedMonth}-01`;
+                const fechaEmision = String(fechaEmisionRaw).includes('T') ? String(fechaEmisionRaw).split('T')[0] : String(fechaEmisionRaw);
+                const montoNeto = Number(item.montoNeto || item.MontoNeto || item.neto || item.Neto || 0);
+                const montoIva = Number(item.montoIvaRecuperable ?? item.MontoIvaRecuperable ?? item.montoIva ?? item.MontoIva ?? item.iva ?? item.Iva ?? 0);
+                const montoExento = Number(item.montoExento || item.MontoExento || item.exento || item.Exento || (tipoDte === '110' || tipoDte === '34' ? (Number(item.montoTotal || item.MontoTotal || 0) || montoNeto) : 0));
+                const montoTotal = Number(item.montoTotal || item.MontoTotal || item.total || item.Total || (montoNeto + montoIva + montoExento));
 
                 // Normalize client RUT and Razon Social - ensure emitting company is NOT set as client
                 const rawClientRut = (
                   item.rutCliente ||
+                  item.RutCliente ||
                   item.rutReceptor ||
+                  item.RutReceptor ||
                   item.rutRecep ||
+                  item.RutRecep ||
                   (item.rutRecep && item.dvRecep ? `${item.rutRecep}-${item.dvRecep}` : '') ||
+                  (item.RutRecep && item.DvRecep ? `${item.RutRecep}-${item.DvRecep}` : '') ||
                   item.rutComprador ||
+                  item.RutComprador ||
                   (item.rut && item.rut.replace(/[^0-9kK]/g, '').toUpperCase() !== cleanCompanyRutRaw.toUpperCase() ? item.rut : '') ||
+                  (item.Rut && item.Rut.replace(/[^0-9kK]/g, '').toUpperCase() !== cleanCompanyRutRaw.toUpperCase() ? item.Rut : '') ||
                   ''
                 );
                 const clientRutWithDash = rawClientRut.length > 1
                   ? `${rawClientRut.replace(/[^0-9kK]/g, '').slice(0, -1)}-${rawClientRut.replace(/[^0-9kK]/g, '').slice(-1)}`
-                  : (rawClientRut || '76.000.000-0');
+                  : (tipoDte === '110' || tipoDte === '111' || tipoDte === '112' ? '55.555.555-5' : (rawClientRut || '76.000.000-0'));
 
                 const clientName = (
                   item.razonSocialReceptor ||
+                  item.RazonSocialReceptor ||
                   item.razonSocialCliente ||
+                  item.RazonSocialCliente ||
                   item.rznSocRecep ||
+                  item.RznSocRecep ||
                   item.razonSocial ||
+                  item.RazonSocial ||
                   item.rznSoc ||
+                  item.RznSoc ||
                   item.nombreReceptor ||
+                  item.NombreReceptor ||
                   item.cliente ||
-                  'CLIENTE FACTURA'
+                  item.Cliente ||
+                  (tipoDte === '110' ? 'Cliente Extranjero (Exportación)' : 'CLIENTE FACTURA')
                 );
+
+                let resolvedNombreTipoDoc = item.tipoDTEString || item.TipoDTEString || item.tipoDocString || item.TipoDocString;
+                if (!resolvedNombreTipoDoc) {
+                  if (tipoDte === '110') resolvedNombreTipoDoc = 'Factura de Exportación Electrónica (110)';
+                  else if (tipoDte === '111') resolvedNombreTipoDoc = 'Nota de Débito de Exportación Electrónica (111)';
+                  else if (tipoDte === '112') resolvedNombreTipoDoc = 'Nota de Crédito de Exportación Electrónica (112)';
+                  else if (tipoDte === '34') resolvedNombreTipoDoc = 'Factura No Afecta o Exenta Electrónica (34)';
+                  else if (tipoDte === '33') resolvedNombreTipoDoc = 'Factura Electrónica';
+                  else if (tipoDte === '61') resolvedNombreTipoDoc = 'Nota de Crédito Electrónica (61)';
+                  else if (tipoDte === '56') resolvedNombreTipoDoc = 'Nota de Débito Electrónica (56)';
+                  else resolvedNombreTipoDoc = `DTE Venta (${tipoDte})`;
+                }
 
                 docs.push({
                   tipoRegistro: 'Venta',
                   tipoDocumento: tipoDte,
                   tipoDoc: tipoDte,
-                  nombreTipoDoc: item.tipoDTEString || item.tipoDocString || (tipoDte === '33' ? 'Factura Electrónica' : tipoDte === '34' ? 'Factura Exenta' : tipoDte === '61' ? 'Nota de Crédito' : 'DTE Venta'),
+                  nombreTipoDoc: resolvedNombreTipoDoc,
                   folio,
                   rutEmisor: cleanCompanyRutWithDash,
                   razonSocialEmisor: req.body.companyName || 'EMPRESA EMISORA',
@@ -255,42 +292,73 @@ app.post("/api/sii/rescatar-rcv", async (req, res) => {
                   fechaEmision,
                   montoNeto,
                   montoIva,
-                  montoExento,
+                  montoExento: tipoDte === '110' || tipoDte === '34' ? (montoExento || montoTotal) : montoExento,
                   montoTotal,
                   period: `${yearNum}-${formattedMonth}`
                 });
               }
 
-              // B: Resúmenes de Ventas (Boletas Electrónicas Tipo 39 o 41 del mes)
-              const resumenesVentas = dataVentas?.ventas?.resumenes || dataVentas?.resumenes || [];
+              // B: Resúmenes de Ventas (Boletas 39/41, Exportaciones 110/111/112, Facturas Exentas 34)
+              const resumenesVentas = (
+                dataVentas?.ventas?.resumenes ||
+                dataVentas?.resumenes ||
+                dataVentas?.ventas?.resumen ||
+                dataVentas?.Ventas?.Resumenes ||
+                dataVentas?.Resumenes ||
+                dataVentas?.Ventas?.Resumen ||
+                dataVentas?.Resumen ||
+                dataVentas?.data?.resumenes ||
+                dataVentas?.data?.Resumenes ||
+                dataVentas?.data?.resumen ||
+                dataVentas?.resumen ||
+                []
+              );
+
               for (const resItem of resumenesVentas) {
-                const tipoDte = Number(resItem.tipoDte || 0);
-                const totalDocs = Number(resItem.totalDocumentos || 0);
-                const montoTotal = Number(resItem.montoTotal || 0);
-                if (totalDocs > 0 || montoTotal > 0) {
-                  const hasIndividualDocs = detalleVentas.some((d: any) => Number(d.tipoDTE || d.tipoDte) === tipoDte);
+                const tipoDte = Number(resItem.tipoDte || resItem.tipoDTE || resItem.TipoDte || resItem.TipoDTE || resItem.TipoDoc || resItem.tipoDoc || resItem.codigoDte || resItem.CodigoDTE || 0);
+                const totalDocs = Number(resItem.totalDocumentos || resItem.totalDocs || resItem.cantidadDocumentos || resItem.TotalDocumentos || resItem.TotalDocs || resItem.CantidadDocumentos || resItem.Cantidad || resItem.cantidad || 0);
+                const montoTotal = Number(resItem.montoTotal || resItem.total || resItem.MontoTotal || resItem.Total || 0);
+                const montoExento = Number(resItem.montoExento || resItem.exento || resItem.MontoExento || resItem.Exento || 0);
+                const montoNeto = Number(resItem.montoNeto || resItem.neto || resItem.MontoNeto || resItem.Neto || 0);
+
+                if (totalDocs > 0 || montoTotal > 0 || montoExento > 0 || montoNeto > 0) {
+                  const hasIndividualDocs = detalleVentas.some((d: any) => Number(d.tipoDTE || d.tipoDte || d.TipoDTE || d.TipoDte || d.TipoDoc || d.tipoDoc) === tipoDte);
                   if (!hasIndividualDocs) {
-                    const montoNeto = Number(resItem.montoNeto || 0);
-                    const montoIva = Number(resItem.ivaRecuperable ?? resItem.montoIva ?? 0);
-                    const montoExento = Number(resItem.montoExento || 0);
+                    const montoIva = Number(resItem.ivaRecuperable ?? resItem.montoIva ?? resItem.iva ?? resItem.MontoIva ?? resItem.Iva ?? 0);
+                    const effectiveExento = Number(resItem.montoExento || resItem.exento || resItem.MontoExento || resItem.Exento || (tipoDte === 110 || tipoDte === 34 ? (montoTotal || montoNeto) : 0));
+                    const isBoleta = tipoDte === 39 || tipoDte === 41;
+                    const isExport = tipoDte === 110 || tipoDte === 111 || tipoDte === 112;
+
+                    let nombreTipo = resItem.tipoDteString || resItem.tipoDTEString || resItem.TipoDteString || resItem.TipoDTEString;
+                    if (!nombreTipo) {
+                      if (tipoDte === 110) nombreTipo = 'Factura de Exportación Electrónica (110)';
+                      else if (tipoDte === 111) nombreTipo = 'Nota de Débito de Exportación Electrónica (111)';
+                      else if (tipoDte === 112) nombreTipo = 'Nota de Crédito de Exportación Electrónica (112)';
+                      else if (tipoDte === 34) nombreTipo = 'Factura No Afecta o Exenta Electrónica (34)';
+                      else if (tipoDte === 39) nombreTipo = 'Boleta Electrónica (Resumen Mensual)';
+                      else if (tipoDte === 41) nombreTipo = 'Boleta Exenta Electrónica';
+                      else nombreTipo = `Resumen DTE (${tipoDte})`;
+                    }
+
                     docs.push({
                       tipoRegistro: 'Venta',
-                      tipoDocumento: String(tipoDte || '39'),
-                      tipoDoc: String(tipoDte || '39'),
-                      nombreTipoDoc: resItem.tipoDteString || (tipoDte === 39 ? 'Boleta Electrónica (Resumen Mensual)' : 'Resumen DTE'),
-                      folio: `RESUMEN-${totalDocs}DOCS`,
+                      tipoDocumento: String(tipoDte || '33'),
+                      tipoDoc: String(tipoDte || '33'),
+                      nombreTipoDoc: nombreTipo,
+                      folio: isExport ? `EXP-${totalDocs || 1}DOCS` : (isBoleta ? `RESUMEN-${totalDocs}DOCS` : `RESUMEN-T${tipoDte}-${totalDocs}DOCS`),
                       rutEmisor: cleanCompanyRutWithDash,
                       razonSocialEmisor: req.body.companyName || 'EMPRESA EMISORA',
-                      rutReceptor: '66.666.666-6',
-                      razonSocialReceptor: `Clientes Varios (${totalDocs} Boletas)`,
+                      rutReceptor: isExport ? '55.555.555-5' : (isBoleta ? '66.666.666-6' : '76.000.000-0'),
+                      razonSocialReceptor: isExport ? `Cliente Extranjero / Exportación (${totalDocs || 1} DTEs)` : (isBoleta ? `Clientes Varios (${totalDocs} Boletas)` : `Clientes Varios DTE`),
                       fechaEmision: `${yearNum}-${formattedMonth}-28`,
-                      montoNeto,
+                      montoNeto: isExport ? 0 : montoNeto,
                       montoIva,
-                      montoExento,
-                      montoTotal,
+                      montoExento: isExport ? (effectiveExento || montoTotal) : effectiveExento,
+                      montoTotal: montoTotal || (montoNeto + montoIva + effectiveExento),
                       period: `${yearNum}-${formattedMonth}`,
-                      isBoletaResumen: true,
-                      totalDocumentos: totalDocs
+                      isBoletaResumen: isBoleta,
+                      isExportacionResumen: isExport,
+                      totalDocumentos: totalDocs || 1
                     });
                   }
                 }

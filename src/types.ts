@@ -921,6 +921,25 @@ export interface CustomAnalysisTableItem {
   updatedAt?: string;
 }
 
+export interface SavedAccountingQuery {
+  id: string;
+  name: string;
+  description?: string;
+  sourceType: 'MAYOR' | 'PROVEEDORES_RCV' | 'CLIENTES_RCV' | 'BANCO_CARTOLA' | 'PARTIDAS_ABIERTAS';
+  accountCode?: string;
+  accountName?: string;
+  cutoffDate?: string; // "HOY", "2026-04-30", o fecha YYYY-MM-DD
+  dateFrom?: string;
+  statusFilter?: 'TODOS' | 'PENDIENTES' | 'COMPENSADOS';
+  rutFilter?: string;
+  docTypeFilter?: string;
+  columns?: string[];
+  isPredefined?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: string;
+}
+
 export interface MarketingPromoConfig {
   id?: string;
   enabled: boolean;

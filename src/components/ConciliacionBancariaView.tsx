@@ -55,13 +55,15 @@ import {
   ChevronRight,
   Landmark,
   Save,
-  ExternalLink
+  ExternalLink,
+  ArrowRightLeft
 } from 'lucide-react';
 import { ImportCSVModal, ManualMatchModal, QuickVoucherModal } from './BankReconciliationModals';
 import AutoRutMatchModal from './AutoRutMatchModal';
 import JuniorGlossAutomationModal from './JuniorGlossAutomationModal';
 import BankCartolaSmartImportModal from './BankCartolaSmartImportModal';
 import PendingItemsReportModal from './PendingItemsReportModal';
+import InterbankTransferModal from './InterbankTransferModal';
 import { parseChileanNumber } from '../utils/bankCartolaParser';
 
 const MONTH_NAMES: { [key: string]: string } = {
@@ -162,6 +164,7 @@ export default function ConciliacionBancariaView({
   const [showSmartImportModal, setShowSmartImportModal] = useState<boolean>(false);
   const [showAutoRutModal, setShowAutoRutModal] = useState<boolean>(false);
   const [showJuniorGlossModal, setShowJuniorGlossModal] = useState<boolean>(false);
+  const [showInterbankModal, setShowInterbankModal] = useState<boolean>(false);
   const [showPendingReportModal, setShowPendingReportModal] = useState<boolean>(false);
   const [pastedCSV, setPastedCSV] = useState<string>('');
   const [importInitialBalance, setImportInitialBalance] = useState<number>(0);
@@ -175,6 +178,11 @@ export default function ConciliacionBancariaView({
   const [quickExpenseAccountId, setQuickExpenseAccountId] = useState<string>('');
   const [quickGloss, setQuickGloss] = useState<string>('');
   const [quickVoucherPeriod, setQuickVoucherPeriod] = useState<string>('');
+
+  // Multi-Selection State for N to 1, 1 to N, and N to M reconciliation
+  const [selectedStatementLineIds, setSelectedStatementLineIds] = useState<Set<string>>(new Set());
+  const [selectedVoucherKeys, setSelectedVoucherKeys] = useState<Set<string>>(new Set());
+  const [showMatchedInModal, setShowMatchedInModal] = useState<boolean>(false);
 
   // Right Vertical Summary Sidebar State: 'collapsed' | 'normal' | 'expanded'
   const [summaryPanelState, setSummaryPanelState] = useState<'collapsed' | 'normal' | 'expanded'>('normal');
@@ -263,29 +271,73 @@ export default function ConciliacionBancariaView({
     }
   }, [selectedBankAccountId, selectedPeriod, vouchers]);
 
-  // Set of voucher IDs currently matched in the active in-memory cartola
-  const currentMatchedVoucherIds = useMemo(() => {
-    return new Set(
-      statementLines.filter(l => l.matchedStatus === 'Conciliado' && l.matchedVoucherId).map(l => l.matchedVoucherId!)
-    );
-  }, [statementLines]);
-
   const currentRecId = `${selectedBankAccount?.code}_${selectedPeriod}`.replace(/[^a-zA-Z0-9_-]/g, '_');
 
-  // Map of voucher IDs matched in OTHER saved periods: voucherId -> { period, voucherNumber }
-  const otherPeriodsMatchedVouchers = useMemo(() => {
-    const map = new Map<string, { period: string; voucherNumber?: number }>();
-    savedReconciliations.forEach(r => {
-      if (isMatchingBankReconciliation(r, selectedBankAccount, selectedBankAccountId) && r.id !== currentRecId && r.lines) {
-        r.lines.forEach(l => {
-          if (l.matchedStatus === 'Conciliado' && l.matchedVoucherId) {
-            map.set(l.matchedVoucherId, { period: r.period, voucherNumber: l.matchedVoucherNumber });
-          }
+  // Robust Dual-Key Match Engine: matches vouchers by Firestore Doc ID AND Voucher Number across all periods
+  const activeAndSavedMatches = useMemo(() => {
+    const idMap = new Map<string, { period: string; voucherNumber?: number }>();
+    const numberMap = new Map<number, { period: string; voucherId?: string }>();
+
+    const recordMatch = (l: any, defaultPeriod: string) => {
+      const isConciliado = l.matchedStatus === 'Conciliado' || 
+                           l.matchedStatus === 'CONCILIADO' || 
+                           l.isReconciled || 
+                           !!l.matchedVoucherId || 
+                           (l.matchedVoucherNumber !== undefined && l.matchedVoucherNumber !== null && String(l.matchedVoucherNumber).trim() !== '');
+      
+      if (!isConciliado) return;
+
+      const lPeriod = l.date ? l.date.slice(0, 7) : defaultPeriod;
+
+      const ids: string[] = [];
+      if (Array.isArray(l.matchedVoucherIds)) {
+        ids.push(...l.matchedVoucherIds.map(String));
+      }
+      if (l.matchedVoucherId) {
+        String(l.matchedVoucherId).split(',').forEach(s => {
+          const trimmed = s.trim();
+          if (trimmed) ids.push(trimmed);
         });
       }
+
+      const nums: number[] = [];
+      if (Array.isArray(l.matchedVoucherNumbers)) {
+        l.matchedVoucherNumbers.forEach(n => {
+          const num = Number(n);
+          if (!isNaN(num) && num > 0) nums.push(num);
+        });
+      }
+      if (l.matchedVoucherNumber !== undefined && l.matchedVoucherNumber !== null) {
+        String(l.matchedVoucherNumber).split(',').forEach(s => {
+          const num = Number(s.trim());
+          if (!isNaN(num) && num > 0) nums.push(num);
+        });
+      }
+
+      ids.forEach(id => {
+        idMap.set(id, { period: lPeriod, voucherNumber: nums[0] });
+      });
+
+      nums.forEach(num => {
+        numberMap.set(num, { period: lPeriod, voucherId: ids[0] });
+        idMap.set(String(num), { period: lPeriod, voucherNumber: num });
+      });
+    };
+
+    // 1. Process all saved reconciliations for this bank account
+    savedReconciliations.forEach(r => {
+      if (isMatchingBankReconciliation(r, selectedBankAccount, selectedBankAccountId) && r.lines) {
+        r.lines.forEach(l => recordMatch(l, r.period));
+      }
     });
-    return map;
-  }, [savedReconciliations, selectedBankAccount, selectedBankAccountId, currentRecId]);
+
+    // 2. Active statementLines for selectedPeriod take precedence
+    if (statementLines) {
+      statementLines.forEach(l => recordMatch(l, selectedPeriod));
+    }
+
+    return { idMap, numberMap };
+  }, [savedReconciliations, statementLines, selectedBankAccount, selectedBankAccountId, selectedPeriod]);
 
   // All Bank Vouchers in accounting (any period)
   const allBankVouchers = useMemo(() => {
@@ -308,10 +360,18 @@ export default function ConciliacionBancariaView({
       if (v.status !== 'Anulado') {
         const vDate = v.date || '';
         const vPeriod = v.period || vDate.slice(0, 7) || 'S/P';
+        const vNum = Number(v.voucherNumber || (v as any).number || 0);
+
         v.lines.forEach(l => {
           if (l.accountId === selectedBankAccount.id || l.accountCode === selectedBankAccount.code) {
-            const isMatchedInCurrent = currentMatchedVoucherIds.has(v.id);
-            const otherMatch = otherPeriodsMatchedVouchers.get(v.id);
+            // Match by ID, String(Number), or raw Voucher Number
+            const matchById = activeAndSavedMatches.idMap.get(v.id) || (vNum ? activeAndSavedMatches.idMap.get(String(vNum)) : undefined);
+            const matchByNum = vNum ? activeAndSavedMatches.numberMap.get(vNum) : undefined;
+            const match = matchById || matchByNum;
+
+            const isMatchedInCurrent = !!match && match.period === selectedPeriod;
+            const isMatchedInOther = !!match && match.period !== selectedPeriod;
+
             list.push({
               voucher: v,
               line: l,
@@ -321,8 +381,8 @@ export default function ConciliacionBancariaView({
               period: vPeriod,
               gloss: l.gloss || v.gloss,
               isMatchedInCurrent,
-              isMatchedInOther: !isMatchedInCurrent && !!otherMatch,
-              matchedInOtherPeriod: otherMatch?.period
+              isMatchedInOther,
+              matchedInOtherPeriod: match?.period
             });
           }
         });
@@ -331,7 +391,7 @@ export default function ConciliacionBancariaView({
 
     list.sort((a, b) => b.date.localeCompare(a.date));
     return list;
-  }, [vouchers, selectedBankAccount, currentMatchedVoucherIds, otherPeriodsMatchedVouchers]);
+  }, [vouchers, selectedBankAccount, activeAndSavedMatches, selectedPeriod]);
 
   // Filtered Vouchers for Right Column view
   const filteredBankVouchers = useMemo(() => {
@@ -1134,11 +1194,17 @@ export default function ConciliacionBancariaView({
   };
 
   // 5. Perform manual cross-period match + Immediate Auto-Save
-  const handleManualMatch = async (voucherId: string, voucherNumber: number, voucherPeriod: string) => {
+  const handleManualMatch = async (
+    voucherId: string,
+    voucherNumber: number | string,
+    voucherPeriod: string,
+    additionalVoucherIds?: string[]
+  ) => {
     if (!manualMatchLine) return;
 
     const targetLineId = manualMatchLine.id;
     const inCurrent = statementLines.some(l => l.id === targetLineId);
+    const vIds = additionalVoucherIds && additionalVoucherIds.length > 0 ? additionalVoucherIds : [voucherId];
 
     if (inCurrent) {
       const updated = statementLines.map(l => {
@@ -1146,9 +1212,10 @@ export default function ConciliacionBancariaView({
           return {
             ...l,
             matchedStatus: 'Conciliado' as const,
-            matchedVoucherId: voucherId,
-            matchedVoucherNumber: voucherNumber,
-            matchedVoucherPeriod: voucherPeriod
+            matchedVoucherId: vIds.join(','),
+            matchedVoucherNumber: voucherNumber as any,
+            matchedVoucherPeriod: voucherPeriod,
+            matchedVoucherIds: vIds
           };
         }
         return l;
@@ -1169,9 +1236,10 @@ export default function ConciliacionBancariaView({
               return {
                 ...l,
                 matchedStatus: 'Conciliado' as const,
-                matchedVoucherId: voucherId,
-                matchedVoucherNumber: voucherNumber,
-                matchedVoucherPeriod: voucherPeriod
+                matchedVoucherId: vIds.join(','),
+                matchedVoucherNumber: voucherNumber as any,
+                matchedVoucherPeriod: voucherPeriod,
+                matchedVoucherIds: vIds
               };
             }
             return l;
@@ -1577,7 +1645,10 @@ export default function ConciliacionBancariaView({
     const targetAmount = manualMatchLine.charge > 0 ? manualMatchLine.charge : manualMatchLine.deposit;
     const isTargetCharge = manualMatchLine.charge > 0;
 
-    let list = allBankVouchers.filter(bv => !bv.isMatchedInOther && !bv.isMatchedInCurrent);
+    let list = allBankVouchers;
+    if (!showMatchedInModal) {
+      list = list.filter(bv => !bv.isMatchedInOther && !bv.isMatchedInCurrent);
+    }
 
     if (modalScope === 'ESTE_MES') {
       list = list.filter(bv => bv.period === selectedPeriod);
@@ -1607,7 +1678,229 @@ export default function ConciliacionBancariaView({
     }
 
     return list;
-  }, [manualMatchLine, allBankVouchers, modalScope, modalExactOnly, modalSearch, selectedPeriod]);
+  }, [manualMatchLine, allBankVouchers, modalScope, modalExactOnly, modalSearch, selectedPeriod, showMatchedInModal]);
+
+  // --- MULTI-SELECTION AND BATCH RECONCILIATION (N a 1, 1 a N, N a M) ---
+  const handleToggleSelectStatementLine = (lineId: string) => {
+    setSelectedStatementLineIds(prev => {
+      const next = new Set(prev);
+      if (next.has(lineId)) next.delete(lineId);
+      else next.add(lineId);
+      return next;
+    });
+  };
+
+  const handleSelectAllVisibleStatementLines = () => {
+    if (selectedStatementLineIds.size === displayLines.length && displayLines.length > 0) {
+      setSelectedStatementLineIds(new Set());
+    } else {
+      setSelectedStatementLineIds(new Set(displayLines.map(l => l.id)));
+    }
+  };
+
+  const handleSelectOnlyPendingStatementLines = () => {
+    const pendingLines = displayLines.filter(l => l.matchedStatus !== 'Conciliado');
+    setSelectedStatementLineIds(new Set(pendingLines.map(l => l.id)));
+  };
+
+  const handleToggleSelectVoucher = (key: string) => {
+    setSelectedVoucherKeys(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const handleSelectAllVisibleVouchers = () => {
+    if (selectedVoucherKeys.size === filteredBankVouchers.length && filteredBankVouchers.length > 0) {
+      setSelectedVoucherKeys(new Set());
+    } else {
+      setSelectedVoucherKeys(new Set(filteredBankVouchers.map((bv, idx) => `${bv.voucher.id}_${bv.line?.id || idx}`)));
+    }
+  };
+
+  const handleSelectOnlyPendingVouchers = () => {
+    const pending = filteredBankVouchers.filter(bv => !bv.isMatchedInCurrent && !bv.isMatchedInOther);
+    setSelectedVoucherKeys(new Set(pending.map((bv, idx) => `${bv.voucher.id}_${bv.line?.id || idx}`)));
+  };
+
+  const handleClearAllSelections = () => {
+    setSelectedStatementLineIds(new Set());
+    setSelectedVoucherKeys(new Set());
+  };
+
+  const selectedCartolaLines = useMemo(() => {
+    return displayLines.filter(l => selectedStatementLineIds.has(l.id));
+  }, [displayLines, selectedStatementLineIds]);
+
+  const selectedCartolaCharges = useMemo(() => {
+    return selectedCartolaLines.reduce((s, l) => s + (l.charge || 0), 0);
+  }, [selectedCartolaLines]);
+
+  const selectedCartolaDeposits = useMemo(() => {
+    return selectedCartolaLines.reduce((s, l) => s + (l.deposit || 0), 0);
+  }, [selectedCartolaLines]);
+
+  const selectedCartolaTotal = useMemo(() => {
+    return selectedCartolaCharges + selectedCartolaDeposits;
+  }, [selectedCartolaCharges, selectedCartolaDeposits]);
+
+  const selectedVoucherItems = useMemo(() => {
+    return filteredBankVouchers.filter((bv, idx) => {
+      const key = `${bv.voucher.id}_${bv.line?.id || idx}`;
+      return selectedVoucherKeys.has(key) || selectedVoucherKeys.has(bv.voucher.id);
+    });
+  }, [filteredBankVouchers, selectedVoucherKeys]);
+
+  const selectedVouchersDebits = useMemo(() => {
+    return selectedVoucherItems.reduce((s, bv) => s + (bv.debit || 0), 0);
+  }, [selectedVoucherItems]);
+
+  const selectedVouchersCredits = useMemo(() => {
+    return selectedVoucherItems.reduce((s, bv) => s + (bv.credit || 0), 0);
+  }, [selectedVoucherItems]);
+
+  const selectedVouchersTotal = useMemo(() => {
+    return selectedVouchersDebits + selectedVouchersCredits;
+  }, [selectedVouchersDebits, selectedVouchersCredits]);
+
+  const selectionDifference = useMemo(() => {
+    if (selectedCartolaLines.length === 0 || selectedVoucherItems.length === 0) return 0;
+    return Math.abs(selectedCartolaTotal - selectedVouchersTotal);
+  }, [selectedCartolaLines, selectedVoucherItems, selectedCartolaTotal, selectedVouchersTotal]);
+
+  const isSelectionBalanced = useMemo(() => {
+    return selectedCartolaLines.length > 0 && selectedVoucherItems.length > 0 && selectionDifference === 0;
+  }, [selectedCartolaLines, selectedVoucherItems, selectionDifference]);
+
+  // Batch Conciliar N Cartola lines with M Accounting vouchers
+  const handleBatchMatchSelection = async () => {
+    if (selectedCartolaLines.length === 0) {
+      notify.warning('Seleccione al menos un movimiento de la cartola bancaria.');
+      return;
+    }
+    if (selectedVoucherItems.length === 0) {
+      notify.warning('Seleccione al menos un comprobante contable.');
+      return;
+    }
+
+    const uniqueVoucherNumbers = Array.from(
+      new Set(selectedVoucherItems.map(v => Number(v.voucher.voucherNumber)).filter(n => !isNaN(n) && n > 0))
+    );
+    const uniqueVoucherIds = Array.from(new Set(selectedVoucherItems.map(v => v.voucher.id)));
+    const targetPeriod = selectedVoucherItems[0]?.period || selectedPeriod;
+
+    const vNumberDisplay = uniqueVoucherNumbers.length > 0 ? (uniqueVoucherNumbers.length === 1 ? uniqueVoucherNumbers[0] : uniqueVoucherNumbers.join(', ')) : 'Asiento';
+    const vIdDisplay = uniqueVoucherIds.join(',');
+
+    const selectedIdsSet = new Set(selectedCartolaLines.map(l => l.id));
+
+    // Update active period statement lines
+    const updatedCurrent = statementLines.map(l => {
+      if (selectedIdsSet.has(l.id)) {
+        return {
+          ...l,
+          matchedStatus: 'Conciliado' as const,
+          matchedVoucherId: vIdDisplay,
+          matchedVoucherNumber: vNumberDisplay as any,
+          matchedVoucherPeriod: targetPeriod,
+          matchedVoucherIds: uniqueVoucherIds,
+          matchedVoucherNumbers: uniqueVoucherNumbers
+        };
+      }
+      return l;
+    });
+
+    setStatementLines(updatedCurrent);
+    await persistReconciliation(selectedPeriod, updatedCurrent, bankInitialBalanceInput, bankFinalBalanceInput);
+
+    // Also update any lines belonging to other periods in savedReconciliations
+    for (const rec of savedReconciliations) {
+      if (rec.bankAccountId === selectedBankAccountId && rec.period !== selectedPeriod && rec.lines) {
+        const hasLine = rec.lines.some(l => selectedIdsSet.has(l.id));
+        if (hasLine) {
+          const updatedRec = rec.lines.map(l => {
+            if (selectedIdsSet.has(l.id)) {
+              return {
+                ...l,
+                matchedStatus: 'Conciliado' as const,
+                matchedVoucherId: vIdDisplay,
+                matchedVoucherNumber: vNumberDisplay as any,
+                matchedVoucherPeriod: targetPeriod,
+                matchedVoucherIds: uniqueVoucherIds,
+                matchedVoucherNumbers: uniqueVoucherNumbers
+              };
+            }
+            return l;
+          });
+          await persistReconciliation(rec.period, updatedRec, rec.bankInitialBalance, rec.bankFinalBalance);
+        }
+      }
+    }
+
+    notify.success(
+      `🎉 Conciliación Guardada: ${selectedCartolaLines.length} movimiento(s) de cartola vinculados con ${selectedVoucherItems.length} comprobante(s) (Asiento(s) N° ${vNumberDisplay}).`,
+      'Conciliación N a M'
+    );
+
+    setSelectedStatementLineIds(new Set());
+    setSelectedVoucherKeys(new Set());
+  };
+
+  // Batch Desconciliar selection
+  const handleBatchUnmatchSelection = async () => {
+    if (selectedCartolaLines.length === 0) {
+      notify.warning('Seleccione los movimientos de cartola a desconciliar.');
+      return;
+    }
+
+    const selectedIdsSet = new Set(selectedCartolaLines.map(l => l.id));
+    const updatedCurrent = statementLines.map(l => {
+      if (selectedIdsSet.has(l.id)) {
+        return {
+          ...l,
+          matchedStatus: 'Pendiente' as const,
+          matchedVoucherId: undefined,
+          matchedVoucherNumber: undefined,
+          matchedVoucherPeriod: undefined,
+          matchedVoucherIds: undefined,
+          matchedVoucherNumbers: undefined
+        };
+      }
+      return l;
+    });
+
+    setStatementLines(updatedCurrent);
+    await persistReconciliation(selectedPeriod, updatedCurrent, bankInitialBalanceInput, bankFinalBalanceInput);
+
+    for (const rec of savedReconciliations) {
+      if (rec.bankAccountId === selectedBankAccountId && rec.period !== selectedPeriod && rec.lines) {
+        const hasLine = rec.lines.some(l => selectedIdsSet.has(l.id));
+        if (hasLine) {
+          const updatedRec = rec.lines.map(l => {
+            if (selectedIdsSet.has(l.id)) {
+              return {
+                ...l,
+                matchedStatus: 'Pendiente' as const,
+                matchedVoucherId: undefined,
+                matchedVoucherNumber: undefined,
+                matchedVoucherPeriod: undefined,
+                matchedVoucherIds: undefined,
+                matchedVoucherNumbers: undefined
+              };
+            }
+            return l;
+          });
+          await persistReconciliation(rec.period, updatedRec, rec.bankInitialBalance, rec.bankFinalBalance);
+        }
+      }
+    }
+
+    notify.success(`Se desconciliaron ${selectedCartolaLines.length} movimiento(s) seleccionados.`);
+    setSelectedStatementLineIds(new Set());
+    setSelectedVoucherKeys(new Set());
+  };
 
   return (
     <div className={isEmbedded ? "flex flex-col w-full h-full overflow-hidden bg-slate-900 text-slate-100 relative" : "fixed inset-0 z-50 bg-[#0b1329]/70 backdrop-blur-xs flex flex-col w-screen h-screen overflow-hidden animate-in fade-in duration-150"}>
@@ -1667,6 +1960,19 @@ export default function ConciliacionBancariaView({
             <Save className="w-3.5 h-3.5 text-emerald-100" />
             <span>Guardar Acta</span>
           </button>
+
+          {/* Dedicated Interbank Transfer Button */}
+          {bankAccounts.length >= 2 && (
+            <button
+              type="button"
+              onClick={() => setShowInterbankModal(true)}
+              className="px-3 py-1.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white text-xs font-bold rounded-lg shadow-xs flex items-center gap-1.5 cursor-pointer transition-all border border-teal-500/40"
+              title="Detectar y contabilizar automáticamente traspasos entre cuentas bancarias de la misma sociedad (1 a 1, N a 1 y N a M)"
+            >
+              <ArrowRightLeft className="w-3.5 h-3.5 text-teal-100" />
+              <span>Traspaso entre Cuentas</span>
+            </button>
+          )}
 
           {/* Consolidated Actions Dropdown */}
           <div className="relative inline-block text-left">
@@ -1766,6 +2072,18 @@ export default function ConciliacionBancariaView({
                         <div className="text-[10px] text-indigo-700 font-normal">Reglas automáticas por glosa</div>
                       </div>
                     </button>
+                    {bankAccounts.length >= 2 && (
+                      <button
+                        onClick={() => { setIsActionsDropdownOpen(false); setShowInterbankModal(true); }}
+                        className="w-full text-left px-3 py-1.5 text-teal-900 hover:bg-teal-50 font-semibold flex items-center gap-2 cursor-pointer"
+                      >
+                        <span className="text-base">🔄</span>
+                        <div>
+                          <div className="font-bold text-teal-900">Traspaso entre Cuentas (Interbancario)</div>
+                          <div className="text-[10px] text-teal-700 font-normal">Cruce y asiento automático entre bancos propios (1 a 1 y N a 1)</div>
+                        </div>
+                      </button>
+                    )}
                   </div>
 
                   <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
@@ -2315,19 +2633,35 @@ export default function ConciliacionBancariaView({
             )}
           </div>
 
-          {/* Excel Totals Bar */}
-          <div className="bg-slate-100 border-b border-slate-200 px-3 py-1 text-[11px] font-mono flex items-center justify-between text-slate-700 flex-wrap gap-2">
-            <div className="flex items-center gap-4">
+          {/* Excel Totals Bar with Multi-select controls */}
+          <div className="bg-slate-100 border-b border-slate-200 px-3 py-1.5 text-[11px] font-mono flex items-center justify-between text-slate-700 flex-wrap gap-2">
+            <div className="flex items-center gap-3">
               <span>Filas: <strong className="text-slate-950">{displayLines.length}</strong></span>
-              <span>Total Cargos: <strong className="text-rose-700">${displayLines.reduce((acc, l) => acc + (l.charge || 0), 0).toLocaleString('es-CL')}</strong></span>
-              <span>Total Abonos: <strong className="text-emerald-700">${displayLines.reduce((acc, l) => acc + (l.deposit || 0), 0).toLocaleString('es-CL')}</strong></span>
+              {selectedStatementLineIds.size > 0 && (
+                <span className="bg-indigo-100 text-indigo-900 px-1.5 py-0.5 rounded font-bold text-[10px]">
+                  ✓ {selectedStatementLineIds.size} marcados (${selectedCartolaTotal.toLocaleString('es-CL')})
+                </span>
+              )}
+              <span>Cargos: <strong className="text-rose-700">${displayLines.reduce((acc, l) => acc + (l.charge || 0), 0).toLocaleString('es-CL')}</strong></span>
+              <span>Abonos: <strong className="text-emerald-700">${displayLines.reduce((acc, l) => acc + (l.deposit || 0), 0).toLocaleString('es-CL')}</strong></span>
             </div>
-            <div className="text-[10.5px] text-slate-500 font-sans font-medium">
-              {cartolaSelectedMonths.length > 0 && cartolaSelectedMonths[0] !== '99'
-                ? `Meses activos: ${cartolaSelectedMonths.map(m => MONTH_NAMES[m]).join(', ')}`
-                : cartolaYearFilter !== 'TODOS'
-                ? `Año: ${cartolaYearFilter}`
-                : 'Vista sin restricciones de período'}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleSelectOnlyPendingStatementLines}
+                className="text-[10px] text-indigo-700 hover:text-indigo-900 font-sans font-semibold hover:underline"
+              >
+                Marcar Pendientes
+              </button>
+              {selectedStatementLineIds.size > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedStatementLineIds(new Set())}
+                  className="text-[10px] text-slate-500 hover:text-rose-600 font-sans"
+                >
+                  Desmarcar
+                </button>
+              )}
             </div>
           </div>
 
@@ -2335,6 +2669,15 @@ export default function ConciliacionBancariaView({
             <table className="w-full text-left text-xs border-collapse font-mono">
               <thead className="bg-slate-100 text-slate-700 font-bold sticky top-0 z-10 border-b border-slate-200 text-[11px] shadow-2xs">
                 <tr>
+                  <th className="py-2 px-2 text-center w-8">
+                    <input
+                      type="checkbox"
+                      checked={displayLines.length > 0 && selectedStatementLineIds.size === displayLines.length}
+                      onChange={handleSelectAllVisibleStatementLines}
+                      className="rounded text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5"
+                      title="Seleccionar / Deseleccionar todos los movimientos visibles"
+                    />
+                  </th>
                   <th className="py-2 px-2">Fecha</th>
                   <th className="py-2 px-2">Glosa Banco</th>
                   <th className="py-2 px-1.5 text-right text-rose-700">Cargo ($)</th>
@@ -2347,7 +2690,7 @@ export default function ConciliacionBancariaView({
               <tbody className="divide-y divide-slate-200 text-[11px]">
                 {displayLines.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-slate-400 font-sans italic">
+                    <td colSpan={8} className="py-8 text-center text-slate-400 font-sans italic">
                       No hay movimientos de cartola para mostrar con los filtros seleccionados.
                     </td>
                   </tr>
@@ -2362,18 +2705,29 @@ export default function ConciliacionBancariaView({
                     const fp = `${d}__${amt}__${desc}`;
                     const dupInfo = statementDuplicatesMap.get(fp);
                     const isPotentialDuplicate = dupInfo && dupInfo.count >= 2;
+                    const isChecked = selectedStatementLineIds.has(l.id);
 
                     return (
                       <tr
                         key={l.id}
                         className={
-                          l.matchedStatus === 'Conciliado'
+                          isChecked
+                            ? 'bg-indigo-50/90 ring-1 ring-indigo-400 font-medium'
+                            : l.matchedStatus === 'Conciliado'
                             ? 'bg-emerald-50/40 hover:bg-emerald-50/70'
                             : isPotentialDuplicate
                             ? 'bg-amber-50/60 hover:bg-amber-100/50'
                             : 'hover:bg-slate-50'
                         }
                       >
+                        <td className="py-2 px-2 text-center">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => handleToggleSelectStatementLine(l.id)}
+                            className="rounded text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5"
+                          />
+                        </td>
                         <td className="py-2 px-2 text-slate-700 font-mono text-[11px] whitespace-nowrap">
                           <div>{l.date}</div>
                           {l.date && l.date.slice(5, 7) !== selectedPeriod.slice(5, 7) && (
@@ -2472,7 +2826,7 @@ export default function ConciliacionBancariaView({
                                     setModalScope('TODOS_PENDIENTES');
                                   }}
                                   className="px-1.5 py-0.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded text-[10px]"
-                                  title="Vincular con asiento de este o cualquier mes"
+                                  title="Vincular con asiento de este o cualquier mes (1 a 1 o 1 a Varios)"
                                 >
                                   Match
                                 </button>
@@ -2518,13 +2872,25 @@ export default function ConciliacionBancariaView({
         {/* Right Column: Movimientos en Libro Mayor (Cross-period view) */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden flex flex-col">
           <div className="p-3 bg-slate-900 text-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-            <div>
+            <div className="flex items-center gap-2">
               <span className="font-bold text-xs uppercase tracking-wide flex items-center gap-1.5">
                 <span>📚</span> Asientos en Libros ({filteredBankVouchers.length})
               </span>
+              {selectedVoucherKeys.size > 0 && (
+                <span className="bg-indigo-500/30 text-indigo-300 border border-indigo-400/40 text-[10px] px-1.5 py-0.5 rounded font-bold font-mono">
+                  ✓ {selectedVoucherKeys.size} marcados
+                </span>
+              )}
             </div>
 
             <div className="flex items-center gap-1.5 flex-wrap">
+              <button
+                type="button"
+                onClick={handleSelectOnlyPendingVouchers}
+                className="text-[10px] text-indigo-300 hover:text-white font-sans font-semibold underline mr-1"
+              >
+                Marcar Pendientes
+              </button>
               <select
                 value={voucherPeriodScope}
                 onChange={(e) => setVoucherPeriodScope(e.target.value as any)}
@@ -2554,6 +2920,15 @@ export default function ConciliacionBancariaView({
             <table className="w-full text-left text-xs border-collapse font-mono">
               <thead className="bg-slate-100 text-slate-700 font-bold sticky top-0 z-10 border-b border-slate-200 text-[11px] shadow-2xs">
                 <tr>
+                  <th className="py-2 px-2 text-center w-8">
+                    <input
+                      type="checkbox"
+                      checked={filteredBankVouchers.length > 0 && selectedVoucherKeys.size === filteredBankVouchers.length}
+                      onChange={handleSelectAllVisibleVouchers}
+                      className="rounded text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5"
+                      title="Seleccionar / Deseleccionar todos los asientos visibles"
+                    />
+                  </th>
                   <th className="py-2 px-2">Fecha / Mes</th>
                   <th className="py-2 px-2">N° Asiento</th>
                   <th className="py-2 px-2">Glosa / Concepto</th>
@@ -2565,91 +2940,106 @@ export default function ConciliacionBancariaView({
               <tbody className="divide-y divide-slate-200 text-[11px]">
                 {filteredBankVouchers.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-slate-400 font-sans italic">
+                    <td colSpan={7} className="py-8 text-center text-slate-400 font-sans italic">
                       No hay comprobantes contables registrados para esta cuenta en el alcance seleccionado.
                     </td>
                   </tr>
                 ) : (
-                  filteredBankVouchers.map((bv, idx) => (
-                    <tr
-                      key={idx}
-                      className={
-                        bv.isMatchedInCurrent
-                          ? 'bg-emerald-50/50'
-                          : bv.isMatchedInOther
-                          ? 'bg-slate-100/70 text-slate-400'
-                          : 'hover:bg-slate-50'
-                      }
-                    >
-                      <td className="py-2 px-2 text-slate-600 text-[10px]">
-                        <div>{bv.date}</div>
-                        {bv.period !== selectedPeriod && (
-                          <span className="text-[9px] font-sans font-bold bg-purple-100 text-purple-800 px-1 rounded border border-purple-200">
-                            Mes {bv.period}
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-2 px-2 font-bold text-indigo-700 font-mono">
-                        {onOpenVoucher ? (
-                          <button
-                            type="button"
-                            onClick={() => onOpenVoucher(bv.voucher)}
-                            className="inline-flex items-center gap-1 font-bold text-xs text-indigo-700 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-1.5 py-0.5 rounded border border-indigo-200 transition-all cursor-pointer shadow-2xs group"
-                            title="Abrir comprobante para consultar, modificar, anular o eliminar"
-                          >
-                            <span>N° {bv.voucher.voucherNumber}</span>
-                            <ExternalLink className="w-2.5 h-2.5 text-indigo-500 group-hover:text-indigo-800" />
-                          </button>
-                        ) : (
-                          <span>N° {bv.voucher.voucherNumber}</span>
-                        )}
-                      </td>
-                      <td className="py-2 px-2 font-sans truncate max-w-[130px] text-slate-900 font-medium" title={bv.gloss}>
-                        {bv.gloss}
-                      </td>
-                      <td className="py-2 px-1.5 text-right font-bold text-emerald-700">
-                        {bv.debit > 0 ? `$${bv.debit.toLocaleString('es-CL')}` : '-'}
-                      </td>
-                      <td className="py-2 px-1.5 text-right font-bold text-rose-700">
-                        {bv.credit > 0 ? `$${bv.credit.toLocaleString('es-CL')}` : '-'}
-                      </td>
-                      <td className="py-2 px-2 text-center font-sans">
-                        {bv.isMatchedInCurrent ? (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                            ✓ Este Mes
-                          </span>
-                        ) : bv.isMatchedInOther ? (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-200 text-slate-600">
-                            Conciliado ({bv.matchedInOtherPeriod})
-                          </span>
-                        ) : (
-                          <div className="flex flex-col items-center">
-                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800">
-                              ⏳ Pendiente
+                  filteredBankVouchers.map((bv, idx) => {
+                    const key = `${bv.voucher.id}_${bv.line?.id || idx}`;
+                    const isChecked = selectedVoucherKeys.has(key) || selectedVoucherKeys.has(bv.voucher.id);
+
+                    return (
+                      <tr
+                        key={idx}
+                        className={
+                          isChecked
+                            ? 'bg-indigo-50/90 ring-1 ring-indigo-400 font-medium'
+                            : bv.isMatchedInCurrent
+                            ? 'bg-emerald-50/50'
+                            : bv.isMatchedInOther
+                            ? 'bg-slate-100/70 text-slate-400'
+                            : 'hover:bg-slate-50'
+                        }
+                      >
+                        <td className="py-2 px-2 text-center">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => handleToggleSelectVoucher(key)}
+                            className="rounded text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5"
+                          />
+                        </td>
+                        <td className="py-2 px-2 text-slate-600 text-[10px]">
+                          <div>{bv.date}</div>
+                          {bv.period !== selectedPeriod && (
+                            <span className="text-[9px] font-sans font-bold bg-purple-100 text-purple-800 px-1 rounded border border-purple-200">
+                              Mes {bv.period}
                             </span>
-                            {(() => {
-                              const isDebitDup = bv.debit > 0 && (duplicateVouchersMap.get(`DEBIT_${bv.debit}`)?.count || 0) >= 2;
-                              const isCreditDup = bv.credit > 0 && (duplicateVouchersMap.get(`CREDIT_${bv.credit}`)?.count || 0) >= 2;
-                              if (isDebitDup || isCreditDup) {
-                                const dupCount = isDebitDup
-                                  ? duplicateVouchersMap.get(`DEBIT_${bv.debit}`)?.count
-                                  : duplicateVouchersMap.get(`CREDIT_${bv.credit}`)?.count;
-                                return (
-                                  <span
-                                    className="text-[8.5px] font-bold text-amber-900 bg-amber-100/90 px-1 py-0.5 rounded border border-amber-300 mt-0.5 text-center leading-tight"
-                                    title={`Existen ${dupCount} comprobantes con el mismo monto en contabilidad. Posible duplicado registrado por el contador.`}
-                                  >
-                                    ⚠️ {dupCount} asientos iguales
-                                  </span>
-                                );
-                              }
-                              return null;
-                            })()}
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  ))
+                          )}
+                        </td>
+                        <td className="py-2 px-2 font-bold text-indigo-700 font-mono">
+                          {onOpenVoucher ? (
+                            <button
+                              type="button"
+                              onClick={() => onOpenVoucher(bv.voucher)}
+                              className="inline-flex items-center gap-1 font-bold text-xs text-indigo-700 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-1.5 py-0.5 rounded border border-indigo-200 transition-all cursor-pointer shadow-2xs group"
+                              title="Abrir comprobante para consultar, modificar, anular o eliminar"
+                            >
+                              <span>N° {bv.voucher.voucherNumber}</span>
+                              <ExternalLink className="w-2.5 h-2.5 text-indigo-500 group-hover:text-indigo-800" />
+                            </button>
+                          ) : (
+                            <span>N° {bv.voucher.voucherNumber}</span>
+                          )}
+                        </td>
+                        <td className="py-2 px-2 font-sans truncate max-w-[130px] text-slate-900 font-medium" title={bv.gloss}>
+                          {bv.gloss}
+                        </td>
+                        <td className="py-2 px-1.5 text-right font-bold text-emerald-700">
+                          {bv.debit > 0 ? `$${bv.debit.toLocaleString('es-CL')}` : '-'}
+                        </td>
+                        <td className="py-2 px-1.5 text-right font-bold text-rose-700">
+                          {bv.credit > 0 ? `$${bv.credit.toLocaleString('es-CL')}` : '-'}
+                        </td>
+                        <td className="py-2 px-2 text-center font-sans">
+                          {bv.isMatchedInCurrent ? (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                              ✓ Este Mes
+                            </span>
+                          ) : bv.isMatchedInOther ? (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-300">
+                              ✓ Conciliado ({bv.matchedInOtherPeriod})
+                            </span>
+                          ) : (
+                            <div className="flex flex-col items-center">
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800">
+                                ⏳ Pendiente
+                              </span>
+                              {(() => {
+                                const isDebitDup = bv.debit > 0 && (duplicateVouchersMap.get(`DEBIT_${bv.debit}`)?.count || 0) >= 2;
+                                const isCreditDup = bv.credit > 0 && (duplicateVouchersMap.get(`CREDIT_${bv.credit}`)?.count || 0) >= 2;
+                                if (isDebitDup || isCreditDup) {
+                                  const dupCount = isDebitDup
+                                    ? duplicateVouchersMap.get(`DEBIT_${bv.debit}`)?.count
+                                    : duplicateVouchersMap.get(`CREDIT_${bv.credit}`)?.count;
+                                  return (
+                                    <span
+                                      className="text-[8.5px] font-bold text-amber-900 bg-amber-100/90 px-1 py-0.5 rounded border border-amber-300 mt-0.5 text-center leading-tight"
+                                      title={`Existen ${dupCount} comprobantes con el mismo monto en contabilidad. Posible duplicado registrado por el contador.`}
+                                    >
+                                      ⚠️ {dupCount} asientos iguales
+                                    </span>
+                                  );
+                                }
+                                return null;
+                              })()}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -2984,6 +3374,113 @@ export default function ConciliacionBancariaView({
         }}
       />
 
+      {/* BARRA FLOTANTE DE CONCILIACIÓN MULTILÍNEA (N a 1 / 1 a N / N a M) */}
+      {(selectedStatementLineIds.size > 0 || selectedVoucherKeys.size > 0) && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-slate-900/95 backdrop-blur-md text-white border-2 border-indigo-500 shadow-2xl rounded-2xl p-3 sm:px-5 sm:py-3.5 max-w-4xl w-[95%] flex flex-col md:flex-row items-center justify-between gap-3 animate-in slide-in-from-bottom-5 duration-200 ring-4 ring-indigo-500/20">
+          {/* Lado Izquierdo: Resumen Cartola */}
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-indigo-600/30 text-indigo-300 border border-indigo-400/40">
+              <ArrowRightLeft className="w-5 h-5 text-indigo-300" />
+            </div>
+            <div>
+              <div className="text-[11px] uppercase tracking-wider text-slate-400 font-bold flex items-center gap-1.5">
+                <span>🏦 Cartola:</span>
+                <strong className="text-white text-xs">{selectedCartolaLines.length} selecc.</strong>
+              </div>
+              <div className="text-xs font-mono font-bold text-slate-200">
+                Total: <span className="text-emerald-400">${selectedCartolaTotal.toLocaleString('es-CL')}</span>
+                {selectedCartolaCharges > 0 && selectedCartolaDeposits > 0 && (
+                  <span className="text-[10px] text-slate-400 font-sans ml-1">
+                    (Cargos: ${selectedCartolaCharges.toLocaleString('es-CL')}, Abonos: ${selectedCartolaDeposits.toLocaleString('es-CL')})
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Centro: Flechas y Cuadratura */}
+          <div className="flex flex-col items-center">
+            <div className="flex items-center gap-2">
+              <span className="text-slate-400 text-xs font-bold">⮂</span>
+              <span
+                className={`px-2.5 py-1 rounded-full text-xs font-bold font-mono tracking-tight flex items-center gap-1 ${
+                  isSelectionBalanced
+                    ? 'bg-emerald-500 text-white shadow-sm'
+                    : selectedCartolaLines.length > 0 && selectedVoucherItems.length > 0
+                    ? 'bg-amber-500 text-slate-950 font-black'
+                    : 'bg-slate-800 text-slate-400 border border-slate-700'
+                }`}
+              >
+                {isSelectionBalanced ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-white" />
+                    <span>✓ Cuadre Exacto ($0)</span>
+                  </>
+                ) : selectedCartolaLines.length > 0 && selectedVoucherItems.length > 0 ? (
+                  <>
+                    <AlertTriangle className="w-3.5 h-3.5 text-slate-950" />
+                    <span>Diferencia: ${selectionDifference.toLocaleString('es-CL')}</span>
+                  </>
+                ) : selectedCartolaLines.length === 0 ? (
+                  <span>👈 Marca movimientos en Cartola</span>
+                ) : (
+                  <span>👉 Marca asiento(s) en Libros</span>
+                )}
+              </span>
+              <span className="text-slate-400 text-xs font-bold">⮂</span>
+            </div>
+          </div>
+
+          {/* Lado Derecho: Resumen Libros y Botones de Acción */}
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <div className="text-[11px] uppercase tracking-wider text-slate-400 font-bold flex items-center justify-end gap-1.5">
+                <span>📚 Libros:</span>
+                <strong className="text-white text-xs">{selectedVoucherItems.length} selecc.</strong>
+              </div>
+              <div className="text-xs font-mono font-bold text-slate-200">
+                Total: <span className="text-emerald-400">${selectedVouchersTotal.toLocaleString('es-CL')}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleClearAllSelections}
+                className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition-colors"
+                title="Desmarcar todos"
+              >
+                ✕
+              </button>
+
+              {selectedCartolaLines.some(l => l.matchedStatus === 'Conciliado') && (
+                <button
+                  type="button"
+                  onClick={handleBatchUnmatchSelection}
+                  className="px-3 py-1.5 rounded-lg bg-rose-600/80 hover:bg-rose-600 text-white text-xs font-bold transition-all shadow-xs"
+                  title="Desconciliar los movimientos seleccionados"
+                >
+                  Desconciliar
+                </button>
+              )}
+
+              <button
+                type="button"
+                disabled={selectedCartolaLines.length === 0 || selectedVoucherItems.length === 0}
+                onClick={handleBatchMatchSelection}
+                className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-lg flex items-center gap-1.5 ${
+                  selectedCartolaLines.length > 0 && selectedVoucherItems.length > 0
+                    ? 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white cursor-pointer hover:scale-105 active:scale-95'
+                    : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-60'
+                }`}
+              >
+                <span>⚡ Conciliar Selección ({selectedCartolaLines.length} ⮂ {selectedVoucherItems.length})</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ImportCSVModal
         isOpen={showImportModal}
         onClose={() => setShowImportModal(false)}
@@ -3004,6 +3501,8 @@ export default function ConciliacionBancariaView({
         setModalExactOnly={setModalExactOnly}
         modalSearch={modalSearch}
         setModalSearch={setModalSearch}
+        showMatchedInModal={showMatchedInModal}
+        setShowMatchedInModal={setShowMatchedInModal}
         availableVouchers={modalAvailableVouchers}
         onMatch={handleManualMatch}
         selectedPeriod={selectedPeriod}
@@ -3084,6 +3583,25 @@ export default function ConciliacionBancariaView({
         projects={projects}
         products={products}
         customAnalysisItems={customAnalysisItems}
+        onSuccess={async () => {
+          await fetchReconciliations();
+          if (onVouchersUpdated) {
+            onVouchersUpdated();
+          }
+        }}
+      />
+
+      <InterbankTransferModal
+        isOpen={showInterbankModal}
+        onClose={() => setShowInterbankModal(false)}
+        studyId={studyId}
+        company={company}
+        accounts={accounts}
+        vouchers={vouchers}
+        reconciliations={savedReconciliations}
+        fiscalYears={fiscalYears}
+        initialPeriod={selectedPeriod}
+        onOpenVoucher={onOpenVoucher}
         onSuccess={async () => {
           await fetchReconciliations();
           if (onVouchersUpdated) {

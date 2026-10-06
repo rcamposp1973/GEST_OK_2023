@@ -162,6 +162,8 @@ interface ManualMatchModalProps {
   setModalExactOnly: (val: boolean) => void;
   modalSearch: string;
   setModalSearch: (val: string) => void;
+  showMatchedInModal?: boolean;
+  setShowMatchedInModal?: (val: boolean) => void;
   availableVouchers: {
     voucher: Voucher;
     line: any;
@@ -170,8 +172,10 @@ interface ManualMatchModalProps {
     date: string;
     period: string;
     gloss: string;
+    isMatchedInCurrent?: boolean;
+    isMatchedInOther?: boolean;
   }[];
-  onMatch: (voucherId: string, voucherNumber: number, voucherPeriod: string) => void;
+  onMatch: (voucherId: string, voucherNumber: number | string, voucherPeriod: string, additionalVoucherIds?: string[]) => void;
   selectedPeriod: string;
 }
 
@@ -189,11 +193,50 @@ function ManualMatchModalContent({
   setModalExactOnly,
   modalSearch,
   setModalSearch,
+  showMatchedInModal = false,
+  setShowMatchedInModal,
   availableVouchers,
   onMatch,
   selectedPeriod
 }: ManualMatchModalProps & { manualMatchLine: BankStatementLine }) {
   const { dragProps, modalStyle } = useDraggableModal({ isOpen: true });
+  const [selectedVoucherKeys, setSelectedVoucherKeys] = useState<Set<string>>(new Set());
+
+  const targetLineAmount = (manualMatchLine.charge || 0) + (manualMatchLine.deposit || 0);
+
+  // Toggle voucher selection in modal
+  const handleToggleVoucherKey = (key: string) => {
+    setSelectedVoucherKeys(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  // Selected vouchers summary inside modal
+  const selectedItems = useMemo(() => {
+    return availableVouchers.filter((bv, idx) => {
+      const key = `${bv.voucher.id}_${bv.line?.id || idx}`;
+      return selectedVoucherKeys.has(key) || selectedVoucherKeys.has(bv.voucher.id);
+    });
+  }, [availableVouchers, selectedVoucherKeys]);
+
+  const selectedSum = useMemo(() => {
+    return selectedItems.reduce((s, bv) => s + (bv.debit > 0 ? bv.debit : bv.credit), 0);
+  }, [selectedItems]);
+
+  const modalDiff = Math.abs(targetLineAmount - selectedSum);
+  const isExactGroupMatch = selectedItems.length > 0 && modalDiff === 0;
+
+  const handleApplyGroupMatch = () => {
+    if (selectedItems.length === 0) return;
+    const firstVoucher = selectedItems[0];
+    const uniqueNumbers = Array.from(new Set(selectedItems.map(v => Number(v.voucher.voucherNumber)).filter(n => !isNaN(n) && n > 0)));
+    const uniqueIds = Array.from(new Set(selectedItems.map(v => v.voucher.id)));
+    const vNumberStr = uniqueNumbers.length === 1 ? uniqueNumbers[0] : uniqueNumbers.join(', ');
+    onMatch(firstVoucher.voucher.id, vNumberStr, firstVoucher.period, uniqueIds);
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4">
@@ -212,12 +255,12 @@ function ManualMatchModalContent({
             </div>
             <div>
               <h4 className="text-sm font-black text-slate-900 uppercase flex items-center gap-1.5">
-                <span>🔗</span> Conciliar Partida con Asiento (Mismo Mes o Distinto Mes)
+                <span>🔗</span> Conciliar Partida con Asiento (1 a 1 o 1 a Varios)
               </h4>
               <div className="text-xs text-slate-600 mt-0.5">
                 Línea Cartola: <strong className="text-slate-900">{manualMatchLine.description}</strong> ({manualMatchLine.date}) — Monto:{' '}
                 <strong className={manualMatchLine.charge > 0 ? 'text-rose-700' : 'text-emerald-700'}>
-                  ${((manualMatchLine.charge || 0) + (manualMatchLine.deposit || 0)).toLocaleString('es-CL')} (
+                  ${targetLineAmount.toLocaleString('es-CL')} (
                   {manualMatchLine.charge > 0 ? 'Cargo / Egreso' : 'Abono / Ingreso'})
                 </strong>
               </div>
@@ -255,7 +298,7 @@ function ManualMatchModalContent({
             />
           </div>
 
-          <div className="flex items-end pb-1.5">
+          <div className="flex flex-col justify-end gap-1 pb-0.5">
             <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800 text-xs">
               <input
                 type="checkbox"
@@ -263,10 +306,51 @@ function ManualMatchModalContent({
                 onChange={(e) => setModalExactOnly(e.target.checked)}
                 className="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4"
               />
-              <span>Solo monto idéntico (${((manualMatchLine.charge || 0) + (manualMatchLine.deposit || 0)).toLocaleString('es-CL')})</span>
+              <span>Solo monto idéntico (${targetLineAmount.toLocaleString('es-CL')})</span>
             </label>
+            {setShowMatchedInModal && (
+              <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-600 text-[11px]">
+                <input
+                  type="checkbox"
+                  checked={showMatchedInModal}
+                  onChange={(e) => setShowMatchedInModal(e.target.checked)}
+                  className="rounded text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5"
+                />
+                <span>Incluir asientos ya vinculados</span>
+              </label>
+            )}
           </div>
         </div>
+
+        {/* Selected Vouchers Batch Bar in Modal if items selected */}
+        {selectedItems.length > 0 && (
+          <div className="bg-indigo-900 text-white p-2.5 rounded-lg flex items-center justify-between gap-3 text-xs shadow-md animate-in fade-in">
+            <div className="flex items-center gap-3">
+              <span>
+                Asientos Marcados: <strong>{selectedItems.length}</strong> (Total: <strong>${selectedSum.toLocaleString('es-CL')}</strong>)
+              </span>
+              <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${isExactGroupMatch ? 'bg-emerald-500 text-white' : 'bg-amber-400 text-slate-950'}`}>
+                {isExactGroupMatch ? '✓ Calce Exacto' : `Diferencia: $${modalDiff.toLocaleString('es-CL')}`}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedVoucherKeys(new Set())}
+                className="px-2 py-1 text-[11px] text-indigo-200 hover:text-white"
+              >
+                Desmarcar
+              </button>
+              <button
+                type="button"
+                onClick={handleApplyGroupMatch}
+                className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded shadow-xs text-xs"
+              >
+                Vincular los {selectedItems.length} Asientos
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Duplicate Vouchers Warning in Modal */}
         {(() => {
@@ -285,8 +369,7 @@ function ManualMatchModalContent({
                   <strong className="font-bold">Advertencia de Asientos Múltiples / Duplicados en Libros:</strong>
                   <p className="mt-0.5 text-[11px] text-amber-800">
                     Se detectaron <strong>{exactMatchingVouchers.length} comprobantes contables</strong> con el mismo monto exacto (Asientos:{' '}
-                    {exactMatchingVouchers.map(v => `N° ${v.voucher.voucherNumber}`).join(', ')}). El sistema omitió la conciliación automática
-                    por seguridad. Seleccione manualmente el comprobante correcto o elimine el duplicado en el libro contable.
+                    {exactMatchingVouchers.map(v => `N° ${v.voucher.voucherNumber}`).join(', ')}). Seleccione manualmente el comprobante correcto.
                   </p>
                 </div>
               </div>
@@ -300,6 +383,21 @@ function ManualMatchModalContent({
           <table className="w-full text-left text-xs font-mono">
             <thead className="bg-slate-100 sticky top-0 border-b border-slate-200">
               <tr>
+                <th className="p-2 text-center w-8">
+                  <input
+                    type="checkbox"
+                    checked={availableVouchers.length > 0 && selectedItems.length === availableVouchers.length}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedVoucherKeys(new Set(availableVouchers.map((bv, idx) => `${bv.voucher.id}_${bv.line?.id || idx}`)));
+                      } else {
+                        setSelectedVoucherKeys(new Set());
+                      }
+                    }}
+                    className="rounded text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5"
+                    title="Seleccionar todos los visibles"
+                  />
+                </th>
                 <th className="p-2">Período / Fecha</th>
                 <th className="p-2">N° Asiento</th>
                 <th className="p-2">Tipo</th>
@@ -311,19 +409,29 @@ function ManualMatchModalContent({
             <tbody className="divide-y">
               {availableVouchers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-slate-400 font-sans italic">
-                    No se encontraron comprobantes pendientes con los filtros seleccionados. Desmarca "Solo monto idéntico" o amplía el alcance temporal.
+                  <td colSpan={7} className="p-8 text-center text-slate-400 font-sans italic">
+                    No se encontraron comprobantes con los filtros seleccionados. Desmarca "Solo monto idéntico" o amplía el alcance temporal.
                   </td>
                 </tr>
               ) : (
                 availableVouchers.map((bv, idx) => {
+                  const key = `${bv.voucher.id}_${bv.line?.id || idx}`;
+                  const isChecked = selectedVoucherKeys.has(key) || selectedVoucherKeys.has(bv.voucher.id);
                   const isExact =
                     (manualMatchLine.charge > 0 && bv.credit === manualMatchLine.charge) ||
                     (manualMatchLine.deposit > 0 && bv.debit === manualMatchLine.deposit);
                   const isCrossPeriod = bv.period !== selectedPeriod;
 
                   return (
-                    <tr key={idx} className={`hover:bg-slate-50 ${isExact ? 'bg-emerald-50/30' : ''}`}>
+                    <tr key={idx} className={`hover:bg-slate-50 ${isChecked ? 'bg-indigo-50/70 font-semibold' : isExact ? 'bg-emerald-50/30' : ''}`}>
+                      <td className="p-2 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => handleToggleVoucherKey(key)}
+                          className="rounded text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5"
+                        />
+                      </td>
                       <td className="p-2">
                         <div>{bv.date}</div>
                         {isCrossPeriod ? (
@@ -332,6 +440,11 @@ function ManualMatchModalContent({
                           </span>
                         ) : (
                           <span className="text-[9px] text-slate-500 font-sans">Mismo período</span>
+                        )}
+                        {bv.isMatchedInCurrent && (
+                          <span className="ml-1 text-[8.5px] font-sans font-bold bg-emerald-100 text-emerald-800 px-1 rounded">
+                            Ya Vinculado
+                          </span>
                         )}
                       </td>
                       <td className="p-2 font-bold text-indigo-700">N° {bv.voucher.voucherNumber}</td>
@@ -350,7 +463,7 @@ function ManualMatchModalContent({
                           onClick={() => onMatch(bv.voucher.id, bv.voucher.voucherNumber || 0, bv.period)}
                           className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded font-black text-xs transition-colors shadow-2xs"
                         >
-                          Vincular y Guardar
+                          Vincular
                         </button>
                       </td>
                     </tr>
@@ -362,7 +475,7 @@ function ManualMatchModalContent({
         </div>
 
         <div className="text-[11px] text-slate-500 flex justify-between items-center border-t pt-2">
-          <span>* Al presionar "Vincular", el estado se graba automáticamente en tiempo real.</span>
+          <span>* Puedes marcar varios asientos con los checkboxes para conciliar 1 movimiento de cartola con múltiples asientos contables.</span>
           <button
             onClick={onClose}
             className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded text-xs"

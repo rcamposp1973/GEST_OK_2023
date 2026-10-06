@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { db, auth } from '../lib/firebase';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
-import { Company, ChartOfAccount, Auxiliary, RCVDocument, Voucher, CollectionRecord, CollectionItem, FiscalPeriodYear } from '../types';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, setDoc } from 'firebase/firestore';
+import { Company, ChartOfAccount, Auxiliary, RCVDocument, Voucher, CollectionRecord, CollectionItem, FiscalPeriodYear, AccountMatch, MatchedLineRef } from '../types';
 import { checkIsPeriodClosed } from '../utils/periodUtils';
 import { logAuditEvent } from '../utils/auditLogger';
 import { sanitizeVoucherLines } from '../utils/voucherValidation';
@@ -542,6 +542,49 @@ export default function CobranzaView({
       };
 
       await addDoc(collection(companyRef, 'collections'), newRecordData);
+
+      // 6. Si es una compensación o aplicación de Nota de Crédito, registrar automáticamente el calce en accountMatches
+      if (isComp || !isBankUsed) {
+        try {
+          const matchId = `match_col_${vRef.id}`;
+          const matchedLinesRef: MatchedLineRef[] = voucherLines
+            .filter(l => l.accountId === customerReceivableAcc.id || l.accountCode === customerReceivableAcc.code)
+            .map((l, lIdx) => ({
+              voucherId: vRef.id,
+              voucherNumber: nextVoucherNumber,
+              voucherDate: collectDate,
+              voucherPeriod: collectPeriod,
+              lineIndex: lIdx,
+              accountId: l.accountId || customerReceivableAcc.id,
+              accountCode: l.accountCode || customerReceivableAcc.code,
+              debit: l.debit || 0,
+              credit: l.credit || 0,
+              gloss: l.gloss || autoGloss,
+              documentRef: l.documentRef,
+              auxiliaryRut: l.auxiliaryRut,
+              auxiliaryName: l.auxiliaryName
+            }));
+
+          if (matchedLinesRef.length >= 2) {
+            const compMatch: AccountMatch = {
+              id: matchId,
+              accountId: customerReceivableAcc.id,
+              accountCode: customerReceivableAcc.code,
+              accountName: customerReceivableAcc.name,
+              matchedLines: matchedLinesRef,
+              totalAmount: recordAmount,
+              matchDate: new Date().toISOString(),
+              matchedBy: auth.currentUser?.email || 'Módulo de Cobranzas / Compensación NC',
+              notes: autoGloss,
+              creationMode: 'AUTOMATICO',
+              status: 'CALZADO'
+            };
+            await setDoc(doc(companyRef, 'accountMatches', matchId), compMatch);
+          }
+        } catch (matchErr) {
+          console.warn('Advertencia al guardar calce automático de compensación:', matchErr);
+        }
+      }
 
       if (!isBankUsed) {
         alert(`✅ Aplicación de Nota de Crédito registrada con éxito.\nSe generó automáticamente el Comprobante de Traspaso N° ${nextVoucherNumber} por $${recordAmount.toLocaleString('es-CL')} (sin línea de banco). Los documentos fueron compensados en cartera.`);

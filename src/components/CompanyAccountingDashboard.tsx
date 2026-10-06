@@ -18,6 +18,7 @@ import NominasPagoView from './NominasPagoView';
 import CobranzaView from './CobranzaView';
 import AnalisisAuxiliaresView from './AnalisisAuxiliaresView';
 import AnalisisCuentasView from './AnalisisCuentasView';
+import PlanillaConsultasDinamicasView from './PlanillaConsultasDinamicasView';
 import ConciliacionBancariaView from './ConciliacionBancariaView';
 import LibroBancoColaborativoView from './LibroBancoColaborativoView';
 import CargaMasivaComprobantesView from './CargaMasivaComprobantesView';
@@ -83,6 +84,7 @@ const QUICK_ACCESS_ITEMS = [
   { id: 'estadoResultados', label: 'Estado de Resultados IFRS', group: 'FINANZAS', icon: TrendingUp, tab: 'estadoResultados' },
   { id: 'analisisAuxiliares', label: 'Auxiliares Cuentas Corrientes', group: 'FINANZAS', icon: Users, tab: 'analisisAuxiliares' },
   { id: 'analisisCuentas', label: 'Análisis de Cuentas', group: 'FINANZAS', icon: Sliders, tab: 'analisisCuentas' },
+  { id: 'planillaConsultas', label: 'Planilla Dinámica (Consultas & Calce)', group: 'FINANZAS', icon: FileSpreadsheet, tab: 'planillaConsultas' },
   { id: 'reportesAnaliticos', label: 'Reportes Analíticos', group: 'FINANZAS', icon: TableIcon, tab: 'reportesAnaliticos' },
   { id: 'activoFijo', label: 'Activo Fijo & Depreciación', group: 'FINANZAS', icon: Building2, tab: 'activoFijo' },
   { id: 'auditorEstadosFinancieros', label: 'Auditor Estados Financieros', group: 'FINANZAS', icon: ShieldCheck, tab: 'auditorEstadosFinancieros' },
@@ -133,7 +135,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
   const { withProcess } = useProcess();
   type RibbonGroup = 'FINANZAS' | 'OPERACIONES' | 'TESORERIA' | 'PERSONAL' | 'CARGA (SII)' | 'IMPUESTOS' | 'INDICADORES' | 'CONFIGURACIONES' | 'FAVORITOS';
   const [activeRibbonGroup, setActiveRibbonGroup] = useState<RibbonGroup>('FINANZAS');
-  const [activeTab, setActiveTab] = useState<'accounts' | 'auxiliaries' | 'periods' | 'rcv' | 'exchange' | 'rcvParams' | 'f29Codes' | 'vouchers' | 'libroDiario' | 'libroMayor' | 'balance8' | 'balanceIFRS' | 'analisisAuxiliares' | 'analisisCuentas' | 'reportesAnaliticos' | 'estadoResultados' | 'indicadoresFinancieros' | 'auditorEstadosFinancieros' | 'smartNotebooks' | 'flujoDeCaja' | 'nominasPago' | 'cobranza' | 'conciliacionBancaria' | 'libroBancoColaborativo' | 'cargaMasiva' | 'formulario29' | 'plantillasCarga' | 'emisionDte' | 'tablasAnalisis' | 'controlFolios' | 'productsServices' | 'operativaComercial' | 'stockKardex' | 'warehouses' | 'employees' | 'liquidaciones' | 'activoFijo' | 'ddjj' | 'agenticStudy2040' | 'agenticPyme2040'>('vouchers');
+  const [activeTab, setActiveTab] = useState<'accounts' | 'auxiliaries' | 'periods' | 'rcv' | 'exchange' | 'rcvParams' | 'f29Codes' | 'vouchers' | 'libroDiario' | 'libroMayor' | 'balance8' | 'balanceIFRS' | 'analisisAuxiliares' | 'analisisCuentas' | 'planillaConsultas' | 'reportesAnaliticos' | 'estadoResultados' | 'indicadoresFinancieros' | 'auditorEstadosFinancieros' | 'smartNotebooks' | 'flujoDeCaja' | 'nominasPago' | 'cobranza' | 'conciliacionBancaria' | 'libroBancoColaborativo' | 'cargaMasiva' | 'formulario29' | 'plantillasCarga' | 'emisionDte' | 'tablasAnalisis' | 'controlFolios' | 'productsServices' | 'operativaComercial' | 'stockKardex' | 'warehouses' | 'employees' | 'liquidaciones' | 'activoFijo' | 'ddjj' | 'agenticStudy2040' | 'agenticPyme2040'>('vouchers');
   const [auxSubTab, setAuxSubTab] = useState<'deudores' | 'acreedores'>('deudores');
   const [employeeSubTab, setEmployeeSubTab] = useState<'employees' | 'contracts' | 'attendance' | 'advances' | 'severance' | 'certificates'>('employees');
   const [payrollTab, setPayrollTab] = useState<'NOMINA' | 'LIQUIDACION_INDIVIDUAL' | 'LRD_DT' | 'PREVIRED' | 'PARAMETROS' | 'CONCEPTOS' | 'RELIQUIDACIONES'>('NOMINA');
@@ -159,7 +161,7 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
     // Default complete list with Estado de Resultados and core modules
     return [
       'vouchers', 'libroDiario', 'libroMayor', 'balance8', 'balanceIFRS', 
-      'estadoResultados', 'analisisAuxiliares', 'analisisCuentas', 
+      'estadoResultados', 'analisisAuxiliares', 'analisisCuentas', 'planillaConsultas',
       'conciliacionBancaria', 'rcv', 'formulario29', 'liquidaciones', 
       'operativaComercial', 'calculator'
     ];
@@ -8107,6 +8109,22 @@ export default function CompanyAccountingDashboard({ studyId, company, currentUs
           rcvDocuments={rcvDocuments}
           onVouchersUpdated={fetchData}
           onOpenVoucher={handleOpenVoucherModal}
+        />
+      )}
+
+      {/* TAB: PLANILLA DINÁMICA DE CONSULTAS & COMPENSACIÓN */}
+      {activeTab === 'planillaConsultas' && (
+        <PlanillaConsultasDinamicasView
+          studyId={studyId}
+          company={company}
+          accounts={accounts}
+          vouchers={vouchers}
+          fiscalYears={fiscalYears}
+          auxiliaries={auxiliaries}
+          rcvDocuments={rcvDocuments}
+          onVouchersUpdated={fetchData}
+          onOpenVoucher={handleOpenVoucherModal}
+          onBackToTraditionalAnalysis={() => setActiveTab('analisisCuentas')}
         />
       )}
 

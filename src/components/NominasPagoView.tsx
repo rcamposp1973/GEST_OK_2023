@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { db, auth } from '../lib/firebase';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
-import { Company, ChartOfAccount, Auxiliary, RCVDocument, Voucher, PaymentBatch, PaymentItem, FiscalPeriodYear } from '../types';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, setDoc } from 'firebase/firestore';
+import { Company, ChartOfAccount, Auxiliary, RCVDocument, Voucher, PaymentBatch, PaymentItem, FiscalPeriodYear, AccountMatch, MatchedLineRef } from '../types';
 import { checkIsPeriodClosed } from '../utils/periodUtils';
 import { logAuditEvent } from '../utils/auditLogger';
 import { sanitizeVoucherLines } from '../utils/voucherValidation';
@@ -423,6 +423,49 @@ export default function NominasPagoView({
       };
 
       await addDoc(collection(companyRef, 'paymentBatches'), newBatchData);
+
+      // 4. Si es compensación pura sin banco, registrar en accountMatches
+      if (!isBankUsed) {
+        try {
+          const matchId = `match_pay_${voucherDocRef.id}`;
+          const matchedLinesRef: MatchedLineRef[] = voucherLines
+            .filter(l => l.accountId === supplierAcc.id || l.accountCode === supplierAcc.code)
+            .map((l, lIdx) => ({
+              voucherId: voucherDocRef.id,
+              voucherNumber: nextVoucherNumber,
+              voucherDate: batchDate,
+              voucherPeriod: batchPeriod,
+              lineIndex: lIdx,
+              accountId: l.accountId || supplierAcc.id,
+              accountCode: l.accountCode || supplierAcc.code,
+              debit: l.debit || 0,
+              credit: l.credit || 0,
+              gloss: l.gloss || batchGloss,
+              documentRef: l.documentRef,
+              auxiliaryRut: l.auxiliaryRut,
+              auxiliaryName: l.auxiliaryName
+            }));
+
+          if (matchedLinesRef.length >= 2) {
+            const compMatch: AccountMatch = {
+              id: matchId,
+              accountId: supplierAcc.id,
+              accountCode: supplierAcc.code,
+              accountName: supplierAcc.name,
+              matchedLines: matchedLinesRef,
+              totalAmount: totalBatchAmount,
+              matchDate: new Date().toISOString(),
+              matchedBy: auth.currentUser?.email || 'Módulo de Nóminas / Compensación NC',
+              notes: batchGloss,
+              creationMode: 'AUTOMATICO',
+              status: 'CALZADO'
+            };
+            await setDoc(doc(companyRef, 'accountMatches', matchId), compMatch);
+          }
+        } catch (matchErr) {
+          console.warn('Advertencia al guardar calce automático de proveedores:', matchErr);
+        }
+      }
 
       if (!isBankUsed) {
         alert(`✅ Compensación N° ${nextBatchNumber} procesada con éxito.\nSe generó automáticamente el Comprobante de Traspaso N° ${nextVoucherNumber} (sin línea de banco). Documentos compensados en cartera de proveedores.`);

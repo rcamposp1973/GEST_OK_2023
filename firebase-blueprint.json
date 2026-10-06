@@ -66,6 +66,20 @@
         "moduleOrder": { "type": "object" }
       },
       "required": ["userId", "moduleOrder"]
+    },
+    "savedAccountingQuery": {
+      "title": "SavedAccountingQuery",
+      "description": "Consultas dinámicas y plantillas guardadas tipo hoja de cálculo / SQL",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "sourceType": { "type": "string" },
+        "accountCode": { "type": "string" },
+        "cutoffDate": { "type": "string" },
+        "statusFilter": { "type": "string" },
+        "rutFilter": { "type": "string" }
+      },
+      "required": ["name", "sourceType"]
     }
   },
   "firestore": {
@@ -80,6 +94,10 @@
     "/companies/{companyId}": {
       "schema": "company",
       "description": "Empresas clientes"
+    },
+    "/studies/{studyId}/companies/{companyId}/savedAccountingQueries/{queryId}": {
+      "schema": "savedAccountingQuery",
+      "description": "Consultas y plantillas dinámicas contables guardadas de la empresa"
     },
     "/auditLogs/{auditLogId}": {
       "schema": "auditLog",

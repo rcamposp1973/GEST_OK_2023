@@ -4,11 +4,20 @@
   :root {
     --font-corporate: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --bg-canvas: #f8fafc;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --border-subtle: #e2e8f0;
+    --border-strong: #cbd5e1;
+    --brand-primary: #0f172a;
+    --brand-accent: #2563eb;
   }
 
   html, body {
     font-family: var(--font-corporate);
-    @apply bg-slate-100/80 text-slate-800 antialiased selection:bg-slate-900 selection:text-white;
+    background-color: #f8fafc;
+    color: #0f172a;
+    @apply antialiased selection:bg-slate-900 selection:text-white;
     letter-spacing: -0.011em;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
@@ -19,55 +28,36 @@
     font-variant-numeric: tabular-nums lining-nums;
   }
 
-  /* Professional corporate scrollbars */
+  /* Professional corporate scrollbars (Linear / Mercury refined) */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
   ::-webkit-scrollbar-track {
-    background: #f1f5f9;
+    background: #f8fafc;
   }
   ::-webkit-scrollbar-thumb {
     background: #cbd5e1;
-    border-radius: 3px;
+    border-radius: 9999px;
   }
   ::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
   }
 }
 
-/* Stripe Design System Utilities */
-.stripe-canvas {
-  background-color: #f6f9fc;
+/* Linear / Ramp Card & Modal subtle elevation */
+.mercury-card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 1px 2px -1px rgba(15, 23, 42, 0.03);
 }
 
-.stripe-mesh-hero {
-  background-color: #f6f9fc;
-  background-image:
-    radial-gradient(at 10% 12%, rgba(83, 58, 253, 0.16) 0px, transparent 55%),
-    radial-gradient(at 88% 8%, rgba(56, 189, 248, 0.18) 0px, transparent 50%),
-    radial-gradient(at 52% 28%, rgba(192, 132, 252, 0.14) 0px, transparent 48%),
-    radial-gradient(at 15% 65%, rgba(254, 215, 170, 0.16) 0px, transparent 52%),
-    radial-gradient(at 82% 70%, rgba(99, 102, 241, 0.12) 0px, transparent 55%),
-    radial-gradient(at 48% 85%, rgba(5, 150, 105, 0.08) 0px, transparent 60%);
+.mercury-card-hover {
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
-
-.stripe-mesh-side {
-  background-color: #0d253d;
-  background-image:
-    radial-gradient(at 15% 15%, rgba(83, 58, 253, 0.45) 0px, transparent 60%),
-    radial-gradient(at 85% 20%, rgba(56, 189, 248, 0.35) 0px, transparent 55%),
-    radial-gradient(at 50% 60%, rgba(168, 85, 247, 0.3) 0px, transparent 60%),
-    radial-gradient(at 80% 85%, rgba(251, 146, 60, 0.25) 0px, transparent 50%),
-    radial-gradient(at 20% 90%, rgba(5, 150, 105, 0.3) 0px, transparent 50%);
-}
-
-.stripe-card-shadow {
-  box-shadow: 0 24px 64px -12px rgba(13, 37, 61, 0.08), 0 4px 16px -2px rgba(13, 37, 61, 0.04);
-}
-
-.stripe-card-float {
-  box-shadow: 0 32px 80px -16px rgba(13, 37, 61, 0.14), 0 8px 24px -4px rgba(13, 37, 61, 0.06);
+.mercury-card-hover:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.06), 0 2px 4px -2px rgba(15, 23, 42, 0.03);
 }
 
 /* Indicador global de cursor en proceso */
@@ -102,17 +92,26 @@ body.cursor-progress * {
 .fixed.inset-0.bg-slate-900\/60,
 .fixed.inset-0.bg-slate-900\/70,
 .fixed.inset-0.bg-slate-900\/80 {
-  background-color: rgba(15, 23, 42, 0.35) !important;
+  background-color: rgba(15, 23, 42, 0.45) !important;
 }
 
-/* Fix for invisible text in input fields */
+/* Inputs, Selects y Textareas con acabado Linear / Mercury de alta precisión */
 input, textarea, select {
-  background-color: white !important;
-  border: 1px solid #cbd5e1 !important;
+  background-color: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
   color: #0f172a !important;
+  border-radius: 0.5rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
+
 input:focus, textarea:focus, select:focus {
-  outline: 2px solid #0284c7 !important; /* sky-600 */
+  border-color: #0f172a !important;
+  outline: none !important;
+  box-shadow: 0 0 0 1px #0f172a !important;
+}
+
+input::placeholder, textarea::placeholder {
+  color: #94a3b8 !important;
 }
 
 

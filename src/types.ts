@@ -201,6 +201,7 @@ export interface DTEDocument {
   createdAt: string;
   refDocumentoOrigId?: string; // Para NC / ND
   refFolioOrig?: string;
+  esSimulado?: boolean;
 }
 
 export interface Company {
@@ -223,6 +224,9 @@ export interface Company {
   contactName?: string; // Contacto Operativo Nombre
   contactPhone?: string; // Contacto Operativo Teléfono
   estado?: 'Activo' | 'Inactivo';
+  claveSiiMasked?: string;
+  hasCertificadoDigital?: boolean;
+  siiConnectionStatus?: string;
   isEmpresaConstructora?: boolean; // Tratamiento especial constructoras (CEEC Art. 21 DL 910)
   isDemoCompany?: boolean; // Empresa exclusiva para demostraciones de ventas (reseteable)
   initialRemanenteUTM?: number; // Remanente inicial de apertura en UTM
@@ -387,6 +391,9 @@ export interface RCVDocument {
   montoBruto?: number;
   montoRetencion?: number;
   montoLiquido?: number;
+  montoIvaNoRecuperable?: number; // IVA Sin Derecho a Crédito Fiscal (Compras exentas / no gravadas Art. 23 DL 825)
+  codigoIvaNoRec?: string | number; // Código SII de IVA No Recuperable (1, 2, 3, etc.)
+  montoIvaUsoComun?: number; // IVA de compras destinadas simultáneamente a operaciones gravadas y exentas
   montoOtrosImpuestos?: number; // Impuestos adicionales (ILA, diesel, carnes, licores, etc.)
   isBoletaResumen?: boolean; // Identificador de resumen consolidado de boletas de venta
   totalDocumentos?: number; // Conteo de documentos agrupados en el resumen
@@ -421,6 +428,9 @@ export interface VoucherLine {
   accountName: string;
   debit: number;
   credit: number;
+  moneda?: string; // Ej: 'USD', 'UF', 'EUR', 'CLP'
+  tipoCambio?: number; // Tipo de cambio oficial o acordado a la fecha (ej: 931.57)
+  montoMonedaOriginal?: number; // Monto original en divisa extranjera o UF (ej: 4000)
   auxiliaryRut?: string;
   auxiliaryName?: string;
   documentType?: string;
@@ -494,6 +504,11 @@ export interface Voucher {
   descuadreDifference?: number;
   anuladoAt?: string;
   anuladoReason?: string;
+  anuladoPor?: string;
+  anuladoEn?: string;
+  motivoAnulacion?: string;
+  requiereRevision?: boolean;
+  motivoRevision?: string;
   createdFromRcvId?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -552,6 +567,93 @@ export interface RCVAccountingParams {
   defaultProject?: string; // Proyecto por Defecto (Fallback si auxiliar no tiene)
   defaultProduct?: string; // Producto por Defecto (Fallback si auxiliar no tiene)
   defaultCustomAnalyses?: { [key: string]: string };
+}
+
+export interface MasterAccountingParameters extends RCVAccountingParams {
+  // Ventas & Exportaciones
+  exportSalesIncomeAccountId?: string; // Ventas Exportación (USD / Exentas)
+  foreignCustomerAccountId?: string; // Clientes Extranjeros / Exterior (USD)
+  
+  // Compras & Importaciones
+  foreignSupplierAccountId?: string; // Proveedores del Exterior (USD)
+  importExpenseAccountId?: string; // Gastos de Importación / Aranceles
+  
+  // Remuneraciones & RRHH (Capa 1 -> Capa 2)
+  salariesExpenseAccountId?: string; // Gasto Sueldos Base / Gratificaciones
+  sueldosGastoAccountId?: string; // Alias
+  nonTaxableExpenseAccountId?: string; // Gasto Asignaciones No Imponibles (Colación / Movilización)
+  asignacionesGastoAccountId?: string; // Alias
+  patronalContributionsExpenseAccountId?: string; // Aportes Patronales (SIS, Mutual, AFC Empleador)
+  imposicionesGastoAccountId?: string; // Alias
+  salariesPayableAccountId?: string; // Pasivo: Sueldos por Pagar (Líquido)
+  sueldosPorPagarAccountId?: string; // Alias
+  socialLawsPayableAccountId?: string; // Pasivo: Leyes Sociales por Pagar (Previred: AFP, Fonasa/Isapre, AFC, SIS, Mutual)
+  leyesSocialesPorPagarAccountId?: string; // Alias
+  uniqueTaxPayableAccountId?: string; // Pasivo: Retención Impuesto Único 2da Categoría por Pagar
+  retencionSegundaCatAccountId?: string; // Alias
+  
+  // Activo Fijo & Depreciaciones
+  depreciationExpenseAccountId?: string; // Gasto Depreciación del Ejercicio
+  depreciacionGastoAccountId?: string; // Alias
+  accumulatedDepreciationAccountId?: string; // Depreciación Acumulada (Activo Complementario)
+  depreciacionAcumuladaAccountId?: string; // Alias
+  monetaryCorrectionAccountId?: string; // Corrección Monetaria / Reajuste
+  
+  // Inventarios & Bodegas / Costo de Ventas
+  costoVentasAccountId?: string; // Gasto / Costo de Ventas (5101...)
+  inventarioAccountId?: string; // Activo Existencias / Mercaderías (1106...)
+  inventoryCostExpenseAccountId?: string; // Alias
+  inventoryAssetAccountId?: string; // Alias
+
+  // Rendiciones de Gastos & Viáticos
+  fondosPorRendirAccountId?: string; // Activo Anticipos / Fondo por Rendir Colaborador (1105...)
+  gastosMenoresAccountId?: string; // Gasto Boletas y Gastos Menores (4201...)
+
+  // Tesorería & Bancos / Diferencia de Cambio
+  primaryBankAccountId?: string; // Banco Operativo Principal
+  exchangeGainAccountId?: string; // Diferencia de Cambio - Ganancia (Resultado Positivo)
+  exchangeLossAccountId?: string; // Diferencia de Cambio - Pérdida (Resultado Negativo)
+  
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
+export interface ExpenseReportItem {
+  id: string;
+  date: string; // YYYY-MM-DD
+  documentType: 'BOLETA' | 'FACTURA' | 'PEAJE' | 'TICKET' | 'VALE' | 'OTRO';
+  documentNumber: string;
+  supplierRut?: string;
+  supplierName: string;
+  category: 'ALIMENTACION' | 'COMBUSTIBLE' | 'PEAJES' | 'ALOJAMIENTO' | 'TRANSPORTE' | 'MATERIALES' | 'GASTOS_MENORES';
+  description: string;
+  amount: number; // Monto total en pesos ($ CLP)
+  expenseAccountId?: string;
+  expenseAccountCode?: string;
+  expenseAccountName?: string;
+  costCenter?: string;
+}
+
+export interface ExpenseReport {
+  id: string;
+  folio: string; // Ej: "RDG-001"
+  period: string; // YYYY-MM
+  date: string; // YYYY-MM-DD
+  title: string;
+  responsibleRut: string;
+  responsibleName: string;
+  employeeId?: string;
+  status: 'BORRADOR' | 'ENVIADA' | 'APROBADA' | 'CENTRALIZADA';
+  initialAdvanceAmount: number; // Anticipo / Fondo Fijo ($)
+  totalExpensesAmount: number; // Total rendido ($)
+  balanceAmount: number; // Saldo a favor o en contra ($)
+  items: ExpenseReportItem[];
+  voucherId?: string;
+  voucherNumber?: number | string;
+  centralizedAt?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface PaymentItem {
@@ -769,6 +871,10 @@ export interface F29Retenciones {
   prestamoSolidario: number;
   totalRetenciones: number;
   docsCount: number;
+  totalHonorariosBruto?: number;
+  docsWithRetentionCount?: number;
+  docsSinRetentionCount?: number;
+  tasaEfectivaHonorarios?: number;
 }
 
 export interface FiniquitoRecord {
@@ -925,14 +1031,21 @@ export interface SavedAccountingQuery {
   id: string;
   name: string;
   description?: string;
-  sourceType: 'MAYOR' | 'PROVEEDORES_RCV' | 'CLIENTES_RCV' | 'BANCO_CARTOLA' | 'PARTIDAS_ABIERTAS';
+  sourceType: 'MAYOR' | 'PROVEEDORES_RCV' | 'CLIENTES_RCV' | 'BANCO_CARTOLA' | 'PARTIDAS_ABIERTAS' | 'NOMINA_PAGO' | 'COMPARATIVO';
   accountCode?: string;
+  accountCodes?: string[]; // Soporte para multi-cuenta contable
   accountName?: string;
   cutoffDate?: string; // "HOY", "2026-04-30", o fecha YYYY-MM-DD
   dateFrom?: string;
   statusFilter?: 'TODOS' | 'PENDIENTES' | 'COMPENSADOS';
   rutFilter?: string;
+  costCenterFilter?: string;
+  expenseItemFilter?: string;
   docTypeFilter?: string;
+  viewMode?: 'DETALLE' | 'PIVOT' | 'CONCILIACION' | 'NOMINA_PAGO' | 'COMPARATIVO';
+  pivotGroupBy?: 'ACCOUNT' | 'COST_CENTER' | 'AUXILIARY' | 'PERIOD' | 'EXPENSE_ITEM';
+  comparisonPeriod1?: string;
+  comparisonPeriod2?: string;
   columns?: string[];
   isPredefined?: boolean;
   createdAt?: string;
@@ -1163,6 +1276,8 @@ export interface Employee {
   contractType: ContractType;
   workHoursPerWeek: number;
   baseSalary: number; // Sueldo Base Mensual en CLP
+  isSueldoEmpresarial?: boolean; // Contrato / Sueldo Empresarial (Socio / Dueño - Renta Variable)
+  isPartTime?: boolean; // Jornada Parcial / Medio Tiempo
   hasGratificacionLegal: boolean; // 25% con tope 4.75 IMM / 12 (Art. 50 Código del Trabajo)
   gratificacionType?: 'ART_50' | 'CONVENIDA' | 'SIN_GRATIFICACION';
   pensionSystem: PensionSystem;
@@ -1170,6 +1285,7 @@ export interface Employee {
   healthSystem: HealthSystem;
   healthPlanType: HealthPlanType;
   healthPlanValue: number; // Valor Isapre en UF o Pesos (0 si Fonasa)
+  isapreGesValue?: number; // Cotización GES en UF o Pesos
   hasCesantiaAFC: boolean; // Seguro de cesantía
   apvType?: ApvType;
   apvInstitution?: string;
@@ -1185,6 +1301,9 @@ export interface Employee {
   descuentoSeguroComplementario?: number;
   descuentoAhorroBienestar?: number;
   descuentoPrestamoCuota?: number;
+  descuentoJudicialPensionAlimentos?: number; // Retención judicial de pensión de alimentos ($ CLP)
+  descuentoJudicialTipo?: 'MONTO_FIJO' | 'PORCENTAJE_LIQUIDO' | 'UTM';
+  descuentoJudicialValor?: number;
   otrosDescuentosPactados?: number;
   contractText?: string;
   contractStatus?: 'VIGENTE' | 'PENDIENTE_FIRMA' | 'TERMINADO';
@@ -1219,8 +1338,12 @@ export interface PayrollParameters {
   imm: number; // Ingreso Mínimo Mensual ($500.000)
   topeImponibleAfpUf: number; // 84.3 UF
   topeImponibleAfcUf: number; // 126.6 UF
-  tasaSisPercent: number; // 1.49%
-  tasaMutualPercent: number; // 0.93%
+  tasaSisPercent: number; // 1.49% o 1.62%
+  tasaMutualPercent: number; // Tasa Mutual Total (Básica + SANNA + Adicional)
+  tasaMutualBasePercent?: number; // Tasa Base Ley 16.744 (0.90%)
+  tasaLeySannaPercent?: number; // Ley SANNA (0.03%)
+  tasaMutualAdicionalPercent?: number; // Tasa Adicional por Siniestralidad (D.S. 67)
+  tasaReformaProteccionSocialPercent?: number; // Tasa adicional Protección Social / Reforma Previsional (%)
   afpCommissions: Record<string, number>;
   tramosAsignacionFamiliar: {
     tramoA: number; // $20.328
@@ -1298,10 +1421,13 @@ export interface PayrollSlip {
   rentaAfectaImpuesto: number;
   impuestoUnicoSegundaCategoria: number;
   tramoImpuestoUnico?: string;
+  mayorRetencionSolicitada?: number;
   
   // Otros Descuentos
   anticipos: number;
   prestamosEmpresa: number;
+  descuentoJudicialPensionAlimentos?: number; // Retención judicial de pensión de alimentos ($ CLP)
+  subsidioIncapacidadLaboralSil?: number; // Subsidio por incapacidad laboral (días de licencia)
   otrosDescuentos: number;
   totalOtrosDescuentos: number;
   
@@ -1317,6 +1443,8 @@ export interface PayrollSlip {
   afcEmpleadorTasa: number; // 2.4% o 3.0%
   afcEmpleadorMonto: number;
   mutualMonto: number; // 0.93%
+  cotizacionEmpleadorLey21735?: number; // Ley 21.735 Reforma Previsional (1.0% desde Ago 2025, 3.5% desde Ago 2026 integrando SIS)
+  porcentajeLey21735?: number;
   totalAportesPatronales: number;
   costoTotalEmpresa: number;
   

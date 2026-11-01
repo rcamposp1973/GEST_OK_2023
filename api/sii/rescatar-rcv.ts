@@ -1,4 +1,114 @@
 import type { IncomingMessage, ServerResponse } from 'http';
+import crypto from 'crypto';
+import * as adminImport from 'firebase-admin';
+import { getApps, initializeApp, cert } from 'firebase-admin/app';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getAuth } from 'firebase-admin/auth';
+import firebaseConfig from '../../firebase-applet-config.json';
+
+// Inicializacion de Firebase Admin (compartida con server.ts).
+// En Vercel se necesita la variable FIREBASE_SERVICE_ACCOUNT (JSON de la cuenta de servicio).
+// Se usa la base de datos con nombre del proyecto (no la "(default)").
+function initAdmin() {
+  if (getApps().length) return getApps()[0];
+  const projectId = process.env.FIREBASE_PROJECT_ID || firebaseConfig.projectId;
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (raw) {
+    try {
+      return initializeApp({ projectId, credential: cert(JSON.parse(raw)) });
+    } catch (e) {
+      console.error('FIREBASE_SERVICE_ACCOUNT invalida:', (e as Error).message);
+    }
+  }
+  return initializeApp({ projectId });
+}
+const adminApp = initAdmin();
+const adminDb = getFirestore(adminApp, (firebaseConfig as any).firestoreDatabaseId || undefined as any);
+const adminAuth = getAuth(adminApp);
+const admin: any = {
+  apps: getApps(),
+  getApps,
+  initializeApp,
+  firestore: Object.assign(() => adminDb, { FieldValue }),
+  auth: () => adminAuth
+};
+
+function getEncryptionKey(): Buffer {
+  const rawKey = process.env.SECRETS_ENCRYPTION_KEY;
+  if (!rawKey) {
+    throw new Error("Falta configurar SECRETS_ENCRYPTION_KEY en el servidor.");
+  }
+  return crypto.createHash('sha256').update(rawKey).digest();
+}
+
+function decryptSecret(encryptedPayload: string): string {
+  if (!encryptedPayload) return '';
+  const key = getEncryptionKey();
+  try {
+    const { iv, data, tag } = JSON.parse(encryptedPayload);
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(iv, 'base64'));
+    decipher.setAuthTag(Buffer.from(tag, 'base64'));
+    let decrypted = decipher.update(data, 'base64', 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
+  } catch (err: any) {
+    if (err.message === "Falta configurar SECRETS_ENCRYPTION_KEY en el servidor.") {
+      throw err;
+    }
+    return '';
+  }
+}
+
+async function getDecryptedCompanySecrets(companyId: string) {
+  if (!companyId) return null;
+  try {
+    const docSnap = await adminDb.collection('companySecrets').doc(companyId).get();
+    if (!docSnap.exists) return null;
+    const data = docSnap.data() || {};
+    return {
+      studyId: data.studyId || '',
+      claveSii: data.claveSiiEncrypted ? decryptSecret(data.claveSiiEncrypted) : '',
+      rutRepresentante: data.rutRepresentante || '',
+      claveRepresentante: data.claveRepresentanteEncrypted ? decryptSecret(data.claveRepresentanteEncrypted) : '',
+      claveCertificadoDigital: data.claveCertificadoEncrypted ? decryptSecret(data.claveCertificadoEncrypted) : '',
+      certificadoB64: data.certificadoB64Encrypted ? decryptSecret(data.certificadoB64Encrypted) : '',
+      hasCertificadoDigital: !!data.hasCertificadoDigital
+    };
+  } catch {
+    return null;
+  }
+}
+
+function validateSiiApiUrl(rawUrl: string): { valid: boolean; error?: string } {
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.protocol !== 'https:') {
+      return { valid: false, error: 'Protocolo no permitido. Solo se admite HTTPS seguro.' };
+    }
+    const hostname = parsed.hostname.toLowerCase();
+    if (
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname === '::1' ||
+      hostname === '0.0.0.0' ||
+      hostname.startsWith('10.') ||
+      hostname.startsWith('192.168.') ||
+      hostname.startsWith('169.254.') ||
+      /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname)
+    ) {
+      return { valid: false, error: 'Acceso a IPs privadas bloqueado por seguridad (Anti-SSRF).' };
+    }
+    const allowedHostsEnv = process.env.ALLOWED_SII_HOSTS || 'simpleapi.cl,api.simpleapi.cl,servicios.simpleapi.cl,zeus.sii.cl,mpt.sii.cl';
+    const allowedHosts = allowedHostsEnv.split(',').map(h => h.trim().toLowerCase());
+    const isAllowed = allowedHosts.some(allowed => hostname === allowed || hostname.endsWith(`.${allowed}`));
+    if (!isAllowed) {
+      return { valid: false, error: `El host ${hostname} no está en la lista blanca de proveedores autorizados.` };
+    }
+    return { valid: true };
+  } catch {
+    return { valid: false, error: 'URL malformada o inválida.' };
+  }
+}
 
 // Helper to parse JSON body in Vercel Serverless Function
 async function parseBody(req: IncomingMessage): Promise<any> {
@@ -19,8 +129,9 @@ async function parseBody(req: IncomingMessage): Promise<any> {
 
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
   // CORS & Options handling
+  const allowedOrigin = process.env.APP_URL || '*';
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader(
     'Access-Control-Allow-Headers',
@@ -40,6 +151,26 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     return;
   }
 
+  // 1. Verificación de Autenticación Firebase ID Token
+  const authHeader = (req.headers['authorization'] || req.headers['Authorization']) as string | undefined;
+  const token = (authHeader && authHeader.startsWith('Bearer ')) ? authHeader.split('Bearer ')[1].trim() : null;
+  if (!token) {
+    res.statusCode = 401;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify({ success: false, error: 'Acceso no autorizado: Token de autenticación requerido.' }));
+    return;
+  }
+
+  let decodedToken: any = null;
+  try {
+    decodedToken = await admin.auth().verifyIdToken(token);
+  } catch (tokenErr) {
+    res.statusCode = 401;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify({ success: false, error: 'Token de autenticación inválido o expirado.' }));
+    return;
+  }
+
   try {
     const body = await parseBody(req);
     const {
@@ -54,11 +185,44 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       claveCertificadoDigital,
       certificadoB64,
       companyRut,
-      companyName
+      companyName,
+      companyId,
+      siiApiUrl
     } = body;
 
+    // SSRF Check
+    if (siiApiUrl && typeof siiApiUrl === 'string' && siiApiUrl.trim().length > 0) {
+      const urlCheck = validateSiiApiUrl(siiApiUrl.trim());
+      if (!urlCheck.valid) {
+        res.statusCode = 400;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ success: false, error: `URL rechazada: ${urlCheck.error}` }));
+        return;
+      }
+    }
+
+    // Cargar secretos de servidor si no se envían
+    let activeCertB64 = certificadoB64;
+    let activeCertPass = claveCertificadoDigital || claveRepresentante;
+    let activeRepRut = rutRepresentante;
+
+    if ((!activeCertB64 || !activeCertPass) && companyId) {
+      const secrets = await getDecryptedCompanySecrets(companyId);
+      if (secrets) {
+        if (decodedToken?.role !== 'SUPER_USER' && secrets.studyId !== decodedToken?.studyId) {
+          res.statusCode = 403;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ success: false, error: "No tienes permisos sobre las credenciales de esta empresa." }));
+          return;
+        }
+        if (!activeCertB64) activeCertB64 = secrets.certificadoB64;
+        if (!activeCertPass) activeCertPass = secrets.claveCertificadoDigital || secrets.claveRepresentante;
+        if (!activeRepRut) activeRepRut = secrets.rutRepresentante;
+      }
+    }
+
     const cleanCompanyRut = (rutEmpresa || companyRut || '').replace(/[^0-9kK]/g, '').toUpperCase();
-    const cleanRepRut = (rutRepresentante || '').replace(/[^0-9kK]/g, '').toUpperCase();
+    const cleanRepRut = (activeRepRut || '').replace(/[^0-9kK]/g, '').toUpperCase();
     const yearNum = Number(year) || new Date().getFullYear();
 
     const formatRut = (raw: string) => {
@@ -71,10 +235,21 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     const cleanCompanyRutWithDash = formatRut(cleanCompanyRut);
     const cleanRepRutWithDash = formatRut(cleanRepRut);
 
-    const effectiveApiKey = (apiKey || '5511-W960-6395-2355-3470').trim();
+    const MASTER_SII_API_KEY = process.env.SII_API_KEY || '';
+    const effectiveApiKey = (apiKey || MASTER_SII_API_KEY).trim();
 
-    const cleanCertB64 = (certificadoB64 || '').replace(/^data:[^;]+;base64,/, '').trim();
-    const certPass = (claveCertificadoDigital || claveRepresentante || '').trim();
+    if (!effectiveApiKey) {
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({
+        success: false,
+        error: "Error de configuración: Variable de entorno SII_API_KEY no configurada en el servidor."
+      }));
+      return;
+    }
+
+    const cleanCertB64 = (activeCertB64 || '').replace(/^data:[^;]+;base64,/, '').trim();
+    const certPass = (activeCertPass || '').trim();
     const formattedMonth = String(month === 'ALL' ? '01' : month).padStart(2, '0');
 
     // 1. Si no tiene certificado digital, avisar claramente

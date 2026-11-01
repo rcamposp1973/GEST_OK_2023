@@ -12,7 +12,7 @@ import Login from './components/Login';
 import Register from './components/Register';
 import CreateStudy from './components/CreateStudy';
 import React, { useEffect, useState } from 'react';
-import { doc, collection, collectionGroup, onSnapshot, deleteDoc, getDocs, query, where, addDoc } from 'firebase/firestore';
+import { doc, collection, collectionGroup, onSnapshot, deleteDoc, getDoc, getDocs, query, where, addDoc } from 'firebase/firestore';
 import { db, auth } from './lib/firebase';
 import { signOut } from 'firebase/auth';
 import { Study, UserRole, Company } from './types';
@@ -89,63 +89,59 @@ function Dashboard() {
     setLoading(true);
     setErrorMsg(null);
     try {
-      console.log("Fetching data for:", currentUser.email);
+      console.log("Fetching claims and role for:", currentUser.email);
       const userEmail = currentUser.email?.toLowerCase();
 
-      // 1. Root Super Admin Global Bootstrap (rcampos@pulsocontable.cl)
-      if (userEmail === 'rcampos@pulsocontable.cl') {
-        console.log("User is root bootstrap Super Admin Global:", userEmail);
+      // 1. Obtener Custom Claims del token criptográfico de Firebase Auth
+      const tokenResult = await currentUser.getIdTokenResult(true);
+      const claimRole = tokenResult.claims.role as string | undefined;
+      const claimStudyId = tokenResult.claims.studyId as string | undefined;
+
+      // 2. Rol SUPER_USER verificado estrictamente desde Custom Claims
+      if (claimRole === 'SUPER_USER' || tokenResult.claims.isSuperUser === true) {
         setRole(UserRole.SUPER_USER);
-        setUserData({ email: userEmail, name: 'Ramón Campos (Pulso Contable)', isSuperUser: true });
+        setUserData({ email: userEmail, name: currentUser.displayName || 'Super Administrador', isSuperUser: true });
         return;
       }
 
-      // 2. Check StudyAdmin (in studies collection or administrators array)
-      const studiesSnap = await getDocs(collection(db, 'studies'));
-      let foundStudyAdmin = false;
-
-      for (const sDoc of studiesSnap.docs) {
-        const sData = sDoc.data();
-        const studyStatus = sData.estado || 'Vigente';
-
-        // A. Check in administrators array
-        if (sData.administrators && Array.isArray(sData.administrators)) {
-          const matchAdmin = sData.administrators.find(
-            (a: any) => a.email?.toLowerCase() === userEmail
-          );
-          if (matchAdmin) {
-            if (studyStatus === 'Sin Vigencia') {
-              throw new Error('El estudio contable asignado se encuentra sin vigencia.');
-            }
-            if (matchAdmin.estado === 'Sin Vigencia') {
-              throw new Error('Tu usuario administrador se encuentra sin vigencia.');
-            }
-            setUserData({ ...sData, id: sDoc.id, studyId: sDoc.id, currentAdmin: matchAdmin });
-            setRole(UserRole.STUDY_ADMIN);
-            foundStudyAdmin = true;
-            break;
-          }
-        }
-
-        // B. Check root level legacy/primary admin fields
-        const rootAdminEmail = (sData.adminEmail || sData.email || '').toLowerCase();
-        if (!foundStudyAdmin && (rootAdminEmail === userEmail || (sData.adminId === currentUser.uid && rootAdminEmail === userEmail))) {
-          if (studyStatus === 'Sin Vigencia') {
+      // 3. Rol STUDY_ADMIN verificado desde claims con acceso directo a su estudio
+      if (claimRole === 'STUDY_ADMIN' && claimStudyId) {
+        const sDoc = await getDoc(doc(db, 'studies', claimStudyId));
+        if (sDoc.exists()) {
+          const sData = sDoc.data();
+          if (sData.estado === 'Sin Vigencia') {
             throw new Error('El estudio contable asignado se encuentra sin vigencia.');
-          }
-          if (sData.adminEstado === 'Sin Vigencia') {
-            throw new Error('Tu usuario administrador se encuentra sin vigencia.');
           }
           setUserData({ ...sData, id: sDoc.id, studyId: sDoc.id });
           setRole(UserRole.STUDY_ADMIN);
-          foundStudyAdmin = true;
-          break;
+          return;
         }
       }
 
-      if (foundStudyAdmin) return;
+      // 4. Roles ACCOUNTANT, ANALYST, OBSERVER verificados desde claims
+      if ((claimRole === 'ACCOUNTANT' || claimRole === 'ANALYST' || claimRole === 'OBSERVER') && claimStudyId) {
+        const sDoc = await getDoc(doc(db, 'studies', claimStudyId));
+        if (sDoc.exists() && sDoc.data().estado === 'Sin Vigencia') {
+          throw new Error('El estudio contable asignado se encuentra sin vigencia.');
+        }
 
-      // 3. Check Accountant / Analyst (in studies/{id}/users)
+        const uDoc = await getDoc(doc(db, 'studies', claimStudyId, 'users', currentUser.uid));
+        if (uDoc.exists()) {
+          const uData = uDoc.data();
+          if (uData.estado === 'Inactivo' || uData.estado === 'Sin Vigencia') {
+            throw new Error('Tu usuario se encuentra inactivo o sin vigencia.');
+          }
+          setUserData({ ...uData, id: uDoc.id, studyId: claimStudyId });
+        } else {
+          setUserData({ email: userEmail, id: currentUser.uid, studyId: claimStudyId });
+        }
+
+        const resolvedRole = claimRole === 'ANALYST' ? UserRole.ANALYST : claimRole === 'OBSERVER' ? UserRole.OBSERVER : UserRole.ACCOUNTANT;
+        setRole(resolvedRole);
+        return;
+      }
+
+      // 5. Fallback transicional (para usuarios antes de ejecutar migrate-users.ts)
       try {
         const qUser = query(collectionGroup(db, 'users'), where('email', '==', userEmail));
         const snapUser = await getDocs(qUser);
@@ -160,51 +156,8 @@ function Dashboard() {
           setRole(userRole);
           return;
         }
-      } catch (cgErr: any) {
-        console.warn("CollectionGroup query error, fallback to nested search:", cgErr);
-        for (const sDoc of studiesSnap.docs) {
-          const uSnap = await getDocs(query(collection(db, 'studies', sDoc.id, 'users'), where('email', '==', userEmail)));
-          if (!uSnap.empty) {
-            const uDoc = uSnap.docs[0];
-            const uData = uDoc.data();
-            if (uData.estado === 'Inactivo' || uData.estado === 'Sin Vigencia') {
-              throw new Error('Tu usuario se encuentra inactivo o sin vigencia.');
-            }
-            setUserData({ ...uData, id: uDoc.id, studyId: sDoc.id });
-            const userRole = uData.role === UserRole.ANALYST ? UserRole.ANALYST : (uData.role || UserRole.ACCOUNTANT);
-            setRole(userRole);
-            return;
-          }
-        }
-      }
-
-      // 4. Check Explicit SuperUser in Firestore 'superUsers' collection (excluding study admins)
-      try {
-        const qSuper = query(collection(db, 'superUsers'), where('email', '==', userEmail));
-        const snapSuper = await getDocs(qSuper);
-        if (!snapSuper.empty) {
-          // Safeguard: Study admins / regular users must NEVER be granted SUPER_USER
-          if (foundStudyAdmin || userEmail === 'campos.ramon@gmail.com') {
-            console.warn("Blocking study admin from superuser collection promotion:", userEmail);
-            for (const superDoc of snapSuper.docs) {
-              await deleteDoc(doc(db, 'superUsers', superDoc.id));
-            }
-            return;
-          }
-
-          const superDoc = snapSuper.docs[0];
-          const superData = superDoc.data();
-          if (superData.estado === 'Inactivo' || superData.estado === 'Sin Vigencia') {
-            throw new Error('Tu cuenta de Super Administrador se encuentra inactiva o bloqueada.');
-          }
-          console.log("User is superuser (DB verified):", userEmail);
-          setRole(UserRole.SUPER_USER);
-          setUserData({ ...superData, id: superDoc.id, isSuperUser: true });
-          return;
-        }
-      } catch (superErr: any) {
-        if (superErr.message?.includes('inactiva') || superErr.message?.includes('bloqueada')) throw superErr;
-        console.warn("Error querying superUsers collection:", superErr);
+      } catch (cgErr) {
+        console.warn("Transitional fallback notice:", cgErr);
       }
     } catch (err: any) {
       console.error("Error loading user data in Dashboard:", err);
@@ -219,7 +172,7 @@ function Dashboard() {
     
     // Subscribe to studies (only for superuser)
     let unsubscribe = () => {};
-    if (role === UserRole.SUPER_USER || currentUser?.email === 'rcampos@pulsocontable.cl') {
+    if (role === UserRole.SUPER_USER) {
       try {
         unsubscribe = onSnapshot(collection(db, 'studies'), (snapshot) => {
           const studiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Study));
@@ -331,173 +284,179 @@ function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col text-slate-900">
-      {/* Encabezado Principal Persistente (Executive Header) */}
-      <ExecutiveHeader
-        currentUserEmail={currentUser?.email}
-        currentUserRole={role}
-        activeCompany={activeCompany}
-        activeStudy={selectedStudy || (role === UserRole.STUDY_ADMIN ? userData : null)}
-        onLogout={handleLogout}
-        onGoHome={() => {
-          setActiveCompany(null);
-          setSelectedStudy(null);
-        }}
-        onOpenHistoricalRates={() => setShowGlobalIndicatorsModal(true)}
-      />
+    <div className="min-h-screen bg-slate-50 flex flex-col text-slate-900">
+      {/* Encabezado Principal Persistente (Executive Header para Vistas Generales) */}
+      {!activeCompany && (
+        <ExecutiveHeader
+          currentUserEmail={currentUser?.email}
+          currentUserRole={role}
+          activeCompany={activeCompany}
+          activeStudy={selectedStudy || (role === UserRole.STUDY_ADMIN ? userData : null)}
+          onLogout={handleLogout}
+          onGoHome={() => {
+            setActiveCompany(null);
+            setSelectedStudy(null);
+          }}
+          onOpenHistoricalRates={() => setShowGlobalIndicatorsModal(true)}
+        />
+      )}
       
       <main className="flex-1 p-3 md:p-5 w-full">
         {role === UserRole.SUPER_USER ? (
           selectedStudy ? (
             <StudyDetails
               study={selectedStudy}
-              onBack={() => setSelectedStudy(null)}
+              onBack={() => {
+                setSelectedStudy(null);
+                setActiveCompany(null);
+              }}
+              onCompanyChange={(comp) => setActiveCompany(comp)}
               onLogout={handleLogout}
             />
           ) : (
           <div className="space-y-6 max-w-7xl mx-auto">
             {/* ACCIÓN ESPECIAL SOLICITADA: PURGAR DIAGON CONSTRUCCIONES */}
-            <div className="bg-gradient-to-r from-rose-900 to-red-950 text-white p-4 rounded-2xl shadow-md border border-rose-700 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="bg-slate-900 text-white p-4 rounded-xl shadow-2xs border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
               <div className="space-y-1 text-center md:text-left">
-                <h3 className="text-sm font-bold flex items-center justify-center md:justify-start gap-2">
-                  <Trash2 className="w-4 h-4 text-rose-300 animate-bounce" />
+                <h3 className="text-sm font-semibold flex items-center justify-center md:justify-start gap-2">
+                  <Trash2 className="w-4 h-4 text-rose-400" />
                   <span>Depuración Urgente: Diagon Construcciones SpA (Ricardo Ibarra Pérez)</span>
                 </h3>
-                <p className="text-xs text-rose-200">
+                <p className="text-xs text-slate-400">
                   Borra todos los documentos RCV subidos y todos los comprobantes (vouchers) de esta empresa de forma instantánea.
                 </p>
               </div>
               <button
                 onClick={handlePurgeDiagonGlobal}
                 disabled={isPurgingDiagonApp}
-                className="bg-white hover:bg-rose-50 text-rose-900 px-5 py-2.5 rounded-xl font-bold text-xs shadow-sm transition-all cursor-pointer disabled:opacity-50 shrink-0 flex items-center gap-2"
+                className="bg-white hover:bg-slate-100 text-slate-900 px-4 py-2 rounded-lg font-medium text-xs shadow-2xs transition-colors cursor-pointer disabled:opacity-50 shrink-0 flex items-center gap-2"
               >
                 <Trash2 className="w-4 h-4 text-rose-600" />
-                {isPurgingDiagonApp ? 'Eliminando RCV y Vouchers...' : '🗑️ Borrar RCV y Comprobantes de Diagon'}
+                {isPurgingDiagonApp ? 'Eliminando RCV y Vouchers...' : 'Borrar RCV y Comprobantes de Diagon'}
               </button>
             </div>
 
             {/* SUPER ADMIN NAVIGATION TABS */}
-            <div className="bg-white p-2 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-2">
-              <div className="flex flex-wrap items-center gap-2">
+            <div className="bg-white p-1.5 rounded-xl border border-slate-200 shadow-2xs flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-1">
                 <button
                   onClick={() => setSuperAdminTab('monitor')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                     superAdminTab === 'monitor'
-                      ? 'bg-[#533AFD] text-white shadow-md shadow-indigo-500/20'
-                      : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+                      ? 'bg-slate-900 text-white shadow-2xs'
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                   }`}
                 >
-                  <Activity className="w-4 h-4 text-emerald-300 animate-pulse" />
-                  <span>Monitor en Vivo & Estadísticas 📊</span>
+                  <Activity className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Monitor en Vivo & Estadísticas</span>
                 </button>
 
                 <button
                   onClick={() => setSuperAdminTab('indicators_loader')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                     superAdminTab === 'indicators_loader'
-                      ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20 font-extrabold'
-                      : 'text-emerald-800 bg-emerald-50/80 hover:bg-emerald-100 hover:text-emerald-950 border border-emerald-200'
+                      ? 'bg-slate-900 text-white shadow-2xs'
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                   }`}
                 >
-                  <TrendingUp className="w-4 h-4 text-emerald-600" />
-                  <span>Carga Indicadores (Previred & Monedas)</span>
+                  <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>Carga Indicadores</span>
                 </button>
 
                 <button
                   onClick={() => setSuperAdminTab('studies')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                     superAdminTab === 'studies'
-                      ? 'bg-[#533AFD] text-white shadow-md shadow-indigo-500/20'
+                      ? 'bg-slate-900 text-white shadow-2xs'
                       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                   }`}
                 >
-                  <Building2 className="w-4 h-4" />
+                  <Building2 className="w-3.5 h-3.5" />
                   <span>Estudios Registrados ({studies.length})</span>
                 </button>
 
                 <button
                   onClick={() => setSuperAdminTab('create_study')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                     superAdminTab === 'create_study'
-                      ? 'bg-[#533AFD] text-white shadow-md shadow-indigo-500/20'
+                      ? 'bg-slate-900 text-white shadow-2xs'
                       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                   }`}
                 >
-                  <PlusCircle className="w-4 h-4" />
+                  <PlusCircle className="w-3.5 h-3.5" />
                   <span>Crear Nuevo Estudio</span>
                 </button>
 
                 <button
                   onClick={() => setSuperAdminTab('super_users')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                     superAdminTab === 'super_users'
-                      ? 'bg-[#533AFD] text-white shadow-md shadow-indigo-500/20'
+                      ? 'bg-slate-900 text-white shadow-2xs'
                       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                   }`}
                 >
-                  <ShieldCheck className="w-4 h-4" />
-                  <span>Super Administradores (RBAC)</span>
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Super Administradores</span>
                 </button>
 
                 <button
                   onClick={() => setSuperAdminTab('testimonials')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                     superAdminTab === 'testimonials'
-                      ? 'bg-[#533AFD] text-white shadow-md shadow-indigo-500/20'
+                      ? 'bg-slate-900 text-white shadow-2xs'
                       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                   }`}
                 >
-                  <Quote className="w-4 h-4 text-indigo-300" />
-                  <span>Testimonios Portada (Diapositivas)</span>
+                  <Quote className="w-3.5 h-3.5" />
+                  <span>Testimonios Portada</span>
                 </button>
 
                 <button
                   onClick={() => setSuperAdminTab('pricing')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                     superAdminTab === 'pricing'
-                      ? 'bg-[#533AFD] text-white shadow-md shadow-indigo-500/20'
+                      ? 'bg-slate-900 text-white shadow-2xs'
                       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                   }`}
                 >
-                  <CreditCard className="w-4 h-4 text-indigo-300" />
-                  <span>Planes y Precios Portada</span>
+                  <CreditCard className="w-3.5 h-3.5" />
+                  <span>Planes y Precios</span>
                 </button>
 
                 <button
                   onClick={() => setSuperAdminTab('marketing_promo')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                     superAdminTab === 'marketing_promo'
-                      ? 'bg-amber-600 text-white shadow-md'
+                      ? 'bg-slate-900 text-white shadow-2xs'
                       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                   }`}
                 >
-                  <Megaphone className="w-4 h-4" />
-                  <span>Promoción WhatsApp (Landing)</span>
+                  <Megaphone className="w-3.5 h-3.5" />
+                  <span>Promoción WhatsApp</span>
                 </button>
 
                 <button
                   onClick={() => setSuperAdminTab('audit_logs')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                     superAdminTab === 'audit_logs'
-                      ? 'bg-slate-800 text-white shadow-md'
+                      ? 'bg-slate-900 text-white shadow-2xs'
                       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                   }`}
                 >
-                  <History className="w-4 h-4 text-indigo-400" />
-                  <span>Bitácora de Sistema (Audit Logs)</span>
+                  <History className="w-3.5 h-3.5" />
+                  <span>Bitácora de Sistema</span>
                 </button>
 
                 <button
                   onClick={() => setSuperAdminTab('presentation')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                     superAdminTab === 'presentation'
-                      ? 'bg-emerald-600 text-white shadow-md'
+                      ? 'bg-slate-900 text-white shadow-2xs'
                       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                   }`}
                 >
-                  <Sparkles className="w-4 h-4 text-emerald-300" />
-                  <span>Kit Comercial & Video Tour</span>
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Kit Comercial</span>
                 </button>
               </div>
 
@@ -559,7 +518,8 @@ function Dashboard() {
             )}
 
             {superAdminTab === 'studies' && (() => {
-              const filteredStudies = studies.filter(study => {
+              const safeStudies = studies || [];
+              const filteredStudies = safeStudies.filter(study => {
                 if (studyStatusFilter !== 'ALL') {
                   const isVigente = study.estado !== 'Sin Vigencia';
                   if (studyStatusFilter === 'Vigente' && !isVigente) return false;
@@ -585,7 +545,7 @@ function Dashboard() {
                 <section className="space-y-4">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                     <div>
-                      <h3 className="text-lg font-bold text-slate-900">Estudios Contables Registrados ({studies.length})</h3>
+                      <h3 className="text-lg font-bold text-slate-900">Estudios Contables Registrados ({safeStudies.length})</h3>
                       <p className="text-xs text-slate-500">Selecciona un estudio para auditar sus sociedades o gestionar sus administradores.</p>
                     </div>
                     <button
@@ -628,7 +588,7 @@ function Dashboard() {
                               : 'text-slate-600 hover:text-slate-900'
                           }`}
                         >
-                          Todos ({studies.length})
+                          Todos ({safeStudies.length})
                         </button>
                         <button
                           onClick={() => setStudyStatusFilter('Vigente')}
@@ -716,7 +676,7 @@ function Dashboard() {
                     })}
                     {filteredStudies.length === 0 && (
                       <div className="col-span-full p-8 text-center bg-white rounded-xl border border-slate-200 text-xs text-slate-500 space-y-2">
-                        {studies.length === 0 ? (
+                        {safeStudies.length === 0 ? (
                           <p className="italic">No hay estudios registrados actualmente. Utiliza el botón superior para registrar el primero.</p>
                         ) : (
                           <>

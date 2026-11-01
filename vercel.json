@@ -1,6 +1,11 @@
 {
   "version": 2,
   "rewrites": [
+    { "source": "/api/health", "destination": "/api/index" },
+    { "source": "/api/companies/:companyId/secrets", "destination": "/api/index" },
+    { "source": "/api/auth/set-user-claims", "destination": "/api/index" },
+    { "source": "/api/auth/create-user", "destination": "/api/index" },
+    { "source": "/api/sii/test-connection", "destination": "/api/index" },
     {
       "source": "/api/(.*)",
       "destination": "/api/$1"

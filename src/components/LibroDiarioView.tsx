@@ -227,7 +227,7 @@ export default function LibroDiarioView({
   };
 
   const handlePrint = () => {
-    window.print();
+    handlePrintOfficialBook();
   };
 
   const handlePrintOfficialBook = async () => {

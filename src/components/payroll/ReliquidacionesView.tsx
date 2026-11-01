@@ -8,6 +8,7 @@ import {
   ArrowRight, Shield, Building2 
 } from 'lucide-react';
 import { calculateAnnualReliquidation } from '../../utils/payrollCalculator';
+import { triggerIframePrint } from '../../utils/printUtils';
 
 interface ReliquidacionesViewProps {
   companyId: string;
@@ -236,7 +237,54 @@ export const ReliquidacionesView: React.FC<ReliquidacionesViewProps> = ({
   };
 
   const handlePrint = () => {
-    window.print();
+    const selectedEmp = employees.find(e => e.id === selectedEmployeeId);
+    if (!selectedEmp || !activeReliquidation) {
+      window.print();
+      return;
+    }
+
+    triggerIframePrint({
+      title: `Reliquidacion_${selectedEmp.name}_${yearOrigin}`,
+      htmlContent: `
+        <div class="header-box">
+          <h2>INFORME DE RELIQUIDACIÓN LEGAL DE REMUNERACIONES (ART. 43 LEY RENTA)</h2>
+          <p class="font-bold">${companyName.toUpperCase()} (RUT: ${companyRut})</p>
+          <p>Trabajador: <strong>${selectedEmp.name}</strong> (RUT: ${selectedEmp.rut})</p>
+          <p>Concepto: <strong>${reliquidationType}</strong> &bull; Año Devengo: ${yearOrigin}</p>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>DETALLE DE RELIQUIDACIÓN TRIBUTARIA</th>
+              <th class="text-right">MONTO ($)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Monto Bruto de Bono / Gratificación a Reliquidar</td>
+              <td class="text-right font-bold">$${activeReliquidation.montoTotalBruto.toLocaleString('es-CL')}</td>
+            </tr>
+            <tr>
+              <td>Diferencia Impuesto Único de Segunda Categoría (Art. 43)</td>
+              <td class="text-right font-bold">$${activeReliquidation.totalImpuestoUnicoRetenido.toLocaleString('es-CL')}</td>
+            </tr>
+            <tr>
+              <td>Diferencia Cotizaciones Previsionales e Isapre / Fonasa</td>
+              <td class="text-right font-bold">$${activeReliquidation.totalCotizacionesPrevisionales.toLocaleString('es-CL')}</td>
+            </tr>
+            <tr class="bg-slate font-bold">
+              <td>MONTO LÍQUIDO FINAL A PAGAR AL TRABAJADOR</td>
+              <td class="text-right">$${activeReliquidation.liquidoAPagar.toLocaleString('es-CL')}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="footer-box">
+          <p>Documento emitido para respaldar la reliquidación de remuneraciones en la Ficha del Trabajador y DJ 1887 del SII.</p>
+        </div>
+      `
+    });
   };
 
   return (

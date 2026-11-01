@@ -15,6 +15,7 @@ import {
   Move
 } from 'lucide-react';
 import { useDraggableModal } from '../hooks/useDraggableModal';
+import { triggerIframePrint } from '../utils/printUtils';
 import { 
   Company, 
   ChartOfAccount, 
@@ -159,15 +160,32 @@ export default function PendingItemsReportModal({
               <span>Exportar Excel</span>
             </button>
             <button
-              onClick={() => window.print()}
-              className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 shadow-xs"
+              onClick={() => {
+                const area = document.getElementById('printable-pending-items-area');
+                if (area) {
+                  triggerIframePrint({
+                    title: `Informe_Partidas_Pendientes_${company.rut}_${period}`,
+                    htmlContent: `
+                      <div class="header-box">
+                        <h2>INFORME DE CONCILIACIÓN BANCARIA Y PARTIDAS PENDIENTES</h2>
+                        <p class="font-bold">${company.name.toUpperCase()} (RUT: ${company.rut})</p>
+                        <p>Cuenta: ${bankAccount?.code} - ${bankAccount?.name} &bull; Período: ${period}</p>
+                      </div>
+                      ${area.innerHTML}
+                    `
+                  });
+                } else {
+                  window.print();
+                }
+              }}
+              className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
             >
               <Printer className="w-3.5 h-3.5" />
               <span>Imprimir</span>
             </button>
             <button
               onClick={onClose}
-              className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+              className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -191,7 +209,7 @@ export default function PendingItemsReportModal({
         </div>
 
         {/* Body */}
-        <div className="p-4 overflow-y-auto space-y-4 flex-1 text-xs">
+        <div id="printable-pending-items-area" className="p-4 overflow-y-auto space-y-4 flex-1 text-xs">
           
           {/* CUADRATURA RESUMEN */}
           <div className={`p-3.5 rounded-xl border flex justify-between items-center ${

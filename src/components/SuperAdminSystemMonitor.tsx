@@ -64,7 +64,7 @@ export default function SuperAdminSystemMonitor({ onSelectStudy }: SuperAdminSys
 
   // Master System Gateway SII Settings (Super Admin Only)
   const [masterApiKey, setMasterApiKey] = useState<string>(() => {
-    return localStorage.getItem('gest_ok_master_api_key') || '5511-W960-6395-2355-3470';
+    return localStorage.getItem('gest_ok_master_api_key') || '';
   });
   const [masterProvider, setMasterProvider] = useState<string>('SIMPLE_API');
   const [masterApiEndpoint, setMasterApiEndpoint] = useState<string>('https://api.simpleapi.cl/v1');
@@ -1248,7 +1248,7 @@ export default function SuperAdminSystemMonitor({ onSelectStudy }: SuperAdminSys
                   type="text"
                   value={masterApiKey}
                   onChange={(e) => setMasterApiKey(e.target.value)}
-                  placeholder="5511-W960-6395-2355-3470"
+                  placeholder="Ej. Ingresa tu API Key de proveedor (SimpleAPI)"
                   className="w-full bg-slate-50 border border-amber-300 rounded-xl p-2.5 text-xs text-amber-900 font-mono font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none shadow-2xs"
                 />
               </div>

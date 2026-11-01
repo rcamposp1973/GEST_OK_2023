@@ -50,8 +50,30 @@ export const WorkerParametersModal: React.FC<WorkerParametersModalProps> = ({
     e.preventDefault();
     setIsSaving(true);
     try {
+      let updatedSalaryHistory = formData.salaryHistory ? [...formData.salaryHistory] : [];
+      if (employee.baseSalary !== formData.baseSalary) {
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const thisMonthStart = `${todayStr.slice(0, 7)}-01`;
+        updatedSalaryHistory = updatedSalaryHistory.map(h => ({
+          ...h,
+          isCurrent: false,
+          endDate: h.endDate || todayStr
+        }));
+        updatedSalaryHistory.push({
+          id: `sal_${Date.now()}`,
+          employeeId: employee.id,
+          baseSalary: formData.baseSalary,
+          startDate: thisMonthStart,
+          endDate: null,
+          isCurrent: true,
+          reason: formData.isSueldoEmpresarial ? 'Ajuste Renta Sueldo Empresarial' : 'Modificación en Parámetros',
+          createdAt: new Date().toISOString()
+        });
+      }
+
       await onSave({
         ...formData,
+        salaryHistory: updatedSalaryHistory,
         updatedAt: new Date().toISOString()
       });
       setSuccessMessage('Parámetros actualizados con éxito.');
@@ -235,6 +257,22 @@ export const WorkerParametersModal: React.FC<WorkerParametersModalProps> = ({
                   <p className="text-[11px] text-slate-500 mt-1">
                     Si el trabajador no percibe gratificación mensual o se liquida anualmente, selecciona "Sin Gratificación Mensual".
                   </p>
+                </div>
+
+                <div className="md:col-span-2 bg-amber-50/70 border border-amber-200/90 rounded-xl p-3 flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    id="workerModalIsSueldoEmpresarial"
+                    checked={formData.isSueldoEmpresarial || false}
+                    onChange={(e) => setFormData({ ...formData, isSueldoEmpresarial: e.target.checked })}
+                    className="mt-0.5 rounded text-amber-600 focus:ring-amber-500 h-4 w-4 cursor-pointer"
+                  />
+                  <label htmlFor="workerModalIsSueldoEmpresarial" className="text-xs text-slate-700 cursor-pointer">
+                    <span className="font-bold text-amber-950 block">Régimen de Sueldo Empresarial (Socio / Dueño)</span>
+                    <span className="text-[11px] text-amber-800">
+                      Régimen de socio activo (Art. 31 N° 6 LIR). Permite variación mensual de sueldo sin alterar períodos contables pasados.
+                    </span>
+                  </label>
                 </div>
               </div>
 
@@ -476,6 +514,68 @@ export const WorkerParametersModal: React.FC<WorkerParametersModalProps> = ({
                     onChange={(e) => setFormData({ ...formData, descuentoPrestamoCuota: Number(e.target.value) })}
                     className="w-full px-3 py-2 text-xs font-mono font-bold text-slate-900 border border-slate-300 rounded-xl"
                   />
+                </div>
+
+                <div className="md:col-span-2 p-3.5 bg-rose-50/60 border border-rose-200 rounded-xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-bold text-rose-950">
+                      ⚖️ Retención Judicial por Pensión de Alimentos (Tribunales de Familia)
+                    </label>
+                    <span className="text-[10px] font-semibold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full">
+                      Prioritario sobre el Líquido
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-rose-900 mb-1">
+                        Modalidad de Cálculo
+                      </label>
+                      <select
+                        value={formData.descuentoJudicialTipo || 'MONTO_FIJO'}
+                        onChange={(e) => setFormData({ 
+                          ...formData, 
+                          descuentoJudicialTipo: e.target.value as any,
+                          descuentoJudicialValor: formData.descuentoJudicialValor || formData.descuentoJudicialPensionAlimentos || 0
+                        })}
+                        className="w-full px-2.5 py-1.5 text-xs font-semibold text-slate-800 bg-white border border-rose-300 rounded-lg focus:ring-2 focus:ring-rose-500"
+                      >
+                        <option value="MONTO_FIJO">Monto Fijo en Pesos ($ CLP)</option>
+                        <option value="PORCENTAJE_LIQUIDO">Porcentaje sobre Renta Líquida (% Líquido)</option>
+                        <option value="UTM">Valor Decretado en UTM (Mes de Pago)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-rose-900 mb-1">
+                        {formData.descuentoJudicialTipo === 'PORCENTAJE_LIQUIDO'
+                          ? 'Porcentaje a Retener (% sobre líquido)'
+                          : formData.descuentoJudicialTipo === 'UTM'
+                          ? 'Cantidad de UTM Decretadas'
+                          : 'Monto a Retener ($ CLP)'}
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        step={formData.descuentoJudicialTipo === 'UTM' ? 0.01 : formData.descuentoJudicialTipo === 'PORCENTAJE_LIQUIDO' ? 0.1 : 1000}
+                        placeholder={formData.descuentoJudicialTipo === 'PORCENTAJE_LIQUIDO' ? 'Ej: 30' : formData.descuentoJudicialTipo === 'UTM' ? 'Ej: 2.5' : 'Ej: 150000'}
+                        value={formData.descuentoJudicialValor !== undefined ? formData.descuentoJudicialValor : (formData.descuentoJudicialPensionAlimentos || 0)}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setFormData({ 
+                            ...formData, 
+                            descuentoJudicialValor: val,
+                            descuentoJudicialPensionAlimentos: formData.descuentoJudicialTipo === 'MONTO_FIJO' ? val : formData.descuentoJudicialPensionAlimentos
+                          });
+                        }}
+                        className="w-full px-2.5 py-1.5 text-xs font-mono font-bold text-rose-950 bg-white border border-rose-300 rounded-lg focus:ring-2 focus:ring-rose-500"
+                      />
+                    </div>
+                  </div>
+
+                  <p className="text-[11px] text-rose-800">
+                    Calculado automáticamente en la liquidación conforme a la Ley N° 21.389 y órdenes judiciales, deduciéndose tras cotizaciones legales e impuesto.
+                  </p>
                 </div>
 
                 <div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { provisionAuthUser } from '../utils/adminApi';
 import { db } from '../lib/firebase';
 import { collection, getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc, setDoc } from 'firebase/firestore';
 import { User, Company, UserRole, Assignment, Study, ChartOfAccount, Voucher, RCVDocument, BankReconciliation, FiscalPeriodYear, DTEConfig } from '../types';
@@ -384,6 +385,8 @@ export default function StudyAdminDashboard({
 
     setIsSavingUser(true);
     try {
+      // Cuenta de acceso (Firebase Auth) + rol/estudio, necesaria para iniciar sesion
+      await provisionAuthUser({ email, password: password || undefined, name, role, studyId });
       if (editingUser) {
         const updateData: any = { name, email, role, estado };
         if (password) updateData.password = password;
@@ -849,8 +852,11 @@ export default function StudyAdminDashboard({
     return (
       <CompanyAccountingDashboard
         studyId={studyId}
+        studyName={studyData?.name}
         company={selectedCompanyForAccounting}
         currentUserRole={currentUserRole}
+        currentUserEmail={currentUserEmail}
+        onLogout={onLogout}
         onBack={() => handleSelectCompany(null)}
       />
     );
@@ -860,7 +866,7 @@ export default function StudyAdminDashboard({
     { id: 'companies', label: 'Empresas Clientes' },
     { id: 'users', label: 'Gestión de Usuarios' },
     { id: 'assignments', label: 'Asignaciones' },
-    ...(isCurrentStudyTest ? [{ id: 'demoPurge' as const, label: '🎯 Sociedad Demo (2025)' }] : [])
+    ...(isSuperUser && isCurrentStudyTest ? [{ id: 'demoPurge' as const, label: '🎯 Sociedad Demo (2026)' }] : [])
   ];
 
   return (
@@ -883,51 +889,43 @@ export default function StudyAdminDashboard({
         </div>
       )}
 
-      {/* Header del Estudio con Formato Moderno Pulso Contable / Gest_OK */}
-      <div className="bg-white text-[#0D253D] p-5 sm:p-6 rounded-2xl shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border border-slate-200/80">
-        <div className="flex items-center gap-3.5">
-          {/* Logo Oficial Pulso Contable / Gest_OK */}
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-[#533AFD] to-sky-400 flex items-center justify-center text-white shadow-md shadow-indigo-500/20 shrink-0">
-            <Activity className="w-6 h-6 stroke-[2.5]" />
+      {/* Header del Estudio con Estilo Linear / Mercury */}
+      <div className="bg-white text-slate-900 p-4 sm:p-5 rounded-xl shadow-2xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border border-slate-200">
+        <div className="flex items-center gap-3">
+          {/* Logo Oficial Gest_OK */}
+          <div className="w-9 h-9 rounded-lg bg-slate-900 flex items-center justify-center text-white shadow-2xs shrink-0">
+            <Activity className="w-4.5 h-4.5 stroke-[2.25]" />
           </div>
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-extrabold text-lg text-[#0D253D] tracking-tight">
-                Pulso Contable
-              </span>
-              <span className="text-[10px] font-mono font-bold bg-indigo-50 text-[#533AFD] px-2 py-0.5 rounded-full border border-indigo-100">
+              <span className="font-bold text-base text-slate-900 tracking-tight">
                 Gest_OK
               </span>
-              <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-mono font-bold uppercase tracking-wider ${
-                isAnalyst ? 'bg-amber-50 text-amber-800 border border-amber-200' :
-                isObserver ? 'bg-sky-50 text-sky-800 border border-sky-200' :
-                isAccountant ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' :
-                isSuperUser ? 'bg-purple-50 text-purple-800 border border-purple-200' :
-                'bg-indigo-50 text-indigo-800 border border-indigo-200'
-              }`}>
+              <span className="text-[10px] font-mono font-semibold bg-slate-100 text-slate-700 px-1.5 py-0.2 rounded border border-slate-200">
+                ERP
+              </span>
+              <span className="text-[10px] px-2 py-0.5 rounded font-mono font-semibold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200">
                 {isAnalyst ? 'Analista' : isObserver ? 'Cliente Observador' : isAccountant ? 'Contador' : isSuperUser ? 'Super Admin (Lectura)' : 'Administración Estudio'}
               </span>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full font-mono flex items-center gap-1 ${
+              <span className={`text-[10px] font-medium px-2 py-0.5 rounded font-mono flex items-center gap-1 border ${
                 formatInfo.isAgentic
-                  ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-xs shadow-violet-500/20'
-                  : formatInfo.code === 'VERSION_B'
-                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                  : 'bg-indigo-100 text-indigo-800 border border-indigo-200'
+                  ? 'bg-slate-900 text-white border-slate-800'
+                  : 'bg-slate-50 text-slate-700 border-slate-200'
               }`}>
-                {formatInfo.isAgentic && <Sparkles className="w-3 h-3 text-amber-300 animate-spin" />}
+                {formatInfo.isAgentic && <Sparkles className="w-2.5 h-2.5 text-amber-300" />}
                 <span>{formatInfo.badgeTitle}</span>
               </span>
             </div>
-            <h2 className="text-sm font-bold text-[#425466] mt-0.5">
+            <h2 className="text-xs font-semibold text-slate-600 mt-0.5">
               {isRestrictedWorker ? 'Mis Empresas Asignadas' : 'Panel de Gestión y Operación Contable'}
             </h2>
             <p className="text-slate-400 text-[11px] mt-0.5 flex items-center gap-1.5">
               <span>Estudio ID:</span>
-              <span className="font-mono bg-slate-50 px-2 py-0.5 rounded-md text-slate-700 border border-slate-200 font-semibold">{studyId}</span>
+              <span className="font-mono bg-slate-50 px-1.5 py-0.2 rounded text-slate-700 border border-slate-200 font-medium">{studyId}</span>
               {studyData?.planName && (
                 <>
                   <span className="text-slate-300">&bull;</span>
-                  <span className="font-semibold text-indigo-600">{studyData.planName}</span>
+                  <span className="font-medium text-slate-700">{studyData.planName}</span>
                 </>
               )}
             </p>
@@ -935,7 +933,7 @@ export default function StudyAdminDashboard({
         </div>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
-          <div className="bg-[#F8FAFC] p-2.5 rounded-xl border border-slate-200/80 flex items-center gap-3 flex-1 sm:flex-initial">
+          <div className="bg-slate-50 p-2 rounded-lg border border-slate-200 flex items-center gap-2 flex-1 sm:flex-initial">
             <div className="flex-1">
               <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">
                 {isRestrictedWorker ? 'Ingresar a Empresa' : 'Selector de Empresa Activa'}
@@ -946,7 +944,7 @@ export default function StudyAdminDashboard({
                   if (found) handleSelectCompany(found);
                 }}
                 value={selectedCompanyForAccounting?.id || ''}
-                className="bg-white text-slate-900 text-xs p-2 rounded-lg font-semibold w-full sm:w-64 border border-slate-200 shadow-2xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                className="bg-white text-slate-900 text-xs p-1.5 rounded font-semibold w-full sm:w-64 border border-slate-200 shadow-2xs focus:border-slate-900 focus:outline-none"
               >
                 <option value="" disabled>Seleccione empresa cliente...</option>
                 {visibleCompanies.map(c => (
@@ -956,27 +954,47 @@ export default function StudyAdminDashboard({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            {isCurrentStudyTest && (
-              <button
-                type="button"
-                onClick={() => setShowDemoFerreteriaModal(true)}
-                className="px-3.5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
-                title="Gestor y Generador de Demostración: FERRETERIA DON ALI KT LTDA (2025)"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">🎯 Sociedad Demo (2025)</span>
-              </button>
+          <div className="flex items-center gap-1.5">
+            {/* Botón Demo Comercial Showroom (1-Clic) - Exclusivo para Super Admin */}
+            {isSuperUser && (
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const demoComp = companies.find(c => isDemoFerreteriaCompany(c));
+                    if (demoComp) {
+                      setSelectedCompanyForAccounting(demoComp);
+                      onCompanyChange?.(demoComp);
+                    } else {
+                      setShowDemoFerreteriaModal(true);
+                    }
+                  }}
+                  className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
+                  title="Abrir de inmediato la Empresa Modelo 'Ferretería Don Alí KT Ltda' con ciclo contable completo cuadrado"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                  <span>Demo Showroom</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowDemoFerreteriaModal(true)}
+                  className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg border border-slate-200 transition-colors cursor-pointer"
+                  title="Configurar o regenerar datos de la Empresa Modelo"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                </button>
+              </div>
             )}
 
             {currentUserEmail && (
               <button
                 type="button"
                 onClick={() => setShowChangePassModal(true)}
-                className="px-3.5 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl border border-slate-200/80 flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg border border-slate-200 flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
                 title="Cambiar contraseña de acceso"
               >
-                <Key className="w-3.5 h-3.5 text-amber-500" />
+                <Key className="w-3.5 h-3.5 text-slate-500" />
                 <span>Clave</span>
               </button>
             )}
@@ -985,10 +1003,10 @@ export default function StudyAdminDashboard({
               <button
                 type="button"
                 onClick={onLogout}
-                className="px-3.5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-xl border border-rose-200 flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                className="px-3 py-2 bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 text-xs font-medium rounded-lg border border-slate-200 hover:border-rose-200 flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
                 title="Cerrar sesión segura"
               >
-                <LogOut className="w-3.5 h-3.5 text-rose-600" />
+                <LogOut className="w-3.5 h-3.5" />
                 <span>Salir</span>
               </button>
             )}
@@ -1005,27 +1023,27 @@ export default function StudyAdminDashboard({
 
       {/* BANNER INFORMATIVO MODO AGÉNTICO 2040 */}
       {isAgentic && (
-        <div className="bg-gradient-to-r from-violet-950 via-indigo-950 to-slate-900 text-white p-4 rounded-2xl border border-violet-500/30 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="flex items-start gap-3">
-            <div className="w-9 h-9 rounded-xl bg-violet-600/30 border border-violet-400/40 text-amber-300 flex items-center justify-center shrink-0 mt-0.5">
-              <Sparkles className="w-5 h-5 animate-pulse" />
+        <div className="bg-white text-slate-900 p-3.5 rounded-xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-start gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center shrink-0 mt-0.5">
+              <Sparkles className="w-4 h-4 text-blue-600" />
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-extrabold text-xs uppercase tracking-wider text-violet-200 font-mono">
+                <span className="font-bold text-xs uppercase tracking-wider text-slate-900 font-mono">
                   {formatInfo.title}
                 </span>
-                <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[9px] font-bold px-2 py-0.2 rounded-full">
+                <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 text-[9px] font-semibold px-2 py-0.2 rounded-md">
                   Agentes Autónomos Activos 2040
                 </span>
               </div>
-              <p className="text-xs text-slate-300 mt-0.5 max-w-3xl leading-relaxed">
+              <p className="text-xs text-slate-600 mt-0.5 max-w-3xl leading-relaxed">
                 Este estudio cuenta con la suite del 2040: Auditor Autónomo continuo de vouchers y descuadres, Copiloto Tributario F29 con cruce RCV, y Conciliación Bancaria con Inteligencia Artificial.
               </p>
             </div>
           </div>
 
-          <span className="text-[10px] font-mono text-violet-300 bg-white/10 px-2.5 py-1 rounded-lg shrink-0 border border-violet-400/20 self-end sm:self-center">
+          <span className="text-[10px] font-mono text-slate-600 bg-slate-100 px-2 py-1 rounded border border-slate-200 self-end sm:self-center">
             {formatInfo.badgeTitle}
           </span>
         </div>
@@ -1033,45 +1051,45 @@ export default function StudyAdminDashboard({
 
       {/* Si es contador o analista, mostrar únicamente sus empresas asignadas */}
       {isRestrictedWorker ? (
-        <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-xs space-y-5">
+        <div className="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-2xs space-y-5">
           <div>
-            <h3 className="text-base font-extrabold text-[#0D253D]">
+            <h3 className="text-base font-bold text-slate-900">
               Empresas asignadas a tu cuenta ({visibleCompanies.length})
             </h3>
-            <p className="text-xs text-[#64748D] mt-0.5">
+            <p className="text-xs text-slate-500 mt-0.5">
               Selecciona la empresa con la que deseas trabajar para abrir los libros, F29 y conciliación.
             </p>
           </div>
 
           {visibleCompanies.length === 0 ? (
-            <div className="p-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+            <div className="p-8 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200">
               <p className="text-sm font-semibold text-slate-700">No tienes empresas asignadas actualmente.</p>
               <p className="text-xs text-slate-500 mt-1">Por favor comunícate con el administrador de tu estudio para que asigne las empresas clientes a tu usuario.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {visibleCompanies.map(c => (
-                <div key={c.id} className="p-5 border border-slate-200/90 bg-white hover:border-indigo-300 hover:shadow-md rounded-2xl space-y-4 transition-all shadow-xs flex flex-col justify-between">
+                <div key={c.id} className="p-4 border border-slate-200 bg-white hover:border-slate-300 rounded-xl space-y-4 transition-all shadow-2xs flex flex-col justify-between">
                   <div className="space-y-2">
                     <div className="flex items-start justify-between gap-2">
-                      <div className="w-8 h-8 rounded-xl bg-indigo-50 text-[#533AFD] flex items-center justify-center font-bold text-xs shrink-0 border border-indigo-100">
+                      <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0 border border-slate-200">
                         <Building2 className="w-4 h-4" />
                       </div>
-                      <span className={`inline-block text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase ${c.estado === 'Inactivo' ? 'bg-rose-50 text-rose-800 border border-rose-200' : 'bg-emerald-50 text-emerald-800 border border-emerald-200'}`}>
+                      <span className={`inline-block text-[10px] px-2 py-0.5 rounded font-semibold uppercase ${c.estado === 'Inactivo' ? 'bg-rose-50 text-rose-800 border border-rose-200' : 'bg-emerald-50 text-emerald-800 border border-emerald-200'}`}>
                         {c.estado || 'Activo'}
                       </span>
                     </div>
 
                     <div>
-                      <h4 className="font-extrabold text-[#0D253D] text-sm leading-snug">{c.name}</h4>
-                      <p className="text-xs font-mono font-medium text-[#533AFD] mt-0.5">RUT: {c.rut}</p>
-                      {c.fantasyName && <p className="text-xs text-[#64748D] mt-0.5">Fantasía: {c.fantasyName}</p>}
+                      <h4 className="font-bold text-slate-900 text-sm leading-snug">{c.name}</h4>
+                      <p className="text-xs font-mono font-medium text-slate-600 mt-0.5">RUT: {c.rut}</p>
+                      {c.fantasyName && <p className="text-xs text-slate-500 mt-0.5">Fantasía: {c.fantasyName}</p>}
                     </div>
                   </div>
 
                   <button
                     onClick={() => handleSelectCompany(c)}
-                    className="w-full py-2.5 bg-[#533AFD] hover:bg-[#4326EB] text-white font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-2 shadow-md shadow-indigo-500/20 cursor-pointer transform hover:-translate-y-0.5"
+                    className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs rounded-lg transition-colors flex items-center justify-center gap-2 shadow-2xs cursor-pointer"
                   >
                     <span>Abrir Contabilidad</span>
                     <ArrowRight className="w-3.5 h-3.5" />
@@ -1083,15 +1101,15 @@ export default function StudyAdminDashboard({
         </div>
       ) : (
         <div className="space-y-6">
-          <div className="bg-white p-2 rounded-2xl border border-slate-200/80 shadow-xs inline-flex flex-wrap gap-1.5">
+          <div className="bg-slate-100/90 p-1 rounded-lg border border-slate-200 inline-flex flex-wrap gap-1">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-2 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-md font-semibold text-xs transition-all cursor-pointer ${
                   activeTab === tab.id
-                    ? 'bg-[#533AFD] text-white shadow-md shadow-indigo-500/20'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    ? 'bg-white text-slate-900 shadow-2xs font-bold border border-slate-200/90'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
                 }`}
               >
                 {tab.label}
@@ -1797,7 +1815,7 @@ export default function StudyAdminDashboard({
 
           {activeTab === 'demoPurge' && (
             <div className="space-y-6">
-              {/* Card Destacada: Sociedad de Demostración 2025 */}
+              {/* Card Destacada: Sociedad de Demostración 2026 */}
               <div className="bg-gradient-to-br from-amber-500/10 via-orange-500/10 to-indigo-500/10 p-6 rounded-3xl border border-amber-300 shadow-sm space-y-4">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div className="space-y-1">
@@ -1806,14 +1824,14 @@ export default function StudyAdminDashboard({
                         Sociedad Demo Exclusiva
                       </span>
                       <span className="text-xs font-mono font-bold text-amber-900">
-                        RUT: 77.892.410-K
+                        RUT: 77.654.321-K
                       </span>
                     </div>
                     <h3 className="text-xl font-black text-slate-900">
-                      FERRETERIA DON ALI KT LTDA (Ejercicio 2025)
+                      FERRETERIA DON ALI KT LTDA (Ejercicio 2026)
                     </h3>
                     <p className="text-xs text-slate-600 max-w-2xl">
-                      Diseñada especialmente para realizar demostraciones comerciales de alto nivel a potenciales clientes. Contiene 10 transacciones diarias por todo 2025 (ventas, compras, honorarios, gastos), nómina de 10 trabajadores con cálculo de Impuesto Único de Segunda Categoría (IUSC), cartolas bancarias 100% conciliables, formularios de IVA F29 mensuales, declaraciones juradas de renta, F.22 y RLI.
+                      Diseñada especialmente para realizar demostraciones comerciales de alto nivel a potenciales clientes. Contiene 10 transacciones diarias por todo 2026 (ventas, compras, honorarios, gastos), nómina de 10 trabajadores con cálculo de Impuesto Único de Segunda Categoría (IUSC), cartolas bancarias 100% conciliables, formularios de IVA F29 mensuales, declaraciones juradas de renta, F.22 y RLI.
                     </p>
                   </div>
 
@@ -1823,7 +1841,7 @@ export default function StudyAdminDashboard({
                     className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-sm rounded-2xl shadow-lg shadow-orange-500/25 transition-all flex items-center gap-2 cursor-pointer shrink-0"
                   >
                     <Sparkles className="w-4 h-4" />
-                    <span>Cargar / Resetear Demo 2025</span>
+                    <span>Cargar / Resetear Demo 2026</span>
                   </button>
                 </div>
 

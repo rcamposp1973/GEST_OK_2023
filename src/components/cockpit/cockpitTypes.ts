@@ -3,7 +3,7 @@ import {
   FolderTree, CreditCard, Receipt, TrendingUp, Landmark, ShoppingCart, 
   BarChart3, Settings, Calendar, Download, FileSpreadsheet, 
   ShieldCheck, Boxes, Package, Briefcase, Calculator, Building2, 
-  Sparkles, Table as TableIcon, Warehouse as WarehouseIcon
+  Sparkles, Table as TableIcon, Warehouse as WarehouseIcon, Activity, Clock
 } from 'lucide-react';
 
 export type DockPosition = 'left' | 'right' | 'bottom' | 'hidden';
@@ -49,6 +49,16 @@ export const COCKPIT_MODULE_CATALOG: CockpitModuleItem[] = [
     colorScheme: 'amber',
     shortcut: 'Alt+C',
     description: 'Calculadora flotante con historial y cinta de memoria contable'
+  },
+  {
+    id: 'centralizaciones',
+    label: 'Motor Centralizaciones & Parametrización',
+    shortLabel: 'Centralizaciones',
+    category: 'FINANZAS',
+    icon: Layers,
+    colorScheme: 'indigo',
+    shortcut: 'Alt+M',
+    description: 'Capa 2 ERP: Centralización mensual automática de Ventas, Compras, Sueldos, Activo Fijo y Tesorería'
   },
   {
     id: 'vouchers',
@@ -137,6 +147,16 @@ export const COCKPIT_MODULE_CATALOG: CockpitModuleItem[] = [
     description: 'Informes analíticos combinados y resúmenes gerenciales'
   },
   {
+    id: 'analyticsHud',
+    label: 'Tablero Analítico HUD (Power Pivot BI)',
+    shortLabel: 'Gest_OK HUD',
+    category: 'FINANZAS',
+    icon: Activity,
+    colorScheme: 'cyan',
+    shortcut: 'Alt+H',
+    description: 'Tablero analítico avanzado, matriz multidimensional y motor OLAP en memoria'
+  },
+  {
     id: 'activoFijo',
     label: 'Activo Fijo & Depreciación',
     shortLabel: 'Activo Fijo',
@@ -211,8 +231,26 @@ export const COCKPIT_MODULE_CATALOG: CockpitModuleItem[] = [
     colorScheme: 'cyan',
     description: 'Proyección y control de ingresos y egresos efectivos'
   },
+  {
+    id: 'agingDeudas',
+    label: 'Aging de Deudas & Cartera',
+    shortLabel: 'Aging Deudas',
+    category: 'TESORERIA',
+    icon: Clock,
+    colorScheme: 'cyan',
+    description: 'Matriz gerencial de antigüedad de saldos en Cuentas por Cobrar y Cuentas por Pagar'
+  },
 
   // --- OPERACIONES ---
+  {
+    id: 'rendicionGastos',
+    label: 'Rendición de Gastos & Viáticos',
+    shortLabel: 'Rendiciones',
+    category: 'OPERACIONES',
+    icon: Receipt,
+    colorScheme: 'emerald',
+    description: 'Control de viáticos, fondos por rendir y compras menores con centralización contable'
+  },
   {
     id: 'operativaComercial',
     label: 'Gestión Comercial',

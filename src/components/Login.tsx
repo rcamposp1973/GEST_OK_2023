@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth, db } from '../lib/firebase';
-import { collection, query, where, getDocs, updateDoc, collectionGroup } from 'firebase/firestore';
+import { collection, query, where, getDocs, updateDoc, doc, getDoc } from 'firebase/firestore';
 import { 
   Lock, Mail, Eye, EyeOff, ShieldCheck, KeyRound, 
   ArrowLeft, CheckCircle2, Activity, ArrowRight
@@ -48,57 +48,7 @@ export default function Login({ onBackToLanding, initialEmail = '' }: LoginProps
     setResetLoading(true);
 
     try {
-      // 1. Intentar enviar correo de restablecimiento vía Firebase Auth
-      let resetSent = false;
-      try {
-        await sendPasswordResetEmail(auth, cleanEmail);
-        resetSent = true;
-      } catch (authErr: any) {
-        console.warn("Firebase Auth reset warning:", authErr);
-      }
-
-      // 2. Verificar existencia de usuario en colecciones Firestore
-      let userFound = resetSent;
-      if (!userFound) {
-        try {
-          const qSuper = query(collection(db, 'superUsers'), where('email', '==', cleanEmail));
-          const snapSuper = await getDocs(qSuper);
-          if (!snapSuper.empty || cleanEmail === 'rcampos@pulsocontable.cl') {
-            userFound = true;
-          }
-        } catch (e) {}
-
-        if (!userFound) {
-          try {
-            const studiesSnap = await getDocs(collection(db, 'studies'));
-            for (const sDoc of studiesSnap.docs) {
-              const sData = sDoc.data();
-              if ((sData.adminEmail || '').toLowerCase() === cleanEmail || (sData.email || '').toLowerCase() === cleanEmail) {
-                userFound = true;
-                break;
-              }
-              if (sData.administrators && Array.isArray(sData.administrators)) {
-                if (sData.administrators.some((a: any) => a.email?.toLowerCase() === cleanEmail)) {
-                  userFound = true;
-                  break;
-                }
-              }
-            }
-          } catch (e) {}
-        }
-
-        if (!userFound) {
-          try {
-            const qUsers = query(collectionGroup(db, 'users'), where('email', '==', cleanEmail));
-            const snapUsers = await getDocs(qUsers);
-            if (!snapUsers.empty) userFound = true;
-          } catch (e) {}
-        }
-      }
-
-      if (!userFound) {
-        throw new Error('El correo electrónico ingresado no se encuentra registrado en la plataforma.');
-      }
+      await sendPasswordResetEmail(auth, cleanEmail);
 
       // Registrar auditoría
       logAuditEvent({
@@ -112,7 +62,14 @@ export default function Login({ onBackToLanding, initialEmail = '' }: LoginProps
       setResetSuccess(`Se ha enviado un enlace con las instrucciones para restablecer tu contraseña a ${cleanEmail}. Por favor revisa tu bandeja de entrada o carpeta de spam.`);
     } catch (err: any) {
       console.error("Forgot password error:", err);
-      setError(err.message || 'Error al procesar la solicitud de recuperación.');
+      const code = err?.code || '';
+      if (code.includes('auth/user-not-found')) {
+        setError('El correo electrónico ingresado no se encuentra registrado en la plataforma.');
+      } else if (code.includes('auth/invalid-email')) {
+        setError('El correo electrónico no tiene un formato válido.');
+      } else {
+        setError('Error al procesar la solicitud de recuperación. Inténtalo más tarde.');
+      }
     } finally {
       setResetLoading(false);
     }
@@ -130,174 +87,74 @@ export default function Login({ onBackToLanding, initialEmail = '' }: LoginProps
 
     setLoading(true);
     try {
-      // 1. Intentar iniciar sesión directo en Firebase Auth
-      try {
-        await signInWithEmailAndPassword(auth, cleanEmail, password);
-      } catch (authErr: any) {
-        const errCode = authErr?.code || authErr?.message || '';
+      // 1. Autenticar de forma estricta contra Firebase Authentication
+      const userCredential = await signInWithEmailAndPassword(auth, cleanEmail, password);
+      const user = userCredential.user;
 
-        // Si el usuario no existe en Auth o credencial inválida, verificar en base de datos Firestore para sincronización
-        if (errCode.includes('auth/user-not-found') || errCode.includes('auth/invalid-credential')) {
-          let userAuthorized = false;
+      // 2. Verificar Custom Claims y vigencia
+      const tokenResult = await user.getIdTokenResult(true);
+      const userRole = tokenResult.claims.role as string | undefined;
+      const userStudyId = tokenResult.claims.studyId as string | undefined;
 
-          // A. Caso SuperAdmin (Consultar colección superUsers en Firestore o bootstrap)
-          try {
-            const qSuper = query(collection(db, 'superUsers'), where('email', '==', cleanEmail));
-            const snapSuper = await getDocs(qSuper);
-            if (!snapSuper.empty) {
-              const sUser = snapSuper.docs[0].data();
-              if (sUser.estado === 'Inactivo' || sUser.estado === 'Sin Vigencia') {
-                throw new Error('Tu cuenta de Super Administrador se encuentra inactiva o bloqueada.');
-              }
-              const expectedPass = sUser.password;
-              if (!expectedPass || expectedPass === password) {
-                userAuthorized = true;
-              }
-            } else if (cleanEmail === 'rcampos@pulsocontable.cl') {
-              userAuthorized = true;
-            }
-          } catch (errSuper: any) {
-            if (errSuper.message?.includes('inactiva') || errSuper.message?.includes('bloqueada')) throw errSuper;
-            console.warn("Error verificando superadmin:", errSuper);
-          }
-
-          // B. Caso Administrador de Estudio (colección /studies)
-          if (!userAuthorized) {
-            try {
-              const studiesSnap = await getDocs(collection(db, 'studies'));
-              for (const sDoc of studiesSnap.docs) {
-                const sData = sDoc.data();
-                const studyStatus = sData.estado || 'Vigente';
-
-                // Revisar lista de administradores
-                if (sData.administrators && Array.isArray(sData.administrators)) {
-                  const matchAdmin = sData.administrators.find(
-                    (a: any) => a.email?.toLowerCase() === cleanEmail
-                  );
-                  if (matchAdmin) {
-                    if (studyStatus === 'Sin Vigencia') {
-                      throw new Error('El estudio contable asignado se encuentra sin vigencia.');
-                    }
-                    if (matchAdmin.estado === 'Sin Vigencia') {
-                      throw new Error('Tu usuario administrador se encuentra sin vigencia.');
-                    }
-                    const expectedPass = matchAdmin.password;
-                    if (!expectedPass || expectedPass === password) {
-                      userAuthorized = true;
-                      break;
-                    }
-                  }
-                }
-
-                // Revisar campos raíz de admin (legacy / primario)
-                const legacyAdminEmail = (sData.adminEmail || sData.email || '').toLowerCase();
-                if (legacyAdminEmail === cleanEmail) {
-                  if (studyStatus === 'Sin Vigencia') {
-                    throw new Error('El estudio contable asignado se encuentra sin vigencia.');
-                  }
-                  if (sData.adminEstado === 'Sin Vigencia') {
-                    throw new Error('Tu usuario administrador se encuentra sin vigencia.');
-                  }
-                  const expectedPass = sData.adminPassword || sData.password;
-                  if (!expectedPass || expectedPass === password) {
-                    userAuthorized = true;
-                    break;
-                  }
-                }
-              }
-            } catch (errDb: any) {
-              if (errDb.message?.includes('sin vigencia')) throw errDb;
-              console.warn("Error verificando estudio:", errDb);
+      // Si pertenece a un estudio, verificar que el estudio no esté 'Sin Vigencia'
+      if (userStudyId && userRole !== 'SUPER_USER') {
+        try {
+          const studyDoc = await getDoc(doc(db, 'studies', userStudyId));
+          if (studyDoc.exists()) {
+            const sData = studyDoc.data();
+            if (sData.estado === 'Sin Vigencia') {
+              await auth.signOut();
+              throw new Error('El estudio contable asignado se encuentra sin vigencia.');
             }
           }
-
-          // C. Caso Contador / Usuario de Estudio (colecciones /studies/{id}/users)
-          if (!userAuthorized) {
-            try {
-              const qUser = query(collectionGroup(db, 'users'), where('email', '==', cleanEmail));
-              const snapUsers = await getDocs(qUser);
-              if (!snapUsers.empty) {
-                const uDoc = snapUsers.docs[0];
-                const uData = uDoc.data();
-                if (uData.estado === 'Inactivo' || uData.estado === 'Sin Vigencia') {
-                  throw new Error('Tu usuario contador se encuentra inactivo o sin vigencia.');
-                }
-                const expectedPass = uData.password;
-                if (!expectedPass || expectedPass === password) {
-                  userAuthorized = true;
-                }
-              }
-            } catch (errCg: any) {
-              if (errCg.message?.includes('sin vigencia') || errCg.message?.includes('inactivo')) throw errCg;
-              console.warn("Error verificando contador:", errCg);
-            }
+        } catch (studyCheckErr: any) {
+          if (studyCheckErr.message?.includes('sin vigencia')) {
+            throw studyCheckErr;
           }
-
-          if (userAuthorized) {
-            // Sincronizar y crear usuario en Firebase Authentication
-            try {
-              await createUserWithEmailAndPassword(auth, cleanEmail, password);
-            } catch (createErr: any) {
-              if (createErr?.code?.includes('auth/email-already-in-use')) {
-                throw new Error('La contraseña ingresada es incorrecta.');
-              } else {
-                throw createErr;
-              }
-            }
-          } else {
-            throw new Error('Credenciales incorrectas o usuario no registrado en el sistema.');
-          }
-        } else if (errCode.includes('auth/wrong-password')) {
-          throw new Error('La contraseña ingresada es incorrecta.');
-        } else if (errCode.includes('auth/invalid-email')) {
-          throw new Error('El correo electrónico no tiene un formato válido.');
-        } else if (errCode.includes('auth/too-many-requests')) {
-          throw new Error('Demasiados intentos fallidos. Por favor espera unos minutos.');
-        } else {
-          throw authErr;
         }
       }
 
-      // 2. Registrar identificador de sesión activa
+      // 3. Registrar identificador de sesión activa
       const sessionId = crypto.randomUUID();
       sessionStorage.setItem('activeSessionId', sessionId);
 
-      // 3. Registrar auditoría de inicio de sesión
+      // 4. Registrar auditoría de inicio de sesión
       logAuditEvent({
-        userId: auth.currentUser?.uid || 'auth-login',
+        userId: user.uid,
         userEmail: cleanEmail,
         action: 'LOGIN',
         module: 'AUTENTICACION',
         details: `Inicio de sesión exitoso de ${cleanEmail}`,
-        metadata: { sessionId }
+        metadata: { sessionId, role: userRole || 'DEFAULT' }
       });
 
-      if (cleanEmail !== 'rcampos@pulsocontable.cl') {
+      if (userStudyId) {
         try {
-          const qStudy1 = query(collection(db, 'studies'), where('adminEmail', '==', cleanEmail));
-          const qStudy2 = query(collection(db, 'studies'), where('email', '==', cleanEmail));
-          const [snap1, snap2] = await Promise.all([getDocs(qStudy1), getDocs(qStudy2)]);
-          
-          if (!snap1.empty) {
-            await updateDoc(snap1.docs[0].ref, { activeSessionId: sessionId });
-          } else if (!snap2.empty) {
-            await updateDoc(snap2.docs[0].ref, { activeSessionId: sessionId });
-          }
+          await updateDoc(doc(db, 'studies', userStudyId), { activeSessionId: sessionId });
         } catch (sErr) {
-          console.warn("Non-fatal session update error:", sErr);
+          console.warn("Non-fatal session update notice:", sErr);
         }
       }
     } catch (err: any) {
       console.error("Login error:", err);
-      setError(err.message || 'Error al iniciar sesión.');
+      const errCode = err?.code || '';
+      if (errCode.includes('auth/user-not-found') || errCode.includes('auth/wrong-password') || errCode.includes('auth/invalid-credential')) {
+        setError('Credenciales incorrectas o usuario no registrado en el sistema.');
+      } else if (errCode.includes('auth/invalid-email')) {
+        setError('El correo electrónico no tiene un formato válido.');
+      } else if (errCode.includes('auth/too-many-requests')) {
+        setError('Demasiados intentos fallidos. Por favor espera unos minutos.');
+      } else {
+        setError(err.message || 'Error al iniciar sesión.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#F6F9FC] flex flex-col justify-center items-center p-4 sm:p-6 selection:bg-[#533AFD] selection:text-white">
-      <div className="w-full max-w-md bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-xl p-6 sm:p-10 flex flex-col justify-between">
+    <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center p-4 sm:p-6 selection:bg-slate-900 selection:text-white">
+      <div className="w-full max-w-md bg-white rounded-xl border border-slate-200 shadow-sm p-6 sm:p-8 flex flex-col justify-between">
         
         <div>
           {/* Top Bar: Botón Volver a Landing y Versión */}
@@ -306,7 +163,7 @@ export default function Login({ onBackToLanding, initialEmail = '' }: LoginProps
               <button
                 type="button"
                 onClick={onBackToLanding}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#64748D] hover:text-[#0D253D] transition cursor-pointer group"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-900 transition cursor-pointer group"
               >
                 <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
                 <span>Volver a la portada</span>
@@ -315,33 +172,33 @@ export default function Login({ onBackToLanding, initialEmail = '' }: LoginProps
               <div />
             )}
 
-            <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 uppercase font-mono">
+            <span className="text-[10px] font-mono font-medium tracking-wide px-2 py-0.5 rounded bg-slate-100 text-slate-600 uppercase border border-slate-200">
               {APP_VERSION.startsWith('v') ? APP_VERSION : `v${APP_VERSION}`}
             </span>
           </div>
 
-          {/* Logo de Marca Minimalista con Onda Contable */}
+          {/* Logo de Marca Minimalista */}
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#533AFD] to-sky-400 flex items-center justify-center text-white shadow-md shadow-indigo-500/20 shrink-0">
-              <Activity className="w-5 h-5 stroke-[2.5]" />
+            <div className="w-9 h-9 rounded-lg bg-slate-900 flex items-center justify-center text-white shadow-2xs shrink-0">
+              <Activity className="w-4.5 h-4.5 stroke-[2.25]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xl font-extrabold tracking-tight text-[#0D253D]">Pulso Contable</span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-[#533AFD] border border-indigo-100 font-mono">
-                  Gest_OK
+                <span className="text-xl font-bold tracking-tight text-slate-900">Gest_OK</span>
+                <span className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded bg-slate-100 text-slate-700 border border-slate-200">
+                  ERP
                 </span>
               </div>
-              <p className="text-[11px] text-[#64748D]">Sistema Contable, Financiero & Tributario</p>
+              <p className="text-[11px] text-slate-500 font-normal">Software Contable, Financiero & Tributario</p>
             </div>
           </div>
 
           {/* Encabezado del Formulario */}
           <div className="mb-6">
-            <h1 className="text-2xl font-extrabold tracking-tight text-[#0D253D]">
+            <h1 className="text-xl font-bold tracking-tight text-slate-900">
               {isResetMode ? 'Recupera tu acceso' : 'Bienvenido de nuevo'}
             </h1>
-            <p className="text-xs sm:text-sm text-[#64748D] mt-1 leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-500 mt-1 leading-relaxed">
               {isResetMode
                 ? 'Ingresa tu correo o RUT corporativo registrado para enviar el enlace de recuperación.'
                 : 'Ingresa tus credenciales para acceder a la gestión contable de tu estudio o empresa.'}
@@ -464,17 +321,17 @@ export default function Login({ onBackToLanding, initialEmail = '' }: LoginProps
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-4 h-4 rounded border-slate-300 text-[#533AFD] focus:ring-indigo-500/20 focus:ring-offset-0 cursor-pointer"
+                    className="w-4 h-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900 cursor-pointer"
                   />
-                  <span className="text-xs text-[#64748D] font-medium">Recordar este dispositivo</span>
+                  <span className="text-xs text-slate-600 font-medium">Recordar este dispositivo</span>
                 </label>
               </div>
 
-              {/* Botón CTA Primario Voltaje Índigo */}
+              {/* Botón CTA Primario Sobrio Linear/Mercury */}
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 px-4 bg-[#533AFD] hover:bg-[#4326EB] active:bg-[#3519d6] text-white font-bold text-xs sm:text-sm rounded-xl shadow-md shadow-indigo-500/20 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                className="w-full py-2.5 px-4 bg-slate-900 hover:bg-slate-800 active:bg-slate-950 text-white font-medium text-xs sm:text-sm rounded-lg shadow-2xs transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
               >
                 {loading ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -495,7 +352,7 @@ export default function Login({ onBackToLanding, initialEmail = '' }: LoginProps
                     setError('');
                     setResetSuccess('');
                   }}
-                  className="text-xs font-semibold text-[#533AFD] hover:underline transition cursor-pointer"
+                  className="text-xs font-medium text-slate-500 hover:text-slate-900 hover:underline transition cursor-pointer"
                 >
                   ¿Olvidaste tu clave?
                 </button>

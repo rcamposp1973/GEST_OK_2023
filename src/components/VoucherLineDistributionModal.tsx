@@ -63,10 +63,8 @@ export default function VoucherLineDistributionModal({
   onApplyDistribution,
   onClose
 }: VoucherLineDistributionModalProps) {
-  if (!isOpen || !sourceLine || lineIndex === null) return null;
-
-  const isDebit = (Number(sourceLine.debit) || 0) > 0;
-  const originalTotal = isDebit ? Number(sourceLine.debit) : Number(sourceLine.credit) || 0;
+  const isDebit = (Number(sourceLine?.debit) || 0) > 0;
+  const originalTotal = isDebit ? Number(sourceLine?.debit || 0) : Number(sourceLine?.credit || 0);
 
   const [mode, setMode] = useState<'percentage' | 'amount'>('percentage');
   const [subLines, setSubLines] = useState<DistributionSubLine[]>([]);
@@ -288,7 +286,7 @@ export default function VoucherLineDistributionModal({
 
   const { dragProps, modalStyle } = useDraggableModal({ isOpen });
 
-  if (!isOpen) return null;
+  if (!isOpen || !sourceLine || lineIndex === null) return null;
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/30 flex items-center justify-center p-3 sm:p-5">

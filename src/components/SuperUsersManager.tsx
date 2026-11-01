@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { provisionAuthUser } from '../utils/adminApi';
 import { db } from '../lib/firebase';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs } from 'firebase/firestore';
 import { SuperUser } from '../types';
@@ -126,6 +127,8 @@ export default function SuperUsersManager() {
     }
 
     try {
+      // Cuenta de acceso (Firebase Auth) con rol SUPER_USER
+      await provisionAuthUser({ email: cleanEmail, password: formData.password || undefined, name: cleanName, role: 'SUPER_USER' });
       if (editingUser?.id) {
         const updatePayload: any = {
           name: cleanName,

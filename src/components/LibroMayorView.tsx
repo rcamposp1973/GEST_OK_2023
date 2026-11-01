@@ -310,7 +310,7 @@ export default function LibroMayorView({
   };
 
   const handlePrint = () => {
-    window.print();
+    handlePrintOfficialBook();
   };
 
   const handlePrintOfficialBook = async () => {

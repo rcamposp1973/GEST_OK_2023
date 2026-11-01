@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { db } from '../lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { 
   FileSpreadsheet, Calculator, Download, CheckCircle2, AlertCircle, 
   Printer, ArrowRight, DollarSign, Shield, HeartPulse, Building2, 
@@ -10,8 +10,10 @@ import {
 } from 'lucide-react';
 import { 
   Employee, PayrollSlip, PayrollParameters, ChartOfAccount, 
-  Voucher, VoucherLine, CostCenterMaster, PayrollConcept, SalaryHistoryEntry, AnnualReliquidation 
+  Voucher, VoucherLine, CostCenterMaster, PayrollConcept, SalaryHistoryEntry, AnnualReliquidation,
+  MasterAccountingParameters
 } from '../types';
+import { triggerIframePrint } from '../utils/printUtils';
 import { 
   DEFAULT_PAYROLL_PARAMS_2026, DEFAULT_AFP_COMMISSIONS, PREVIRED_AFP_CODES,
   DEFAULT_PAYROLL_CONCEPTS, getPrevisionalParametersForPeriod,
@@ -24,6 +26,10 @@ import { SalaryHistoryModal } from './payroll/SalaryHistoryModal';
 import { PayrollConceptsModal } from './payroll/PayrollConceptsModal';
 import { ExcelBulkImportModal } from './payroll/ExcelBulkImportModal';
 import { ReliquidacionesView } from './payroll/ReliquidacionesView';
+import { PreviredReceptorModal } from './payroll/PreviredReceptorModal';
+import { WorkerMonthlyNovedadesModal } from './payroll/WorkerMonthlyNovedadesModal';
+import { FiniquitosCalculatorModal } from './payroll/FiniquitosCalculatorModal';
+import { StandardModuleHeader } from './StandardModuleHeader';
 
 interface LiquidacionSueldosViewProps {
   companyId: string;
@@ -51,6 +57,7 @@ interface LiquidacionSueldosViewProps {
   onSaveReliquidation?: (reliquidation: AnnualReliquidation) => Promise<void> | void;
   defaultYear?: number;
   defaultMonth?: number;
+  masterParams?: MasterAccountingParameters | null;
 }
 
 export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
@@ -78,7 +85,8 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
   savedReliquidations = [],
   onSaveReliquidation,
   defaultYear = 2026,
-  defaultMonth = 1
+  defaultMonth = 1,
+  masterParams
 }) => {
   // Estado de Período
   const [selectedYear, setSelectedYear] = useState<number>(() => defaultYear || 2026);
@@ -103,8 +111,11 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
   // Modales de Colaborador y Conceptos
   const [selectedEmployeeForParams, setSelectedEmployeeForParams] = useState<Employee | null>(null);
   const [selectedEmployeeForSalaryHistory, setSelectedEmployeeForSalaryHistory] = useState<Employee | null>(null);
+  const [selectedEmployeeForNovedades, setSelectedEmployeeForNovedades] = useState<Employee | null>(null);
   const [isConceptsModalOpen, setIsConceptsModalOpen] = useState(false);
   const [isExcelBulkImportOpen, setIsExcelBulkImportOpen] = useState(false);
+  const [isPreviredReceptorOpen, setIsPreviredReceptorOpen] = useState(false);
+  const [isFiniquitosModalOpen, setIsFiniquitosModalOpen] = useState(false);
 
   // Conceptos dinámicos en memoria y sincronizados
   const [companyConcepts, setCompanyConcepts] = useState<PayrollConcept[]>(() => {
@@ -140,26 +151,38 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
     onTabChange?.(tab);
   };
 
-  // Estado local para parámetros cargados centralizadamente desde Firestore (Super Administrador)
+  // Estado local para parámetros cargados centralizadamente desde Firestore (Super Administrador o Administrador de Estudio)
   const [firestorePrevisionalParams, setFirestorePrevisionalParams] = useState<PayrollParameters | null>(null);
+  const [isEditingPeriodIndicators, setIsEditingPeriodIndicators] = useState(false);
+  const [indicatorFormData, setIndicatorFormData] = useState<PayrollParameters | null>(null);
+  const [isSavingIndicators, setIsSavingIndicators] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
     const fetchCentralizedIndicators = async () => {
       try {
-        const cached = localStorage.getItem(`gestok_previred_params_${periodStr}`);
+        const cached = localStorage.getItem(`gestok_previred_params_${companyId}_${periodStr}`);
         if (cached && isMounted) {
           try {
             setFirestorePrevisionalParams(JSON.parse(cached));
           } catch {}
         }
-        const snap = await getDoc(doc(db, 'previsionalIndicators', periodStr));
+
+        // 1. Buscar si la empresa tiene indicadores personalizados cargados por el administrador para este mes
+        let snap = await getDoc(doc(db, 'companies', companyId, 'previsionalIndicators', periodStr));
+        if (!snap.exists()) {
+          // 2. Si no, buscar si hay indicadores globales centralizados
+          snap = await getDoc(doc(db, 'previsionalIndicators', periodStr));
+        }
+
         if (snap.exists() && isMounted) {
           const data = snap.data() as PayrollParameters;
           setFirestorePrevisionalParams(data);
           try {
-            localStorage.setItem(`gestok_previred_params_${periodStr}`, JSON.stringify(data));
+            localStorage.setItem(`gestok_previred_params_${companyId}_${periodStr}`, JSON.stringify(data));
           } catch {}
+        } else if (isMounted) {
+          setFirestorePrevisionalParams(getPrevisionalParametersForPeriod(periodStr));
         }
       } catch (err) {
         console.warn('Could not fetch centralized previsional indicators:', err);
@@ -167,7 +190,30 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
     };
     fetchCentralizedIndicators();
     return () => { isMounted = false; };
-  }, [periodStr]);
+  }, [companyId, periodStr]);
+
+  // Carga de novedades y sueldos específicos del mes en proceso (Sueldo empresarial, horas, etc.)
+  useEffect(() => {
+    let isMounted = true;
+    const fetchMonthInputs = async () => {
+      try {
+        const cached = localStorage.getItem(`gestok_month_inputs_${companyId}_${periodStr}`);
+        if (cached && isMounted) {
+          try { setMonthInputs(JSON.parse(cached)); } catch {}
+        }
+        const snap = await getDoc(doc(db, 'companies', companyId, 'monthlyPayrollInputs', periodStr));
+        if (snap.exists() && isMounted) {
+          const data = snap.data() as Record<string, MonthPayrollInput>;
+          setMonthInputs(data);
+          try { localStorage.setItem(`gestok_month_inputs_${companyId}_${periodStr}`, JSON.stringify(data)); } catch {}
+        }
+      } catch (err) {
+        console.warn('Could not fetch monthly payroll inputs:', err);
+      }
+    };
+    fetchMonthInputs();
+    return () => { isMounted = false; };
+  }, [companyId, periodStr]);
 
   // Parámetros previsionales del período seleccionado (actualizados automáticamente con datos oficiales de Previred / SII o del Super Administrador)
   const periodParams: PayrollParameters = useMemo(() => {
@@ -338,15 +384,86 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
   const [isCentralizing, setIsCentralizing] = useState(false);
   const [createdVoucherId, setCreatedVoucherId] = useState<string | null>(null);
 
-  // Manejador de cambio de novedades de un colaborador
+  // Manejador de cambio de novedades y renta de un colaborador para este período específico
   const handleInputChange = (employeeId: string, field: keyof MonthPayrollInput, value: number) => {
-    setMonthInputs(prev => ({
-      ...prev,
-      [employeeId]: {
-        ...(prev[employeeId] || {}),
-        [field]: value
+    setMonthInputs(prev => {
+      const updated = {
+        ...prev,
+        [employeeId]: {
+          ...(prev[employeeId] || {}),
+          [field]: value
+        }
+      };
+      try {
+        localStorage.setItem(`gestok_month_inputs_${companyId}_${periodStr}`, JSON.stringify(updated));
+        setDoc(doc(db, 'companies', companyId, 'monthlyPayrollInputs', periodStr), updated, { merge: true }).catch(() => {});
+      } catch {}
+      return updated;
+    });
+  };
+
+  // Sincronizar novedades importadas desde Previred
+  const handleApplyNovedadesFromPrevired = async (novedades: Record<string, MonthPayrollInput>) => {
+    setMonthInputs(prev => {
+      const updated = { ...prev };
+      for (const [empId, data] of Object.entries(novedades)) {
+        updated[empId] = {
+          ...(updated[empId] || {}),
+          ...data
+        };
       }
-    }));
+      try {
+        localStorage.setItem(`gestok_month_inputs_${companyId}_${periodStr}`, JSON.stringify(updated));
+        setDoc(doc(db, 'companies', companyId, 'monthlyPayrollInputs', periodStr), updated, { merge: true }).catch(() => {});
+      } catch {}
+      return updated;
+    });
+  };
+
+  // Guardar novedades completas de un colaborador para el mes
+  const handleSaveWorkerMonthlyNovedades = async (employeeId: string, updatedInput: MonthPayrollInput) => {
+    setMonthInputs(prev => {
+      const updated = {
+        ...prev,
+        [employeeId]: updatedInput
+      };
+      try {
+        localStorage.setItem(`gestok_month_inputs_${companyId}_${periodStr}`, JSON.stringify(updated));
+        setDoc(doc(db, 'companies', companyId, 'monthlyPayrollInputs', periodStr), updated, { merge: true }).catch(() => {});
+      } catch {}
+      return updated;
+    });
+  };
+
+  // Guardar indicadores del período configurados por el administrador
+  const handleSavePeriodIndicators = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!indicatorFormData) return;
+    setIsSavingIndicators(true);
+    try {
+      const toSave: PayrollParameters = {
+        ...indicatorFormData,
+        period: periodStr
+      };
+
+      // Guardar en la empresa para este período y en el registro central
+      await setDoc(doc(db, 'companies', companyId, 'previsionalIndicators', periodStr), toSave, { merge: true });
+      await setDoc(doc(db, 'previsionalIndicators', periodStr), toSave, { merge: true });
+
+      setFirestorePrevisionalParams(toSave);
+      try {
+        localStorage.setItem(`gestok_previred_params_${companyId}_${periodStr}`, JSON.stringify(toSave));
+      } catch {}
+
+      setSyncNotice(`✅ Indicadores para el período [${periodStr}] guardados y aplicados exitosamente.`);
+      setIsEditingPeriodIndicators(false);
+      setTimeout(() => setSyncNotice(''), 7000);
+    } catch (err: any) {
+      console.error('Error al guardar indicadores:', err);
+      alert('Error al guardar indicadores: ' + (err.message || err));
+    } finally {
+      setIsSavingIndicators(false);
+    }
   };
 
   // Guardar concepto dinámico de haberes o descuentos
@@ -458,11 +575,29 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
     }
   };
 
+  // Buscar comprobante de centralización de remuneraciones existente para el período
+  const existingPayrollVoucher = useMemo(() => {
+    return vouchers.find(v => 
+      (v.origin === 'REMUNERACIONES' || 
+       v.origin === 'RRHH' ||
+       v.gloss?.toLowerCase().includes(`remuneraciones ${periodStr}`) ||
+       v.gloss?.toLowerCase().includes(`sueldos ${periodStr}`) ||
+       v.gloss?.toLowerCase().includes(`nómina ${periodStr}`)
+      ) &&
+      (v.period === periodStr || v.date?.startsWith(periodStr))
+    );
+  }, [vouchers, periodStr]);
+
   // Centralización Contable Automática
   const handleCentralizePayroll = async () => {
     if (slipsForPeriod.length === 0) {
       alert('No hay liquidaciones calculadas para centralizar.');
       return;
+    }
+
+    if (existingPayrollVoucher) {
+      const reConfirm = confirm(`Ya existe el comprobante de centralización Folio #${existingPayrollVoucher.voucherNumber || existingPayrollVoucher.id} para el período ${periodStr}.\n\n¿Desea generar un comprobante adicional de ajuste de nómina?`);
+      if (!reConfirm) return;
     }
 
     const confirmMsg = `¿Desea generar el comprobante contable de Centralización de Remuneraciones para el período ${periodStr}?\n\n` +
@@ -492,15 +627,32 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
         };
       };
 
-      // Cuentas de Gasto (Débitos)
-      const accGastoSueldos = findAccount(['4201001', '420101', '4.2.01.001'], ['sueldo', 'remuneracion', 'gratificacion'], '4201001', 'Sueldos y Gratificaciones', 'Gasto');
-      const accGastoNoImponible = findAccount(['4201003', '420103', '4.2.01.003'], ['colacion', 'movilizacion', 'no imponible'], '4201003', 'Gastos Colación y Movilización', 'Gasto');
-      const accGastoLeyesSociales = findAccount(['4201004', '420104', '4.2.01.004'], ['leyes sociales', 'aporte patronal', 'sis', 'afc empleador'], '4201004', 'Leyes Sociales y Aportes Patronales', 'Gasto');
+      // Cuentas de Gasto (Débitos) - Respetando Master Parameters si están configuradas
+      const accGastoSueldos = masterParams?.sueldosGastoAccountId
+        ? accounts.find(a => a.id === masterParams.sueldosGastoAccountId) || findAccount(['4201001', '420101', '4.2.01.001'], ['sueldo', 'remuneracion'], '4201001', 'Sueldos y Gratificaciones', 'Gasto')
+        : findAccount(['4201001', '420101', '4.2.01.001'], ['sueldo', 'remuneracion', 'gratificacion'], '4201001', 'Sueldos y Gratificaciones', 'Gasto');
+
+      const accGastoNoImponible = masterParams?.asignacionesGastoAccountId
+        ? accounts.find(a => a.id === masterParams.asignacionesGastoAccountId) || findAccount(['4201003', '420103', '4.2.01.003'], ['colacion', 'movilizacion'], '4201003', 'Gastos Colación y Movilización', 'Gasto')
+        : findAccount(['4201003', '420103', '4.2.01.003'], ['colacion', 'movilizacion', 'no imponible'], '4201003', 'Gastos Colación y Movilización', 'Gasto');
+
+      const accGastoLeyesSociales = masterParams?.imposicionesGastoAccountId
+        ? accounts.find(a => a.id === masterParams.imposicionesGastoAccountId) || findAccount(['4201004', '420104', '4.2.01.004'], ['leyes sociales', 'aporte patronal'], '4201004', 'Leyes Sociales y Aportes Patronales', 'Gasto')
+        : findAccount(['4201004', '420104', '4.2.01.004'], ['leyes sociales', 'aporte patronal', 'sis', 'afc empleador'], '4201004', 'Leyes Sociales y Aportes Patronales', 'Gasto');
 
       // Cuentas de Pasivo / Contrapartidas (Créditos)
-      const accSueldosPorPagar = findAccount(['2103001', '2101003', '2.1.03.001'], ['sueldos por pagar', 'remuneraciones por pagar'], '2103001', 'Sueldos por Pagar', 'Pasivo');
-      const accImpuestoUnicoPorPagar = findAccount(['2104003', '2.1.04.003', '2103003'], ['impuesto unico', 'retencion segunda', 'segunda categoria', 'art 43'], '2104003', 'Impuesto Único 2da Categoría por Pagar', 'Pasivo');
-      const accAfpPorPagar = findAccount(['2105001', '2.1.05.001', '2103004'], ['afp por pagar', 'fondos de pensiones'], '2105001', 'AFP e Imposiciones Previsionales por Pagar', 'Pasivo');
+      const accSueldosPorPagar = masterParams?.sueldosPorPagarAccountId
+        ? accounts.find(a => a.id === masterParams.sueldosPorPagarAccountId) || findAccount(['2103001', '2101003', '2.1.03.001'], ['sueldos por pagar'], '2103001', 'Sueldos por Pagar', 'Pasivo')
+        : findAccount(['2103001', '2101003', '2.1.03.001'], ['sueldos por pagar', 'remuneraciones por pagar'], '2103001', 'Sueldos por Pagar', 'Pasivo');
+
+      const accImpuestoUnicoPorPagar = masterParams?.retencionSegundaCatAccountId
+        ? accounts.find(a => a.id === masterParams.retencionSegundaCatAccountId) || findAccount(['2104003', '2.1.04.003', '2103003'], ['impuesto unico'], '2104003', 'Impuesto Único 2da Categoría por Pagar', 'Pasivo')
+        : findAccount(['2104003', '2.1.04.003', '2103003'], ['impuesto unico', 'retencion segunda', 'segunda categoria', 'art 43'], '2104003', 'Impuesto Único 2da Categoría por Pagar', 'Pasivo');
+
+      const accAfpPorPagar = masterParams?.leyesSocialesPorPagarAccountId
+        ? accounts.find(a => a.id === masterParams.leyesSocialesPorPagarAccountId) || findAccount(['2105001', '2.1.05.001', '2103004'], ['afp por pagar'], '2105001', 'AFP e Imposiciones Previsionales por Pagar', 'Pasivo')
+        : findAccount(['2105001', '2.1.05.001', '2103004'], ['afp por pagar', 'fondos de pensiones'], '2105001', 'AFP e Imposiciones Previsionales por Pagar', 'Pasivo');
+
       const accSaludPorPagar = findAccount(['2105002', '2.1.05.002', '2103005'], ['salud por pagar', 'fonasa', 'isapre'], '2105002', 'Instituciones de Salud por Pagar', 'Pasivo');
       const accAfcPorPagar = findAccount(['2105003', '2.1.05.003', '2103006'], ['afc por pagar', 'seguro de cesantia'], '2105003', 'AFC Seguro de Cesantía por Pagar', 'Pasivo');
       const accSisMutualPorPagar = findAccount(['2105004', '2.1.05.004', '2103007'], ['sis por pagar', 'mutual', 'seguridad laboral'], '2105004', 'SIS y Mutualidad por Pagar', 'Pasivo');
@@ -893,174 +1045,128 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
 
   // Imprimir Liquidación Individual
   const handlePrintSlip = () => {
-    window.print();
+    const slipElement = document.getElementById('printable-payroll-slip');
+    if (slipElement) {
+      triggerIframePrint({
+        title: `Liquidacion_Sueldo_${companyName}`,
+        htmlContent: slipElement.innerHTML
+      });
+    } else {
+      window.print();
+    }
   };
 
   return (
     <div className="space-y-6">
-      {/* Header y Control de Período Sticky (Siempre visible al subir o bajar) */}
-      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md rounded-2xl shadow-md border border-slate-200 p-4 transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-indigo-600 text-white rounded-xl shadow-xs shrink-0">
-            <Calculator className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-base font-bold text-slate-900 tracking-tight leading-none">
-                Módulo de Remuneraciones
-              </h1>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold font-mono bg-indigo-100 text-indigo-800 border border-indigo-200">
-                Período: {periodStr}
-              </span>
-              <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border flex items-center gap-1 ${
+      {/* HEADER ESTANDARIZADO DE MÓDULO */}
+      <StandardModuleHeader
+        title="Módulo de Remuneraciones & RRHH"
+        subtitle="Cálculo legal mensual, vigencias, aperturas dinámicas, reliquidaciones y centralización contable al Libro Diario."
+        icon={Calculator}
+        iconBgColor="bg-indigo-600"
+        layerBadge={{ layer: 1, label: 'Capa 1: Módulo Operativo' }}
+        period={{
+          selectedPeriod: periodStr,
+          onPrevPeriod: handlePrevMonth,
+          onNextPeriod: handleNextMonth
+        }}
+        centralizationStatus={{
+          isCentralized: !!existingPayrollVoucher,
+          voucherId: existingPayrollVoucher?.id,
+          voucherNumber: existingPayrollVoucher?.voucherNumber,
+          onViewVoucher: (id) => onNavigateToLibroDiario?.(id),
+          onQuickCentralize: handleCentralizePayroll,
+          isCentralizing,
+          disabled: isFuturePeriodBlocked || slipsForPeriod.length === 0,
+          disabledTooltip: slipsForPeriod.length === 0 ? 'Calcule y guarde primero las liquidaciones del período' : undefined
+        }}
+        kpis={[
+          {
+            label: 'Trabajadores',
+            value: totals.totalEmployees,
+            subtext: `${slipsForPeriod.length} liquidaciones procesadas`,
+            icon: Users,
+            variant: 'default'
+          },
+          {
+            label: 'Total Imponible (Gasto)',
+            value: `$${totals.totalImponible.toLocaleString('es-CL')}`,
+            subtext: 'Base cálculo legal',
+            icon: DollarSign,
+            variant: 'purple'
+          },
+          {
+            label: 'Sueldos Líquidos a Pagar',
+            value: `$${totals.totalLiquido.toLocaleString('es-CL')}`,
+            subtext: 'Pasivo neto transferencias',
+            icon: HeartPulse,
+            variant: 'success'
+          },
+          {
+            label: 'Leyes Sociales Totales',
+            value: `$${(totals.totalAfp + totals.totalSalud + totals.totalAfcTrabajador + totals.totalAfcEmpleador + totals.totalSis + totals.totalMutual).toLocaleString('es-CL')}`,
+            subtext: 'Previred + Mutual + Aportes',
+            icon: Shield,
+            variant: 'warning'
+          }
+        ]}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Botón Carga Masiva Excel Tabulado */}
+            <button
+              type="button"
+              onClick={() => setIsExcelBulkImportOpen(true)}
+              className="px-3 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-300 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-300 rounded-xl transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
+              title="Cargar haberes y bonos desde Excel tabulado"
+            >
+              <Upload className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Excel Masivo</span>
+            </button>
+
+            {/* Botón Configuración de Conceptos */}
+            <button
+              type="button"
+              onClick={() => setIsConceptsModalOpen(true)}
+              className="px-3 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-300 hover:bg-indigo-50 hover:text-indigo-800 hover:border-indigo-300 rounded-xl transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
+              title="Parametrizar conceptos de haberes"
+            >
+              <Layers className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Conceptos ({companyConcepts.length})</span>
+            </button>
+
+            {/* Botón Principal: Procesar / Guardar Remuneraciones del Mes */}
+            <button
+              type="button"
+              onClick={handleSaveAllSlips}
+              disabled={isFuturePeriodBlocked}
+              className={`px-3.5 py-1.5 text-xs font-bold text-white rounded-xl transition-all flex items-center gap-1.5 shadow-2xs shrink-0 cursor-pointer ${
                 isFuturePeriodBlocked
-                  ? 'bg-rose-100 text-rose-800 border-rose-300'
+                  ? 'bg-slate-400 cursor-not-allowed opacity-60'
                   : isPeriodProcessed 
-                  ? 'bg-emerald-100 text-emerald-800 border-emerald-300' 
-                  : 'bg-amber-100 text-amber-800 border-amber-300'
-              }`}>
-                {isFuturePeriodBlocked ? '🔒 Futuro Bloqueado' : isPeriodProcessed ? '✅ Procesado / Cerrado' : '⚡ Activo Abierto'}
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 mt-1 line-clamp-1">
-              Cálculo legal mensual, vigencias, aperturas dinámicas, reliquidaciones y centralización contable
-            </p>
+                  ? 'bg-slate-800 hover:bg-slate-900 active:bg-black' 
+                  : 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800'
+              }`}
+              title={isFuturePeriodBlocked ? 'Período bloqueado' : 'Calcular y procesar liquidaciones'}
+            >
+              {isFuturePeriodBlocked ? <Lock className="w-3.5 h-3.5 text-slate-200" /> : <Sparkles className="w-3.5 h-3.5 text-amber-300" />}
+              <span>{isFuturePeriodBlocked ? `Bloqueado` : isPeriodProcessed ? `Re-Procesar (${periodStr})` : `Procesar (${periodStr})`}</span>
+            </button>
+
+            {/* Botón Reset / Limpiar Período */}
+            {onResetPayrollSlips && isPeriodProcessed && (
+              <button
+                type="button"
+                onClick={handleResetCurrentPeriod}
+                className="px-2.5 py-1.5 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-colors flex items-center gap-1 shadow-2xs cursor-pointer"
+                title={`Eliminar las liquidaciones guardadas del período ${periodStr}`}
+              >
+                <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                <span>Limpiar</span>
+              </button>
+            )}
           </div>
-        </div>
-
-        {/* Selector de Período y Botones Rápidos */}
-        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
-          {/* Navegador Mes a Mes */}
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-2xs">
-            <button
-              type="button"
-              onClick={handlePrevMonth}
-              className="p-1 text-slate-600 hover:text-slate-900 hover:bg-white rounded-lg transition-colors"
-              title="Mes anterior"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-
-            <select
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(Number(e.target.value))}
-              className="bg-white text-xs font-bold text-slate-900 rounded-lg px-2 py-1.5 border-none shadow-2xs focus:outline-none"
-            >
-              {[
-                { m: 1, name: 'Enero' },
-                { m: 2, name: 'Febrero' },
-                { m: 3, name: 'Marzo' },
-                { m: 4, name: 'Abril' },
-                { m: 5, name: 'Mayo' },
-                { m: 6, name: 'Junio' },
-                { m: 7, name: 'Julio' },
-                { m: 8, name: 'Agosto' },
-                { m: 9, name: 'Septiembre' },
-                { m: 10, name: 'Octubre' },
-                { m: 11, name: 'Noviembre' },
-                { m: 12, name: 'Diciembre' },
-              ].map(item => {
-                const pStr = `${selectedYear}-${String(item.m).padStart(2, '0')}`;
-                const isProc = savedPeriods.includes(pStr);
-                const isAct = pStr === activeOpenPeriod;
-                const isFut = pStr > activeOpenPeriod;
-                let label = item.name;
-                if (isProc) label += ' (✅ Cerrado)';
-                else if (isAct) label += ' (⚡ Activo)';
-                else if (isFut) label += ' (🔒 Futuro)';
-
-                return (
-                  <option key={item.m} value={item.m}>
-                    {label}
-                  </option>
-                );
-              })}
-            </select>
-
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
-              className="bg-white text-xs font-bold text-slate-900 rounded-lg px-2 py-1.5 border-none shadow-2xs focus:outline-none font-mono"
-            >
-              {[2025, 2026, 2027].map(y => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
-
-            <button
-              type="button"
-              onClick={handleNextMonth}
-              className="p-1 text-slate-600 hover:text-slate-900 hover:bg-white rounded-lg transition-colors"
-              title="Mes siguiente"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Botón Carga Masiva Excel Tabulado */}
-          <button
-            type="button"
-            onClick={() => setIsExcelBulkImportOpen(true)}
-            className="px-3 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-300 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-300 rounded-xl transition-colors flex items-center gap-1.5 shadow-2xs"
-            title="Cargar haberes y bonos desde Excel tabulado (trabajador por trabajador y concepto por concepto)"
-          >
-            <Upload className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Excel Masivo</span>
-          </button>
-
-          {/* Botón Configuración de Conceptos */}
-          <button
-            type="button"
-            onClick={() => setIsConceptsModalOpen(true)}
-            className="px-3 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-300 hover:bg-indigo-50 hover:text-indigo-800 hover:border-indigo-300 rounded-xl transition-colors flex items-center gap-1.5 shadow-2xs"
-            title="Crear o parametrizar conceptos de haberes (bonos, comisiones, viáticos)"
-          >
-            <Layers className="w-3.5 h-3.5 text-indigo-600" />
-            <span>Conceptos ({companyConcepts.length})</span>
-          </button>
-
-          {/* Botón Principal: Procesar / Guardar Remuneraciones del Mes */}
-          <button
-            type="button"
-            onClick={handleSaveAllSlips}
-            disabled={isFuturePeriodBlocked}
-            className={`px-4 py-1.5 text-xs font-bold text-white rounded-xl transition-all flex items-center gap-1.5 shadow-md shrink-0 ${
-              isFuturePeriodBlocked
-                ? 'bg-slate-400 cursor-not-allowed opacity-60'
-                : isPeriodProcessed 
-                ? 'bg-slate-800 hover:bg-slate-900 active:bg-black' 
-                : 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 ring-2 ring-emerald-400 ring-offset-1 animate-pulse'
-            }`}
-            title={isFuturePeriodBlocked ? 'Período bloqueado: debe cerrar primero el mes activo anterior' : 'Calcular y procesar oficialmente las liquidaciones de sueldo para el período seleccionado'}
-          >
-            {isFuturePeriodBlocked ? <Lock className="w-3.5 h-3.5 text-slate-200" /> : <Sparkles className="w-3.5 h-3.5 text-amber-300" />}
-            <span>{isFuturePeriodBlocked ? `Bloqueado (${periodStr})` : isPeriodProcessed ? `Re-Procesar (${periodStr})` : `Procesar Remuneraciones (${periodStr})`}</span>
-          </button>
-
-          {/* Botón Centralización */}
-          <button
-            onClick={handleCentralizePayroll}
-            disabled={isCentralizing || slipsForPeriod.length === 0}
-            className="px-3.5 py-1.5 text-xs font-bold text-slate-800 bg-white border border-slate-300 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-900 rounded-xl transition-colors flex items-center gap-1.5 shadow-2xs disabled:opacity-50"
-            title="Generar Asiento Contable Cuadrado en el Libro Diario"
-          >
-            <Layers className="w-3.5 h-3.5 text-emerald-600" />
-            {isCentralizing ? 'Centralizando...' : 'Centralizar'}
-          </button>
-
-          {/* Botón Reset / Limpiar Período */}
-          {onResetPayrollSlips && isPeriodProcessed && (
-            <button
-              onClick={handleResetCurrentPeriod}
-              className="px-3 py-1.5 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-colors flex items-center gap-1.5 shadow-2xs"
-              title={`Eliminar las liquidaciones guardadas del período ${periodStr} para reiniciar el mes`}
-            >
-              <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-              <span>Limpiar Mes ({periodStr})</span>
-            </button>
-          )}
-        </div>
-      </div>
+        }
+      />
 
       {/* Banner de Parámetros Previsionales del Período */}
       <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-xl p-4 shadow-sm border border-slate-800">
@@ -1185,7 +1291,27 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
           </button>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setIsPreviredReceptorOpen(true)}
+            className="px-3 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+            title="Importar y conciliar cartolas o archivos de 105 campos de Previred"
+          >
+            <Shield className="w-3.5 h-3.5 text-indigo-600" />
+            <span>Conciliador Previred</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsFiniquitosModalOpen(true)}
+            className="px-3 py-1.5 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg border border-rose-200 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+            title="Calcular finiquitos legales, años de servicio (Art. 163), aviso previo y vacaciones"
+          >
+            <Calculator className="w-3.5 h-3.5 text-rose-600" />
+            <span>Finiquitos DT</span>
+          </button>
+
           {onNavigateToEmployees && (
             <button
               onClick={() => onNavigateToEmployees('contracts')}
@@ -1459,12 +1585,45 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
                           </td>
 
                           <td className="py-2.5 px-3 text-right font-medium text-slate-800">
-                            <div>${slip.sueldoBaseProporcional.toLocaleString('es-CL')}</div>
-                            {hasVigencias && (
-                              <span className="inline-flex items-center gap-0.5 text-[9px] text-amber-700 font-sans font-semibold bg-amber-50 px-1 rounded border border-amber-200" title="Sueldo regido por vigencia histórica">
-                                <History className="w-2.5 h-2.5" /> Vigente
-                              </span>
-                            )}
+                            <div className="flex items-center justify-end gap-1">
+                              <span className="text-[10px] text-slate-400 font-mono">$</span>
+                              <input
+                                type="number"
+                                min={0}
+                                step={1000}
+                                value={monthInputs[slip.employeeId]?.sueldoBaseOverride !== undefined ? monthInputs[slip.employeeId].sueldoBaseOverride : slip.sueldoBasePactado}
+                                onChange={(e) => handleInputChange(slip.employeeId, 'sueldoBaseOverride', Number(e.target.value))}
+                                className="w-24 text-right py-1 px-1.5 border border-slate-300 rounded-md font-mono font-bold text-slate-900 focus:ring-1 focus:ring-indigo-500 text-xs bg-white shadow-2xs"
+                                title="Renta / Sueldo Base pactado para este período. Si se modifica, afecta exclusivamente al mes en proceso sin alterar períodos históricos anteriores."
+                              />
+                            </div>
+                            <div className="flex items-center justify-end gap-1 mt-0.5 flex-wrap">
+                              {slip.sueldoBaseProporcional !== (monthInputs[slip.employeeId]?.sueldoBaseOverride ?? slip.sueldoBasePactado) && (
+                                <span className="text-[9px] text-slate-500 font-mono" title="Proporcional según días trabajados">
+                                  Prop: ${slip.sueldoBaseProporcional.toLocaleString('es-CL')}
+                                </span>
+                              )}
+                              {emp?.isSueldoEmpresarial && (
+                                <span className="text-[9px] bg-amber-100 text-amber-900 font-bold px-1 rounded border border-amber-300" title="Contrato o Régimen de Sueldo Empresarial">
+                                  S. Empresarial
+                                </span>
+                              )}
+                              {(emp?.workHoursPerWeek || 45) < 40 && (
+                                <span className="text-[9px] bg-sky-100 text-sky-900 font-bold px-1 rounded border border-sky-300" title="Jornada Parcial / Medio Tiempo">
+                                  {emp?.workHoursPerWeek} hrs
+                                </span>
+                              )}
+                              {monthInputs[slip.employeeId]?.sueldoBaseOverride !== undefined && (
+                                <span className="text-[9px] bg-purple-100 text-purple-900 font-bold px-1 rounded border border-purple-300" title="Renta modificada exclusivamente para este período">
+                                  Mes {periodStr}
+                                </span>
+                              )}
+                              {hasVigencias && (
+                                <span className="inline-flex items-center gap-0.5 text-[9px] text-amber-700 font-sans font-semibold bg-amber-50 px-1 rounded border border-amber-200" title="Sueldo regido por vigencia histórica">
+                                  <History className="w-2.5 h-2.5" /> Vigente
+                                </span>
+                              )}
+                            </div>
                           </td>
 
                           <td className="py-2.5 px-3 text-right text-slate-700">
@@ -1499,6 +1658,17 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
 
                           <td className="py-2.5 px-3 text-center font-sans">
                             <div className="flex items-center justify-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (emp) setSelectedEmployeeForNovedades(emp);
+                                }}
+                                className="p-1.5 text-slate-600 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-colors border border-transparent hover:border-purple-200"
+                                title="Ajustar Novedades y Renta Exclusiva de este Mes (Sueldo empresarial, días, licencias, horas extras, bonos, pensión alimenticia)"
+                              >
+                                <Calendar className="w-4 h-4 text-purple-600" />
+                              </button>
+
                               <button
                                 type="button"
                                 onClick={() => {
@@ -1802,7 +1972,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
           </div>
 
           {/* Plantilla Oficial de Liquidación de Sueldo (Formato Chileno Código del Trabajo) */}
-          <div className="bg-white p-8 rounded-2xl border border-slate-300 shadow-sm max-w-4xl mx-auto text-slate-900 text-xs font-sans print:p-0 print:border-none print:shadow-none print:max-w-full">
+          <div id="printable-payroll-slip" className="bg-white p-8 rounded-2xl border border-slate-300 shadow-sm max-w-4xl mx-auto text-slate-900 text-xs font-sans print:p-0 print:border-none print:shadow-none print:max-w-full">
             {/* Membrete Empleador y Título */}
             <div className="border-b-2 border-slate-900 pb-4 mb-5 flex justify-between items-start">
               <div>
@@ -2007,10 +2177,24 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
 
                     {activeSlip.anticipos > 0 && (
                       <div className="flex justify-between py-1 border-b border-slate-100">
-                        <span>Anticipos de Sueldo / Préstamos</span>
-                        <span className="font-mono">${activeSlip.anticipos.toLocaleString('es-CL')}</span>
+                        <span>Anticipos de Sueldo</span>
+                        <span className="font-mono text-slate-800">${activeSlip.anticipos.toLocaleString('es-CL')}</span>
                       </div>
                     )}
+
+                    {activeSlip.prestamosEmpresa > 0 && (
+                      <div className="flex justify-between py-1 border-b border-slate-100">
+                        <span>Cuota Préstamo Empresa</span>
+                        <span className="font-mono text-slate-800">${activeSlip.prestamosEmpresa.toLocaleString('es-CL')}</span>
+                      </div>
+                    )}
+
+                    {activeSlip.descuentoJudicialPensionAlimentos && activeSlip.descuentoJudicialPensionAlimentos > 0 ? (
+                      <div className="flex justify-between py-1 border-b border-rose-100 bg-rose-50/50 px-1 rounded font-bold text-rose-900">
+                        <span>Retención Judicial (Pensión de Alimentos)</span>
+                        <span className="font-mono">${activeSlip.descuentoJudicialPensionAlimentos.toLocaleString('es-CL')}</span>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
 
@@ -2220,6 +2404,19 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
               </div>
 
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full lg:w-auto">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIndicatorFormData({ ...periodParams });
+                    setIsEditingPeriodIndicators(true);
+                  }}
+                  className="px-3.5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                  title="Cargar o modificar los indicadores de este período específico (Sueldo mínimo, UF, UTM, SIS, Mutual, AFPs)"
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  <span>✏️ Cargar / Modificar Indicadores de {periodStr}</span>
+                </button>
+
                 <button
                   onClick={handleSyncOnlineIndicators}
                   disabled={isSyncingIndicators}
@@ -2734,6 +2931,306 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
           onClose={() => setIsExcelBulkImportOpen(false)}
           onApply={handleApplyBulkExcelConcepts}
         />
+      )}
+
+      {/* MODAL: Receptor Masivo y Conciliador Previred */}
+      {isPreviredReceptorOpen && (
+        <PreviredReceptorModal
+          isOpen={isPreviredReceptorOpen}
+          onClose={() => setIsPreviredReceptorOpen(false)}
+          periodStr={periodStr}
+          companyName={companyName}
+          companyRut={companyRut}
+          employees={employees}
+          slips={slipsForPeriod}
+          onApplyNovedades={handleApplyNovedadesFromPrevired}
+        />
+      )}
+
+      {/* MODAL: Novedades y Ajuste Salarial Exclusivo del Mes */}
+      {selectedEmployeeForNovedades && (
+        <WorkerMonthlyNovedadesModal
+          isOpen={!!selectedEmployeeForNovedades}
+          onClose={() => setSelectedEmployeeForNovedades(null)}
+          employee={selectedEmployeeForNovedades}
+          periodStr={periodStr}
+          currentInput={monthInputs[selectedEmployeeForNovedades.id] || {}}
+          params={periodParams}
+          onSave={handleSaveWorkerMonthlyNovedades}
+        />
+      )}
+
+      {/* MODAL: Finiquitos e Indemnizaciones Legales (Art. 161/163 CdT) */}
+      {isFiniquitosModalOpen && (
+        <FiniquitosCalculatorModal
+          companyName={companyName}
+          companyRut={companyRut}
+          companyAddress={companyAddress}
+          employees={employees}
+          accounts={accounts}
+          onClose={() => setIsFiniquitosModalOpen(false)}
+        />
+      )}
+      {/* MODAL: Cargar / Modificar Indicadores Previsionales del Período */}
+      {isEditingPeriodIndicators && indicatorFormData && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-4xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-200">
+            {/* Header Modal */}
+            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-600 rounded-xl text-white">
+                  <SlidersHorizontal className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-white leading-tight">
+                    Cargar / Modificar Indicadores del Mes ({periodStr})
+                  </h2>
+                  <p className="text-xs text-slate-300">
+                    Configuración mensual exclusiva para el período en proceso. Los períodos pasados permanecen congelados e inmutables.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEditingPeriodIndicators(false)}
+                className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+              >
+                <ChevronLeft className="w-5 h-5 rotate-180" />
+              </button>
+            </div>
+
+            {/* Form Body */}
+            <form onSubmit={handleSavePeriodIndicators} className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Sección 1: Indicadores Económicos Clave */}
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <DollarSign className="w-4 h-4 text-emerald-600" />
+                  1. Indicadores Económicos Clave del Mes
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Sueldo Mínimo Legal (IMM / CLP) *
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min={100000}
+                      step={1000}
+                      value={indicatorFormData.imm}
+                      onChange={(e) => setIndicatorFormData({ ...indicatorFormData, imm: Number(e.target.value) })}
+                      className="w-full px-3 py-2 text-sm font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500"
+                    />
+                    <p className="text-[10px] text-slate-500 mt-0.5">Base gratificación Art. 50 (Tope $ {Math.round((4.75 * indicatorFormData.imm) / 12).toLocaleString('es-CL')})</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Unidad de Fomento (UF / CLP) *
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min={1000}
+                      step={0.01}
+                      value={indicatorFormData.uf}
+                      onChange={(e) => setIndicatorFormData({ ...indicatorFormData, uf: Number(e.target.value) })}
+                      className="w-full px-3 py-2 text-sm font-mono font-bold text-emerald-800 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500"
+                    />
+                    <p className="text-[10px] text-slate-500 mt-0.5">Valor oficial inicio del período</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Unidad Tributaria Mensual (UTM / CLP) *
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min={1000}
+                      step={1}
+                      value={indicatorFormData.utm}
+                      onChange={(e) => setIndicatorFormData({ ...indicatorFormData, utm: Number(e.target.value) })}
+                      className="w-full px-3 py-2 text-sm font-mono font-bold text-indigo-800 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500"
+                    />
+                    <p className="text-[10px] text-slate-500 mt-0.5">Base Impuesto Único de Segunda Categoría</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sección 2: Topes Imponibles Previsionales */}
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <Shield className="w-4 h-4 text-indigo-600" />
+                  2. Topes Imponibles Previsionales Oficiales (en UF)
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Tope AFP / Salud / SIS (UF)
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min={50}
+                      max={150}
+                      step={0.1}
+                      value={indicatorFormData.topeImponibleAfpUf}
+                      onChange={(e) => setIndicatorFormData({ ...indicatorFormData, topeImponibleAfpUf: Number(e.target.value) })}
+                      className="w-full px-3 py-2 text-sm font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <p className="text-[10px] text-slate-500 mt-0.5">Equivale a $ {Math.round(indicatorFormData.topeImponibleAfpUf * indicatorFormData.uf).toLocaleString('es-CL')} en pesos</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Tope Seguro de Cesantía AFC (UF)
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min={50}
+                      max={200}
+                      step={0.1}
+                      value={indicatorFormData.topeImponibleAfcUf}
+                      onChange={(e) => setIndicatorFormData({ ...indicatorFormData, topeImponibleAfcUf: Number(e.target.value) })}
+                      className="w-full px-3 py-2 text-sm font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <p className="text-[10px] text-slate-500 mt-0.5">Equivale a $ {Math.round(indicatorFormData.topeImponibleAfcUf * indicatorFormData.uf).toLocaleString('es-CL')} en pesos</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sección 3: Aportes Patronales y Protección Social */}
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <HeartPulse className="w-4 h-4 text-rose-600" />
+                  3. Aportes Patronales y Protección Social (% a Cargo del Empleador)
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Seguro de Invalidez SIS (%)
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min={0}
+                      max={10}
+                      step={0.01}
+                      value={indicatorFormData.tasaSisPercent}
+                      onChange={(e) => setIndicatorFormData({ ...indicatorFormData, tasaSisPercent: Number(e.target.value) })}
+                      className="w-full px-3 py-2 text-sm font-mono font-bold text-indigo-900 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <p className="text-[10px] text-slate-500 mt-0.5">Aporte empleador sobre renta imponible AFP</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Mutualidad + Ley SANNA (%)
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min={0}
+                      max={10}
+                      step={0.01}
+                      value={indicatorFormData.tasaMutualPercent}
+                      onChange={(e) => setIndicatorFormData({ ...indicatorFormData, tasaMutualPercent: Number(e.target.value) })}
+                      className="w-full px-3 py-2 text-sm font-mono font-bold text-amber-900 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500"
+                    />
+                    <p className="text-[10px] text-slate-500 mt-0.5">Básica 0.90% + 0.03% SANNA + Adicional</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Mayor Cotización Protección Social (%)
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={10}
+                      step={0.01}
+                      value={indicatorFormData.tasaReformaProteccionSocialPercent || 0}
+                      onChange={(e) => setIndicatorFormData({ ...indicatorFormData, tasaReformaProteccionSocialPercent: Number(e.target.value) })}
+                      className="w-full px-3 py-2 text-sm font-mono font-bold text-emerald-900 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500"
+                    />
+                    <p className="text-[10px] text-slate-500 mt-0.5">Reforma previsional / Mayor aporte legal si aplica</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sección 4: Tasas de AFP */}
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <Building2 className="w-4 h-4 text-indigo-600" />
+                  4. Tasas Totales de Cotización AFP (%) (10% Fondo Obligatorio + Comisión)
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
+                  {Object.entries(indicatorFormData.afpCommissions || DEFAULT_AFP_COMMISSIONS)
+                    .filter(([k]) => !['INP', 'JUBILADO_COTIZA', 'JUBILADO_NO_COTIZA'].includes(k))
+                    .map(([afpKey, rate]) => (
+                      <div key={afpKey} className="bg-white p-2.5 rounded-xl border border-slate-200">
+                        <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                          {afpKey.toLowerCase()}
+                        </label>
+                        <input
+                          type="number"
+                          min={10}
+                          max={25}
+                          step={0.01}
+                          value={rate}
+                          onChange={(e) => {
+                            const val = Number(e.target.value);
+                            setIndicatorFormData({
+                              ...indicatorFormData,
+                              afpCommissions: {
+                                ...(indicatorFormData.afpCommissions || DEFAULT_AFP_COMMISSIONS),
+                                [afpKey]: val
+                              }
+                            });
+                          }}
+                          className="w-full px-2 py-1 text-xs font-mono font-bold text-indigo-900 border border-slate-300 rounded-lg text-center"
+                        />
+                      </div>
+                    ))}
+                </div>
+              </div>
+
+              {/* Footer Acciones */}
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const official = getPrevisionalParametersForPeriod(periodStr);
+                    setIndicatorFormData({ ...official });
+                  }}
+                  className="px-3.5 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
+                >
+                  Restablecer Oficiales Previred
+                </button>
+
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingPeriodIndicators(false)}
+                    className="flex-1 sm:flex-initial px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded-xl transition-colors border border-slate-200 cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSavingIndicators}
+                    className="flex-1 sm:flex-initial px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 rounded-xl transition-colors flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20 cursor-pointer"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>{isSavingIndicators ? 'Guardando...' : `Guardar Indicadores de ${periodStr}`}</span>
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

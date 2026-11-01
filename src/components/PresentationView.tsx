@@ -20,6 +20,7 @@ import {
   ShieldCheck, 
   Building2, 
   ArrowRight, 
+  ArrowLeft,
   TrendingUp, 
   Zap, 
   Clock, 
@@ -89,60 +90,70 @@ export default function PresentationView() {
 
   // ESTADO WHATSAPP: Mensaje para Grupos vs Mensaje Directo
   const [whatsappTemplate, setWhatsappTemplate] = useState<'group' | 'direct'>('group');
+  const [flyerDataUrl, setFlyerDataUrl] = useState<string>('');
 
-  // ESCENAS DEL VIDEO REEL VERTICAL (9:16) Y TOUR VISUAL
+  useEffect(() => {
+    try {
+      const url = getSlideDataUrl(0);
+      setFlyerDataUrl(url);
+    } catch (e) {
+      console.error('Error generando preview de lámina:', e);
+    }
+  }, []);
+
+  // ESCENAS DEL VIDEO REEL VERTICAL (9:16) Y TOUR VISUAL (PANTALLAS REALES DEL SISTEMA)
   const reelScenes: ReelScene[] = [
     {
       id: 1,
       durationSeconds: 6,
-      badge: "EL DOLOR ACTUAL",
-      hookText: "¿SIGUES DIGITANDO FACTURAS A MANO?",
-      subText: "Los sistemas tradicionales te cobran por todo y siguen atrapados en interfaces lentas.",
-      narration: "¿Sigues perdiendo horas digitando facturas y cuadrando cartolas a mano en tu estudio contable? Es momento de automatizar.",
-      highlightWords: ["DIGITANDO", "MANO", "AUTOMATIZAR"]
+      badge: "COCKPIT UNIFICADO",
+      hookText: "CONTROL TOTAL DE TU ESTUDIO EN 1 PANTALLA",
+      subText: "Barra ejecutiva unificada: indicadores UF/Dólar en tiempo real y bloqueo seguro de periodos.",
+      narration: "¿Cansado de sistemas lentos y dispersos? Pulso Contable unifica la gestión contable de tu empresa con indicadores chilenos en vivo y navegación instantánea.",
+      highlightWords: ["CONTROL TOTAL", "INDICADORES", "PULSO CONTABLE"]
     },
     {
       id: 2,
       durationSeconds: 7,
-      badge: "RESCATE RCV SEGURO",
-      hookText: "CONEXIÓN Y RESCATE RCV DESDE EL SII",
-      subText: "Rescata automáticamente compras, ventas y boletas BHE con total seguridad y confidencialidad.",
-      narration: "Conexión directa para rescatar tus registros de compras, ventas y boletas de honorarios con los más altos estándares de seguridad.",
-      highlightWords: ["RESCATE RCV", "SII", "SEGURIDAD"]
+      badge: "RCV OFICIAL SII",
+      hookText: "CARGA MASIVA RCV Y HONORARIOS EN 2 SEG",
+      subText: "Importa compras, ventas y boletas BHE oficiales: cero duplicados y creación automática de auxiliares.",
+      narration: "Arrastra tus compras, ventas y boletas de honorarios oficiales del SII. El sistema valida duplicados y crea los asientos contables en segundos.",
+      highlightWords: ["CARGA MASIVA", "CERO DUPLICADOS", "ASIENTOS"]
     },
     {
       id: 3,
       durationSeconds: 7,
-      badge: "RCV & HONORARIOS",
-      hookText: "CARGA MASIVA RCV EN 2 SEGUNDOS",
-      subText: "Importa los archivos del SII: cero duplicados y creación automática de auxiliares.",
-      narration: "Arrastra tus compras, ventas y boletas de honorarios. El sistema valida duplicados y crea los asientos solos.",
-      highlightWords: ["2 SEGUNDOS", "CERO DUPLICADOS", "ASIENTOS SOLOS"]
+      badge: "LIBRO DIARIO & AUDITORÍA",
+      hookText: "GRILLA EXCEL CON BLINDAJE TRIBUTARIO",
+      subText: "Partida doble estricta con validación bloqueante de RUT, documentos y centros de costos.",
+      narration: "Comprobantes contables ágiles como Excel pero blindados. Imposible guardar con descuadres de RUT o centro de costos.",
+      highlightWords: ["GRILLA EXCEL", "BLINDAJE", "CERO DESCUADRES"]
     },
     {
       id: 4,
       durationSeconds: 7,
-      badge: "BANCO Y TESORERÍA",
+      badge: "TESORERÍA INTELIGENTE",
       hookText: "CONCILIACIÓN BANCARIA EN 1 CLIC",
-      subText: "Cruza cartolas de cualquier banco contra tus facturas pendientes.",
-      narration: "Sube la cartola de cualquier banco y concilia tus facturas en un solo clic manteniendo el banco siempre cuadrado.",
+      subText: "Cruza cartolas de cualquier banco chileno contra facturas: Saldo Cartola = Saldo Libro Mayor.",
+      narration: "Sube la cartola de cualquier banco y concilia tus facturas en un solo clic manteniendo el banco 100% cuadrado.",
       highlightWords: ["1 CLIC", "CUALQUIER BANCO", "BANCO CUADRADO"]
     },
     {
       id: 5,
       durationSeconds: 6,
-      badge: "CIERRES Y F29",
-      hookText: "F29 Y BALANCE IFRS AUTOMÁTICOS",
-      subText: "Exigibilidad estricta: imposible guardar con descuadres de RUT o Centro de Costos.",
-      narration: "Obtén tu Formulario 29 mensual y el Balance de 8 Columnas clasificado sin trasnoches ni errores.",
-      highlightWords: ["F29 AUTOMÁTICO", "BALANCE IFRS", "SIN ERRORES"]
+      badge: "CIERRE Y F29",
+      hookText: "F29 Y BALANCE 8 COLUMNAS IFRS AL DÍA",
+      subText: "IVA débito, crédito, retención BHE y balance mayorizado en tiempo real listos para exportar.",
+      narration: "Obtén tu Formulario 29 mensual y el Balance de 8 Columnas clasificado sin trasnoches ni cálculos manuales.",
+      highlightWords: ["F29", "BALANCE 8 COLUMNAS", "SIN TRASNOCHES"]
     },
     {
       id: 6,
       durationSeconds: 6,
       badge: "OFERTA LANZAMIENTO",
       hookText: "15 DÍAS DE PRUEBA GRATIS + MIGRACIÓN",
-      subText: "Súmate al Programa de Estudios Fundadores con migración asistida.",
+      subText: "Súmate al Programa de Estudios Fundadores con migración asistida y soporte por WhatsApp.",
       narration: "Pruébalo gratis por 15 días con migración asistida de tus datos. Escríbenos al WhatsApp +56 9 4631 8783 o entra a app.pulsocontable.cl.",
       highlightWords: ["15 DÍAS GRATIS", "MIGRACIÓN", "PULSOCONTABLE.CL"]
     }
@@ -331,76 +342,185 @@ Estamos recibiendo a los primeros 25 estudios en el "Programa de Estudios Fundad
 
 ¿Te gustaría probarlo en tu estudio? Escribe "QUIERO DEMO" en los comentarios, entra a app.pulsocontable.cl o escríbenos al WhatsApp +56 9 4631 8783.`;
 
-  // 6 LÁMINAS DEL CARRUSEL DE INSTAGRAM (1:1)
+  // 6 LÁMINAS DEL CARRUSEL DE INSTAGRAM (1:1) - PANTALLAS Y MÓDULOS REALES DEL SISTEMA
   const carouselSlides = [
     {
       slideNum: "1/6",
-      title: "¿SIGUES DIGITANDO FACTURAS A MANO?",
-      subtitle: "Descubre cómo Pymes y estudios contables modernos en Chile automatizan el 70% de su trabajo.",
-      badge: "EL DOLOR ACTUAL",
-      accentColor: "from-rose-600 to-amber-600",
+      title: "ESPACIO CONTABLE UNIFICADO",
+      subtitle: "Control total de tu empresa: indicadores oficiales UF/Dólar en tiempo real, bloqueo de periodos y barra ejecutiva.",
+      badge: "COCKPIT & NAVEGACIÓN",
+      accentColor: "from-indigo-600 to-blue-600",
       content: (
-        <div className="space-y-4 text-center">
-          <div className="inline-flex items-center justify-center">
-            <span className="px-3 py-1 rounded-full bg-rose-900/80 border border-rose-500/50 text-rose-200 text-xs font-bold uppercase tracking-wider shadow-sm">
-              🚨 El Dolor Actual
-            </span>
+        <div className="space-y-2.5 text-left font-sans">
+          {/* Simulador de Barra Unificada Real */}
+          <div className="bg-slate-900 border border-slate-700/80 rounded-xl p-2.5 shadow-lg space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-1 text-[11px] pb-2 border-b border-slate-800">
+              <div className="flex items-center gap-1.5">
+                <span className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded font-bold text-[10px] border border-slate-700 flex items-center gap-1">
+                  <ArrowLeft className="w-3 h-3 text-emerald-400" /> VOLVER
+                </span>
+                <span className="font-bold text-white">Ferretería Central SpA</span>
+                <span className="text-[10px] text-slate-400 font-mono">76.123.456-7</span>
+              </div>
+              <div className="flex items-center gap-1 text-[10px]">
+                <span className="px-1.5 py-0.5 bg-slate-800 text-emerald-400 font-bold rounded border border-slate-700">2025</span>
+                <span className="px-1.5 py-0.5 bg-emerald-950 text-emerald-300 font-bold rounded border border-emerald-700/60 flex items-center gap-1">
+                  OCTUBRE <Lock className="w-2.5 h-2.5 text-emerald-400" />
+                </span>
+                <span className="px-1.5 py-0.5 bg-indigo-950 text-indigo-300 font-mono rounded border border-indigo-700/60">
+                  UF: $37.980,45
+                </span>
+                <span className="px-1.5 py-0.5 bg-cyan-950 text-cyan-300 font-mono rounded border border-cyan-700/60">
+                  USD: $945,20
+                </span>
+              </div>
+            </div>
+            {/* Pestañas de trabajo contable */}
+            <div className="flex items-center gap-1 overflow-x-auto text-[10px] font-semibold text-slate-300 pt-0.5">
+              <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 rounded border border-emerald-500/40">Resumen</span>
+              <span className="px-2 py-0.5 bg-slate-800/80 text-slate-300 rounded">RCV</span>
+              <span className="px-2 py-0.5 bg-slate-800/80 text-slate-300 rounded">Comprobantes</span>
+              <span className="px-2 py-0.5 bg-slate-800/80 text-slate-300 rounded">Bancos</span>
+              <span className="px-2 py-0.5 bg-slate-800/80 text-slate-300 rounded">F29</span>
+              <span className="px-2 py-0.5 bg-slate-800/80 text-slate-300 rounded">Balance 8 Col.</span>
+            </div>
           </div>
-          <div className="p-4 bg-rose-950/50 border border-rose-800/80 rounded-2xl">
-            <p className="text-sm text-rose-200 font-medium leading-relaxed">
-              "Horas perdidas pasando datos del SII a sistemas lentos, cuadrando bancos en Excel y persiguiendo descuadres a fin de mes."
-            </p>
+
+          {/* Tarjetas KPI Reales */}
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="p-2 bg-slate-900/90 rounded-lg border border-slate-800">
+              <span className="text-[9.5px] text-slate-400 block font-semibold">VENTAS MES</span>
+              <span className="text-xs font-mono font-bold text-emerald-400">$28.450.000</span>
+              <span className="text-[8.5px] text-emerald-300 block">▲ +14.2%</span>
+            </div>
+            <div className="p-2 bg-slate-900/90 rounded-lg border border-slate-800">
+              <span className="text-[9.5px] text-slate-400 block font-semibold">COMPRAS RCV</span>
+              <span className="text-xs font-mono font-bold text-rose-400">$19.820.000</span>
+              <span className="text-[8.5px] text-slate-400 block">100% Validadas</span>
+            </div>
+            <div className="p-2 bg-slate-900/90 rounded-lg border border-slate-800">
+              <span className="text-[9.5px] text-slate-400 block font-semibold">MARGEN OPER.</span>
+              <span className="text-xs font-mono font-bold text-cyan-400">$8.630.000</span>
+              <span className="text-[8.5px] text-cyan-300 block">EBITDA 30.3%</span>
+            </div>
           </div>
-          <div className="flex items-center justify-center gap-2 text-xs text-amber-400 font-bold">
-            <span>Hay una forma moderna y automática 👉 Desliza</span>
+
+          <div className="p-2 bg-indigo-950/40 border border-indigo-700/50 rounded-lg flex items-center justify-between text-[10.5px] text-indigo-200">
+            <span>⌘K Buscador Universal &bull; Atajos F1</span>
+            <span className="font-mono font-bold text-emerald-400">Modo Pantalla Completa</span>
           </div>
         </div>
       )
     },
     {
       slideNum: "2/6",
-      title: "CONEXIÓN Y RESCATE RCV DESDE EL SII",
-      subtitle: "Rescata compras, ventas y boletas BHE automáticamente con total seguridad.",
-      badge: "SEGURIDAD Y RESCATE SII",
-      accentColor: "from-indigo-600 to-blue-600",
+      title: "CARGA MASIVA RCV Y HONORARIOS",
+      subtitle: "Importa compras, ventas y boletas BHE oficiales: sin digitar a mano, cero duplicados y asignación automática.",
+      badge: "RCV OFICIAL SII",
+      accentColor: "from-teal-600 to-emerald-600",
       content: (
-        <div className="space-y-3">
-          <div className="p-3 bg-indigo-950/60 border border-indigo-700/60 rounded-xl text-xs space-y-1">
-            <p className="font-bold text-white flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-indigo-400" /> Máxima Seguridad y Confidencialidad
-            </p>
-            <p className="text-slate-300 text-[11px]">Tus datos tributarios protegidos y respaldados con los más altos estándares de seguridad en la nube.</p>
+        <div className="space-y-2 text-left font-sans">
+          <div className="flex items-center justify-between text-[11px] px-1">
+            <span className="font-bold text-slate-200 flex items-center gap-1.5">
+              <FileSpreadsheet className="w-3.5 h-3.5 text-teal-400" /> RCV Octubre 2025 (Oficial SII)
+            </span>
+            <span className="text-[10px] text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-700 font-bold">
+              48 Documentos Validados
+            </span>
           </div>
-          <div className="grid grid-cols-2 gap-2 text-center text-xs">
-            <div className="p-2 bg-slate-900 rounded-lg border border-slate-800">
-              <span className="text-[10px] text-slate-400 block">RESCATE RCV</span>
-              <span className="font-bold text-indigo-300">Compras, Ventas & BHE</span>
+          {/* Mini Tabla Real */}
+          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow text-[10.5px]">
+            <div className="grid grid-cols-12 bg-slate-800/80 p-1.5 font-bold text-slate-400 text-[10px]">
+              <div className="col-span-2">Tipo</div>
+              <div className="col-span-2">Folio</div>
+              <div className="col-span-4">Razón Social</div>
+              <div className="col-span-2 text-right">Neto</div>
+              <div className="col-span-2 text-right">Total</div>
             </div>
-            <div className="p-2 bg-slate-900 rounded-lg border border-slate-800">
-              <span className="text-[10px] text-slate-400 block">ASIENTO CONTABLE</span>
-              <span className="font-bold text-emerald-400">100% Automático</span>
+            <div className="divide-y divide-slate-800/60">
+              <div className="grid grid-cols-12 p-1.5 text-slate-200 items-center hover:bg-slate-800/40">
+                <div className="col-span-2 text-emerald-400 font-bold">FC 33</div>
+                <div className="col-span-2 font-mono">4580</div>
+                <div className="col-span-4 truncate">SODIMAC S.A.</div>
+                <div className="col-span-2 text-right font-mono">$1.250.000</div>
+                <div className="col-span-2 text-right font-mono font-bold text-white">$1.487.500</div>
+              </div>
+              <div className="grid grid-cols-12 p-1.5 text-slate-200 items-center hover:bg-slate-800/40">
+                <div className="col-span-2 text-emerald-400 font-bold">FC 33</div>
+                <div className="col-span-2 font-mono">1204</div>
+                <div className="col-span-4 truncate">ENEL DISTRIBUCION</div>
+                <div className="col-span-2 text-right font-mono">$480.000</div>
+                <div className="col-span-2 text-right font-mono font-bold text-white">$571.200</div>
+              </div>
+              <div className="grid grid-cols-12 p-1.5 text-slate-200 items-center hover:bg-slate-800/40">
+                <div className="col-span-2 text-rose-400 font-bold">NC 61</div>
+                <div className="col-span-2 font-mono">312</div>
+                <div className="col-span-4 truncate">DISTRIB. SUR LTDA</div>
+                <div className="col-span-2 text-right font-mono text-rose-300">-$85.000</div>
+                <div className="col-span-2 text-right font-mono font-bold text-rose-400">-$101.150</div>
+              </div>
             </div>
+          </div>
+          <div className="p-2 bg-teal-950/40 border border-teal-800/50 rounded-lg flex items-center justify-between text-[11px] text-teal-300">
+            <span>✓ Cero duplicados garantizado</span>
+            <span className="font-mono font-bold">Asiento Contable Auto</span>
           </div>
         </div>
       )
     },
     {
       slideNum: "3/6",
-      title: "CARGA MASIVA RCV Y HONORARIOS",
-      subtitle: "Importa compras, ventas y boletas BHE desde los archivos oficiales del SII en 2 segundos.",
-      badge: "AUTOMATIZACIÓN",
-      accentColor: "from-teal-600 to-emerald-600",
+      title: "GRILLA EXCEL CON BLINDAJE TRIBUTARIO",
+      subtitle: "Partida doble estricta con validación bloqueante de RUT, documentos y centros de costos antes de guardar.",
+      badge: "LIBRO DIARIO & AUDITORÍA",
+      accentColor: "from-purple-600 to-indigo-600",
       content: (
-        <div className="space-y-3">
-          <div className="p-3 bg-teal-950/60 border border-teal-700/60 rounded-xl text-xs space-y-1">
-            <p className="font-bold text-white flex items-center gap-1.5">
-              <FileSpreadsheet className="w-4 h-4 text-teal-400" /> Cero Duplicados Garantizado
-            </p>
-            <p className="text-slate-300 text-[11px]">El sistema valida si un RUT, Tipo y Folio ya existe y auto-crea la ficha del auxiliar.</p>
+        <div className="space-y-2 text-left font-sans">
+          <div className="flex items-center justify-between text-[11px] px-1">
+            <span className="font-bold text-slate-200 flex items-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5 text-indigo-400" /> Traspaso N° 108 &bull; Compras del Mes
+            </span>
+            <span className="text-[10px] text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-700 font-bold">
+              CUADRADO ✓
+            </span>
           </div>
-          <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 text-center">
-            <span className="text-emerald-400 font-mono font-bold text-base block">100+ Documentos en 3 seg</span>
-            <span className="text-slate-400 text-[11px]">Generación del comprobante de compras y ventas masivo</span>
+          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow text-[10.5px]">
+            <div className="grid grid-cols-12 bg-slate-800/80 p-1.5 font-bold text-slate-400 text-[10px]">
+              <div className="col-span-3">Cuenta</div>
+              <div className="col-span-3">RUT Auxiliar</div>
+              <div className="col-span-3 text-right">Debe</div>
+              <div className="col-span-3 text-right">Haber</div>
+            </div>
+            <div className="divide-y divide-slate-800/60">
+              <div className="grid grid-cols-12 p-1.5 text-slate-200 items-center">
+                <div className="col-span-3 font-mono text-indigo-300 truncate">1-1-08 Mercaderías</div>
+                <div className="col-span-3 font-mono text-slate-400">76.123.456-7</div>
+                <div className="col-span-3 text-right font-mono text-emerald-400">$1.250.000</div>
+                <div className="col-span-3 text-right font-mono text-slate-500">$0</div>
+              </div>
+              <div className="grid grid-cols-12 p-1.5 text-slate-200 items-center">
+                <div className="col-span-3 font-mono text-indigo-300 truncate">1-1-10 IVA Crédito</div>
+                <div className="col-span-3 font-mono text-slate-400">-</div>
+                <div className="col-span-3 text-right font-mono text-emerald-400">$237.500</div>
+                <div className="col-span-3 text-right font-mono text-slate-500">$0</div>
+              </div>
+              <div className="grid grid-cols-12 p-1.5 text-slate-200 items-center">
+                <div className="col-span-3 font-mono text-amber-300 truncate">2-1-01 Proveedores</div>
+                <div className="col-span-3 font-mono text-slate-400">96.541.230-1</div>
+                <div className="col-span-3 text-right font-mono text-slate-500">$0</div>
+                <div className="col-span-3 text-right font-mono text-amber-400">$1.487.500</div>
+              </div>
+            </div>
+            <div className="grid grid-cols-12 p-1.5 bg-slate-950 font-bold text-[11px] border-t border-slate-700">
+              <div className="col-span-6 text-slate-300">TOTALES COMPROBANTE:</div>
+              <div className="col-span-3 text-right text-emerald-400 font-mono">$1.487.500</div>
+              <div className="col-span-3 text-right text-emerald-400 font-mono">$1.487.500</div>
+            </div>
+          </div>
+          <div className="flex gap-1.5 text-[10px] font-mono justify-center pt-0.5">
+            <span className="px-2 py-0.5 bg-indigo-950 text-indigo-300 rounded border border-indigo-700">RUT Obligatorio</span>
+            <span className="px-2 py-0.5 bg-amber-950 text-amber-300 rounded border border-amber-700">DOC Requerido</span>
+            <span className="px-2 py-0.5 bg-emerald-950 text-emerald-300 rounded border border-emerald-700">CC Obligatorio</span>
           </div>
         </div>
       )
@@ -428,44 +548,82 @@ Estamos recibiendo a los primeros 25 estudios en el "Programa de Estudios Fundad
           </span>
         </div>
       ),
-      subtitle: "Cruza cartolas de cualquier banco contra tus facturas pendientes.",
+      subtitle: "Cruza cartolas de cualquier banco chileno contra facturas pendientes: Saldo Cartola = Saldo Libro Mayor.",
       badge: "TESORERÍA INTELIGENTE",
       accentColor: "from-emerald-600 to-cyan-600",
       content: (
-        <div className="space-y-3">
-          <div className="p-3 bg-emerald-950/60 border border-emerald-700/60 rounded-xl text-xs space-y-1">
-            <p className="font-bold text-white flex items-center gap-1.5">
-              <Zap className="w-4 h-4 text-emerald-400" /> Cruce Inteligente de Facturas
-            </p>
-            <p className="text-slate-300 text-[11px]">Detecta abonos y cargos de cualquier banco y sugiere el match automáticamente.</p>
+        <div className="space-y-2 text-left font-sans">
+          <div className="flex items-center justify-between text-[11px] px-1">
+            <span className="font-bold text-slate-200 flex items-center gap-1.5">
+              <Zap className="w-3.5 h-3.5 text-emerald-400" /> Banco de Chile &bull; Cta Cte N° 00-123456-01
+            </span>
+            <span className="text-[10px] text-emerald-300 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-700 font-bold">
+              Match Automático
+            </span>
           </div>
-          <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 text-center">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-2.5 space-y-2 shadow">
+            <div className="flex items-center justify-between text-[10.5px] p-2 bg-slate-950 rounded-lg border border-slate-800">
+              <div>
+                <span className="text-[10px] text-slate-400 block">MOVIMIENTO CARTOLA</span>
+                <span className="font-bold text-white">Abono Transferencia #9042</span>
+              </div>
+              <span className="font-mono font-bold text-emerald-400 text-sm">+$1.487.500</span>
+            </div>
+            <div className="flex items-center justify-center">
+              <span className="text-[10px] text-emerald-400 font-bold bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-700 flex items-center gap-1">
+                ⚡ Coincide con Factura N° 4580 (Sodimac)
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-[10.5px] p-2 bg-slate-950 rounded-lg border border-slate-800">
+              <div>
+                <span className="text-[10px] text-slate-400 block">FACTURA PENDIENTE MATCH</span>
+                <span className="font-bold text-slate-200">Factura Venta N° 4580</span>
+              </div>
+              <span className="font-mono font-bold text-emerald-400 text-sm">$1.487.500</span>
+            </div>
+          </div>
+          <div className="p-2 bg-emerald-950/50 border border-emerald-700/60 rounded-xl text-center">
             <span className="text-emerald-300 font-mono font-bold text-xs block">Saldo Cartola = Saldo Libro Mayor</span>
-            <span className="text-slate-400 text-[11px]">Asiento bancario generado sin digitar una sola cuenta</span>
+            <span className="text-slate-400 text-[10px]">Asiento bancario generado sin digitar una sola cuenta</span>
           </div>
         </div>
       )
     },
     {
       slideNum: "5/6",
-      title: "GRILLAS EXCEL Y EXIGIBILIDAD ESTRICTA",
-      subtitle: "La agilidad de una planilla con la seguridad de una base de datos blindada.",
-      badge: "CALIDAD DE DATOS",
-      accentColor: "from-purple-600 to-indigo-600",
+      title: "F29 Y BALANCE 8 COLUMNAS IFRS",
+      subtitle: "Débito, crédito, retenciones BHE, PPM y balance de 8 columnas calculados al peso en tiempo real.",
+      badge: "CIERRE MENSUAL & TRIBUTARIO",
+      accentColor: "from-amber-600 to-orange-600",
       content: (
-        <div className="space-y-3">
-          <div className="p-3.5 bg-gradient-to-r from-purple-950 via-indigo-950 to-slate-900 border-2 border-purple-500/60 rounded-xl text-center shadow-lg">
-            <p className="font-black text-white text-sm tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-white via-purple-100 to-indigo-200">
-              Formulario 29 Y Balance 8 Columnas IFRS
-            </p>
-            <p className="text-amber-300 font-semibold text-xs mt-1">
-              Calculados en tiempo real listos para exportar a Excel y PDF.
-            </p>
+        <div className="space-y-2 text-left font-sans">
+          <div className="flex items-center justify-between text-[11px] px-1">
+            <span className="font-bold text-slate-200">Resumen Tributario & Balance Mensual</span>
+            <span className="text-[10px] text-amber-400 bg-amber-950/80 px-2 py-0.5 rounded border border-amber-700 font-bold">
+              IFRS Oficial
+            </span>
           </div>
-          <div className="flex flex-wrap gap-1.5 justify-center text-[10px] font-mono font-bold">
-            <span className="px-2 py-1 bg-indigo-950 text-indigo-300 rounded border border-indigo-700">RUT* Bloqueante</span>
-            <span className="px-2 py-1 bg-amber-950 text-amber-300 rounded border border-amber-700">DOC* Requerido</span>
-            <span className="px-2 py-1 bg-emerald-950 text-emerald-300 rounded border border-emerald-700">CC* Obligatorio</span>
+          <div className="grid grid-cols-2 gap-2 text-center text-xs">
+            <div className="p-2.5 bg-slate-900 rounded-xl border border-slate-800 space-y-1">
+              <span className="text-[10px] text-slate-400 block font-bold">F29: IVA DÉBITO FISCAL</span>
+              <span className="text-sm font-mono font-bold text-rose-400">$3.840.500</span>
+              <span className="text-[10px] text-slate-500 block">Ventas Netas: $20.213.158</span>
+            </div>
+            <div className="p-2.5 bg-slate-900 rounded-xl border border-slate-800 space-y-1">
+              <span className="text-[10px] text-slate-400 block font-bold">F29: IVA CRÉDITO FISCAL</span>
+              <span className="text-sm font-mono font-bold text-emerald-400">$2.915.200</span>
+              <span className="text-[10px] text-slate-500 block">Compras Netas: $15.343.158</span>
+            </div>
+          </div>
+          <div className="p-2.5 bg-gradient-to-r from-purple-950 to-indigo-950 border border-purple-700/60 rounded-xl text-[11px] space-y-1">
+            <div className="flex items-center justify-between font-bold text-white">
+              <span>Balance de 8 Columnas IFRS:</span>
+              <span className="text-emerald-400 font-mono">Cuadrado al Peso</span>
+            </div>
+            <div className="flex items-center justify-between text-slate-300 text-[10px]">
+              <span>Total Activo = Pasivo + Patrimonio</span>
+              <span className="font-mono text-purple-200 font-bold">Exportar a Excel / PDF</span>
+            </div>
           </div>
         </div>
       )
@@ -473,27 +631,28 @@ Estamos recibiendo a los primeros 25 estudios en el "Programa de Estudios Fundad
     {
       slideNum: "6/6",
       title: "PROGRAMA DE ESTUDIOS FUNDADORES",
-      subtitle: "Pruébalo 15 días gratis con migración de datos asistida por nuestros expertos.",
-      badge: "OFERTA LIMITADA",
+      subtitle: "15 días de prueba 100% gratuita, migración asistida de empresas y soporte contable chileno.",
+      badge: "ACCESO Y DEMO EN VIVO",
       accentColor: "from-emerald-500 to-teal-500",
       content: (
-        <div className="space-y-3 text-center">
-          <div className="p-3.5 bg-gradient-to-r from-emerald-950 to-teal-950 border border-emerald-700 rounded-2xl space-y-2">
-            <span className="inline-block px-3 py-1 bg-emerald-500 text-slate-950 font-black text-xs rounded-full">
-              CUPOS LIMITADOS
+        <div className="space-y-3 text-center font-sans">
+          <div className="p-3 bg-gradient-to-r from-emerald-950 to-teal-950 border border-emerald-700 rounded-xl space-y-2">
+            <span className="inline-block px-3 py-0.5 bg-emerald-500 text-slate-950 font-black text-[11px] rounded-full">
+              CUPOS LIMITADOS &bull; ACCESO INMEDIATO
             </span>
-            <ul className="text-xs text-slate-200 text-left space-y-1 list-disc list-inside">
-              <li>15 días de acceso total gratuito.</li>
-              <li>Migración asistida de tus empresas y auxiliares.</li>
-              <li>Tarifa preferencial congelada para siempre.</li>
+            <ul className="text-xs text-slate-200 text-left space-y-1.5 list-disc list-inside">
+              <li><strong>15 días de acceso total gratuito</strong> sin compromiso.</li>
+              <li><strong>Migración asistida</strong> de tu plan de cuentas y empresas.</li>
+              <li><strong>Soporte contable chileno</strong> directo vía WhatsApp.</li>
+              <li>Tarifa preferencial congelada de por vida.</li>
             </ul>
           </div>
-          <div className="p-2.5 bg-slate-900 rounded-xl border border-emerald-500/40 space-y-1">
+          <div className="p-2.5 bg-slate-900 rounded-xl border border-emerald-500/40 space-y-1 text-center">
             <p className="text-emerald-400 font-bold text-xs">
-              Comenta "DEMO" o entra a app.pulsocontable.cl 📲
+              Solicita tu acceso o agenda una demo 📲
             </p>
-            <p className="text-slate-300 text-[11px] font-medium">
-              Escríbenos al WhatsApp: <strong className="text-white">+56 9 4631 8783</strong>
+            <p className="text-slate-300 text-[11.5px] font-medium">
+              WhatsApp: <strong className="text-white">+56 9 4631 8783</strong> &bull; app.pulsocontable.cl
             </p>
           </div>
         </div>
@@ -892,11 +1051,11 @@ ${facebookGroupPost}
                     {/* IMAGEN PREVIEW DENTRO DE LA BURBUJA */}
                     <div className="rounded-xl overflow-hidden border border-emerald-700/40 relative">
                       <img 
-                        src={socialSquareImg} 
+                        src={flyerDataUrl || socialSquareImg} 
                         alt="Pulso Contable Portada WhatsApp" 
-                        className="w-full h-48 object-cover"
+                        className="w-full h-48 object-cover object-top"
                       />
-                      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-2 text-[11px] font-bold text-white">
+                      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/85 via-black/50 to-transparent p-2 text-[11px] font-bold text-white">
                         PULSO CONTABLE &bull; Software Contable en la Nube con Rescate RCV SII
                       </div>
                     </div>
@@ -943,8 +1102,8 @@ ${facebookGroupPost}
 
                   <div className="rounded-2xl overflow-hidden border border-slate-700 shadow-2xl relative group">
                     <img 
-                      src={socialSquareImg} 
-                      alt="Flyer Oficial Gest_OK" 
+                      src={flyerDataUrl || socialSquareImg} 
+                      alt="Flyer Oficial Pulso Contable" 
                       className="w-full object-cover rounded-2xl group-hover:scale-102 transition-transform duration-300"
                     />
                   </div>
@@ -952,7 +1111,7 @@ ${facebookGroupPost}
                   {/* BOTONES DE DESCARGA DIRECTA */}
                   <div className="flex flex-col sm:flex-row gap-2">
                     <button
-                      onClick={() => downloadFile(socialSquareImg, 'GEST_OK_Flyer_WhatsApp_1x1.jpg')}
+                      onClick={() => downloadSlidePNGDirect(0)}
                       className="flex-1 py-2.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow transition-all cursor-pointer text-center"
                     >
                       <Download className="w-4 h-4" />
@@ -1316,7 +1475,7 @@ ${facebookGroupPost}
                   {/* BOTONES DE DESCARGA DIRECTA REEL 9:16 */}
                   <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
                     <button
-                      onClick={() => downloadFile(storyReelImg, 'GEST_OK_Story_Reel_Vertical_9x16.jpg')}
+                      onClick={() => downloadFile(storyReelImg, 'PulsoContable_Story_Reel_Vertical_9x16.jpg')}
                       className="px-4 py-2.5 bg-gradient-to-r from-teal-400 to-emerald-500 hover:from-teal-300 hover:to-emerald-400 text-slate-950 font-black rounded-xl text-xs flex items-center gap-2 shadow-lg cursor-pointer transition-all"
                     >
                       <Download className="w-4 h-4 stroke-[2.5]" />
@@ -1414,12 +1573,12 @@ ${facebookGroupPost}
               {/* CABECERA POST FACEBOOK */}
               <div className="p-4 flex items-center justify-between border-b border-slate-700/40">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-600 text-white font-black flex items-center justify-center text-sm">
-                    GO
+                  <div className="w-10 h-10 rounded-full bg-emerald-600 text-slate-950 font-black flex items-center justify-center text-sm">
+                    PC
                   </div>
                   <div>
                     <p className="text-xs font-bold text-white flex items-center gap-1.5">
-                      <span>Gest_OK Chile &bull; Contabilidad en la Nube</span>
+                      <span>Pulso Contable Chile &bull; Software Contable en la Nube</span>
                       <CheckCircle2 className="w-3.5 h-3.5 text-blue-400" />
                     </p>
                     <p className="text-[10px] text-slate-400">Publicado para Grupos de Contadores &bull; Hace un momento &bull; 🌐</p>
@@ -1435,9 +1594,9 @@ ${facebookGroupPost}
               {/* IMAGEN DEL POST */}
               <div className="border-t border-b border-slate-700/50 bg-black">
                 <img 
-                  src={socialSquareImg} 
-                  alt="Post Promocional Facebook" 
-                  className="w-full max-h-[460px] object-cover"
+                  src={flyerDataUrl || socialSquareImg} 
+                  alt="Post Promocional Facebook Pulso Contable" 
+                  className="w-full max-h-[460px] object-cover object-top"
                 />
               </div>
 
@@ -1463,11 +1622,11 @@ ${facebookGroupPost}
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => downloadFile(socialSquareImg, 'GEST_OK_Facebook_Post_HD.jpg')}
+                  onClick={() => downloadSlidePNGDirect(0)}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow transition-colors cursor-pointer"
                 >
                   <Download className="w-4 h-4" />
-                  <span>Descargar Imagen HD</span>
+                  <span>Descargar Imagen HD (1:1)</span>
                 </button>
                 <button
                   onClick={downloadTextKit}

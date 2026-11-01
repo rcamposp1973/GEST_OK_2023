@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { provisionAuthUser } from '../utils/adminApi';
 import { db } from '../lib/firebase';
 import { collection, onSnapshot, updateDoc, doc, getDocs, addDoc, deleteDoc } from 'firebase/firestore';
 import { Study, Company, User, Plan, UserRole, StudyAdmin, StudyModulePermissions, StudySubscriptionStatus, SystemAppFormat } from '../types';
@@ -17,10 +18,11 @@ import { purgeDiagonConstruccionesData } from '../utils/diagonPurge';
 interface StudyDetailsProps {
   study: Study;
   onBack: () => void;
+  onCompanyChange?: (company: Company | null) => void;
   onLogout?: () => void;
 }
 
-export default function StudyDetails({ study: initialStudy, onBack, onLogout }: StudyDetailsProps) {
+export default function StudyDetails({ study: initialStudy, onBack, onCompanyChange, onLogout }: StudyDetailsProps) {
   const { setAssignedFormat } = useSystemFormat();
   const [study, setStudy] = useState(initialStudy);
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -306,6 +308,9 @@ export default function StudyDetails({ study: initialStudy, onBack, onLogout }: 
 
       const primaryAdmin = updatedList.find(a => a.isPrimary) || updatedList[0];
 
+      // Cuenta de acceso (Firebase Auth) del administrador, con rol y estudio asignados
+      await provisionAuthUser({ email: cleanEmail, password: adminFormData.password, name: adminFormData.name.trim(), role: 'STUDY_ADMIN', studyId: study.id });
+
       // Actualizar documento de estudio
       await updateDoc(doc(db, 'studies', study.id), {
         administrators: updatedList,
@@ -403,6 +408,7 @@ export default function StudyDetails({ study: initialStudy, onBack, onLogout }: 
         currentUserRole={UserRole.SUPER_USER}
         isSupportMode={true}
         onExitSupportMode={() => setInSupportMode(false)}
+        onCompanyChange={onCompanyChange}
         onLogout={onLogout}
       />
     );

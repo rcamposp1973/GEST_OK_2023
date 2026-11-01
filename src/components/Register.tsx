@@ -10,17 +10,7 @@ export default function Register() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      // Initialize basic user document
-      await setDoc(doc(db, 'users', userCredential.user.uid), {
-        email,
-        role: 'admin',
-        studyId: null // To be set after creating a study
-      });
-    } catch (err: any) {
-      setError(err.message);
-    }
+    setError('El autoregistro público ha sido deshabilitado por directivas de seguridad. Solicite su registro o invitación a través de su administrador de estudio contable.');
   };
 
   return (

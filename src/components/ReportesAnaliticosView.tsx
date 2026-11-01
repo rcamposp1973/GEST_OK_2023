@@ -16,6 +16,7 @@ import {
   CompanyBudget
 } from '../types';
 import { logAuditEvent } from '../utils/auditLogger';
+import { triggerIframePrint } from '../utils/printUtils';
 import {
   BarChart3,
   TrendingUp,
@@ -45,8 +46,10 @@ import {
   Save,
   CheckCircle2,
   AlertCircle,
-  Table as TableIcon
+  Table as TableIcon,
+  Activity
 } from 'lucide-react';
+import AnalyticsHudDashboard from './analytics-hud/AnalyticsHudDashboard';
 import {
   ResponsiveContainer,
   BarChart,
@@ -106,7 +109,7 @@ export default function ReportesAnaliticosView({
   isReadOnly = false
 }: ReportesAnaliticosViewProps) {
   // --- SUB-PESTAÑA PRINCIPAL ---
-  const [activeSubTab, setActiveSubTab] = useState<'MATRIZ' | 'VENTAS'>('MATRIZ');
+  const [activeSubTab, setActiveSubTab] = useState<'MATRIZ' | 'VENTAS' | 'HUD_BI'>('MATRIZ');
 
   // --- FILTRO DE AÑO GLOBAL ---
   const currentYearNum = new Date().getFullYear();
@@ -1243,7 +1246,19 @@ export default function ReportesAnaliticosView({
           </div>
 
           <button
-            onClick={() => window.print()}
+            onClick={() => {
+              triggerIframePrint({
+                title: `Reporte_Analitico_${company.rut}_${selectedYear}`,
+                htmlContent: `
+                  <div class="header-box">
+                    <h2>REPORTE ANALÍTICO Y MATRIZ MULTIDIMENSIONAL</h2>
+                    <p class="font-bold">${company.name.toUpperCase()} (RUT: ${company.rut})</p>
+                    <p style="color:#64748b;">Ejercicio Fiscal: ${selectedYear} &bull; Emisión: ${new Date().toLocaleString('es-CL')}</p>
+                  </div>
+                  <p style="margin-top:20px;">Informe generado desde la Matriz de Consultas Analíticas del Sistema ERP Gest_OK.</p>
+                `
+              });
+            }}
             className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
             title="Imprimir reporte"
           >
@@ -1286,7 +1301,37 @@ export default function ReportesAnaliticosView({
             Vs Año Anterior / Budget
           </span>
         </button>
+
+        <button
+          onClick={() => setActiveSubTab('HUD_BI')}
+          className={`px-5 py-3 text-sm font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
+            activeSubTab === 'HUD_BI'
+              ? 'border-cyan-500 text-cyan-300 bg-slate-900 shadow-sm'
+              : 'border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300'
+          }`}
+        >
+          <Activity className="w-4 h-4 text-cyan-400 animate-pulse" />
+          <span>Tablero Analítico HUD (Power Pivot BI)</span>
+          <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-cyan-950 text-cyan-400 font-mono font-bold border border-cyan-800">
+            En Memoria • Sub-ms
+          </span>
+        </button>
       </div>
+
+      {/* =========================================================================
+          CONTENIDO: SUB-PESTAÑA 3 - TABLERO ANALÍTICO HUD POWER PIVOT BI
+          ========================================================================= */}
+      {activeSubTab === 'HUD_BI' && (
+        <div className="rounded-2xl overflow-hidden shadow-2xl border border-slate-800">
+          <AnalyticsHudDashboard
+            company={company}
+            accounts={accounts}
+            vouchers={vouchers}
+            auxiliaries={auxiliaries}
+            costCenters={costCenters}
+          />
+        </div>
+      )}
 
       {/* =========================================================================
           CONTENIDO: SUB-PESTAÑA 1 - MATRIZ DINÁMICA DE ANÁLISIS

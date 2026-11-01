@@ -24,7 +24,8 @@ import {
   X,
   FileSpreadsheet
 } from 'lucide-react';
-import { ProductService, InventoryMovement, ChartOfAccount, Warehouse, Voucher } from '../types';
+import { ProductService, InventoryMovement, ChartOfAccount, Warehouse, Voucher, MasterAccountingParameters } from '../types';
+import { StandardModuleHeader } from './StandardModuleHeader';
 
 interface StockKardexViewProps {
   companyId: string;
@@ -33,11 +34,17 @@ interface StockKardexViewProps {
   movements: InventoryMovement[];
   accounts: ChartOfAccount[];
   warehouses?: Warehouse[];
+  vouchers?: Voucher[];
   onSaveMovement?: (
     mov: Partial<InventoryMovement>,
     targetMov?: Partial<InventoryMovement>,
     autoVoucher?: Partial<Voucher>
   ) => Promise<void>;
+  onCentralizeVoucher?: (voucher: Omit<Voucher, 'id' | 'createdAt'>) => Promise<string>;
+  onNavigateToLibroDiario?: (voucherId?: string) => void;
+  onNavigateToVoucher?: (voucherId: string) => void;
+  masterParams?: MasterAccountingParameters | null;
+  selectedPeriod?: string;
   isReadOnly?: boolean;
 }
 
@@ -48,13 +55,40 @@ export const StockKardexView: React.FC<StockKardexViewProps> = ({
   movements,
   accounts,
   warehouses = [],
+  vouchers = [],
   onSaveMovement,
+  onCentralizeVoucher,
+  onNavigateToLibroDiario,
+  onNavigateToVoucher,
+  masterParams,
+  selectedPeriod: initialPeriod,
   isReadOnly = false
 }) => {
   const [selectedProductId, setSelectedProductId] = useState<string>('ALL');
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<string>('ALL');
   const [movementTypeFilter, setMovementTypeFilter] = useState<'ALL' | 'IN' | 'OUT' | 'ADJUSTMENT'>('ALL');
   const [searchTerm, setSearchTerm] = useState<string>('');
+  
+  // Estado de Período para inventario y costeo mensual
+  const [periodStr, setPeriodStr] = useState<string>(() => {
+    if (initialPeriod) return initialPeriod;
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+
+  const handlePrevPeriod = () => {
+    const [y, m] = periodStr.split('-').map(Number);
+    const prevDate = new Date(y, m - 2, 1);
+    setPeriodStr(`${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`);
+  };
+
+  const handleNextPeriod = () => {
+    const [y, m] = periodStr.split('-').map(Number);
+    const nextDate = new Date(y, m, 1);
+    setPeriodStr(`${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}`);
+  };
+
+  const [isCentralizing, setIsCentralizing] = useState(false);
 
   // Modal para Nuevo Movimiento / Ajuste Manual
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -403,80 +437,189 @@ export const StockKardexView: React.FC<StockKardexViewProps> = ({
     document.body.removeChild(link);
   };
 
+  // Consumos / Salidas del período actual para costo de ventas
+  const currentPeriodExitsCost = useMemo(() => {
+    return movements
+      .filter(m => (m.type === 'OUT' || m.movementReason === 'MERMA' || m.movementReason === 'CONSUMO_INTERNO') && m.date.startsWith(periodStr))
+      .reduce((sum, m) => sum + (m.totalCost || 0), 0);
+  }, [movements, periodStr]);
+
+  const existingInventoryVoucher = useMemo(() => {
+    return (vouchers || []).find(v => 
+      (v.origin === 'INVENTARIO' || 
+       v.origin === 'STOCK' ||
+       v.gloss?.toLowerCase().includes(`costo de ventas`) ||
+       v.gloss?.toLowerCase().includes(`inventario`)
+      ) &&
+      (v.period?.startsWith(periodStr) || v.date?.startsWith(periodStr))
+    );
+  }, [vouchers, periodStr]);
+
+  const handleCentralizeInventoryCost = async () => {
+    if (currentPeriodExitsCost <= 0) {
+      alert(`No hay consumos o salidas valorizadas en el período ${periodStr} para centralizar.`);
+      return;
+    }
+    if (!onCentralizeVoucher) {
+      alert("La función de centralización contable no está disponible.");
+      return;
+    }
+
+    if (existingInventoryVoucher) {
+      const confirmRe = confirm(`Ya existe el comprobante de centralización Folio #${existingInventoryVoucher.voucherNumber || existingInventoryVoucher.id} para el período ${periodStr}.\n\n¿Desea generar un comprobante adicional de ajuste de costo de ventas?`);
+      if (!confirmRe) return;
+    }
+
+    const confirmMsg = `¿Desea generar el comprobante contable de Costo de Ventas y Consumo de Existencias para el período ${periodStr}?\n\n` +
+      `• Total Salidas y Consumos del Mes: $${currentPeriodExitsCost.toLocaleString('es-CL')}\n` +
+      `• Débito: Costo de Ventas (Gasto)\n` +
+      `• Crédito: Existencias / Mercaderías (Activo)`;
+
+    if (!confirm(confirmMsg)) return;
+
+    try {
+      setIsCentralizing(true);
+      const accCosto = accounts.find(a => 
+        a.id === masterParams?.costoVentasAccountId ||
+        a.code.replace(/\./g, '').startsWith('5101') ||
+        a.name.toLowerCase().includes('costo de venta') ||
+        a.name.toLowerCase().includes('costo de mercaderias')
+      ) || { id: 'acc_5101001', code: '5101001', name: 'COSTO DE VENTAS' };
+
+      const accExistencias = accounts.find(a => 
+        a.id === masterParams?.inventarioAccountId ||
+        a.code.replace(/\./g, '').startsWith('1106') ||
+        a.name.toLowerCase().includes('mercaderia') ||
+        a.name.toLowerCase().includes('existencia')
+      ) || { id: 'acc_1106001', code: '1106001', name: 'EXISTENCIAS Y MERCADERIAS EN BODEGA' };
+
+      const voucher = {
+        companyId,
+        period: periodStr,
+        voucherNumber: 800 + Math.floor(Math.random() * 90),
+        voucherType: 'Traspaso' as const,
+        date: `${periodStr}-${new Date(Number(periodStr.slice(0, 4)), Number(periodStr.slice(5, 7)), 0).getDate()}`,
+        type: 'Traspaso' as const,
+        gloss: `CENTRALIZACION COSTO DE VENTAS Y CONSUMO INVENTARIOS ${periodStr}`,
+        lines: [
+          {
+            id: 'l1',
+            accountId: accCosto.id,
+            accountCode: accCosto.code,
+            accountName: accCosto.name,
+            debit: currentPeriodExitsCost,
+            credit: 0,
+            gloss: `Costo de ventas existencias mes ${periodStr}`
+          },
+          {
+            id: 'l2',
+            accountId: accExistencias.id,
+            accountCode: accExistencias.code,
+            accountName: accExistencias.name,
+            debit: 0,
+            credit: currentPeriodExitsCost,
+            gloss: `Rebaja inventario por salidas mes ${periodStr}`
+          }
+        ],
+        totalDebit: currentPeriodExitsCost,
+        totalCredit: currentPeriodExitsCost,
+        status: 'Valido' as const,
+        origin: 'INVENTARIO' as const
+      };
+
+      await onCentralizeVoucher(voucher);
+      alert(`🎉 ¡Comprobante de Costo de Ventas ($${currentPeriodExitsCost.toLocaleString('es-CL')}) generado exitosamente en el Libro Diario!`);
+    } catch (err: any) {
+      alert("Error al centralizar inventario: " + err.message);
+    } finally {
+      setIsCentralizing(false);
+    }
+  };
+
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6 animate-fadeIn">
-      {/* HEADER */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 pb-4">
-        <div>
+      {/* HEADER ESTANDARIZADO DE MÓDULO */}
+      <StandardModuleHeader
+        title="Kardex de Inventario & Bodegas"
+        subtitle={`Empresa: ${companyName} — Control físico y valorizado bajo método Precio Medio Ponderado (PMP / CPP según Art. 30 LIR) con centralización directa al Libro Diario.`}
+        icon={Boxes}
+        iconBgColor="bg-amber-600"
+        layerBadge={{ layer: 1, label: 'Capa 1: Módulo Operativo' }}
+        period={{
+          selectedPeriod: periodStr,
+          onPrevPeriod: handlePrevPeriod,
+          onNextPeriod: handleNextPeriod
+        }}
+        centralizationStatus={{
+          isCentralized: !!existingInventoryVoucher,
+          voucherId: existingInventoryVoucher?.id,
+          voucherNumber: existingInventoryVoucher?.voucherNumber,
+          onViewVoucher: (id) => onNavigateToVoucher ? onNavigateToVoucher(id) : onNavigateToLibroDiario?.(id),
+          onQuickCentralize: handleCentralizeInventoryCost,
+          isCentralizing,
+          disabled: currentPeriodExitsCost <= 0,
+          disabledTooltip: currentPeriodExitsCost <= 0 ? 'No hay salidas ni consumos valorizados en este período' : undefined
+        }}
+        kpis={[
+          {
+            label: 'Productos en Bodega',
+            value: `${physicalProducts.length} SKU`,
+            subtext: 'Catálogo con control de stock',
+            icon: Package,
+            variant: 'info'
+          },
+          {
+            label: 'Unidades Totales',
+            value: totalStockUnits.toLocaleString('es-CL'),
+            subtext: 'Existencias físicas consolidadas',
+            icon: ArrowRightLeft,
+            variant: 'purple'
+          },
+          {
+            label: 'Valorización Total PMP',
+            value: formatCLP(totalInventoryValuation),
+            subtext: 'Activo Contable (Cta. Existencias)',
+            icon: DollarSign,
+            variant: 'success'
+          },
+          {
+            label: `Costo Ventas (${periodStr})`,
+            value: formatCLP(currentPeriodExitsCost),
+            subtext: 'Salidas y consumos del mes',
+            icon: FileSpreadsheet,
+            variant: 'warning'
+          },
+          {
+            label: 'Alertas Stock Mínimo',
+            value: `${lowStockCount} Ítems`,
+            subtext: 'Bajo punto de reorden',
+            icon: AlertTriangle,
+            variant: lowStockCount > 0 ? 'danger' : 'default'
+          }
+        ]}
+        actions={
           <div className="flex items-center gap-2">
-            <Boxes className="w-6 h-6 text-indigo-600" />
-            <h1 className="text-xl font-bold text-slate-800">Kardex de Inventario & Valorización PMP Multi-Bodega</h1>
-          </div>
-          <p className="text-xs text-slate-500 mt-1">
-            Empresa: <strong className="text-slate-700">{companyName}</strong> — Control físico y valorizado bajo método Precio Medio Ponderado (PMP / CPP) según Art. 30 LIR.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleExportKardexCSV}
-            className="flex items-center gap-1.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-3 py-2 rounded-xl text-xs font-semibold shadow-2xs transition-all"
-            title="Exportar Kardex a CSV"
-          >
-            <Download className="w-4 h-4 text-slate-500" />
-            <span>Exportar CSV</span>
-          </button>
-
-          {!isReadOnly && (
             <button
-              onClick={handleOpenModal}
-              className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-xs transition-all active:scale-95"
+              onClick={handleExportKardexCSV}
+              className="flex items-center gap-1.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-3 py-1.5 rounded-xl text-xs font-semibold shadow-2xs transition-all cursor-pointer"
+              title="Exportar Kardex a CSV"
             >
-              <Plus className="w-4 h-4" />
-              <span>Registrar Movimiento / Ajuste</span>
+              <Download className="w-3.5 h-3.5 text-slate-500" />
+              <span>Exportar CSV</span>
             </button>
-          )}
-        </div>
-      </div>
 
-      {/* STATS DE INVENTARIO */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Productos en Bodega</span>
-            <Package className="w-5 h-5 text-blue-600" />
+            {!isReadOnly && (
+              <button
+                onClick={handleOpenModal}
+                className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold shadow-2xs transition-all active:scale-95 cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Registrar Movimiento</span>
+              </button>
+            )}
           </div>
-          <div className="text-2xl font-bold text-slate-800 mt-2">{physicalProducts.length} SKU</div>
-          <p className="text-[11px] text-slate-500 mt-1">Catálogo físico con control de stock</p>
-        </div>
-
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Unidades Totales</span>
-            <ArrowRightLeft className="w-5 h-5 text-indigo-600" />
-          </div>
-          <div className="text-2xl font-bold text-indigo-900 mt-2">{totalStockUnits.toLocaleString('es-CL')}</div>
-          <p className="text-[11px] text-slate-500 mt-1">Existencias físicas consolidadas</p>
-        </div>
-
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Valorización Total PMP</span>
-            <DollarSign className="w-5 h-5 text-emerald-600" />
-          </div>
-          <div className="text-2xl font-bold text-emerald-700 mt-2">{formatCLP(totalInventoryValuation)}</div>
-          <p className="text-[11px] text-slate-500 mt-1">Activo Contable (Cta. 110601)</p>
-        </div>
-
-        <div className={`p-4 rounded-xl border shadow-2xs ${lowStockCount > 0 ? 'bg-amber-50/80 border-amber-200' : 'bg-white border-slate-200'}`}>
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-amber-900 uppercase tracking-wider">Alertas Stock Mínimo</span>
-            <AlertTriangle className={`w-5 h-5 ${lowStockCount > 0 ? 'text-amber-600 animate-pulse' : 'text-slate-400'}`} />
-          </div>
-          <div className="text-2xl font-bold text-amber-900 mt-2">{lowStockCount} Ítems</div>
-          <p className="text-[11px] text-amber-700 mt-1">Existencias bajo punto de reorden</p>
-        </div>
-      </div>
+        }
+      />
 
       {/* FILTROS Y SELECTOR DE PRODUCTO Y BODEGA */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">

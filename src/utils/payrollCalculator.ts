@@ -67,6 +67,31 @@ export const DEFAULT_PAYROLL_PARAMS_2026: PayrollParameters = {
 };
 
 /**
+ * Cotizacion adicional del EMPLEADOR - Ley N° 21.735 (Reforma de Pensiones).
+ * Calendario oficial (Min. Trabajo y Prevision Social / Superintendencia de Pensiones):
+ *   ago-2025 a jul-2026: 1,0%      (el SIS se sigue pagando aparte)
+ *   ago-2026: 3,5% | ago-2027: 4,25% | ago-2028: 5,0% | ago-2029: 5,7%
+ *   ago-2030: 6,4% | ago-2031: 7,1%  | ago-2032: 7,8% | ago-2033 en adelante: 8,5%
+ * Desde ago-2026 el SIS queda INTEGRADO en ese total (no se paga por separado).
+ */
+export function getEmployerReformSchedule(periodStr: string): { tasaTotalPercent: number; sisIntegrado: boolean } {
+  const [y, m] = (periodStr || '').split('-').map((x) => parseInt(x, 10));
+  if (!y || !m) return { tasaTotalPercent: 0, sisIntegrado: false };
+  const idx = y * 12 + (m - 1);
+  const desde = (anio: number, mes: number) => anio * 12 + (mes - 1);
+  if (idx < desde(2025, 8)) return { tasaTotalPercent: 0, sisIntegrado: false };
+  if (idx < desde(2026, 8)) return { tasaTotalPercent: 1.0, sisIntegrado: false };
+  if (idx < desde(2027, 8)) return { tasaTotalPercent: 3.5, sisIntegrado: true };
+  if (idx < desde(2028, 8)) return { tasaTotalPercent: 4.25, sisIntegrado: true };
+  if (idx < desde(2029, 8)) return { tasaTotalPercent: 5.0, sisIntegrado: true };
+  if (idx < desde(2030, 8)) return { tasaTotalPercent: 5.7, sisIntegrado: true };
+  if (idx < desde(2031, 8)) return { tasaTotalPercent: 6.4, sisIntegrado: true };
+  if (idx < desde(2032, 8)) return { tasaTotalPercent: 7.1, sisIntegrado: true };
+  if (idx < desde(2033, 8)) return { tasaTotalPercent: 7.8, sisIntegrado: true };
+  return { tasaTotalPercent: 8.5, sisIntegrado: true };
+}
+
+/**
  * Retorna los parámetros previsionales e indicadores oficiales (UF, UTM, Sueldo Mínimo, Topes, SIS)
  * correspondientes de forma exacta para cada mes y año según Previred / SII / Banco Central.
  */
@@ -111,6 +136,9 @@ export function getPrevisionalParametersForPeriod(periodStr: string): PayrollPar
     topeImponibleAfcUf,
     tasaSisPercent,
     tasaMutualPercent: 0.93,
+    tasaMutualBasePercent: 0.90,
+    tasaLeySannaPercent: 0.03,
+    tasaMutualAdicionalPercent: 0.00,
     afpCommissions: DEFAULT_AFP_COMMISSIONS,
     tramosAsignacionFamiliar: {
       tramoA: year >= 2026 ? 22007 : year >= 2024 ? 20328 : 17316,
@@ -125,6 +153,8 @@ export function getPrevisionalParametersForPeriod(periodStr: string): PayrollPar
 }
 
 export interface MonthPayrollInput {
+  sueldoBaseOverride?: number; // Ajuste exclusivo de sueldo/renta para el mes en proceso (ej: Sueldo Empresarial, media jornada variable)
+  weeklyHoursOverride?: number; // Ajuste de jornada de trabajo para el mes
   diasTrabajados?: number; // default 30
   diasLicencia?: number;
   diasInasistencia?: number;
@@ -139,6 +169,10 @@ export interface MonthPayrollInput {
   otrosNoImponibles?: number;
   anticipos?: number;
   prestamosEmpresa?: number;
+  descuentoJudicialPensionAlimentos?: number; // Retención judicial por pensión de alimentos ($ CLP)
+  descuentoJudicialTipo?: 'MONTO_FIJO' | 'PORCENTAJE_LIQUIDO' | 'UTM';
+  descuentoJudicialValor?: number;
+  tasaMutualEmpresaOverride?: number; // Tasa Ley 16.744 específica de la empresa para este período (%)
   otrosDescuentos?: number;
   observations?: string;
   conceptValues?: Record<string, number>; // Código o ID de concepto -> monto en CLP
@@ -322,13 +356,23 @@ export function calculatePayrollSlip(
     }
   }
 
-  const diasTrabajados = input.diasTrabajados !== undefined ? Math.min(30, Math.max(0, input.diasTrabajados)) : diasBase;
   const diasLicencia = input.diasLicencia || 0;
   const diasInasistencia = input.diasInasistencia || 0;
+  // Si no se especificó diasTrabajados pero hay licencias o inasistencias, descontar automáticamente
+  let diasEfectivos = diasBase;
+  if (input.diasTrabajados !== undefined) {
+    diasEfectivos = Math.min(30, Math.max(0, input.diasTrabajados));
+  } else if (diasLicencia > 0 || diasInasistencia > 0) {
+    diasEfectivos = Math.max(0, diasBase - diasLicencia - diasInasistencia);
+  }
+  const diasTrabajados = diasEfectivos;
 
-  // 1. Sueldo Base Pactado según Vigencia Histórica o Salario Base Actual
+  // 1. Sueldo Base Pactado según Vigencia Histórica, Salario Base Actual o Ajuste Exclusivo del Mes
   let sueldoBasePactado = employee.baseSalary || 0;
-  if (employee.salaryHistory && employee.salaryHistory.length > 0) {
+  if (input.sueldoBaseOverride !== undefined && input.sueldoBaseOverride !== null && input.sueldoBaseOverride >= 0) {
+    // Override mensual directo (Sueldo Empresarial o renta variable para el período en proceso)
+    sueldoBasePactado = input.sueldoBaseOverride;
+  } else if (employee.salaryHistory && employee.salaryHistory.length > 0) {
     const targetPeriod = params.period; // YYYY-MM
     // Ordenar de más reciente a más antigua
     const sortedHistory = [...employee.salaryHistory].sort((a, b) => b.startDate.localeCompare(a.startDate));
@@ -498,11 +542,28 @@ export function calculatePayrollSlip(
   // 9. Otros Descuentos
   const anticipos = input.anticipos || 0;
   const prestamosEmpresa = input.prestamosEmpresa !== undefined ? input.prestamosEmpresa : (employee.descuentoPrestamoCuota || 0);
+  
+  // Retención Judicial de Pensión de Alimentos (Orden de Tribunal de Familia)
+  let descuentoJudicialPensionAlimentos = 0;
+  if (input.descuentoJudicialPensionAlimentos !== undefined && input.descuentoJudicialPensionAlimentos !== null && input.descuentoJudicialPensionAlimentos >= 0) {
+    descuentoJudicialPensionAlimentos = input.descuentoJudicialPensionAlimentos;
+  } else if (employee.descuentoJudicialTipo === 'UTM' && employee.descuentoJudicialValor) {
+    descuentoJudicialPensionAlimentos = Math.round(employee.descuentoJudicialValor * params.utm);
+  } else if (employee.descuentoJudicialTipo === 'PORCENTAJE_LIQUIDO' && employee.descuentoJudicialValor) {
+    const alcancePrevio = Math.max(0, totalHaberes - totalDescuentosPrevisionales - impuestoUnicoSegundaCategoria);
+    descuentoJudicialPensionAlimentos = Math.round(alcancePrevio * (employee.descuentoJudicialValor / 100));
+  } else if (employee.descuentoJudicialPensionAlimentos) {
+    descuentoJudicialPensionAlimentos = employee.descuentoJudicialPensionAlimentos;
+  }
+
   const seguroComp = employee.descuentoSeguroComplementario || 0;
   const ahorroBienestar = employee.descuentoAhorroBienestar || 0;
   const otrosDescBase = input.otrosDescuentos !== undefined ? input.otrosDescuentos : (employee.otrosDescuentosPactados || 0);
   const otrosDescuentos = otrosDescBase + seguroComp + ahorroBienestar + extraDescuentosFromConcepts;
-  const totalOtrosDescuentos = anticipos + prestamosEmpresa + otrosDescuentos;
+  const totalOtrosDescuentos = anticipos + prestamosEmpresa + descuentoJudicialPensionAlimentos + otrosDescuentos;
+
+  // Subsidio por Incapacidad Laboral (SIL) referencial si hay días con licencia médica
+  const subsidioIncapacidadLaboralSil = diasLicencia > 0 ? Math.round((sueldoBasePactado / 30) * diasLicencia) : 0;
 
   // 10. Totales y Líquido
   const totalDescuentos = totalDescuentosPrevisionales + impuestoUnicoSegundaCategoria + totalOtrosDescuentos;
@@ -510,8 +571,14 @@ export function calculatePayrollSlip(
   const liquidoAPagar = Math.max(0, totalHaberes - totalDescuentos);
 
   // 11. Aportes Patronales (Costo Empleador)
-  // SIS Empleador: 1.49% sobre base imponible AFP (excepto jubilados no cotizantes)
-  const sisMonto = employee.pensionSystem === 'JUBILADO_NO_COTIZA' ? 0 : Math.round(baseImponibleAfp * (params.tasaSisPercent / 100));
+  // SIS Empleador: sobre base imponible AFP (excepto jubilados no cotizantes)
+  // Ley 21.735: si el administrador no cargo una tasa manual (>0), se aplica el calendario oficial.
+  // Desde ago-2026 el SIS queda integrado en la cotizacion del empleador y no se cobra por separado.
+  const reformaManual = params.tasaReformaProteccionSocialPercent && params.tasaReformaProteccionSocialPercent > 0 ? params.tasaReformaProteccionSocialPercent : 0;
+  const reformaOficial = reformaManual > 0 ? null : getEmployerReformSchedule(params.period);
+  const tasaReformaAplicada = reformaManual > 0 ? reformaManual : (reformaOficial ? reformaOficial.tasaTotalPercent : 0);
+  const sisIntegradoEnReforma = !!(reformaOficial && reformaOficial.sisIntegrado);
+  const sisMonto = (employee.pensionSystem === 'JUBILADO_NO_COTIZA' || sisIntegradoEnReforma) ? 0 : Math.round(baseImponibleAfp * (params.tasaSisPercent / 100));
 
   // AFC Empleador: 2.4% indefinido (1.6% individual + 0.8% solidario), 3.0% plazo fijo (solidario)
   let afcEmpleadorTasa = 0;
@@ -524,10 +591,18 @@ export function calculatePayrollSlip(
   }
   const afcEmpleadorMonto = Math.round(baseImponibleAfc * (afcEmpleadorTasa / 100));
 
-  // Mutual de Seguridad / Accidentes del Trabajo: 0.93% sobre total imponible
-  const mutualMonto = Math.round(baseImponibleAfp * (params.tasaMutualPercent / 100));
+  // Mutual de Seguridad / Accidentes del Trabajo (Ley 16.744): Tasa base + adicional según siniestralidad de la empresa
+  const tasaMutualAplicada = input.tasaMutualEmpresaOverride !== undefined 
+    ? input.tasaMutualEmpresaOverride 
+    : (params.tasaMutualPercent || 0.93);
+  const mutualMonto = Math.round(baseImponibleAfp * (tasaMutualAplicada / 100));
 
-  const totalAportesPatronales = sisMonto + afcEmpleadorMonto + mutualMonto;
+  // Reforma Previsional / Mayor Cotización de Protección Social (si aplica al período)
+  const reformaProteccionMonto = (employee.pensionSystem !== 'JUBILADO_NO_COTIZA' && tasaReformaAplicada > 0)
+    ? Math.round(baseImponibleAfp * (tasaReformaAplicada / 100))
+    : 0;
+
+  const totalAportesPatronales = sisMonto + afcEmpleadorMonto + mutualMonto + reformaProteccionMonto;
   const costoTotalEmpresa = totalHaberes + totalAportesPatronales;
 
   return {
@@ -593,6 +668,8 @@ export function calculatePayrollSlip(
 
     anticipos,
     prestamosEmpresa,
+    descuentoJudicialPensionAlimentos,
+    subsidioIncapacidadLaboralSil,
     otrosDescuentos,
     totalOtrosDescuentos,
 
@@ -720,6 +797,7 @@ export function generateLrdCsv(slips: PayrollSlip[], companyRut: string, periodS
     '4101 Impuesto Unico 2da Categoria',
     '5101 Anticipos',
     '5102 Prestamos',
+    '5201 Retencion Judicial Pension Alimenticia',
     '5103 Otros Descuentos',
     '5000 Total Otros Descuentos',
     'Total Descuentos',
@@ -767,6 +845,7 @@ export function generateLrdCsv(slips: PayrollSlip[], companyRut: string, periodS
       s.impuestoUnicoSegundaCategoria,
       s.anticipos,
       s.prestamosEmpresa,
+      s.descuentoJudicialPensionAlimentos || 0,
       s.otrosDescuentos,
       s.totalOtrosDescuentos,
       s.totalDescuentos,

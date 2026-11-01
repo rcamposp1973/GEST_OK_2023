@@ -1,9 +1,13 @@
+import { auth } from '../lib/firebase';
+
 export interface FetchRcvParams {
   companyRut: string;
   companyName: string;
   year: number;
   month: string;
   tipo?: string;
+  companyId?: string;
+  studyId?: string;
   rutRepresentante?: string;
   claveRepresentante?: string;
   claveCertificadoDigital?: string;
@@ -53,9 +57,19 @@ export async function fetchRcvFromSii(params: FetchRcvParams): Promise<FetchRcvR
 
   // 1. Try server backend endpoint first
   try {
+    const idToken = await auth.currentUser?.getIdToken();
+    if (!idToken) {
+      return {
+        success: false,
+        error: "Sesión expirada. Vuelve a iniciar sesión."
+      };
+    }
     const response = await fetch('/api/sii/rescatar-rcv', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${idToken}`
+      },
       body: JSON.stringify({
         companyRut,
         companyName,
@@ -125,7 +139,15 @@ export async function fetchRcvDirectSimpleApi(params: FetchRcvParams): Promise<F
 
   // Master API Key stored in localStorage or default
   const masterKey = (typeof window !== 'undefined' && localStorage.getItem('gest_ok_master_api_key')) || '';
-  const effectiveApiKey = (apiKey || masterKey || '5511-W960-6395-2355-3470').trim();
+  const effectiveApiKey = (apiKey || masterKey || '').trim();
+
+  if (!effectiveApiKey) {
+    return {
+      success: false,
+      needsCertificate: false,
+      error: `Para consultar el RCV de la empresa ${cleanCompanyRut || ''}, se requiere configurar la API Key del servicio SII.`
+    };
+  }
 
   const ambienteNum = (ambiente === 'SANDBOX' || ambiente === 'Certificación') ? 0 : 1;
   const headers = { 'Authorization': effectiveApiKey };
@@ -396,9 +418,9 @@ export async function fetchRcvDirectSimpleApi(params: FetchRcvParams): Promise<F
           const montoLiquido = Number(item.montoLiquido || item.liquido || (montoBruto - retencion));
 
           docs.push({
-            tipoRegistro: 'Honorario',
-            tipoDocumento: 'BH',
-            tipoDoc: 'BH',
+            tipoRegistro: 'Honorarios',
+            tipoDocumento: 'BHE',
+            tipoDoc: 'BHE',
             nombreTipoDoc: 'Boleta de Honorarios Electrónica',
             folio,
             rutEmisor: item.rutEmisor || item.rutPrestador || '12.345.678-9',
@@ -406,10 +428,13 @@ export async function fetchRcvDirectSimpleApi(params: FetchRcvParams): Promise<F
             rutReceptor: cleanCompanyRut,
             razonSocialReceptor: companyName || 'EMPRESA RECEPTORA',
             fechaEmision,
-            montoNeto: montoLiquido,
+            montoNeto: montoBruto,
             montoIva: retencion,
             montoExento: 0,
-            montoTotal: montoBruto,
+            montoTotal: montoLiquido,
+            montoBruto,
+            montoRetencion: retencion,
+            montoLiquido,
             period: `${yearNum}-${formattedMonth}`
           });
         }

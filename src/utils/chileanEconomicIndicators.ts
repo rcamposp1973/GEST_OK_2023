@@ -166,6 +166,25 @@ export function getOfficialIPC(period: string): { monthly: number; accumulated: 
 }
 
 /**
+ * Obtiene la tasa oficial legal de retención de Boletas de Honorarios según Ley N° 21.133
+ * 2020: 10.75%, 2021: 11.5%, 2022: 12.25%, 2023: 13.0%, 2024: 13.75%, 2025: 14.5%, 2026: 15.25%, 2027: 16.0%, 2028+: 17.0%
+ */
+export function getOfficialHonorariosRate(period: string): number {
+  const [yearStr] = (period || '').split('-');
+  const year = parseInt(yearStr, 10) || 2026;
+  if (year <= 2019) return 10.0;
+  if (year === 2020) return 10.75;
+  if (year === 2021) return 11.5;
+  if (year === 2022) return 12.25;
+  if (year === 2023) return 13.0;
+  if (year === 2024) return 13.75;
+  if (year === 2025) return 14.5;
+  if (year === 2026) return 15.25;
+  if (year === 2027) return 16.0;
+  return 17.0;
+}
+
+/**
  * Obtiene el valor oficial de la UF para una fecha específica 'YYYY-MM-DD' (Fuente: SII / Banco Central)
  * Si la fecha es posterior al día 9 del mes, calcula la continuidad mensual exacta del período con la tasa oficial.
  */

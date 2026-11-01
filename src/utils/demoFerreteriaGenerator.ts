@@ -48,7 +48,7 @@ export function isDemoFerreteriaCompany(company: Company | null | undefined): bo
 }
 
 /**
- * Creates or resets the complete 2025 demo company 'FERRETERIA DON ALI KT LTDA'
+ * Creates or resets the complete 2026 demo company 'FERRETERIA DON ALI KT LTDA'
  * with 10 daily transactions, 10 employees with payroll + IUSC, bank cartolas,
  * payment batches, collections, RCV, F29, DDJJ, RLI, stock, projects, cost centers, etc.
  */
@@ -56,10 +56,12 @@ export async function generateOrResetDemoFerreteria(
   studyId: string,
   userEmail?: string,
   userId?: string,
-  onProgress?: (message: string, percent: number) => void
+  onProgress?: (message: string, percent: number) => void,
+  targetYear: number = 2026
 ): Promise<{ success: boolean; companyId: string; message: string }> {
   try {
-    onProgress?.('Iniciando preparación de FERRETERIA DON ALI KT LTDA...', 5);
+    const targetYearStr = String(targetYear);
+    onProgress?.(`Iniciando preparación de FERRETERIA DON ALI KT LTDA (${targetYearStr})...`, 5);
 
     const studyDocRef = doc(db, 'studies', studyId);
     const studySnap = await getDoc(studyDocRef);
@@ -116,7 +118,8 @@ export async function generateOrResetDemoFerreteria(
       'commercialDocuments',
       'inventoryMovements',
       'f29Declarations',
-      'fiscalPeriods'
+      'fiscalPeriods',
+      'fixedAssets'
     ];
 
     for (const subCol of subcollectionsToClear) {
@@ -141,23 +144,19 @@ export async function generateOrResetDemoFerreteria(
 
     onProgress?.('Configurando Plan de Cuentas y Tablas Maestras...', 20);
 
-    // 3. Setup Fiscal Periods for 2025
-    const months2025 = [
-      '2025-01', '2025-02', '2025-03', '2025-04',
-      '2025-05', '2025-06', '2025-07', '2025-08',
-      '2025-09', '2025-10', '2025-11', '2025-12'
-    ];
+    // 3. Setup Fiscal Periods for targetYear (2026)
+    const monthsYear = Array.from({ length: 12 }, (_, i) => `${targetYearStr}-${String(i + 1).padStart(2, '0')}`);
 
-    const fiscalYear2025: FiscalPeriodYear = {
-      id: '2025',
-      year: 2025,
+    const fiscalYearRecord: FiscalPeriodYear = {
+      id: targetYearStr,
+      year: targetYear,
       months: {
         1: 'Abierto', 2: 'Abierto', 3: 'Abierto', 4: 'Abierto',
         5: 'Abierto', 6: 'Abierto', 7: 'Abierto', 8: 'Abierto',
         9: 'Abierto', 10: 'Abierto', 11: 'Abierto', 12: 'Abierto'
       }
     };
-    await setDoc(doc(compDocRef, 'fiscalPeriods', 'fy-2025'), fiscalYear2025);
+    await setDoc(doc(compDocRef, 'fiscalPeriods', `fy-${targetYearStr}`), fiscalYearRecord);
 
     // 4. Setup Chart of Accounts
     const standardAccounts: Omit<ChartOfAccount, 'id'>[] = [
@@ -178,6 +177,8 @@ export async function generateOrResetDemoFerreteria(
       { code: '1.2.01.001', name: 'Instalaciones y Local Comercial', type: 'Activo', parentCode: '1.2', requiereCentroCosto: false, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: false, estado: 'Activo' },
       { code: '1.2.01.002', name: 'Camiones y Flota de Reparto', type: 'Activo', parentCode: '1.2', requiereCentroCosto: false, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: false, estado: 'Activo' },
       { code: '1.2.01.003', name: 'Racks y Grúa Horquilla Bodega', type: 'Activo', parentCode: '1.2', requiereCentroCosto: false, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: false, estado: 'Activo' },
+      { code: '1.2.01.004', name: 'Servidor Central y Terminales POS Mesón Venta', type: 'Activo', parentCode: '1.2', requiereCentroCosto: false, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: false, estado: 'Activo' },
+      { code: '1.2.01.005', name: 'Muebles, Estanterías y Mesones de Atención', type: 'Activo', parentCode: '1.2', requiereCentroCosto: false, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: false, estado: 'Activo' },
       { code: '1.2.02.001', name: 'Depreciación Acumulada Activo Fijo', type: 'Activo', parentCode: '1.2', requiereCentroCosto: false, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: false, estado: 'Activo' },
 
       // 2. PASIVO
@@ -214,7 +215,8 @@ export async function generateOrResetDemoFerreteria(
       { code: '5.2.02.003', name: 'Combustibles y Mantención Vehículos de Despacho', type: 'Gasto', parentCode: '5', requiereCentroCosto: true, requiereAuxiliarRUT: true, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' },
       { code: '5.2.02.004', name: 'Publicidad, Marketing y Catálogos', type: 'Gasto', parentCode: '5', requiereCentroCosto: true, requiereAuxiliarRUT: true, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' },
       { code: '5.2.02.005', name: 'Honorarios Profesionales Contables e Informáticos', type: 'Gasto', parentCode: '5', requiereCentroCosto: true, requiereAuxiliarRUT: true, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' },
-      { code: '5.2.02.006', name: 'Seguros Contra Incendio y Suministros Menores', type: 'Gasto', parentCode: '5', requiereCentroCosto: true, requiereAuxiliarRUT: true, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' }
+      { code: '5.2.02.006', name: 'Seguros Contra Incendio y Suministros Menores', type: 'Gasto', parentCode: '5', requiereCentroCosto: true, requiereAuxiliarRUT: true, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' },
+      { code: '5.2.02.007', name: 'Depreciación Activo Fijo del Ejercicio', type: 'Gasto', parentCode: '5', requiereCentroCosto: true, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: false, estado: 'Activo' }
     ];
 
     const accountMap = new Map<string, string>(); // code -> id
@@ -273,53 +275,53 @@ export async function generateOrResetDemoFerreteria(
     }
 
     const projectsList: ProjectMaster[] = [
-      { id: 'pry-01', companyId: DEMO_COMPANY_ID, code: 'PRY-2025-01', name: 'Ampliación Bodega de Acopio y Racks Pesados', estado: 'Activo', description: 'Presupuesto: $15.000.000' },
-      { id: 'pry-02', companyId: DEMO_COMPANY_ID, code: 'PRY-2025-02', name: 'Contrato Suministro Ferretero Constructora Los Andes', estado: 'Activo', description: 'Presupuesto: $85.000.000' },
-      { id: 'pry-03', companyId: DEMO_COMPANY_ID, code: 'PRY-2025-03', name: 'Lanzamiento Canal E-commerce y Despacho Express', estado: 'Activo', description: 'Presupuesto: $8.000.000' }
+      { id: 'pry-01', companyId: DEMO_COMPANY_ID, code: `PRY-${targetYearStr}-01`, name: 'Ampliación Bodega de Acopio y Racks Pesados', estado: 'Activo', description: 'Presupuesto: $15.000.000' },
+      { id: 'pry-02', companyId: DEMO_COMPANY_ID, code: `PRY-${targetYearStr}-02`, name: 'Contrato Suministro Ferretero Constructora Los Andes', estado: 'Activo', description: 'Presupuesto: $85.000.000' },
+      { id: 'pry-03', companyId: DEMO_COMPANY_ID, code: `PRY-${targetYearStr}-03`, name: 'Lanzamiento Canal E-commerce y Despacho Express', estado: 'Activo', description: 'Presupuesto: $8.000.000' }
     ];
     for (const pry of projectsList) {
       await setDoc(doc(compDocRef, 'projects', pry.id), pry);
     }
 
     const warehousesList: Warehouse[] = [
-      { id: 'wh-matriz', companyId: DEMO_COMPANY_ID, code: 'BOD-MATRIZ', name: 'Bodega Central - Casa Matriz Providencia', address: 'Av. Los Conquistadores 1840', responsible: 'Juan Carlos Carrasco', isDefault: true, estado: 'Activo', createdAt: '2025-01-01' },
-      { id: 'wh-acopio', companyId: DEMO_COMPANY_ID, code: 'BOD-ACOPIO', name: 'Bodega Acopio Materiales Pesados Renca', address: 'Panamericana Norte 5400', responsible: 'Esteban Gutiérrez', isDefault: false, estado: 'Activo', createdAt: '2025-01-01' }
+      { id: 'wh-matriz', companyId: DEMO_COMPANY_ID, code: 'BOD-MATRIZ', name: 'Bodega Central - Casa Matriz Providencia', address: 'Av. Los Conquistadores 1840', responsible: 'Juan Carlos Carrasco', isDefault: true, estado: 'Activo', createdAt: `${targetYearStr}-01-01` },
+      { id: 'wh-acopio', companyId: DEMO_COMPANY_ID, code: 'BOD-ACOPIO', name: 'Bodega Acopio Materiales Pesados Renca', address: 'Panamericana Norte 5400', responsible: 'Esteban Gutiérrez', isDefault: false, estado: 'Activo', createdAt: `${targetYearStr}-01-01` }
     ];
     for (const wh of warehousesList) {
       await setDoc(doc(compDocRef, 'warehouses', wh.id), wh);
     }
 
     const productsList: ProductService[] = [
-      { id: 'prod-01', companyId: DEMO_COMPANY_ID, code: 'FERR-001', name: 'Cemento Especial Melón 25 Kg', type: 'PRODUCT', unitOfMeasure: 'SACO', salesPrice: 5990, purchaseCost: 4200, currentStock: 450, minStock: 100, defaultWarehouseId: 'wh-matriz', stocksByWarehouse: { 'wh-matriz': 300, 'wh-acopio': 150 }, allowNegativeStock: false, category: 'Construcción Gruesa', estado: 'Activo', createdAt: '2025-01-01' },
-      { id: 'prod-02', companyId: DEMO_COMPANY_ID, code: 'FERR-002', name: 'Fierro Estriado A63-42H 10mm x 6m Gerdau', type: 'PRODUCT', unitOfMeasure: 'BARRA', salesPrice: 6850, purchaseCost: 4800, currentStock: 320, minStock: 80, defaultWarehouseId: 'wh-acopio', stocksByWarehouse: { 'wh-acopio': 320 }, allowNegativeStock: false, category: 'Aceros', estado: 'Activo', createdAt: '2025-01-01' },
-      { id: 'prod-03', companyId: DEMO_COMPANY_ID, code: 'FERR-003', name: 'Taladro Percutor Bosch GSB 13 RE 750W', type: 'PRODUCT', unitOfMeasure: 'UNIDAD', salesPrice: 69990, purchaseCost: 48900, currentStock: 35, minStock: 10, defaultWarehouseId: 'wh-matriz', stocksByWarehouse: { 'wh-matriz': 35 }, allowNegativeStock: false, category: 'Herramientas Eléctricas', estado: 'Activo', createdAt: '2025-01-01' },
-      { id: 'prod-04', companyId: DEMO_COMPANY_ID, code: 'FERR-004', name: 'Esmalte al Agua Extra Blanco 1 Galón Sipa', type: 'PRODUCT', unitOfMeasure: 'GALON', salesPrice: 26900, purchaseCost: 18500, currentStock: 120, minStock: 30, defaultWarehouseId: 'wh-matriz', stocksByWarehouse: { 'wh-matriz': 120 }, allowNegativeStock: false, category: 'Pinturas & Impermeabilizantes', estado: 'Activo', createdAt: '2025-01-01' },
-      { id: 'prod-05', companyId: DEMO_COMPANY_ID, code: 'FERR-005', name: 'Disco de Corte Metal 4 1/2" DeWalt (Pack 25)', type: 'PRODUCT', unitOfMeasure: 'PACK', salesPrice: 21500, purchaseCost: 14200, currentStock: 90, minStock: 25, defaultWarehouseId: 'wh-matriz', stocksByWarehouse: { 'wh-matriz': 90 }, allowNegativeStock: false, category: 'Abrasivos', estado: 'Activo', createdAt: '2025-01-01' },
-      { id: 'prod-06', companyId: DEMO_COMPANY_ID, code: 'FERR-006', name: 'Set Herramientas Profesionales 108 Pzas Stanley', type: 'PRODUCT', unitOfMeasure: 'SET', salesPrice: 94990, purchaseCost: 65000, currentStock: 25, minStock: 8, defaultWarehouseId: 'wh-matriz', stocksByWarehouse: { 'wh-matriz': 25 }, allowNegativeStock: false, category: 'Herramientas Manuales', estado: 'Activo', createdAt: '2025-01-01' },
-      { id: 'prod-07', companyId: DEMO_COMPANY_ID, code: 'FERR-007', name: 'Tornillo Autoperforante Volcanita 6x1 1/4" (Caja 1000)', type: 'PRODUCT', unitOfMeasure: 'CAJA', salesPrice: 9450, purchaseCost: 6200, currentStock: 200, minStock: 50, defaultWarehouseId: 'wh-matriz', stocksByWarehouse: { 'wh-matriz': 200 }, allowNegativeStock: false, category: 'Fijaciones', estado: 'Activo', createdAt: '2025-01-01' },
-      { id: 'prod-08', companyId: DEMO_COMPANY_ID, code: 'FERR-008', name: 'Cable Eléctrico THHN 2.5mm Rojo Rollo 100m', type: 'PRODUCT', unitOfMeasure: 'ROLLO', salesPrice: 45900, purchaseCost: 32000, currentStock: 60, minStock: 15, defaultWarehouseId: 'wh-matriz', stocksByWarehouse: { 'wh-matriz': 60 }, allowNegativeStock: false, category: 'Electricidad', estado: 'Activo', createdAt: '2025-01-01' },
-      { id: 'prod-09', companyId: DEMO_COMPANY_ID, code: 'FERR-009', name: 'Cerradura Embutir Cerrojo Acero Poli', type: 'PRODUCT', unitOfMeasure: 'UNIDAD', salesPrice: 18900, purchaseCost: 12500, currentStock: 80, minStock: 20, defaultWarehouseId: 'wh-matriz', stocksByWarehouse: { 'wh-matriz': 80 }, allowNegativeStock: false, category: 'Cerrajería', estado: 'Activo', createdAt: '2025-01-01' },
-      { id: 'prod-10', companyId: DEMO_COMPANY_ID, code: 'FERR-010', name: 'Servicio de Dimensionado y Corte de Maderas', type: 'SERVICE', unitOfMeasure: 'SERVICIO', salesPrice: 15000, purchaseCost: 0, currentStock: 0, minStock: 0, allowNegativeStock: true, category: 'Servicios en Tienda', estado: 'Activo', createdAt: '2025-01-01' },
-      { id: 'prod-11', companyId: DEMO_COMPANY_ID, code: 'FERR-011', name: 'Flete y Despacho Express en Obra', type: 'SERVICE', unitOfMeasure: 'VIAJE', salesPrice: 25000, purchaseCost: 0, currentStock: 0, minStock: 0, allowNegativeStock: true, category: 'Logística', estado: 'Activo', createdAt: '2025-01-01' }
+      { id: 'prod-01', companyId: DEMO_COMPANY_ID, code: 'FERR-001', name: 'Cemento Especial Melón 25 Kg', type: 'PRODUCT', unitOfMeasure: 'SACO', salesPrice: 5990, purchaseCost: 4200, currentStock: 450, minStock: 100, defaultWarehouseId: 'wh-matriz', stocksByWarehouse: { 'wh-matriz': 300, 'wh-acopio': 150 }, allowNegativeStock: false, category: 'Construcción Gruesa', estado: 'Activo', createdAt: `${targetYearStr}-01-01` },
+      { id: 'prod-02', companyId: DEMO_COMPANY_ID, code: 'FERR-002', name: 'Fierro Estriado A63-42H 10mm x 6m Gerdau', type: 'PRODUCT', unitOfMeasure: 'BARRA', salesPrice: 6850, purchaseCost: 4800, currentStock: 320, minStock: 80, defaultWarehouseId: 'wh-acopio', stocksByWarehouse: { 'wh-acopio': 320 }, allowNegativeStock: false, category: 'Aceros', estado: 'Activo', createdAt: `${targetYearStr}-01-01` },
+      { id: 'prod-03', companyId: DEMO_COMPANY_ID, code: 'FERR-003', name: 'Taladro Percutor Bosch GSB 13 RE 750W', type: 'PRODUCT', unitOfMeasure: 'UNIDAD', salesPrice: 69990, purchaseCost: 48900, currentStock: 35, minStock: 10, defaultWarehouseId: 'wh-matriz', stocksByWarehouse: { 'wh-matriz': 35 }, allowNegativeStock: false, category: 'Herramientas Eléctricas', estado: 'Activo', createdAt: `${targetYearStr}-01-01` },
+      { id: 'prod-04', companyId: DEMO_COMPANY_ID, code: 'FERR-004', name: 'Esmalte al Agua Extra Blanco 1 Galón Sipa', type: 'PRODUCT', unitOfMeasure: 'GALON', salesPrice: 26900, purchaseCost: 18500, currentStock: 120, minStock: 30, defaultWarehouseId: 'wh-matriz', stocksByWarehouse: { 'wh-matriz': 120 }, allowNegativeStock: false, category: 'Pinturas & Impermeabilizantes', estado: 'Activo', createdAt: `${targetYearStr}-01-01` },
+      { id: 'prod-05', companyId: DEMO_COMPANY_ID, code: 'FERR-005', name: 'Disco de Corte Metal 4 1/2" DeWalt (Pack 25)', type: 'PRODUCT', unitOfMeasure: 'PACK', salesPrice: 21500, purchaseCost: 14200, currentStock: 90, minStock: 25, defaultWarehouseId: 'wh-matriz', stocksByWarehouse: { 'wh-matriz': 90 }, allowNegativeStock: false, category: 'Abrasivos', estado: 'Activo', createdAt: `${targetYearStr}-01-01` },
+      { id: 'prod-06', companyId: DEMO_COMPANY_ID, code: 'FERR-006', name: 'Set Herramientas Profesionales 108 Pzas Stanley', type: 'PRODUCT', unitOfMeasure: 'SET', salesPrice: 94990, purchaseCost: 65000, currentStock: 25, minStock: 8, defaultWarehouseId: 'wh-matriz', stocksByWarehouse: { 'wh-matriz': 25 }, allowNegativeStock: false, category: 'Herramientas Manuales', estado: 'Activo', createdAt: `${targetYearStr}-01-01` },
+      { id: 'prod-07', companyId: DEMO_COMPANY_ID, code: 'FERR-007', name: 'Tornillo Autoperforante Volcanita 6x1 1/4" (Caja 1000)', type: 'PRODUCT', unitOfMeasure: 'CAJA', salesPrice: 9450, purchaseCost: 6200, currentStock: 200, minStock: 50, defaultWarehouseId: 'wh-matriz', stocksByWarehouse: { 'wh-matriz': 200 }, allowNegativeStock: false, category: 'Fijaciones', estado: 'Activo', createdAt: `${targetYearStr}-01-01` },
+      { id: 'prod-08', companyId: DEMO_COMPANY_ID, code: 'FERR-008', name: 'Cable Eléctrico THHN 2.5mm Rojo Rollo 100m', type: 'PRODUCT', unitOfMeasure: 'ROLLO', salesPrice: 45900, purchaseCost: 32000, currentStock: 60, minStock: 15, defaultWarehouseId: 'wh-matriz', stocksByWarehouse: { 'wh-matriz': 60 }, allowNegativeStock: false, category: 'Electricidad', estado: 'Activo', createdAt: `${targetYearStr}-01-01` },
+      { id: 'prod-09', companyId: DEMO_COMPANY_ID, code: 'FERR-009', name: 'Cerradura Embutir Cerrojo Acero Poli', type: 'PRODUCT', unitOfMeasure: 'UNIDAD', salesPrice: 18900, purchaseCost: 12500, currentStock: 80, minStock: 20, defaultWarehouseId: 'wh-matriz', stocksByWarehouse: { 'wh-matriz': 80 }, allowNegativeStock: false, category: 'Cerrajería', estado: 'Activo', createdAt: `${targetYearStr}-01-01` },
+      { id: 'prod-10', companyId: DEMO_COMPANY_ID, code: 'FERR-010', name: 'Servicio de Dimensionado y Corte de Maderas', type: 'SERVICE', unitOfMeasure: 'SERVICIO', salesPrice: 15000, purchaseCost: 0, currentStock: 0, minStock: 0, allowNegativeStock: true, category: 'Servicios en Tienda', estado: 'Activo', createdAt: `${targetYearStr}-01-01` },
+      { id: 'prod-11', companyId: DEMO_COMPANY_ID, code: 'FERR-011', name: 'Flete y Despacho Express en Obra', type: 'SERVICE', unitOfMeasure: 'VIAJE', salesPrice: 25000, purchaseCost: 0, currentStock: 0, minStock: 0, allowNegativeStock: true, category: 'Logística', estado: 'Activo', createdAt: `${targetYearStr}-01-01` }
     ];
     for (const prod of productsList) {
       await setDoc(doc(compDocRef, 'products', prod.id), prod);
     }
 
-    onProgress?.('Configurando Nómina de 10 Trabajadores y Liquidaciones 2025...', 35);
+    onProgress?.(`Configurando Nómina de 10 Trabajadores y Liquidaciones ${targetYearStr}...`, 35);
 
     // 7. Setup 10 Employees with Realistic Chilean Salaries and IUSC
     const employeesList: Employee[] = [
-      { id: 'emp-01', companyId: DEMO_COMPANY_ID, rut: '12.345.678-9', name: 'Alí Karim Tapia', position: 'Gerente General', department: 'Gerencia', baseSalary: 3850000, pensionSystem: 'CUPRUM', healthSystem: 'COLMENA', healthPlanType: 'ISAPRE_UF', healthPlanValue: 4.8, hasCesantiaAFC: true, contractType: 'INDEFINIDO', hasGratificacionLegal: true, cargasFamiliares: 0, tramoCargaFamiliar: 'D', workHoursPerWeek: 45, hireDate: '2025-01-01', email: 'alikarim@ferreteriadonali.cl', active: true, createdAt: '2025-01-01' },
-      { id: 'emp-02', companyId: DEMO_COMPANY_ID, rut: '14.567.890-1', name: 'Rodrigo Morales Peña', position: 'Jefe de Operaciones & Logística', department: 'Operaciones', baseSalary: 2400000, pensionSystem: 'HABITAT', healthSystem: 'FONASA', healthPlanType: 'FONASA_7', healthPlanValue: 0, hasCesantiaAFC: true, contractType: 'INDEFINIDO', hasGratificacionLegal: true, cargasFamiliares: 0, tramoCargaFamiliar: 'D', workHoursPerWeek: 45, hireDate: '2025-01-01', email: 'rmorales@ferreteriadonali.cl', active: true, createdAt: '2025-01-01' },
-      { id: 'emp-03', companyId: DEMO_COMPANY_ID, rut: '16.789.012-3', name: 'Claudia Soto Valenzuela', position: 'Jefa de Adquisiciones y Compras', department: 'Abastecimiento', baseSalary: 1850000, pensionSystem: 'PROVIDA', healthSystem: 'FONASA', healthPlanType: 'FONASA_7', healthPlanValue: 0, hasCesantiaAFC: true, contractType: 'INDEFINIDO', hasGratificacionLegal: true, cargasFamiliares: 0, tramoCargaFamiliar: 'D', workHoursPerWeek: 45, hireDate: '2025-01-01', email: 'csoto@ferreteriadonali.cl', active: true, createdAt: '2025-01-01' },
-      { id: 'emp-04', companyId: DEMO_COMPANY_ID, rut: '15.678.901-2', name: 'Patricio Navia Fuentes', position: 'Contador General', department: 'Finanzas', baseSalary: 1600000, pensionSystem: 'MODELO', healthSystem: 'FONASA', healthPlanType: 'FONASA_7', healthPlanValue: 0, hasCesantiaAFC: true, contractType: 'INDEFINIDO', hasGratificacionLegal: true, cargasFamiliares: 0, tramoCargaFamiliar: 'D', workHoursPerWeek: 45, hireDate: '2025-01-01', email: 'pnavia@ferreteriadonali.cl', active: true, createdAt: '2025-01-01' },
-      { id: 'emp-05', companyId: DEMO_COMPANY_ID, rut: '17.890.123-4', name: 'Marcela Araya Castro', position: 'Ejecutiva de Ventas Mesón Sr', department: 'Ventas', baseSalary: 950000, pensionSystem: 'HABITAT', healthSystem: 'FONASA', healthPlanType: 'FONASA_7', healthPlanValue: 0, hasCesantiaAFC: true, contractType: 'INDEFINIDO', hasGratificacionLegal: true, cargasFamiliares: 0, tramoCargaFamiliar: 'D', workHoursPerWeek: 45, hireDate: '2025-01-01', email: 'maraya@ferreteriadonali.cl', active: true, createdAt: '2025-01-01' },
-      { id: 'emp-06', companyId: DEMO_COMPANY_ID, rut: '18.901.234-5', name: 'Gonzalo Pérez Lara', position: 'Ejecutivo de Ventas Empresas', department: 'Ventas', baseSalary: 880000, pensionSystem: 'UNO', healthSystem: 'FONASA', healthPlanType: 'FONASA_7', healthPlanValue: 0, hasCesantiaAFC: true, contractType: 'INDEFINIDO', hasGratificacionLegal: true, cargasFamiliares: 0, tramoCargaFamiliar: 'D', workHoursPerWeek: 45, hireDate: '2025-01-01', email: 'gperez@ferreteriadonali.cl', active: true, createdAt: '2025-01-01' },
-      { id: 'emp-07', companyId: DEMO_COMPANY_ID, rut: '19.012.345-6', name: 'Felipe Rojas Mardones', position: 'Vendedor Salón Ferretería', department: 'Ventas', baseSalary: 750000, pensionSystem: 'PLANVITAL', healthSystem: 'FONASA', healthPlanType: 'FONASA_7', healthPlanValue: 0, hasCesantiaAFC: true, contractType: 'INDEFINIDO', hasGratificacionLegal: true, cargasFamiliares: 0, tramoCargaFamiliar: 'D', workHoursPerWeek: 45, hireDate: '2025-01-01', email: 'frojas@ferreteriadonali.cl', active: true, createdAt: '2025-01-01' },
-      { id: 'emp-08', companyId: DEMO_COMPANY_ID, rut: '18.234.567-8', name: 'Camila Vergara Pinto', position: 'Cajera y Atención a Clientes', department: 'Caja', baseSalary: 680000, pensionSystem: 'PROVIDA', healthSystem: 'FONASA', healthPlanType: 'FONASA_7', healthPlanValue: 0, hasCesantiaAFC: true, contractType: 'INDEFINIDO', hasGratificacionLegal: true, cargasFamiliares: 0, tramoCargaFamiliar: 'D', workHoursPerWeek: 45, hireDate: '2025-01-01', email: 'cvergara@ferreteriadonali.cl', active: true, createdAt: '2025-01-01' },
-      { id: 'emp-09', companyId: DEMO_COMPANY_ID, rut: '15.345.678-0', name: 'Juan Carlos Carrasco', position: 'Jefe de Bodega y Despachos', department: 'Logística', baseSalary: 780000, pensionSystem: 'CAPITAL', healthSystem: 'FONASA', healthPlanType: 'FONASA_7', healthPlanValue: 0, hasCesantiaAFC: true, contractType: 'INDEFINIDO', hasGratificacionLegal: true, cargasFamiliares: 0, tramoCargaFamiliar: 'D', workHoursPerWeek: 45, hireDate: '2025-01-01', email: 'jcarrasco@ferreteriadonali.cl', active: true, createdAt: '2025-01-01' },
-      { id: 'emp-10', companyId: DEMO_COMPANY_ID, rut: '19.456.789-1', name: 'Esteban Gutiérrez Silva', position: 'Operador de Bodega y Reparto', department: 'Logística', baseSalary: 620000, pensionSystem: 'MODELO', healthSystem: 'FONASA', healthPlanType: 'FONASA_7', healthPlanValue: 0, hasCesantiaAFC: true, contractType: 'INDEFINIDO', hasGratificacionLegal: true, cargasFamiliares: 0, tramoCargaFamiliar: 'D', workHoursPerWeek: 45, hireDate: '2025-01-01', email: 'egutierrez@ferreteriadonali.cl', active: true, createdAt: '2025-01-01' }
+      { id: 'emp-01', companyId: DEMO_COMPANY_ID, rut: '12.345.678-9', name: 'Alí Karim Tapia', position: 'Gerente General', department: 'Gerencia', baseSalary: 3850000, pensionSystem: 'CUPRUM', healthSystem: 'COLMENA', healthPlanType: 'ISAPRE_UF', healthPlanValue: 4.8, hasCesantiaAFC: true, contractType: 'INDEFINIDO', hasGratificacionLegal: true, cargasFamiliares: 0, tramoCargaFamiliar: 'D', workHoursPerWeek: 45, hireDate: `${targetYearStr}-01-01`, email: 'alikarim@ferreteriadonali.cl', active: true, createdAt: `${targetYearStr}-01-01` },
+      { id: 'emp-02', companyId: DEMO_COMPANY_ID, rut: '14.567.890-1', name: 'Rodrigo Morales Peña', position: 'Jefe de Operaciones & Logística', department: 'Operaciones', baseSalary: 2400000, pensionSystem: 'HABITAT', healthSystem: 'FONASA', healthPlanType: 'FONASA_7', healthPlanValue: 0, hasCesantiaAFC: true, contractType: 'INDEFINIDO', hasGratificacionLegal: true, cargasFamiliares: 0, tramoCargaFamiliar: 'D', workHoursPerWeek: 45, hireDate: `${targetYearStr}-01-01`, email: 'rmorales@ferreteriadonali.cl', active: true, createdAt: `${targetYearStr}-01-01` },
+      { id: 'emp-03', companyId: DEMO_COMPANY_ID, rut: '16.789.012-3', name: 'Claudia Soto Valenzuela', position: 'Jefa de Adquisiciones y Compras', department: 'Abastecimiento', baseSalary: 1850000, pensionSystem: 'PROVIDA', healthSystem: 'FONASA', healthPlanType: 'FONASA_7', healthPlanValue: 0, hasCesantiaAFC: true, contractType: 'INDEFINIDO', hasGratificacionLegal: true, cargasFamiliares: 0, tramoCargaFamiliar: 'D', workHoursPerWeek: 45, hireDate: `${targetYearStr}-01-01`, email: 'csoto@ferreteriadonali.cl', active: true, createdAt: `${targetYearStr}-01-01` },
+      { id: 'emp-04', companyId: DEMO_COMPANY_ID, rut: '15.678.901-2', name: 'Patricio Navia Fuentes', position: 'Contador General', department: 'Finanzas', baseSalary: 1600000, pensionSystem: 'MODELO', healthSystem: 'FONASA', healthPlanType: 'FONASA_7', healthPlanValue: 0, hasCesantiaAFC: true, contractType: 'INDEFINIDO', hasGratificacionLegal: true, cargasFamiliares: 0, tramoCargaFamiliar: 'D', workHoursPerWeek: 45, hireDate: `${targetYearStr}-01-01`, email: 'pnavia@ferreteriadonali.cl', active: true, createdAt: `${targetYearStr}-01-01` },
+      { id: 'emp-05', companyId: DEMO_COMPANY_ID, rut: '17.890.123-4', name: 'Marcela Araya Castro', position: 'Ejecutiva de Ventas Mesón Sr', department: 'Ventas', baseSalary: 950000, pensionSystem: 'HABITAT', healthSystem: 'FONASA', healthPlanType: 'FONASA_7', healthPlanValue: 0, hasCesantiaAFC: true, contractType: 'INDEFINIDO', hasGratificacionLegal: true, cargasFamiliares: 0, tramoCargaFamiliar: 'D', workHoursPerWeek: 45, hireDate: `${targetYearStr}-01-01`, email: 'maraya@ferreteriadonali.cl', active: true, createdAt: `${targetYearStr}-01-01` },
+      { id: 'emp-06', companyId: DEMO_COMPANY_ID, rut: '18.901.234-5', name: 'Gonzalo Pérez Lara', position: 'Ejecutivo de Ventas Empresas', department: 'Ventas', baseSalary: 880000, pensionSystem: 'UNO', healthSystem: 'FONASA', healthPlanType: 'FONASA_7', healthPlanValue: 0, hasCesantiaAFC: true, contractType: 'INDEFINIDO', hasGratificacionLegal: true, cargasFamiliares: 0, tramoCargaFamiliar: 'D', workHoursPerWeek: 45, hireDate: `${targetYearStr}-01-01`, email: 'gperez@ferreteriadonali.cl', active: true, createdAt: `${targetYearStr}-01-01` },
+      { id: 'emp-07', companyId: DEMO_COMPANY_ID, rut: '19.012.345-6', name: 'Felipe Rojas Mardones', position: 'Vendedor Salón Ferretería', department: 'Ventas', baseSalary: 750000, pensionSystem: 'PLANVITAL', healthSystem: 'FONASA', healthPlanType: 'FONASA_7', healthPlanValue: 0, hasCesantiaAFC: true, contractType: 'INDEFINIDO', hasGratificacionLegal: true, cargasFamiliares: 0, tramoCargaFamiliar: 'D', workHoursPerWeek: 45, hireDate: `${targetYearStr}-01-01`, email: 'frojas@ferreteriadonali.cl', active: true, createdAt: `${targetYearStr}-01-01` },
+      { id: 'emp-08', companyId: DEMO_COMPANY_ID, rut: '18.234.567-8', name: 'Camila Vergara Pinto', position: 'Cajera y Atención a Clientes', department: 'Caja', baseSalary: 680000, pensionSystem: 'PROVIDA', healthSystem: 'FONASA', healthPlanType: 'FONASA_7', healthPlanValue: 0, hasCesantiaAFC: true, contractType: 'INDEFINIDO', hasGratificacionLegal: true, cargasFamiliares: 0, tramoCargaFamiliar: 'D', workHoursPerWeek: 45, hireDate: `${targetYearStr}-01-01`, email: 'cvergara@ferreteriadonali.cl', active: true, createdAt: `${targetYearStr}-01-01` },
+      { id: 'emp-09', companyId: DEMO_COMPANY_ID, rut: '15.345.678-0', name: 'Juan Carlos Carrasco', position: 'Jefe de Bodega y Despachos', department: 'Logística', baseSalary: 780000, pensionSystem: 'CAPITAL', healthSystem: 'FONASA', healthPlanType: 'FONASA_7', healthPlanValue: 0, hasCesantiaAFC: true, contractType: 'INDEFINIDO', hasGratificacionLegal: true, cargasFamiliares: 0, tramoCargaFamiliar: 'D', workHoursPerWeek: 45, hireDate: `${targetYearStr}-01-01`, email: 'jcarrasco@ferreteriadonali.cl', active: true, createdAt: `${targetYearStr}-01-01` },
+      { id: 'emp-10', companyId: DEMO_COMPANY_ID, rut: '19.456.789-1', name: 'Esteban Gutiérrez Silva', position: 'Operador de Bodega y Reparto', department: 'Logística', baseSalary: 620000, pensionSystem: 'MODELO', healthSystem: 'FONASA', healthPlanType: 'FONASA_7', healthPlanValue: 0, hasCesantiaAFC: true, contractType: 'INDEFINIDO', hasGratificacionLegal: true, cargasFamiliares: 0, tramoCargaFamiliar: 'D', workHoursPerWeek: 45, hireDate: `${targetYearStr}-01-01`, email: 'egutierrez@ferreteriadonali.cl', active: true, createdAt: `${targetYearStr}-01-01` }
     ];
 
     for (const emp of employeesList) {
@@ -333,36 +335,143 @@ export async function generateOrResetDemoFerreteria(
     // Monthly payroll calculation helpers
     let voucherCounter = 1;
 
-    // 0. Opening Voucher at 01/01/2025
+    // 0. Opening Voucher at 01/01 of targetYear (Balance Inicial Cuadrado $208.000.000)
     const openingVoucher: Voucher = {
-      id: 'vouch-2025-001',
+      id: `vouch-${targetYearStr}-001`,
       voucherNumber: voucherCounter++,
       companyId: DEMO_COMPANY_ID,
-      period: '2025-01',
-      date: '2025-01-01',
+      period: `${targetYearStr}-01`,
+      date: `${targetYearStr}-01-01`,
       type: 'Traspaso',
       status: 'Valido',
-      gloss: 'Comprobante de Apertura Inicial Ejercicio 2025 - FERRETERIA DON ALI KT LTDA',
+      gloss: `Comprobante de Apertura Inicial Ejercicio ${targetYearStr} - FERRETERIA DON ALI KT LTDA`,
       origin: 'MANUAL',
-      totalDebit: 120000000,
-      totalCredit: 120000000,
+      totalDebit: 208000000,
+      totalCredit: 208000000,
       lines: [
         { id: 'line-op-1', accountId: accountMap.get('1.1.01.002') || 'acc-1_1_01_002', accountCode: '1.1.01.002', accountName: 'Banco Santander Cta Cte 88921-0', debit: 45000000, credit: 0, gloss: 'Saldo Inicial Cta Cte Santander' },
         { id: 'line-op-2', accountId: accountMap.get('1.1.01.001') || 'acc-1_1_01_001', accountCode: '1.1.01.001', accountName: 'Caja Central Ferretería', debit: 3000000, credit: 0, gloss: 'Fondo Fijo Caja Mostrador' },
         { id: 'line-op-3', accountId: accountMap.get('1.1.03.001') || 'acc-1_1_03_001', accountCode: '1.1.03.001', accountName: 'Mercaderías y Materiales de Construcción', debit: 42000000, credit: 0, gloss: 'Inventario Inicial de Ferretería' },
-        { id: 'line-op-4', accountId: accountMap.get('1.2.01.002') || 'acc-1_2_01_002', accountCode: '1.2.01.002', accountName: 'Camiones y Flota de Reparto', debit: 3000000, credit: 0, gloss: 'Flota 2 Camiones Hyundai HD78' },
-        { id: 'line-op-5', accountId: accountMap.get('3.1.01.001') || 'acc-3_1_01_001', accountCode: '3.1.01.001', accountName: 'Capital Social Pagado', debit: 0, credit: 120000000, gloss: 'Aporte de Capital de Socios' }
+        { id: 'line-op-4', accountId: accountMap.get('1.2.01.001') || 'acc-1_2_01_001', accountCode: '1.2.01.001', accountName: 'Instalaciones y Local Comercial', debit: 65000000, credit: 0, gloss: 'Salón Comercial y Terreno Providencia' },
+        { id: 'line-op-5', accountId: accountMap.get('1.2.01.002') || 'acc-1_2_01_002', accountCode: '1.2.01.002', accountName: 'Camiones y Flota de Reparto', debit: 30000000, credit: 0, gloss: 'Flota 2 Camiones Hyundai HD78' },
+        { id: 'line-op-6', accountId: accountMap.get('1.2.01.003') || 'acc-1_2_01_003', accountCode: '1.2.01.003', accountName: 'Racks y Grúa Horquilla Bodega', debit: 15000000, credit: 0, gloss: 'Grúa Horquilla Toyota 2.5T y Racks' },
+        { id: 'line-op-7', accountId: accountMap.get('1.2.01.004') || 'acc-1_2_01_004', accountCode: '1.2.01.004', accountName: 'Servidor Central y Terminales POS Mesón Venta', debit: 4500000, credit: 0, gloss: 'Servidor y Estaciones POS' },
+        { id: 'line-op-8', accountId: accountMap.get('1.2.01.005') || 'acc-1_2_01_005', accountCode: '1.2.01.005', accountName: 'Muebles, Estanterías y Mesones de Atención', debit: 3500000, credit: 0, gloss: 'Estanterías Metálicas y Mesones' },
+        { id: 'line-op-9', accountId: accountMap.get('3.1.01.001') || 'acc-3_1_01_001', accountCode: '3.1.01.001', accountName: 'Capital Social Pagado', debit: 0, credit: 208000000, gloss: 'Aporte de Capital de Socios' }
       ],
-      createdAt: '2025-01-01T08:00:00Z'
+      createdAt: `${targetYearStr}-01-01T08:00:00Z`
     };
     await setDoc(doc(compDocRef, 'vouchers', openingVoucher.id), openingVoucher);
+
+    // Configuración de 5 Activos Fijos con Depreciación Dual (Tributaria LIR / IFRS)
+    const fixedAssetsList = [
+      {
+        id: 'af-001',
+        code: 'AF-001',
+        name: 'Instalaciones y Salón Comercial Providencia',
+        category: 'CONSTRUCCIONES',
+        invoiceNumber: 'FAC-8819',
+        supplierRut: '76.432.109-8',
+        supplierName: 'INMOBILIARIA Y RENTAS LOS CONQUISTADORES SPA',
+        acquisitionDate: '2024-01-15',
+        acquisitionValue: 65000000,
+        residualValue: 1,
+        usefulLifeTributariaMonths: 360,
+        tipoDepreciacionTributaria: 'LINEAL',
+        usefulLifeIFRSMonths: 480,
+        accountAssetId: accountMap.get('1.2.01.001') || 'acc-1_2_01_001',
+        accountDepreciationId: accountMap.get('1.2.02.001') || 'acc-1_2_02_001',
+        accountExpenseId: accountMap.get('5.2.02.007') || 'acc-5_2_02_007',
+        createdAt: `${targetYearStr}-01-01`
+      },
+      {
+        id: 'af-002',
+        code: 'AF-002',
+        name: 'Camiones Hyundai HD78 Flota de Reparto',
+        category: 'VEHICULOS',
+        invoiceNumber: 'FAC-1044',
+        supplierRut: '76.890.123-5',
+        supplierName: 'AUTOMOTORA GILDEMEISTER CHILE SPA',
+        acquisitionDate: '2024-03-20',
+        acquisitionValue: 30000000,
+        residualValue: 1,
+        usefulLifeTributariaMonths: 84,
+        tipoDepreciacionTributaria: 'LINEAL',
+        usefulLifeIFRSMonths: 120,
+        accountAssetId: accountMap.get('1.2.01.002') || 'acc-1_2_01_002',
+        accountDepreciationId: accountMap.get('1.2.02.001') || 'acc-1_2_02_001',
+        accountExpenseId: accountMap.get('5.2.02.007') || 'acc-5_2_02_007',
+        createdAt: `${targetYearStr}-01-01`
+      },
+      {
+        id: 'af-003',
+        code: 'AF-003',
+        name: 'Grúa Horquilla Toyota 2.5T Bodega Central',
+        category: 'MAQUINARIAS',
+        invoiceNumber: 'FAC-3312',
+        supplierRut: '77.123.456-7',
+        supplierName: 'KOMATSU CUMMINS MAQUINARIAS CHILE SPA',
+        acquisitionDate: '2024-05-10',
+        acquisitionValue: 15000000,
+        residualValue: 1,
+        usefulLifeTributariaMonths: 120,
+        tipoDepreciacionTributaria: 'LINEAL',
+        usefulLifeIFRSMonths: 180,
+        accountAssetId: accountMap.get('1.2.01.003') || 'acc-1_2_01_003',
+        accountDepreciationId: accountMap.get('1.2.02.001') || 'acc-1_2_02_001',
+        accountExpenseId: accountMap.get('5.2.02.007') || 'acc-5_2_02_007',
+        createdAt: `${targetYearStr}-01-01`
+      },
+      {
+        id: 'af-004',
+        code: 'AF-004',
+        name: 'Servidor Central y Terminales POS Mesón Venta',
+        category: 'EQUIPOS_COMPUTACIONALES',
+        invoiceNumber: 'FAC-9011',
+        supplierRut: '76.890.123-5',
+        supplierName: 'ROBERT BOSCH HERRAMIENTAS CHILE SPA',
+        acquisitionDate: '2024-06-01',
+        acquisitionValue: 4500000,
+        residualValue: 1,
+        usefulLifeTributariaMonths: 36,
+        tipoDepreciacionTributaria: 'LINEAL',
+        usefulLifeIFRSMonths: 48,
+        accountAssetId: accountMap.get('1.2.01.004') || 'acc-1_2_01_004',
+        accountDepreciationId: accountMap.get('1.2.02.001') || 'acc-1_2_02_001',
+        accountExpenseId: accountMap.get('5.2.02.007') || 'acc-5_2_02_007',
+        createdAt: `${targetYearStr}-01-01`
+      },
+      {
+        id: 'af-005',
+        code: 'AF-005',
+        name: 'Racks Metálicos de Carga Pesada y Estanterías',
+        category: 'MUEBLES_UTILES',
+        invoiceNumber: 'FAC-6520',
+        supplierRut: '77.123.456-7',
+        supplierName: 'STANLEY BLACK & DECKER CHILE SPA',
+        acquisitionDate: '2024-08-15',
+        acquisitionValue: 3500000,
+        residualValue: 1,
+        usefulLifeTributariaMonths: 60,
+        tipoDepreciacionTributaria: 'LINEAL',
+        usefulLifeIFRSMonths: 84,
+        accountAssetId: accountMap.get('1.2.01.005') || 'acc-1_2_01_005',
+        accountDepreciationId: accountMap.get('1.2.02.001') || 'acc-1_2_02_001',
+        accountExpenseId: accountMap.get('5.2.02.007') || 'acc-5_2_02_007',
+        createdAt: `${targetYearStr}-01-01`
+      }
+    ];
+
+    for (const fa of fixedAssetsList) {
+      await setDoc(doc(compDocRef, 'fixedAssets', fa.id), fa);
+    }
 
     // Monthly Remunerations loop
     for (let mIdx = 0; mIdx < 12; mIdx++) {
       const monthStr = String(mIdx + 1).padStart(2, '0');
-      const periodStr = `2025-${monthStr}`;
-      const lastDay = new Date(2025, mIdx + 1, 0).getDate();
-      const payrollDate = `2025-${monthStr}-${lastDay}`;
+      const periodStr = `${targetYearStr}-${monthStr}`;
+      const lastDay = new Date(targetYear, mIdx + 1, 0).getDate();
+      const payrollDate = `${targetYearStr}-${monthStr}-${lastDay}`;
 
       let monthTotalSueldoBase = 0;
       let monthTotalGratificacion = 0;
@@ -417,7 +526,7 @@ export async function generateOrResetDemoFerreteria(
           id: `slip-${emp.id}-${periodStr}`,
           companyId: DEMO_COMPANY_ID,
           period: periodStr,
-          year: 2025,
+          year: targetYear,
           month: mIdx + 1,
           employeeId: emp.id,
           employeeRut: emp.rut,
@@ -495,7 +604,7 @@ export async function generateOrResetDemoFerreteria(
         totalCredit: monthTotalSueldoBase + monthTotalGratificacion + monthTotalAportePatronal + (employeesList.length * 95000),
         lines: [
           { id: `line-rem-1-${periodStr}`, accountId: accountMap.get('5.2.01.001') || 'acc-5_2_01_001', accountCode: '5.2.01.001', accountName: 'Sueldos Base y Remuneraciones', debit: monthTotalSueldoBase, credit: 0, gloss: `Sueldos Base ${periodStr}`, costCenter: 'CC-01' },
-          { id: `line-rem-2-${periodStr}`, accountId: accountMap.get('5.2.01.002') || 'acc-5_2_01_002', accountCode: '5.2.01.002', accountName: 'Gratificaciones Legales', debit: monthTotalGratificacion, credit: 0, gloss: `Gratificación Legal Art. 50 ${periodStr}`, costCenter: 'CC-01' },
+          { id: `line-rem-2-${periodStr}`, accountId: accountMap.get('5.2.01.002') || 'acc-5_2_02_002', accountCode: '5.2.01.002', accountName: 'Gratificaciones Legales', debit: monthTotalGratificacion, credit: 0, gloss: `Gratificación Legal Art. 50 ${periodStr}`, costCenter: 'CC-01' },
           { id: `line-rem-3-${periodStr}`, accountId: accountMap.get('5.2.01.003') || 'acc-5_2_01_003', accountCode: '5.2.01.003', accountName: 'Leyes Sociales Patronales (SIS / Cesantía Empleador)', debit: monthTotalAportePatronal, credit: 0, gloss: `SIS y AFC Aporte Patronal ${periodStr}`, costCenter: 'CC-01' },
           { id: `line-rem-4-${periodStr}`, accountId: accountMap.get('5.2.02.006') || 'acc-5_2_02_006', accountCode: '5.2.02.006', accountName: 'Seguros Contra Incendio y Suministros Menores', debit: employeesList.length * 95000, credit: 0, gloss: `Asig. Colación y Movilización ${periodStr}`, costCenter: 'CC-01' },
           { id: `line-rem-5-${periodStr}`, accountId: accountMap.get('2.1.04.002') || 'acc-2_1_04_002', accountCode: '2.1.04.002', accountName: 'Sueldos Líquidos por Pagar', debit: 0, credit: monthTotalLiquido, gloss: `Sueldos Líquidos por Pagar ${periodStr}` },
@@ -521,9 +630,9 @@ export async function generateOrResetDemoFerreteria(
     }
     if (sCount > 0) await slipBatch.commit();
 
-    onProgress?.('Generando Transacciones Diarias (Compras, Ventas, Honorarios, Pagos)...', 55);
+    onProgress?.(`Generando Transacciones Diarias (Compras, Ventas, Honorarios, Pagos) ${targetYearStr}...`, 55);
 
-    // 8. Generate Daily Transactions across 2025
+    // 8. Generate Daily Transactions across targetYear
     // 10 transactions daily covering purchases, sales, supplier payments, client collections, utility payments
     const rcvDocsList: RCVDocument[] = [];
     const allVouchersList: Voucher[] = [...monthlyCentralizationVouchers];
@@ -532,7 +641,7 @@ export async function generateOrResetDemoFerreteria(
     const commercialDocsList: CommercialDocument[] = [];
     const bankStatementsByMonth: { [period: string]: BankStatementLine[] } = {};
 
-    months2025.forEach(p => {
+    monthsYear.forEach(p => {
       bankStatementsByMonth[p] = [];
     });
 
@@ -555,21 +664,21 @@ export async function generateOrResetDemoFerreteria(
 
     // Customer catalog for rotation
     const customers = [
-      { aux: auxiliariesList[10], name: 'CONSTRUCTORA LOS ANDES SPA', rut: '76.543.999-1', avgNet: 4500000, cc: 'CC-04', pry: 'PRY-2025-02' },
-      { aux: auxiliariesList[11], name: 'INGENIERÍA Y CONSTRUCCIÓN DEL MAIPO LTDA', rut: '77.890.321-4', avgNet: 3200000, cc: 'CC-04', pry: 'PRY-2025-02' },
-      { aux: auxiliariesList[12], name: 'SERVICIOS INTEGRALES Y REFORMAS EL ROBLE SPA', rut: '76.111.222-3', avgNet: 1850000, cc: 'CC-02', pry: 'PRY-2025-01' },
-      { aux: auxiliariesList[13], name: 'CLIENTES MOSTRADOR Y VENTAS DIARIAS BOLETA', rut: '66.666.666-6', avgNet: 950000, cc: 'CC-02', pry: 'PRY-2025-03' }
+      { aux: auxiliariesList[10], name: 'CONSTRUCTORA LOS ANDES SPA', rut: '76.543.999-1', avgNet: 4500000, cc: 'CC-04', pry: `PRY-${targetYearStr}-02` },
+      { aux: auxiliariesList[11], name: 'INGENIERÍA Y CONSTRUCCIÓN DEL MAIPO LTDA', rut: '77.890.321-4', avgNet: 3200000, cc: 'CC-04', pry: `PRY-${targetYearStr}-02` },
+      { aux: auxiliariesList[12], name: 'SERVICIOS INTEGRALES Y REFORMAS EL ROBLE SPA', rut: '76.111.222-3', avgNet: 1850000, cc: 'CC-02', pry: `PRY-${targetYearStr}-01` },
+      { aux: auxiliariesList[13], name: 'CLIENTES MOSTRADOR Y VENTAS DIARIAS BOLETA', rut: '66.666.666-6', avgNet: 950000, cc: 'CC-02', pry: `PRY-${targetYearStr}-03` }
     ];
 
     let runningBankBalance = 45000000; // Starting from opening cash balance
 
     for (let mIdx = 0; mIdx < 12; mIdx++) {
       const monthStr = String(mIdx + 1).padStart(2, '0');
-      const periodStr = `2025-${monthStr}`;
-      const daysInMonth = new Date(2025, mIdx + 1, 0).getDate();
+      const periodStr = `${targetYearStr}-${monthStr}`;
+      const daysInMonth = new Date(targetYear, mIdx + 1, 0).getDate();
 
       // Monthly fixed expenses: Rent (Arriendo), Electricity (Luz), Water (Agua), Legal Honorarios
-      const rentDate = `2025-${monthStr}-05`;
+      const rentDate = `${targetYearStr}-${monthStr}-05`;
       const rentDoc: RCVDocument = {
         id: `rcv-rent-${periodStr}`,
         tipoRegistro: 'Compra',
@@ -628,7 +737,7 @@ export async function generateOrResetDemoFerreteria(
       });
 
       // Basic utilities (Enel + Aguas)
-      const utilDate = `2025-${monthStr}-10`;
+      const utilDate = `${targetYearStr}-${monthStr}-10`;
       const enelDoc: RCVDocument = {
         id: `rcv-enel-${periodStr}`,
         tipoRegistro: 'Compra',
@@ -686,7 +795,7 @@ export async function generateOrResetDemoFerreteria(
       });
 
       // Boleta de Honorarios mensual (Asesoría Contable / Legal)
-      const honDate = `2025-${monthStr}-28`;
+      const honDate = `${targetYearStr}-${monthStr}-28`;
       const honBruto = 850000;
       const honRet = Math.round(honBruto * 0.1375); // 13.75%
       const honLiq = honBruto - honRet;
@@ -753,7 +862,7 @@ export async function generateOrResetDemoFerreteria(
       // Generating ~10 operational movements every 2-3 days for solid demo density
       for (let day = 2; day <= Math.min(28, daysInMonth); day += 2) {
         const dayStr = String(day).padStart(2, '0');
-        const txDate = `2025-${monthStr}-${dayStr}`;
+        const txDate = `${targetYearStr}-${monthStr}-${dayStr}`;
 
         // 1. Purchase (Compra Proveedor)
         const supp = suppliers[(day + mIdx) % suppliers.length];
@@ -788,7 +897,7 @@ export async function generateOrResetDemoFerreteria(
           companyId: DEMO_COMPANY_ID,
           operationType: 'COMPRA',
           documentType: 'ORDEN_COMPRA',
-          folio: `OC-2025-${ocNumber++}`,
+          folio: `OC-${targetYearStr}-${ocNumber++}`,
           date: txDate,
           period: periodStr,
           rutContraparte: supp.aux.rut,
@@ -850,7 +959,7 @@ export async function generateOrResetDemoFerreteria(
           companyId: DEMO_COMPANY_ID,
           operationType: 'VENTA',
           documentType: 'FACTURA_VENTA',
-          folio: `NV-2025-${ovNumber++}`,
+          folio: `NV-${targetYearStr}-${ovNumber++}`,
           date: txDate,
           period: periodStr,
           rutContraparte: cust.rut,
@@ -1016,8 +1125,8 @@ export async function generateOrResetDemoFerreteria(
       }
 
       // End of month: Payment of Previred and Net Salaries
-      const lastDay = new Date(2025, mIdx + 1, 0).getDate();
-      const paySalaryDate = `2025-${monthStr}-${lastDay}`;
+      const lastDay = new Date(targetYear, mIdx + 1, 0).getDate();
+      const paySalaryDate = `${targetYearStr}-${monthStr}-${lastDay}`;
       
       // Calculate month totals from slips
       const monthSlips = payrollSlipsList.filter(s => s.period === periodStr);
@@ -1076,6 +1185,44 @@ export async function generateOrResetDemoFerreteria(
     }
     if (rCount > 0) await rcvBatch.commit();
 
+    // Comprobante Anual de Depreciación Activo Fijo (31/12/targetYear)
+    const annualDepreciationVoucher: Voucher = {
+      id: `vouch-deprec-${targetYearStr}-12`,
+      voucherNumber: voucherCounter++,
+      companyId: DEMO_COMPANY_ID,
+      period: `${targetYearStr}-12`,
+      date: `${targetYearStr}-12-31`,
+      type: 'Traspaso',
+      status: 'Valido',
+      gloss: `Centralización Anual Depreciación Tributaria e IFRS Ejercicio ${targetYearStr} - Activo Fijo`,
+      origin: 'ACTIVO_FIJO',
+      totalDebit: 10152381,
+      totalCredit: 10152381,
+      lines: [
+        {
+          id: 'line-deprec-deb',
+          accountId: accountMap.get('5.2.02.007') || 'acc-5_2_02_007',
+          accountCode: '5.2.02.007',
+          accountName: 'Depreciación Activo Fijo del Ejercicio',
+          debit: 10152381,
+          credit: 0,
+          gloss: `Depreciación Ejercicio ${targetYearStr} Activos Fijos Ferretería`,
+          costCenter: 'CC-01'
+        },
+        {
+          id: 'line-deprec-cred',
+          accountId: accountMap.get('1.2.02.001') || 'acc-1_2_02_001',
+          accountCode: '1.2.02.001',
+          accountName: 'Depreciación Acumulada Activo Fijo',
+          debit: 0,
+          credit: 10152381,
+          gloss: `Depreciación Acumulada Ejercicio ${targetYearStr}`
+        }
+      ],
+      createdAt: `${targetYearStr}-12-31T20:00:00Z`
+    };
+    allVouchersList.push(annualDepreciationVoucher);
+
     // Batch write Vouchers
     onProgress?.('Guardando Comprobantes Contables Cuadrados...', 80);
     let vBatch = writeBatch(db);
@@ -1102,14 +1249,14 @@ export async function generateOrResetDemoFerreteria(
       await setDoc(doc(compDocRef, 'commercialDocuments', cd.id), cd);
     }
 
-    onProgress?.('Generando Cartolas Bancarias Conciliadas 2025...', 88);
+    onProgress?.(`Generando Cartolas Bancarias Conciliadas ${targetYearStr}...`, 88);
 
     // 9. Generate 12 Bank Reconciliations (Cartolas Cuadradas)
     for (let mIdx = 0; mIdx < 12; mIdx++) {
       const monthStr = String(mIdx + 1).padStart(2, '0');
-      const periodStr = `2025-${monthStr}`;
+      const periodStr = `${targetYearStr}-${monthStr}`;
       const lines = bankStatementsByMonth[periodStr] || [];
-      const lastDay = new Date(2025, mIdx + 1, 0).getDate();
+      const lastDay = new Date(targetYear, mIdx + 1, 0).getDate();
 
       const initialBal = lines.length > 0 ? lines[0].balance + (lines[0].charge || 0) - (lines[0].deposit || 0) : 45000000;
       const finalBal = lines.length > 0 ? lines[lines.length - 1].balance : initialBal;
@@ -1120,7 +1267,7 @@ export async function generateOrResetDemoFerreteria(
         bankAccountId: accountMap.get('1.1.01.002') || 'acc-1_1_01_002',
         bankAccountCode: '1.1.01.002',
         bankAccountName: 'Banco Santander Cta Cte 88921-0',
-        statementDate: `2025-${monthStr}-${lastDay}`,
+        statementDate: `${targetYearStr}-${monthStr}-${lastDay}`,
         bankInitialBalance: initialBal,
         bankFinalBalance: finalBal,
         bookFinalBalance: finalBal,
@@ -1133,7 +1280,7 @@ export async function generateOrResetDemoFerreteria(
         status: 'Cuadrado',
         notes: `Cartola Mensual Banco Santander ${periodStr} - 100% Conciliada con Comprobantes Contables`,
         lines: lines,
-        updatedAt: `2025-${monthStr}-${lastDay}T20:00:00Z`
+        updatedAt: `${targetYearStr}-${monthStr}-${lastDay}T20:00:00Z`
       };
 
       await setDoc(doc(compDocRef, 'bankReconciliations', bankRec.id), bankRec);
@@ -1144,7 +1291,7 @@ export async function generateOrResetDemoFerreteria(
     // 10. Generate 12 F29 Declarations (Pagados)
     for (let mIdx = 0; mIdx < 12; mIdx++) {
       const monthStr = String(mIdx + 1).padStart(2, '0');
-      const periodStr = `2025-${monthStr}`;
+      const periodStr = `${targetYearStr}-${monthStr}`;
       
       const periodVouchers = allVouchersList.filter(v => v.period === periodStr);
       const periodSlips = payrollSlipsList.filter(s => s.period === periodStr);
@@ -1170,9 +1317,9 @@ export async function generateOrResetDemoFerreteria(
         id: `f29-${periodStr}`,
         period: periodStr,
         status: 'Pagado',
-        paymentDate: `2025-${monthStr}-20`,
-        declarationDate: `2025-${monthStr}-15`,
-        folioSII: `SII-F29-2025-${monthStr}-8821`,
+        paymentDate: `${targetYearStr}-${monthStr}-20`,
+        declarationDate: `${targetYearStr}-${monthStr}-15`,
+        folioSII: `SII-F29-${targetYearStr}-${monthStr}-8821`,
         settings: {
           regimenTributario: '14_D3_PROPYME_GENERAL',
           ppmRate: 1.5,
@@ -1232,8 +1379,8 @@ export async function generateOrResetDemoFerreteria(
           otrosImpuestos: 0,
           totalPagarF29: totalPagar
         },
-        createdAt: `2025-${monthStr}-15T10:00:00Z`,
-        updatedAt: `2025-${monthStr}-20T11:00:00Z`
+        createdAt: `${targetYearStr}-${monthStr}-15T10:00:00Z`,
+        updatedAt: `${targetYearStr}-${monthStr}-20T11:00:00Z`
       };
 
       await setDoc(doc(compDocRef, 'f29Declarations', f29.id), f29);
@@ -1248,11 +1395,11 @@ export async function generateOrResetDemoFerreteria(
         companyId: DEMO_COMPANY_ID,
         action: 'CREAR',
         module: 'DEMO_PURGE',
-        details: `Carga completa e inicialización de sociedad demo FERRETERIA DON ALI KT LTDA con 10 transacciones diarias, 10 trabajadores, nóminas, cartolas 100% conciliadas, F29, DDJJ y RLI para el año 2025.`,
+        details: `Carga completa e inicialización de sociedad demo FERRETERIA DON ALI KT LTDA con 10 transacciones diarias, 10 trabajadores, nóminas, cartolas 100% conciliadas, F29, DDJJ y RLI para el año ${targetYearStr}.`,
         metadata: {
           companyId: DEMO_COMPANY_ID,
           companyName: DEMO_COMPANY_NAME,
-          year: 2025,
+          year: targetYear,
           vouchersCount: allVouchersList.length,
           rcvCount: rcvDocsList.length,
           slipsCount: payrollSlipsList.length,
@@ -1268,7 +1415,7 @@ export async function generateOrResetDemoFerreteria(
     return {
       success: true,
       companyId: DEMO_COMPANY_ID,
-      message: `Sociedad FERRETERIA DON ALI KT LTDA generada exitosamente para el año 2025 con ${allVouchersList.length} comprobantes, ${rcvDocsList.length} documentos RCV, 10 trabajadores con liquidaciones mensuales, cartolas bancarias 100% conciliadas, F29 pagados y DDJJ preparadas.`
+      message: `Sociedad FERRETERIA DON ALI KT LTDA generada exitosamente para el año ${targetYearStr} con ${allVouchersList.length} comprobantes, ${rcvDocsList.length} documentos RCV, 10 trabajadores con liquidaciones mensuales, cartolas bancarias 100% conciliadas, F29 pagados y DDJJ preparadas.`
     };
   } catch (error: any) {
     console.error("Error generating demo company:", error);

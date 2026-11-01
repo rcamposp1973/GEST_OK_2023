@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { provisionAuthUser } from '../utils/adminApi';
 import { db, auth } from '../lib/firebase';
 import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
 import { UserRole, StudyAdmin, StudyModulePermissions, StudySubscriptionStatus, SystemAppFormat } from '../types';
@@ -131,6 +132,14 @@ export default function CreateStudy({ onSuccess }: CreateStudyProps) {
         administrators: [initialAdmin],
         createdAt: new Date().toISOString()
       });
+
+      // 2b. Cuenta de acceso (Firebase Auth) del administrador del estudio, con rol y estudio asignados
+      try {
+        await provisionAuthUser({ email: cleanAdminEmail, password: adminPassword, name: initialAdmin.name, role: 'STUDY_ADMIN', studyId: newStudyRef.id });
+      } catch (provErr: any) {
+        console.error("No se pudo crear la cuenta de acceso del administrador:", provErr);
+        setError('El estudio se creó, pero NO se pudo crear la cuenta de acceso del administrador: ' + (provErr.message || provErr) + ' Edita al administrador del estudio para reintentarlo.');
+      }
 
       // 3. Crear usuario administrador en la subcolección de usuarios del estudio
       try {

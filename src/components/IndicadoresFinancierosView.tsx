@@ -10,6 +10,7 @@ import {
   CostCenterMaster,
   ExpenseItemMaster
 } from '../types';
+import { triggerIframePrint } from '../utils/printUtils';
 import {
   BarChart3,
   Landmark,
@@ -89,7 +90,7 @@ export default function IndicadoresFinancierosView({
   expenseItems = []
 }: IndicadoresFinancierosViewProps) {
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
-  const [selectedPeriod, setSelectedPeriod] = useState<string>('Todos');
+  const [cutoffMonth, setCutoffMonth] = useState<number>(10);
   const [activeTab, setActiveTab] = useState<'overview' | 'pareto' | 'expenses' | 'unitEconomics' | 'margins'>('overview');
   const [expenseGrouping, setExpenseGrouping] = useState<'byAccount' | 'byCostCenter' | 'byExpenseItem'>('byAccount');
   const [paretoType, setParetoType] = useState<'clients' | 'suppliers'>('clients');
@@ -126,7 +127,10 @@ export default function IndicadoresFinancierosView({
       if (v.status === 'Anulado') return false;
       const vYear = v.date ? parseInt(v.date.slice(0, 4)) : selectedYear;
       if (vYear !== selectedYear) return false;
-      if (selectedPeriod !== 'Todos' && v.period !== selectedPeriod) return false;
+      if (cutoffMonth > 0 && v.date && v.date.length >= 7) {
+        const vMonth = parseInt(v.date.slice(5, 7), 10);
+        if (vMonth > cutoffMonth) return false;
+      }
       return true;
     });
 
@@ -307,7 +311,15 @@ export default function IndicadoresFinancierosView({
     const leverage = patrimonioTotal > 0 ? (pasivoTotal / patrimonioTotal) : 0;
     const razonEndeudamiento = activoTotal > 0 ? (pasivoTotal / activoTotal) * 100 : 0;
 
-    const latestReconciliations = bankReconciliations.filter(r => r.period?.startsWith(String(selectedYear)));
+    const latestReconciliations = bankReconciliations.filter(r => {
+      if (!r.period) return false;
+      if (!r.period.startsWith(String(selectedYear))) return false;
+      if (cutoffMonth > 0) {
+        const rMonth = parseInt(r.period.slice(5, 7), 10);
+        if (rMonth > cutoffMonth) return false;
+      }
+      return true;
+    });
     let saldoCartolasBancarias = 0;
     let abonosPendientesContabilizar = 0;
     let cargosPendientesContabilizar = 0;
@@ -363,7 +375,7 @@ export default function IndicadoresFinancierosView({
       diferenciaDisponibleVsLibros,
       hasReconciliationData: latestReconciliations.length > 0
     };
-  }, [accounts, vouchers, accountMap, selectedYear, selectedPeriod, bankReconciliations]);
+  }, [accounts, vouchers, accountMap, selectedYear, cutoffMonth, bankReconciliations]);
 
   // Monthly Sales & Expense Trend
   const monthlyData = useMemo(() => {
@@ -381,7 +393,12 @@ export default function IndicadoresFinancierosView({
     const validVouchers = vouchers.filter(v => {
       if (v.status === 'Anulado') return false;
       const vYear = v.date ? parseInt(v.date.slice(0, 4)) : selectedYear;
-      return vYear === selectedYear;
+      if (vYear !== selectedYear) return false;
+      if (cutoffMonth > 0 && v.date && v.date.length >= 7) {
+        const vMonth = parseInt(v.date.slice(5, 7), 10);
+        if (vMonth > cutoffMonth) return false;
+      }
+      return true;
     });
 
     validVouchers.forEach(v => {
@@ -415,8 +432,8 @@ export default function IndicadoresFinancierosView({
       m.margenNetoPct = m.ventas > 0 ? (m.utilidadNet / m.ventas) * 100 : 0;
     });
 
-    return monthlyList;
-  }, [vouchers, selectedYear]);
+    return cutoffMonth > 0 && cutoffMonth < 12 ? monthlyList.slice(0, cutoffMonth) : monthlyList;
+  }, [vouchers, selectedYear, cutoffMonth]);
 
   // Pareto 80/20 Analysis (Clientes / Proveedores)
   const paretoData = useMemo(() => {
@@ -426,7 +443,12 @@ export default function IndicadoresFinancierosView({
     const validVouchers = vouchers.filter(v => {
       if (v.status === 'Anulado') return false;
       const vYear = v.date ? parseInt(v.date.slice(0, 4)) : selectedYear;
-      return vYear === selectedYear;
+      if (vYear !== selectedYear) return false;
+      if (cutoffMonth > 0 && v.date && v.date.length >= 7) {
+        const vMonth = parseInt(v.date.slice(5, 7), 10);
+        if (vMonth > cutoffMonth) return false;
+      }
+      return true;
     });
 
     validVouchers.forEach(v => {
@@ -461,6 +483,11 @@ export default function IndicadoresFinancierosView({
 
     // Also parse RCV Documents for supplementary completeness
     rcvDocuments.forEach(doc => {
+      const docDate = doc.fechaEmision || doc.date || (doc.period ? `${doc.period}-01` : '');
+      if (cutoffMonth > 0 && docDate && docDate.length >= 7) {
+        const rMonth = parseInt(docDate.slice(5, 7), 10);
+        if (rMonth > cutoffMonth) return;
+      }
       const rut = doc.tipoRegistro === 'Venta' ? doc.rutReceptor : doc.rutEmisor;
       if (!rut) return;
 
@@ -505,7 +532,7 @@ export default function IndicadoresFinancierosView({
     const suppliersList = buildParetoTable(Array.from(supplierMap.values()));
 
     return { clients: clientsList, suppliers: suppliersList };
-  }, [vouchers, rcvDocuments, auxiliaryMap, selectedYear]);
+  }, [vouchers, rcvDocuments, auxiliaryMap, selectedYear, cutoffMonth]);
 
   // Expense Breakdown Report
   const expenseBreakdown = useMemo(() => {
@@ -514,7 +541,12 @@ export default function IndicadoresFinancierosView({
     const validVouchers = vouchers.filter(v => {
       if (v.status === 'Anulado') return false;
       const vYear = v.date ? parseInt(v.date.slice(0, 4)) : selectedYear;
-      return vYear === selectedYear;
+      if (vYear !== selectedYear) return false;
+      if (cutoffMonth > 0 && v.date && v.date.length >= 7) {
+        const vMonth = parseInt(v.date.slice(5, 7), 10);
+        if (vMonth > cutoffMonth) return false;
+      }
+      return true;
     });
 
     validVouchers.forEach(v => {
@@ -558,9 +590,9 @@ export default function IndicadoresFinancierosView({
     return items.map(item => ({
       ...item,
       pctOfTotal: grandTotalExpenses > 0 ? (item.total / grandTotalExpenses) * 100 : 0,
-      monthlyAvg: item.total / 12
+      monthlyAvg: item.total / (cutoffMonth > 0 ? cutoffMonth : 12)
     }));
-  }, [vouchers, costCenters, expenseItems, selectedYear, expenseGrouping]);
+  }, [vouchers, costCenters, expenseItems, selectedYear, expenseGrouping, cutoffMonth]);
 
   // Financial & Unit Economics Metrics (Clean, professional names)
   const unitEconomics = useMemo(() => {
@@ -667,8 +699,128 @@ export default function IndicadoresFinancierosView({
             </select>
           </div>
 
+          <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200 text-xs">
+            <label className="font-semibold text-slate-600 text-[11px]">Acumulado hasta:</label>
+            <select
+              value={cutoffMonth}
+              onChange={(e) => setCutoffMonth(parseInt(e.target.value, 10))}
+              className="bg-white border border-slate-300 rounded-md font-bold px-2 py-0.5 text-xs text-slate-800 focus:ring-2 focus:ring-indigo-500 font-mono cursor-pointer"
+            >
+              <option value={1}>Hasta Enero (Ene)</option>
+              <option value={2}>Hasta Febrero (Ene - Feb)</option>
+              <option value={3}>Hasta Marzo (Ene - Mar)</option>
+              <option value={4}>Hasta Abril (Ene - Abr)</option>
+              <option value={5}>Hasta Mayo (Ene - May)</option>
+              <option value={6}>Hasta Junio (Ene - Jun)</option>
+              <option value={7}>Hasta Julio (Ene - Jul)</option>
+              <option value={8}>Hasta Agosto (Ene - Ago)</option>
+              <option value={9}>Hasta Septiembre (Ene - Sep)</option>
+              <option value={10}>Hasta Octubre (Ene - Oct)</option>
+              <option value={11}>Hasta Noviembre (Ene - Nov)</option>
+              <option value={12}>Todo el Ejercicio (Ene - Dic)</option>
+            </select>
+          </div>
+
           <button
-            onClick={() => window.print()}
+            onClick={() => {
+              const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+              const cutoffName = monthNames[cutoffMonth - 1] || 'Diciembre';
+              const formatMoney = (n: number) => '$' + Math.round(n || 0).toLocaleString('es-CL');
+
+              triggerIframePrint({
+                title: `Informe_Indicadores_Financieros_${company.rut}_${selectedYear}`,
+                htmlContent: `
+                  <div class="header-box">
+                    <div style="display:flex; justify-between; align-items:flex-start;">
+                      <div>
+                        <h2>INFORME DE INDICADORES FINANCIEROS Y KPIS DE NEGOCIO</h2>
+                        <p class="font-bold">${company.name.toUpperCase()} (RUT: ${company.rut})</p>
+                        <p style="color:#64748b;">Período: Ejercicio ${selectedYear} &bull; Acumulado a ${cutoffName}</p>
+                      </div>
+                      <div style="text-align:right; font-size:9px; color:#64748b;">
+                        <p>Fecha Emisión: ${new Date().toLocaleString('es-CL')}</p>
+                        <p>Moneda: CLP (Pesos Chilenos)</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <h3 style="margin-top:14px; font-size:12px; border-bottom:1px solid #0f172a; padding-bottom:4px;">1. RESUMEN DE VENTAS Y MÁRGENES</h3>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>INDICADOR</th>
+                        <th class="text-right">VALOR MONETARIO / %</th>
+                        <th>DESCRIPCIÓN</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="font-bold">Ventas Totales Operacionales</td>
+                        <td class="text-right font-bold">${formatMoney(stats.ventasTotales)}</td>
+                        <td>Total ingresos de actividades ordinarias acumuladas a ${cutoffName}</td>
+                      </tr>
+                      <tr>
+                        <td>Costo Directo de Ventas</td>
+                        <td class="text-right">${formatMoney(stats.costoVentas)}</td>
+                        <td>Costos directos asociados a ventas y producción</td>
+                      </tr>
+                      <tr class="bg-slate font-bold">
+                        <td>Margen Bruto Operacional</td>
+                        <td class="text-right">${formatMoney(stats.margenBruto)} (${stats.margenBrutoPct.toFixed(1)}%)</td>
+                        <td>Ganancia bruta antes de gastos de administración</td>
+                      </tr>
+                      <tr>
+                        <td>Gastos Operacionales (OPEX)</td>
+                        <td class="text-right">${formatMoney(stats.gastosOperacionales)}</td>
+                        <td>Remuneraciones, arriendos, servicios y administración</td>
+                      </tr>
+                      <tr class="bg-slate font-bold">
+                        <td>EBITDA Operacional</td>
+                        <td class="text-right">${formatMoney(stats.ebitda)} (${stats.margenEbitdaPct.toFixed(1)}%)</td>
+                        <td>Resultado operativo antes de depreciación e impuestos</td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  <h3 style="margin-top:16px; font-size:12px; border-bottom:1px solid #0f172a; padding-bottom:4px;">2. LIQUIDEZ Y TESORERÍA</h3>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>MÉTRICA DE LIQUIDEZ</th>
+                        <th class="text-right">VALOR ($) / RATIO</th>
+                        <th>ESTADO DE SALUD</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="font-bold">Saldo Disponible Real en Bancos / Caja</td>
+                        <td class="text-right font-bold">${formatMoney(stats.saldoDisponibleReal)}</td>
+                        <td>Disponible conciliado al corte de ${cutoffName}</td>
+                      </tr>
+                      <tr>
+                        <td>Razón Corriente (Liquidez)</td>
+                        <td class="text-right font-bold">${stats.razonCorriente.toFixed(2)}x</td>
+                        <td>${stats.razonCorriente >= 1.5 ? 'Excelente (Capacidad de pago holgada)' : stats.razonCorriente >= 1 ? 'Aceptable' : 'Riesgo de liquidez'}</td>
+                      </tr>
+                      <tr>
+                        <td>Prueba Ácida (Sin Inventario)</td>
+                        <td class="text-right font-bold">${stats.pruebaAcida.toFixed(2)}x</td>
+                        <td>Disponible inmediato para pasivos de corto plazo</td>
+                      </tr>
+                      <tr>
+                        <td>Capital de Trabajo Neto</td>
+                        <td class="text-right font-bold">${formatMoney(stats.capitalTrabajo)}</td>
+                        <td>Activo Corriente menos Pasivo Corriente</td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  <div class="footer-box">
+                    <p>Documento emitido automáticamente por el ERP Contable GEST_OK Chile</p>
+                  </div>
+                `
+              });
+            }}
             className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg border border-slate-300 flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
           >
             <Printer className="w-3.5 h-3.5 text-slate-600" />

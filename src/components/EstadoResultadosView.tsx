@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Company, Voucher, ChartOfAccount, FiscalPeriodYear } from '../types';
+import { EstadoResultadosPrintModal } from './EstadoResultadosPrintModal';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -52,9 +53,11 @@ export default function EstadoResultadosView({
   onOpenBalanceIFRS
 }: EstadoResultadosViewProps) {
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [cutoffMonth, setCutoffMonth] = useState<number>(10);
   const [showZeroBalances, setShowZeroBalances] = useState<boolean>(false);
   const [showAccountDetails, setShowAccountDetails] = useState<boolean>(true);
   const [viewFormat, setViewFormat] = useState<'ifrs_cascada' | 'mensual_matriz'>('ifrs_cascada');
+  const [showPrintModal, setShowPrintModal] = useState<boolean>(false);
 
   const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
@@ -265,27 +268,44 @@ export default function EstadoResultadosView({
     // Resultado Neto del Ejercicio
     const monthlyNetIncome = monthlyProfitBeforeTax.map((p, i) => p - monthlyIncomeTax[i]);
 
-    // Totales Anuales
-    const totalOpRevenues = rubroIngresosOperacionales.total;
-    const totalCostOfSales = rubroCostosVentas.total;
+    // Límite de corte mensual (acumulado al mes seleccionado)
+    const cutoffLimit = cutoffMonth > 0 ? cutoffMonth : 12;
+    const sumUpToCutoff = (arr: number[]) => arr.slice(0, cutoffLimit).reduce((s, v) => s + v, 0);
+
+    // Ajustar los totales de cada rubro al límite de corte
+    rubroIngresosOperacionales.total = sumUpToCutoff(rubroIngresosOperacionales.monthlyTotals);
+    rubroCostosVentas.total = sumUpToCutoff(rubroCostosVentas.monthlyTotals);
+    rubroGastosRemuneraciones.total = sumUpToCutoff(rubroGastosRemuneraciones.monthlyTotals);
+    rubroGastosAdministracion.total = sumUpToCutoff(rubroGastosAdministracion.monthlyTotals);
+    rubroDepreciacionAmort.total = sumUpToCutoff(rubroDepreciacionAmort.monthlyTotals);
+    rubroIngresosFinancieros.total = sumUpToCutoff(rubroIngresosFinancieros.monthlyTotals);
+    rubroCostosFinancieros.total = sumUpToCutoff(rubroCostosFinancieros.monthlyTotals);
+    rubroOtrosIngresosOp.total = sumUpToCutoff(rubroOtrosIngresosOp.monthlyTotals);
+    rubroOtrosGastosNoOp.total = sumUpToCutoff(rubroOtrosGastosNoOp.monthlyTotals);
+    rubroImpuestoRenta.total = sumUpToCutoff(rubroImpuestoRenta.monthlyTotals);
+
+    // Totales Acumulados al Mes de Corte
+    const totalOpRevenues = sumUpToCutoff(monthlyOpRevenues);
+    const totalCostOfSales = sumUpToCutoff(monthlyCostOfSales);
     const totalGrossMargin = totalOpRevenues - totalCostOfSales;
     const grossMarginPercent = totalOpRevenues > 0 ? ((totalGrossMargin / totalOpRevenues) * 100).toFixed(1) : '0.0';
 
-    const totalOpExpenses = rubroGastosRemuneraciones.total + rubroGastosAdministracion.total + rubroDepreciacionAmort.total;
+    const totalOpExpenses = sumUpToCutoff(monthlyOpExpenses);
     const totalOperatingResult = totalGrossMargin - totalOpExpenses;
     const operatingMarginPercent = totalOpRevenues > 0 ? ((totalOperatingResult / totalOpRevenues) * 100).toFixed(1) : '0.0';
 
-    const totalFinInc = rubroIngresosFinancieros.total;
-    const totalFinCosts = rubroCostosFinancieros.total;
-    const totalOtherInc = rubroOtrosIngresosOp.total;
-    const totalOtherExp = rubroOtrosGastosNoOp.total;
+    const totalFinInc = sumUpToCutoff(monthlyFinInc);
+    const totalFinCosts = sumUpToCutoff(monthlyFinCosts);
+    const totalOtherInc = sumUpToCutoff(monthlyOtherInc);
+    const totalOtherExp = sumUpToCutoff(monthlyOtherExp);
 
     const totalProfitBeforeTax = totalOperatingResult + totalFinInc - totalFinCosts + totalOtherInc - totalOtherExp;
-    const totalIncomeTax = rubroImpuestoRenta.total;
+    const totalIncomeTax = sumUpToCutoff(monthlyIncomeTax);
     const totalNetIncome = totalProfitBeforeTax - totalIncomeTax;
     const netMarginPercent = totalOpRevenues > 0 ? ((totalNetIncome / totalOpRevenues) * 100).toFixed(1) : '0.0';
 
     return {
+      cutoffLimit,
       rubros: {
         ingresosOperacionales: rubroIngresosOperacionales,
         costosVentas: rubroCostosVentas,
@@ -331,37 +351,40 @@ export default function EstadoResultadosView({
         isProfit: totalNetIncome >= 0
       }
     };
-  }, [accounts, vouchers, accountMap, selectedYear, showZeroBalances]);
+  }, [accounts, vouchers, accountMap, selectedYear, showZeroBalances, cutoffMonth]);
 
   // Export CSV IFRS
   const handleExportCSV = () => {
-    const headers = ['CONCEPTO / CLASIFICACIÓN IFRS', 'CÓDIGO', 'CUENTA', ...monthNames, 'TOTAL AÑO'];
+    const limit = statementData.cutoffLimit || 12;
+    const visibleMonths = monthNames.slice(0, limit);
+    const totalHeader = limit === 12 ? 'TOTAL AÑO' : `TOTAL ACUM. (Ene - ${monthNames[limit - 1]})`;
+    const headers = ['CONCEPTO / CLASIFICACIÓN IFRS', 'CÓDIGO', 'CUENTA', ...visibleMonths, totalHeader];
     const rows = [
-      ['ESTADO DE RESULTADOS POR FUNCIÓN (ESTÁNDAR IFRS / NIIF)', `"${company.name}"`, `RUT: ${company.rut}`, `Año: ${selectedYear}`],
+      ['ESTADO DE RESULTADOS POR FUNCIÓN (ESTÁNDAR IFRS / NIIF)', `"${company.name}"`, `RUT: ${company.rut}`, `Año: ${selectedYear} - Corte: ${monthNames[limit - 1]}`],
       [''],
       headers,
-      ['1. INGRESOS DE ACTIVIDADES ORDINARIAS / EXPLOTACIÓN (51xxxxx)', '5101000', '', ...statementData.monthly.opRevenues.map(v => v.toString()), statementData.totals.opRevenues.toString()],
-      ...statementData.rubros.ingresosOperacionales.accounts.map(a => ['', `"${a.account.code}"`, `"${a.account.name}"`, ...a.months.map(v => v.toString()), a.total.toString()]),
-      ['2. COSTO DE VENTAS / COSTO DE EXPLOTACIÓN (41xxxxx)', '4101000', '', ...statementData.monthly.costOfSales.map(v => v.toString()), statementData.totals.costOfSales.toString()],
-      ...statementData.rubros.costosVentas.accounts.map(a => ['', `"${a.account.code}"`, `"${a.account.name}"`, ...a.months.map(v => v.toString()), a.total.toString()]),
-      ['(=) MARGEN OPERACIONAL (GANANCIA BRUTA)', '', '', ...statementData.monthly.grossMargin.map(v => v.toString()), statementData.totals.grossMargin.toString()],
-      ['3. GASTOS DE ADMINISTRACIÓN Y VENTAS (42xxxxx)', '4200000', '', ...statementData.monthly.opExpenses.map(v => v.toString()), statementData.totals.opExpenses.toString()],
-      ...statementData.rubros.gastosRemuneraciones.accounts.map(a => ['  Remuneraciones (4201xxx)', `"${a.account.code}"`, `"${a.account.name}"`, ...a.months.map(v => v.toString()), a.total.toString()]),
-      ...statementData.rubros.gastosAdministracion.accounts.map(a => ['  Administración (4202xxx)', `"${a.account.code}"`, `"${a.account.name}"`, ...a.months.map(v => v.toString()), a.total.toString()]),
-      ...statementData.rubros.depreciacionAmort.accounts.map(a => ['  Depreciación (4203xxx)', `"${a.account.code}"`, `"${a.account.name}"`, ...a.months.map(v => v.toString()), a.total.toString()]),
-      ['(=) RESULTADO OPERACIONAL (EBIT)', '', '', ...statementData.monthly.operatingResult.map(v => v.toString()), statementData.totals.operatingResult.toString()],
-      ['4. OTROS INGRESOS FUERA DE LA EXPLOTACIÓN (52xxxxx)', '5201000', '', ...statementData.monthly.otherInc.map(v => v.toString()), statementData.totals.otherInc.toString()],
-      ...statementData.rubros.otrosIngresosOp.accounts.map(a => ['', `"${a.account.code}"`, `"${a.account.name}"`, ...a.months.map(v => v.toString()), a.total.toString()]),
-      ['5. INGRESOS FINANCIEROS Y REAJUSTES (53xxxxx)', '5301000', '', ...statementData.monthly.finInc.map(v => v.toString()), statementData.totals.finInc.toString()],
-      ...statementData.rubros.ingresosFinancieros.accounts.map(a => ['', `"${a.account.code}"`, `"${a.account.name}"`, ...a.months.map(v => v.toString()), a.total.toString()]),
-      ['6. COSTOS FINANCIEROS E INTERESES (43xxxxx)', '4301000', '', ...statementData.monthly.finCosts.map(v => v.toString()), statementData.totals.finCosts.toString()],
-      ...statementData.rubros.costosFinancieros.accounts.map(a => ['', `"${a.account.code}"`, `"${a.account.name}"`, ...a.months.map(v => v.toString()), a.total.toString()]),
-      ['7. OTROS GASTOS FUERA DE LA EXPLOTACIÓN (44xxxxx)', '4401000', '', ...statementData.monthly.otherExp.map(v => v.toString()), statementData.totals.otherExp.toString()],
-      ...statementData.rubros.otrosGastosNoOp.accounts.map(a => ['', `"${a.account.code}"`, `"${a.account.name}"`, ...a.months.map(v => v.toString()), a.total.toString()]),
-      ['(=) RESULTADO ANTES DE IMPUESTO A LAS GANANCIAS', '', '', ...statementData.monthly.profitBeforeTax.map(v => v.toString()), statementData.totals.profitBeforeTax.toString()],
-      ['8. GASTO POR IMPUESTO A LAS GANANCIAS (45xxxxx)', '4501000', '', ...statementData.monthly.incomeTax.map(v => v.toString()), statementData.totals.incomeTax.toString()],
-      ...statementData.rubros.impuestoRenta.accounts.map(a => ['', `"${a.account.code}"`, `"${a.account.name}"`, ...a.months.map(v => v.toString()), a.total.toString()]),
-      ['(=) RESULTADO NETO DEL EJERCICIO', '', '', ...statementData.monthly.netIncome.map(v => v.toString()), statementData.totals.netIncome.toString()]
+      ['1. INGRESOS DE ACTIVIDADES ORDINARIAS / EXPLOTACIÓN (51xxxxx)', '5101000', '', ...statementData.monthly.opRevenues.slice(0, limit).map(v => v.toString()), statementData.totals.opRevenues.toString()],
+      ...statementData.rubros.ingresosOperacionales.accounts.map(a => ['', `"${a.account.code}"`, `"${a.account.name}"`, ...a.months.slice(0, limit).map(v => v.toString()), a.total.toString()]),
+      ['2. COSTO DE VENTAS / COSTO DE EXPLOTACIÓN (41xxxxx)', '4101000', '', ...statementData.monthly.costOfSales.slice(0, limit).map(v => v.toString()), statementData.totals.costOfSales.toString()],
+      ...statementData.rubros.costosVentas.accounts.map(a => ['', `"${a.account.code}"`, `"${a.account.name}"`, ...a.months.slice(0, limit).map(v => v.toString()), a.total.toString()]),
+      ['(=) MARGEN OPERACIONAL (GANANCIA BRUTA)', '', '', ...statementData.monthly.grossMargin.slice(0, limit).map(v => v.toString()), statementData.totals.grossMargin.toString()],
+      ['3. GASTOS DE ADMINISTRACIÓN Y VENTAS (42xxxxx)', '4200000', '', ...statementData.monthly.opExpenses.slice(0, limit).map(v => v.toString()), statementData.totals.opExpenses.toString()],
+      ...statementData.rubros.gastosRemuneraciones.accounts.map(a => ['  Remuneraciones (4201xxx)', `"${a.account.code}"`, `"${a.account.name}"`, ...a.months.slice(0, limit).map(v => v.toString()), a.total.toString()]),
+      ...statementData.rubros.gastosAdministracion.accounts.map(a => ['  Administración (4202xxx)', `"${a.account.code}"`, `"${a.account.name}"`, ...a.months.slice(0, limit).map(v => v.toString()), a.total.toString()]),
+      ...statementData.rubros.depreciacionAmort.accounts.map(a => ['  Depreciación (4203xxx)', `"${a.account.code}"`, `"${a.account.name}"`, ...a.months.slice(0, limit).map(v => v.toString()), a.total.toString()]),
+      ['(=) RESULTADO OPERACIONAL (EBIT)', '', '', ...statementData.monthly.operatingResult.slice(0, limit).map(v => v.toString()), statementData.totals.operatingResult.toString()],
+      ['4. OTROS INGRESOS FUERA DE LA EXPLOTACIÓN (52xxxxx)', '5201000', '', ...statementData.monthly.otherInc.slice(0, limit).map(v => v.toString()), statementData.totals.otherInc.toString()],
+      ...statementData.rubros.otrosIngresosOp.accounts.map(a => ['', `"${a.account.code}"`, `"${a.account.name}"`, ...a.months.slice(0, limit).map(v => v.toString()), a.total.toString()]),
+      ['5. INGRESOS FINANCIEROS Y REAJUSTES (53xxxxx)', '5301000', '', ...statementData.monthly.finInc.slice(0, limit).map(v => v.toString()), statementData.totals.finInc.toString()],
+      ...statementData.rubros.ingresosFinancieros.accounts.map(a => ['', `"${a.account.code}"`, `"${a.account.name}"`, ...a.months.slice(0, limit).map(v => v.toString()), a.total.toString()]),
+      ['6. COSTOS FINANCIEROS E INTERESES (43xxxxx)', '4301000', '', ...statementData.monthly.finCosts.slice(0, limit).map(v => v.toString()), statementData.totals.finCosts.toString()],
+      ...statementData.rubros.costosFinancieros.accounts.map(a => ['', `"${a.account.code}"`, `"${a.account.name}"`, ...a.months.slice(0, limit).map(v => v.toString()), a.total.toString()]),
+      ['7. OTROS GASTOS FUERA DE LA EXPLOTACIÓN (44xxxxx)', '4401000', '', ...statementData.monthly.otherExp.slice(0, limit).map(v => v.toString()), statementData.totals.otherExp.toString()],
+      ...statementData.rubros.otrosGastosNoOp.accounts.map(a => ['', `"${a.account.code}"`, `"${a.account.name}"`, ...a.months.slice(0, limit).map(v => v.toString()), a.total.toString()]),
+      ['(=) RESULTADO ANTES DE IMPUESTO A LAS GANANCIAS', '', '', ...statementData.monthly.profitBeforeTax.slice(0, limit).map(v => v.toString()), statementData.totals.profitBeforeTax.toString()],
+      ['8. GASTO POR IMPUESTO A LAS GANANCIAS (45xxxxx)', '4501000', '', ...statementData.monthly.incomeTax.slice(0, limit).map(v => v.toString()), statementData.totals.incomeTax.toString()],
+      ...statementData.rubros.impuestoRenta.accounts.map(a => ['', `"${a.account.code}"`, `"${a.account.name}"`, ...a.months.slice(0, limit).map(v => v.toString()), a.total.toString()]),
+      ['(=) RESULTADO NETO DEL EJERCICIO', '', '', ...statementData.monthly.netIncome.slice(0, limit).map(v => v.toString()), statementData.totals.netIncome.toString()]
     ];
 
     const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + rows.map(e => e.join(';')).join('\n');
@@ -493,11 +516,11 @@ export default function EstadoResultadosView({
           </button>
 
           <button
-            onClick={() => window.print()}
-            className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-xs font-semibold rounded-lg border border-indigo-300 flex items-center gap-1.5 transition-colors shadow-2xs"
+            onClick={() => setShowPrintModal(true)}
+            className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-xs font-semibold rounded-lg border border-indigo-300 flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
           >
             <Printer className="w-3.5 h-3.5 text-indigo-700" />
-            <span>Imprimir</span>
+            <span>Imprimir / PDF</span>
           </button>
         </div>
       </div>
@@ -515,6 +538,29 @@ export default function EstadoResultadosView({
               {[2025, 2026, 2027].map(y => (
                 <option key={y} value={y}>{y}</option>
               ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <label className="font-semibold text-slate-700">Mostrar hasta:</label>
+            <select
+              value={cutoffMonth}
+              onChange={(e) => setCutoffMonth(parseInt(e.target.value, 10))}
+              className="bg-white border border-slate-300 rounded-md px-2.5 py-1 text-xs font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer"
+            >
+              <option value={10}>Hasta Octubre (Ene - Oct)</option>
+              <option value={1}>Hasta Enero (Ene)</option>
+              <option value={2}>Hasta Febrero (Ene - Feb)</option>
+              <option value={3}>Hasta Marzo (Ene - Mar)</option>
+              <option value={4}>Hasta Abril (Ene - Abr)</option>
+              <option value={5}>Hasta Mayo (Ene - May)</option>
+              <option value={6}>Hasta Junio (Ene - Jun)</option>
+              <option value={7}>Hasta Julio (Ene - Jul)</option>
+              <option value={8}>Hasta Agosto (Ene - Ago)</option>
+              <option value={9}>Hasta Septiembre (Ene - Sep)</option>
+              <option value={10}>Hasta Octubre (Ene - Oct)</option>
+              <option value={11}>Hasta Noviembre (Ene - Nov)</option>
+              <option value={12}>Todo el Año (12 Meses: Ene - Dic)</option>
             </select>
           </div>
 
@@ -737,17 +783,19 @@ export default function EstadoResultadosView({
             <thead>
               <tr className="bg-slate-900 text-white font-bold uppercase text-[11px]">
                 <th className="p-3 sticky left-0 bg-slate-900 z-10 min-w-[240px]">Rubro / Concepto IFRS</th>
-                {monthNames.map(m => (
+                {monthNames.slice(0, statementData.cutoffLimit).map(m => (
                   <th key={m} className="p-2 text-right min-w-[85px] font-mono">{m}</th>
                 ))}
-                <th className="p-3 text-right bg-indigo-950 min-w-[120px] font-mono text-amber-300">Total {selectedYear}</th>
+                <th className="p-3 text-right bg-indigo-950 min-w-[130px] font-mono text-amber-300">
+                  {statementData.cutoffLimit === 12 ? `Total ${selectedYear}` : `Total Acum. (Ene - ${monthNames[statementData.cutoffLimit - 1]})`}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 font-mono text-[11px]">
               {/* 1. Ingresos Operacionales */}
               <tr className="bg-emerald-50/70 font-bold text-emerald-950">
                 <td className="p-2.5 font-sans sticky left-0 bg-emerald-50 z-10">1. Ingresos de Actividades Ordinarias</td>
-                {statementData.monthly.opRevenues.map((v, i) => (
+                {statementData.monthly.opRevenues.slice(0, statementData.cutoffLimit).map((v, i) => (
                   <td key={i} className="p-2 text-right">${v.toLocaleString('es-CL')}</td>
                 ))}
                 <td className="p-2.5 text-right font-black bg-emerald-100">${statementData.totals.opRevenues.toLocaleString('es-CL')}</td>
@@ -756,7 +804,7 @@ export default function EstadoResultadosView({
               {/* 2. Costos de Ventas */}
               <tr className="bg-rose-50/50 font-bold text-rose-950">
                 <td className="p-2.5 font-sans sticky left-0 bg-rose-50 z-10">2. Costos de Ventas / Explotación</td>
-                {statementData.monthly.costOfSales.map((v, i) => (
+                {statementData.monthly.costOfSales.slice(0, statementData.cutoffLimit).map((v, i) => (
                   <td key={i} className="p-2 text-right">-${v.toLocaleString('es-CL')}</td>
                 ))}
                 <td className="p-2.5 text-right font-black bg-rose-100">-${statementData.totals.costOfSales.toLocaleString('es-CL')}</td>
@@ -765,7 +813,7 @@ export default function EstadoResultadosView({
               {/* MARGEN OPERACIONAL */}
               <tr className="bg-indigo-100 font-black text-indigo-950 text-xs">
                 <td className="p-2.5 font-sans sticky left-0 bg-indigo-100 z-10 uppercase">(=) MARGEN OPERACIONAL (BRUTO)</td>
-                {statementData.monthly.grossMargin.map((v, i) => (
+                {statementData.monthly.grossMargin.slice(0, statementData.cutoffLimit).map((v, i) => (
                   <td key={i} className="p-2 text-right">${v.toLocaleString('es-CL')}</td>
                 ))}
                 <td className="p-2.5 text-right font-black bg-indigo-200 text-indigo-950">${statementData.totals.grossMargin.toLocaleString('es-CL')}</td>
@@ -774,7 +822,7 @@ export default function EstadoResultadosView({
               {/* 3. Gastos de Administración y Ventas */}
               <tr className="text-slate-700">
                 <td className="p-2.5 font-sans sticky left-0 bg-white z-10">3. Gastos de Adm. y Ventas</td>
-                {statementData.monthly.opExpenses.map((v, i) => (
+                {statementData.monthly.opExpenses.slice(0, statementData.cutoffLimit).map((v, i) => (
                   <td key={i} className="p-2 text-right">-${v.toLocaleString('es-CL')}</td>
                 ))}
                 <td className="p-2.5 text-right font-bold bg-slate-100">-${statementData.totals.opExpenses.toLocaleString('es-CL')}</td>
@@ -783,7 +831,7 @@ export default function EstadoResultadosView({
               {/* RESULTADO OPERACIONAL */}
               <tr className="bg-slate-200/80 font-bold text-slate-900">
                 <td className="p-2.5 font-sans sticky left-0 bg-slate-200 z-10">(=) RESULTADO OPERACIONAL (EBIT)</td>
-                {statementData.monthly.operatingResult.map((v, i) => (
+                {statementData.monthly.operatingResult.slice(0, statementData.cutoffLimit).map((v, i) => (
                   <td key={i} className="p-2 text-right">${v.toLocaleString('es-CL')}</td>
                 ))}
                 <td className="p-2.5 text-right font-black bg-slate-300">${statementData.totals.operatingResult.toLocaleString('es-CL')}</td>
@@ -792,7 +840,7 @@ export default function EstadoResultadosView({
               {/* Resultados Financieros y Otros */}
               <tr className="text-slate-600 text-[10px]">
                 <td className="p-2 font-sans sticky left-0 bg-white z-10">4. Res. Financieros y Otros</td>
-                {statementData.monthly.profitBeforeTax.map((pbt, i) => {
+                {statementData.monthly.profitBeforeTax.slice(0, statementData.cutoffLimit).map((pbt, i) => {
                   const diff = pbt - statementData.monthly.operatingResult[i];
                   return <td key={i} className="p-2 text-right">${diff.toLocaleString('es-CL')}</td>;
                 })}
@@ -804,7 +852,7 @@ export default function EstadoResultadosView({
               {/* Impuesto a la Renta */}
               <tr className="text-rose-800 text-[10px]">
                 <td className="p-2 font-sans sticky left-0 bg-white z-10">5. Gasto Impuesto Renta</td>
-                {statementData.monthly.incomeTax.map((v, i) => (
+                {statementData.monthly.incomeTax.slice(0, statementData.cutoffLimit).map((v, i) => (
                   <td key={i} className="p-2 text-right">-${v.toLocaleString('es-CL')}</td>
                 ))}
                 <td className="p-2 text-right font-semibold bg-rose-50">-${statementData.totals.incomeTax.toLocaleString('es-CL')}</td>
@@ -815,7 +863,7 @@ export default function EstadoResultadosView({
                 <td className="p-3 font-sans sticky left-0 bg-inherit z-10 uppercase">
                   (=) RESULTADO NETO DEL EJERCICIO
                 </td>
-                {statementData.monthly.netIncome.map((v, i) => (
+                {statementData.monthly.netIncome.slice(0, statementData.cutoffLimit).map((v, i) => (
                   <td key={i} className="p-2 text-right">${v.toLocaleString('es-CL')}</td>
                 ))}
                 <td className="p-3 text-right font-mono font-black text-amber-300 text-sm">
@@ -826,6 +874,16 @@ export default function EstadoResultadosView({
           </table>
         </div>
       )}
+
+      <EstadoResultadosPrintModal
+        isOpen={showPrintModal}
+        onClose={() => setShowPrintModal(false)}
+        company={company}
+        selectedYear={selectedYear}
+        cutoffMonth={cutoffMonth}
+        showAccountDetails={showAccountDetails}
+        statementData={statementData}
+      />
     </div>
   );
 }

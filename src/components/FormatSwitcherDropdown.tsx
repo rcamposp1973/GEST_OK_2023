@@ -18,7 +18,7 @@ export default function FormatSwitcherDropdown({
   const [showInfoModal, setShowInfoModal] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const isSuperUser = currentUserRole === UserRole.SUPER_USER || currentUserRole === 'SUPER_USER' || currentUserEmail === 'rcampos@pulsocontable.cl';
+  const isSuperUser = currentUserRole === UserRole.SUPER_USER || currentUserRole === 'SUPER_USER';
 
   // Close dropdown on outside click
   useEffect(() => {

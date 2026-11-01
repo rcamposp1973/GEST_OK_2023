@@ -22,7 +22,8 @@ import {
   Calendar,
   CheckCircle2,
   ExternalLink,
-  MessageSquare
+  MessageSquare,
+  Activity
 } from 'lucide-react';
 import { APP_VERSION } from '../constants/version';
 import { db } from '../lib/firebase';
@@ -194,14 +195,17 @@ export default function LandingHome({ onGoToLogin }: LandingHomeProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           
           {/* Zona 1: Wordmark limpio */}
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white font-bold text-sm">
-              PC
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white shadow-2xs">
+              <Activity className="w-4 h-4 stroke-[2.25]" />
             </div>
-            <div>
-              <span className="text-lg font-bold tracking-tight text-slate-900">Pulso Contable</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-base font-bold tracking-tight text-slate-900">Gest_OK</span>
+              <span className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded bg-slate-100 text-slate-700 border border-slate-200">
+                ERP
+              </span>
               <span className="text-xs text-slate-500 hidden sm:inline ml-2 pl-2 border-l border-slate-200">
-                Software Contable & Tributario Chile
+                Software Contable, Financiero & Tributario
               </span>
             </div>
           </div>
@@ -892,7 +896,7 @@ export default function LandingHome({ onGoToLogin }: LandingHomeProps) {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-6 text-slate-400">
             
             <div className="flex items-center gap-3">
-              <span className="font-bold text-white text-sm">Pulso Contable</span>
+              <span className="font-bold text-white text-sm">Gest_OK ERP</span>
               <span>·</span>
               <span>Versión {APP_VERSION}</span>
               <span>·</span>

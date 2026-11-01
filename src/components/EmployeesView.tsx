@@ -3,11 +3,13 @@ import {
   Users, UserPlus, Search, Edit2, Trash2, CheckCircle2, XCircle, 
   Building2, DollarSign, Shield, HeartPulse, FileText, 
   Download, Upload, Sparkles, Filter, Briefcase, Calendar, CreditCard, ChevronRight,
-  Calculator, Printer, Save, FileSpreadsheet, AlertCircle, Eye, Check, Copy, FileCheck
+  Calculator, Printer, Save, FileSpreadsheet, AlertCircle, Eye, Check, Copy, FileCheck,
+  Award
 } from 'lucide-react';
 import { Employee, ContractType, PensionSystem, HealthSystem, HealthPlanType, ApvType, TramoCargaFamiliar, CostCenterMaster } from '../types';
 import { DEFAULT_AFP_COMMISSIONS } from '../utils/payrollCalculator';
 import { formatRut } from '../utils/rutMatcher';
+import { triggerIframePrint } from '../utils/printUtils';
 
 export function generateChileanEmploymentContract(
   emp: Employee,
@@ -191,6 +193,7 @@ interface EmployeesViewProps {
   initialSubTab?: 'employees' | 'contracts' | 'attendance' | 'advances' | 'severance' | 'certificates';
   onSubTabChange?: (tab: 'employees' | 'contracts' | 'attendance' | 'advances' | 'severance' | 'certificates') => void;
   onNavigateToPayroll?: (tab?: string) => void;
+  onOpenCertificadosSii?: (type: 'CERT_6_SUELDOS' | 'CERT_2_HONORARIOS') => void;
 }
 
 export const EmployeesView: React.FC<EmployeesViewProps> = ({
@@ -203,7 +206,8 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
   companyAddress,
   initialSubTab,
   onSubTabChange,
-  onNavigateToPayroll
+  onNavigateToPayroll,
+  onOpenCertificadosSii
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDepartment, setFilterDepartment] = useState('ALL');
@@ -259,6 +263,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
     contractType: 'INDEFINIDO',
     workHoursPerWeek: 45,
     baseSalary: 650000,
+    isSueldoEmpresarial: false,
     hasGratificacionLegal: true,
     gratificacionType: 'ART_50',
     pensionSystem: 'MODELO',
@@ -346,6 +351,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
       contractType: emp.contractType,
       workHoursPerWeek: emp.workHoursPerWeek || 45,
       baseSalary: emp.baseSalary,
+      isSueldoEmpresarial: emp.isSueldoEmpresarial || false,
       hasGratificacionLegal: emp.hasGratificacionLegal ?? true,
       gratificacionType: emp.gratificacionType || 'ART_50',
       pensionSystem: emp.pensionSystem,
@@ -407,10 +413,37 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
 
     try {
       setIsSaving(true);
+      let updatedSalaryHistory = editingEmployee?.salaryHistory ? [...editingEmployee.salaryHistory] : [];
+      
+      // Si el sueldo base cambió en la ficha, registrar la vigencia histórica para proteger meses anteriores
+      if (editingEmployee && editingEmployee.baseSalary !== formData.baseSalary) {
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const thisMonthStart = `${todayStr.slice(0, 7)}-01`;
+        
+        // Cerrar vigencias anteriores abiertas
+        updatedSalaryHistory = updatedSalaryHistory.map(h => ({
+          ...h,
+          isCurrent: false,
+          endDate: h.endDate || todayStr
+        }));
+        
+        updatedSalaryHistory.push({
+          id: `sal_${Date.now()}`,
+          employeeId: editingEmployee.id,
+          baseSalary: formData.baseSalary,
+          startDate: thisMonthStart,
+          endDate: null,
+          isCurrent: true,
+          reason: formData.isSueldoEmpresarial ? 'Ajuste Renta Sueldo Empresarial' : 'Modificación en Ficha Laboral',
+          createdAt: new Date().toISOString()
+        });
+      }
+
       const employeePayload: Employee = {
         id: editingEmployee ? editingEmployee.id : `emp_${Date.now()}`,
         companyId: editingEmployee ? editingEmployee.companyId : '',
         ...formData,
+        salaryHistory: updatedSalaryHistory,
         createdAt: editingEmployee ? editingEmployee.createdAt : new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -854,7 +887,18 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
 
               <button
                 onClick={() => {
-                  window.print();
+                  triggerIframePrint({
+                    title: `Contrato_Trabajo_${companyName}`,
+                    htmlContent: `
+                      <div class="header-box">
+                        <h2>${companyName.toUpperCase()}</h2>
+                        <p class="font-bold">R.U.T.: ${companyRut}</p>
+                      </div>
+                      <div style="white-space: pre-wrap; font-family: monospace; font-size: 11px; line-height: 1.6;">
+                        ${contractCustomText}
+                      </div>
+                    `
+                  });
                 }}
                 className="px-3.5 py-2 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 text-white shadow-xs flex items-center gap-1.5 transition-colors"
               >
@@ -1279,8 +1323,49 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
                     <p className="text-xs text-indigo-700">Trabajador: <span className="font-semibold">{emp.name}</span> | Ingreso: {emp.hireDate}</p>
                   </div>
                   <button
-                    onClick={() => window.print()}
-                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-lg shadow-xs flex items-center gap-1.5"
+                    onClick={() => {
+                      triggerIframePrint({
+                        title: `Finiquito_${emp.name}`,
+                        htmlContent: `
+                          <div class="header-box">
+                            <h2>SIMULACIÓN DE FINIQUITO DE TRABAJO</h2>
+                            <p class="font-bold">${companyName.toUpperCase()} (RUT: ${companyRut})</p>
+                            <p>Trabajador: <strong>${emp.name}</strong> (RUT: ${emp.rut})</p>
+                            <p>Fecha Ingreso: ${emp.hireDate} &bull; Emisión: ${new Date().toLocaleDateString('es-CL')}</p>
+                          </div>
+                          <table>
+                            <thead>
+                              <tr>
+                                <th>CONCEPTO DE INDEMNIZACIÓN</th>
+                                <th class="text-right">MONTO ($)</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr>
+                                <td>Indemnización por Años de Servicio (${yearsOfService} año${yearsOfService > 1 ? 's' : ''})</td>
+                                <td class="text-right font-bold">$${baseIndemnizacion.toLocaleString('es-CL')}</td>
+                              </tr>
+                              <tr>
+                                <td>Indemnización Sustitutiva de Aviso Previo</td>
+                                <td class="text-right font-bold">$${avisoPrevio.toLocaleString('es-CL')}</td>
+                              </tr>
+                              <tr>
+                                <td>Feriado Proporcional (Vacaciones Pendientes)</td>
+                                <td class="text-right font-bold">$${feriadoProporcional.toLocaleString('es-CL')}</td>
+                              </tr>
+                              <tr class="bg-slate font-bold" style="font-size:12px;">
+                                <td>TOTAL LIQUIDACIÓN DE FINIQUITO</td>
+                                <td class="text-right">$${totalFiniquito.toLocaleString('es-CL')}</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                          <div class="footer-box">
+                            <p>Documento emitido conforme al Art. 177 del Código del Trabajo de Chile</p>
+                          </div>
+                        `
+                      });
+                    }}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-lg shadow-xs flex items-center gap-1.5 cursor-pointer"
                   >
                     <FileText className="w-4 h-4" />
                     Imprimir / Exportar Finiquito
@@ -1344,14 +1429,53 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
                 ))}
               </select>
             </div>
-            <div className="flex items-end">
+            <div className="flex items-end gap-2">
               <button
-                onClick={() => window.print()}
-                className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-lg shadow-xs flex items-center justify-center gap-1.5"
+                onClick={() => {
+                  const targetEmp = employees.find(e => e.id === certEmpId);
+                  const empName = targetEmp ? targetEmp.name : 'Trabajador';
+                  const empRut = targetEmp ? targetEmp.rut : 'S/R';
+                  const titleCert = certType === 'ANTIGUEDAD' ? 'CERTIFICADO DE ANTIGÜEDAD LABORAL' : 'CERTIFICADO DE RENTA Y REMUNERACIONES';
+
+                  triggerIframePrint({
+                    title: `${certType}_${empName}`,
+                    htmlContent: `
+                      <div class="header-box">
+                        <h2>${companyName.toUpperCase()}</h2>
+                        <p class="font-bold">R.U.T.: ${companyRut}</p>
+                      </div>
+                      <div style="text-align: center; margin: 30px 0 20px 0;">
+                        <h2 style="font-size: 16px; text-decoration: underline;">${titleCert}</h2>
+                      </div>
+                      <p style="font-size: 12px; line-height: 1.8; text-align: justify; margin-bottom: 20px;">
+                        Por medio del presente certificado, la empresa <strong>${companyName}</strong> (R.U.T. ${companyRut}) certifica que don/doña <strong>${empName}</strong>, R.U.T. <strong>${empRut}</strong>, se desempeña en nuestra institución prestando servicios bajo contrato de trabajo vigente.
+                      </p>
+                      <div class="footer-box" style="margin-top: 60px;">
+                        <div style="width: 200px; margin: 0 auto; border-top: 1px solid #0f172a; padding-top: 5px; text-align: center;">
+                          <p class="font-bold">REPRESENTANTE LEGAL</p>
+                          <p style="font-size: 9px; color: #64748b;">${companyName}</p>
+                        </div>
+                      </div>
+                    `
+                  });
+                }}
+                className="flex-1 py-2 bg-slate-800 hover:bg-slate-900 text-white font-semibold text-xs rounded-lg shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                title="Imprimir certificado laboral de antigüedad o renta"
               >
                 <FileText className="w-4 h-4" />
-                Imprimir Certificado Oficial
+                <span>Imprimir Laboral</span>
               </button>
+              {onOpenCertificadosSii && (
+                <button
+                  type="button"
+                  onClick={() => onOpenCertificadosSii('CERT_6_SUELDOS')}
+                  className="flex-1 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold text-xs rounded-lg shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                  title="Emitir el Certificado N° 6 oficial del SII para Declaración Jurada 1887"
+                >
+                  <Award className="w-4 h-4 text-amber-300" />
+                  <span>Certificado N° 6 SII</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -1577,15 +1701,36 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                     />
                   </div>
+
+                  <div className="md:col-span-3 bg-amber-50/70 border border-amber-200/90 rounded-xl p-3 flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      id="isSueldoEmpresarial"
+                      checked={formData.isSueldoEmpresarial || false}
+                      onChange={(e) => setFormData({ ...formData, isSueldoEmpresarial: e.target.checked })}
+                      className="mt-0.5 rounded text-amber-600 focus:ring-amber-500 h-4 w-4 cursor-pointer"
+                    />
+                    <label htmlFor="isSueldoEmpresarial" className="text-xs text-slate-700 cursor-pointer">
+                      <span className="font-bold text-amber-950 block">Contrato o Régimen de Sueldo Empresarial (Socio / Dueño)</span>
+                      <span className="text-[11px] text-amber-800">
+                        Habilita el tratamiento especial de socio trabajador (Art. 31 N° 6 LIR). Si la renta varía mes a mes, puedes ingresar la renta pactada aquí o ajustarla directamente en cada liquidación mensual sin afectar períodos históricos cerrados.
+                      </span>
+                    </label>
+                  </div>
                 </div>
               </div>
 
               {/* SECCIÓN 3: REMUNERACIÓN Y HABERES PACTADOS */}
               <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-900 border-b border-indigo-100 pb-1 mb-3 flex items-center gap-2">
-                  <DollarSign className="w-4 h-4 text-emerald-600" />
-                  3. Remuneraciones y Haberes Pactados
-                </h4>
+                <div className="flex items-center justify-between border-b border-indigo-100 pb-1 mb-3">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-900 flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-emerald-600" />
+                    3. Remuneraciones y Haberes Pactados
+                  </h4>
+                  <span className="text-[11px] text-slate-500 font-medium">
+                    💡 Las modificaciones aplicadas rigen a partir del mes en proceso, protegiendo períodos pasados.
+                  </span>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Sueldo Base Mensual (CLP) *</label>

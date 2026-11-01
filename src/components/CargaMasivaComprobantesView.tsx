@@ -6,6 +6,7 @@ import { useProcess } from '../context/ProcessContext';
 import { logAuditEvent } from '../utils/auditLogger';
 import { validateVoucherLine, sanitizeVoucherLines } from '../utils/voucherValidation';
 import * as XLSX from 'xlsx';
+import { getOfficialDolar, getOfficialUF } from '../utils/chileanEconomicIndicators';
 
 interface CargaMasivaComprobantesViewProps {
   studyId: string;
@@ -145,6 +146,8 @@ export default function CargaMasivaComprobantesView({
   const [parsedVouchers, setParsedVouchers] = useState<ParsedVoucherDraft[]>([]);
   const [missingAccountCodes, setMissingAccountCodes] = useState<string[]>([]);
   const [renumberMode, setRenumberMode] = useState<'auto' | 'keep'>('auto');
+  const [autoConvertForeignCurrency, setAutoConvertForeignCurrency] = useState<boolean>(true);
+  const [foreignLinesDetectedCount, setForeignLinesDetectedCount] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
   const [uploadSuccessCount, setUploadSuccessCount] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState<boolean>(false);
@@ -197,7 +200,10 @@ export default function CargaMasivaComprobantesView({
       dueDate: 15,
       expenseItem: 16,
       project: 17,
-      product: 18
+      product: 18,
+      currency: -1,
+      exchangeRate: -1,
+      foreignAmount: -1
     };
 
     const customColsMap: { [colName: string]: number } = {};
@@ -393,6 +399,18 @@ export default function CargaMasivaComprobantesView({
         else if (head.includes('producto') || head.includes('articulo') || head.includes('servicio')) {
           colIdxMap.product = idx;
         }
+        // 20. Moneda / Currency
+        else if (head === 'moneda' || head === 'currency' || head === 'divisa') {
+          colIdxMap.currency = idx;
+        }
+        // 21. Tipo de Cambio / Exchange Rate
+        else if (head.includes('tipocambio') || head.includes('tipo_cambio') || head === 'tc' || head === 't_c' || head.includes('exchange')) {
+          colIdxMap.exchangeRate = idx;
+        }
+        // 22. Monto Original en Divisa / Foreign Amount
+        else if (head.includes('montousd') || head.includes('monto_usd') || head.includes('montodivisa') || head.includes('monto_extranjero') || head.includes('montomonedaoriginal')) {
+          colIdxMap.foreignAmount = idx;
+        }
 
         // Match custom columns
         companyCustomCols.forEach(customCol => {
@@ -413,6 +431,7 @@ export default function CargaMasivaComprobantesView({
     }>();
 
     const missingSet = new Set<string>();
+    let detectedForeignCount = 0;
     let currentVoucherIndex = 1;
     let lastWasEmptyLine = false;
     let previousRawNum = '';
@@ -538,13 +557,44 @@ export default function CargaMasivaComprobantesView({
         missingSet.add(accCode.toUpperCase());
       }
 
+      // Foreign currency detection & handling
+      const explicitCurr = colIdxMap.currency >= 0 ? getSafeCellString(row, colIdxMap.currency).toUpperCase() : '';
+      const explicitRate = colIdxMap.exchangeRate >= 0 ? parseChileanNumber(row[colIdxMap.exchangeRate]) : 0;
+      const explicitForeignAmt = colIdxMap.foreignAmount >= 0 ? parseChileanNumber(row[colIdxMap.foreignAmount]) : 0;
+
+      const isAccountUSD = matchedAccount?.moneda === 'USD' || matchedAccount?.moneda === 'Dolar' || matchedAccount?.moneda === 'DOLAR' || explicitCurr === 'USD' || Boolean(matchedAccount?.requiereDifCambio);
+      const isAccountUF = matchedAccount?.moneda === 'UF' || explicitCurr === 'UF';
+
+      let lineCurrency: string | undefined = undefined;
+      let lineRate: number | undefined = undefined;
+      let lineForeignAmt: number | undefined = undefined;
+      let finalDebit = debit;
+      let finalCredit = credit;
+
+      if (isAccountUSD || isAccountUF) {
+        detectedForeignCount++;
+        lineCurrency = isAccountUF ? 'UF' : 'USD';
+        lineRate = explicitRate > 0 ? explicitRate : (isAccountUF ? getOfficialUF(vDate) : getOfficialDolar(vDate));
+        const rawAmt = explicitForeignAmt > 0 ? explicitForeignAmt : (debit > 0 ? debit : credit);
+        lineForeignAmt = rawAmt;
+
+        // Auto-convert to CLP if enabled and amount was entered in foreign currency
+        if (autoConvertForeignCurrency && lineRate > 1 && rawAmt > 0) {
+          if (debit > 0) finalDebit = Math.round(rawAmt * lineRate);
+          if (credit > 0) finalCredit = Math.round(rawAmt * lineRate);
+        }
+      }
+
       const voucherLine: VoucherLine & { isAccountMissing?: boolean; requiredErrors?: string[] } = {
         id: `line_${i}`,
         accountId: matchedAccount ? matchedAccount.id : `acc_${accCode}`,
         accountCode: (accCode || 'SIN_CUENTA').toUpperCase(),
         accountName: matchedAccount ? matchedAccount.name.toUpperCase() : '❌ CUENTA NO CONFIGURADA EN PLAN DE CUENTAS',
-        debit,
-        credit,
+        debit: finalDebit,
+        credit: finalCredit,
+        moneda: lineCurrency,
+        tipoCambio: lineRate,
+        montoMonedaOriginal: lineForeignAmt,
         auxiliaryRut: auxRut,
         auxiliaryName: auxName,
         documentRef: refDte,
@@ -581,6 +631,7 @@ export default function CargaMasivaComprobantesView({
     }
 
     setMissingAccountCodes(Array.from(missingSet));
+    setForeignLinesDetectedCount(detectedForeignCount);
 
     // Calculate numbering sequence
     let autoSequence = maxExistingNum;
@@ -1219,6 +1270,46 @@ export default function CargaMasivaComprobantesView({
               <span>Mantener N° de Archivo</span>
             </button>
           </div>
+        </div>
+      )}
+
+      {/* FOREIGN CURRENCY CONVERSION CONFIG */}
+      {selectedFile && parsedVouchers.length > 0 && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <span className="text-xl">💵</span>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="text-xs font-black text-emerald-950 uppercase tracking-wide">
+                  Conversión de Moneda Extranjera (USD / UF)
+                </h4>
+                {foreignLinesDetectedCount > 0 && (
+                  <span className="px-2 py-0.5 bg-emerald-200 text-emerald-900 rounded-full font-bold text-[10px]">
+                    {foreignLinesDetectedCount} cuentas en divisa detectadas
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-emerald-700 mt-0.5">
+                Convierte automáticamente cuentas configuradas en Dólar o UF a moneda funcional (CLP) aplicando el Tipo de Cambio Oficial del Banco Central / SII a la fecha del comprobante.
+              </p>
+            </div>
+          </div>
+
+          <label className="flex items-center gap-2 cursor-pointer bg-white px-3.5 py-1.5 rounded-xl border border-emerald-300 shadow-xs hover:border-emerald-400 transition-colors">
+            <input 
+              type="checkbox"
+              checked={autoConvertForeignCurrency}
+              onChange={e => {
+                const nextVal = e.target.checked;
+                setAutoConvertForeignCurrency(nextVal);
+                validateMatrixData(rawFileRows, renumberMode);
+              }}
+              className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
+            />
+            <span className="text-xs font-bold text-emerald-900 whitespace-nowrap">
+              Convertir a CLP automáticamente
+            </span>
+          </label>
         </div>
       )}
 

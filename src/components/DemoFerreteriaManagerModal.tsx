@@ -51,10 +51,10 @@ export const DemoFerreteriaManagerModal: React.FC<DemoFerreteriaManagerModalProp
 
   const handleExecuteReset = async () => {
     const confirmPrompt = window.confirm(
-      `¿Desea inicializar/resetear todos los datos del año 2025 de ${DEMO_COMPANY_NAME}?\n\n` +
-      `• Se cargarán 10 transacciones diarias de compras, ventas y honorarios.\n` +
+      `¿Desea inicializar/resetear todos los datos del año 2026 de ${DEMO_COMPANY_NAME}?\n\n` +
+      `• Se cargarán 10 transacciones diarias de compras, ventas y honorarios (año 2026).\n` +
       `• Se configurarán 10 trabajadores con remuneraciones e Impuesto Único.\n` +
-      `• Se generarán cartolas bancarias 100% conciliadas para los 12 meses.\n` +
+      `• Se generarán cartolas bancarias 100% conciliadas para los 12 meses de 2026.\n` +
       `• Se poblarán F29 pagados, DDJJ de renta (1887, 1879, 1835), RLI, Centros de Costos, Proyectos y Kardex.\n\n` +
       `🔒 Esta acción solo afecta a la empresa de demostración, manteniendo seguras todas las demás empresas.`
     );
@@ -75,7 +75,8 @@ export const DemoFerreteriaManagerModal: React.FC<DemoFerreteriaManagerModalProp
         (msg, pct) => {
           setProgressMsg(msg);
           setProgressPercent(pct);
-        }
+        },
+        2026
       );
 
       setSuccessMessage(res.message);
@@ -102,7 +103,7 @@ export const DemoFerreteriaManagerModal: React.FC<DemoFerreteriaManagerModalProp
             <div>
               <h2 className="text-lg font-bold tracking-tight">Centro de Control de Demostraciones</h2>
               <p className="text-xs text-amber-100">
-                Sociedad Demo: <span className="font-semibold">{DEMO_COMPANY_NAME}</span> (Año 2025)
+                Sociedad Demo: <span className="font-semibold">{DEMO_COMPANY_NAME}</span> (Año 2026)
               </p>
             </div>
           </div>
@@ -139,7 +140,7 @@ export const DemoFerreteriaManagerModal: React.FC<DemoFerreteriaManagerModalProp
                 <div>
                   <div className="font-semibold text-xs text-slate-900">10 Trabajadores y Nóminas</div>
                   <div className="text-[11px] text-slate-500 leading-snug">
-                    Gerente, Jefe Operaciones, Contador, Ventas, Bodega. Sueldos con Impuesto Único de 2da Categoría y 120 liquidaciones 2025.
+                    Gerente, Jefe Operaciones, Contador, Ventas, Bodega. Sueldos con Impuesto Único de 2da Categoría y 120 liquidaciones 2026.
                   </div>
                 </div>
               </div>
@@ -169,7 +170,7 @@ export const DemoFerreteriaManagerModal: React.FC<DemoFerreteriaManagerModalProp
                 <div>
                   <div className="font-semibold text-xs text-slate-900">F29, DDJJ y Renta (RLI/F22)</div>
                   <div className="text-[11px] text-slate-500 leading-snug">
-                    12 Formularios 29 pagados, DJ 1887 de sueldos, DJ 1879 de honorarios, DJ 1835 de arriendos y RLI 2025 calculada.
+                    12 Formularios 29 pagados, DJ 1887 de sueldos, DJ 1879 de honorarios, DJ 1835 de arriendos y RLI 2026 calculada.
                   </div>
                 </div>
               </div>
@@ -240,7 +241,7 @@ export const DemoFerreteriaManagerModal: React.FC<DemoFerreteriaManagerModalProp
         <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="text-xs text-slate-500 flex items-center gap-1.5">
             <Clock className="w-4 h-4 text-slate-400" />
-            <span>Año de demostración: <strong>2025</strong></span>
+            <span>Año de demostración: <strong>2026</strong></span>
           </div>
 
           <div className="flex items-center gap-2 w-full sm:w-auto">

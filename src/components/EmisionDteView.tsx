@@ -970,7 +970,11 @@ export default function EmisionDteView({
         voucherId: vRef.id,
       };
 
-      await addDoc(collection(companyRef, 'rcvDocuments'), rcvItem);
+      const safeRcvItem = Object.fromEntries(
+        Object.entries(rcvItem).filter(([_, v]) => v !== undefined)
+      );
+
+      await addDoc(collection(companyRef, 'rcvDocuments'), safeRcvItem);
 
       await onRefreshData();
       await fetchDteDocuments();
@@ -2357,7 +2361,7 @@ export default function EmisionDteView({
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-700 leading-relaxed">
-                    Selecciona tu proveedor (ej. <strong>SimpleAPI.cl</strong>) e ingresa tu <strong>API Key</strong> (ej. <code>5511-W960-...</code>) o URL Endpoint para rescatar RCV, Boletas de Honorarios y sincronizar documentos.
+                    Selecciona tu proveedor (ej. <strong>SimpleAPI.cl</strong>) e ingresa tu <strong>API Key</strong> (ej. <code>XXXX-XXXX-XXXX-XXXX</code>) o URL Endpoint para rescatar RCV, Boletas de Honorarios y sincronizar documentos.
                   </p>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -2404,7 +2408,7 @@ export default function EmisionDteView({
                         type="text"
                         value={config.siiApiKey || ''}
                         onChange={(e) => setConfig({ ...config, siiApiKey: e.target.value })}
-                        placeholder="Ej. 5511-W960-6395-2355-3470"
+                        placeholder="Ej. XXXX-XXXX-XXXX-XXXX"
                         className="w-full border border-amber-400 bg-white rounded-lg p-2.5 font-mono text-xs font-bold text-amber-950 focus:ring-2 focus:ring-amber-500 focus:outline-none shadow-xs"
                       />
                     </div>
@@ -2618,8 +2622,8 @@ export default function EmisionDteView({
                     <div className="bg-slate-900 h-16 w-full rounded flex items-center justify-center font-mono text-[9px] text-slate-400 tracking-widest overflow-hidden p-1">
                       |||||| |||||||| |||||||| ||| |||||||| |||||||||| |||||| |||||||||| |||||
                     </div>
-                    <p className="font-bold text-[10px] text-slate-800">Timbre Electrónico S.I.I.</p>
-                    <p className="text-[9px] text-slate-500">Res. N° {config.resolutionNumber} de {config.resolutionDate} - Verifique documento en sii.cl</p>
+                    <p className="font-bold text-[10px] text-rose-700">VISTA PREVIA - SIN TIMBRE ELECTRÓNICO S.I.I.</p>
+                    <p className="text-[9px] text-slate-500">Este documento no tiene validez tributaria mientras no sea timbrado, firmado y aceptado por el SII (Res. N° {config.resolutionNumber} de {config.resolutionDate}).</p>
                   </div>
 
                   {/* TOTALES BOX */}

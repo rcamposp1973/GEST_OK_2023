@@ -6,9 +6,10 @@ import {
   CostCenterMaster,
   ExpenseItemMaster,
   ProjectMaster,
-  ProductMaster
+  ProductMaster,
+  RCVDocument
 } from '../types';
-import { doc, deleteDoc, setDoc } from 'firebase/firestore';
+import { doc, deleteDoc, setDoc, addDoc, collection } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { 
   Search, 

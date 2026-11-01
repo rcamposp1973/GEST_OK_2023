@@ -56,7 +56,9 @@ import {
   Landmark,
   Save,
   ExternalLink,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Bot,
+  Sparkles
 } from 'lucide-react';
 import { ImportCSVModal, ManualMatchModal, QuickVoucherModal } from './BankReconciliationModals';
 import AutoRutMatchModal from './AutoRutMatchModal';
@@ -64,6 +66,7 @@ import JuniorGlossAutomationModal from './JuniorGlossAutomationModal';
 import BankCartolaSmartImportModal from './BankCartolaSmartImportModal';
 import PendingItemsReportModal from './PendingItemsReportModal';
 import InterbankTransferModal from './InterbankTransferModal';
+import Agent1ConciliadorModal from './Agent1ConciliadorModal';
 import { parseChileanNumber } from '../utils/bankCartolaParser';
 
 const MONTH_NAMES: { [key: string]: string } = {
@@ -149,7 +152,7 @@ export default function ConciliacionBancariaView({
   // Scopes and filters
   const [voucherPeriodScope, setVoucherPeriodScope] = useState<'PENDIENTES_TODOS' | 'PERIODO_ACTUAL' | 'HASTA_ACTUAL' | 'ANIO_ACTUAL' | 'TODOS'>('PENDIENTES_TODOS');
   const [filterStatement, setFilterStatement] = useState<'Todos' | 'Conciliados' | 'Pendiente' | 'Duplicados'>('Todos');
-  const [filterVouchers, setFilterVouchers] = useState<'Todos' | 'Conciliados' | 'Pendiente'>('Todos');
+  const [filterVouchers, setFilterVouchers] = useState<'Todos' | 'Conciliados' | 'Pendiente' | 'EnTransito'>('Todos');
   const [statementSearchQuery, setStatementSearchQuery] = useState<string>('');
   const [voucherSearchQuery, setVoucherSearchQuery] = useState<string>('');
 
@@ -166,6 +169,7 @@ export default function ConciliacionBancariaView({
   const [showJuniorGlossModal, setShowJuniorGlossModal] = useState<boolean>(false);
   const [showInterbankModal, setShowInterbankModal] = useState<boolean>(false);
   const [showPendingReportModal, setShowPendingReportModal] = useState<boolean>(false);
+  const [showAgent1Modal, setShowAgent1Modal] = useState<boolean>(false);
   const [pastedCSV, setPastedCSV] = useState<string>('');
   const [importInitialBalance, setImportInitialBalance] = useState<number>(0);
 
@@ -273,10 +277,26 @@ export default function ConciliacionBancariaView({
 
   const currentRecId = `${selectedBankAccount?.code}_${selectedPeriod}`.replace(/[^a-zA-Z0-9_-]/g, '_');
 
-  // Robust Dual-Key Match Engine: matches vouchers by Firestore Doc ID AND Voucher Number across all periods
+  // Robust Dual-Key Match Engine: matches vouchers primarily by unique Firestore Doc ID,
+  // preventing collisions across periods when different vouchers share the same voucherNumber (e.g., Asiento N° 1)
   const activeAndSavedMatches = useMemo(() => {
-    const idMap = new Map<string, { period: string; voucherNumber?: number }>();
-    const numberMap = new Map<number, { period: string; voucherId?: string }>();
+    const idMap = new Map<string, {
+      period: string;
+      voucherNumber?: number;
+      voucherId?: string;
+      cartolaDesc?: string;
+      cartolaDate?: string;
+      cartolaAmount?: number;
+    }>();
+    
+    // Map of (voucherNumber + '_' + period) -> match info (ONLY for legacy records without voucherId)
+    const legacyNumberPeriodMap = new Map<string, {
+      period: string;
+      voucherNumber: number;
+      cartolaDesc?: string;
+      cartolaDate?: string;
+      cartolaAmount?: number;
+    }>();
 
     const recordMatch = (l: any, defaultPeriod: string) => {
       const isConciliado = l.matchedStatus === 'Conciliado' || 
@@ -288,6 +308,9 @@ export default function ConciliacionBancariaView({
       if (!isConciliado) return;
 
       const lPeriod = l.date ? l.date.slice(0, 7) : defaultPeriod;
+      const cDesc = l.description || l.gloss || '';
+      const cDate = l.date || '';
+      const cAmt = Number(l.charge || l.cargo || l.payment || l.abono || 0);
 
       const ids: string[] = [];
       if (Array.isArray(l.matchedVoucherIds)) {
@@ -314,14 +337,31 @@ export default function ConciliacionBancariaView({
         });
       }
 
-      ids.forEach(id => {
-        idMap.set(id, { period: lPeriod, voucherNumber: nums[0] });
-      });
-
-      nums.forEach(num => {
-        numberMap.set(num, { period: lPeriod, voucherId: ids[0] });
-        idMap.set(String(num), { period: lPeriod, voucherNumber: num });
-      });
+      // CRITICAL: When the cartola line has explicit matched voucher ID(s),
+      // we strictly bind ONLY those specific voucher IDs to prevent number collision across periods!
+      if (ids.length > 0) {
+        ids.forEach(id => {
+          idMap.set(id, {
+            period: lPeriod,
+            voucherNumber: nums[0],
+            voucherId: id,
+            cartolaDesc: cDesc,
+            cartolaDate: cDate,
+            cartolaAmount: cAmt
+          });
+        });
+      } else if (nums.length > 0) {
+        // Fallback for legacy records without voucherId: scoped strictly by period!
+        nums.forEach(num => {
+          legacyNumberPeriodMap.set(`${num}_${lPeriod}`, {
+            period: lPeriod,
+            voucherNumber: num,
+            cartolaDesc: cDesc,
+            cartolaDate: cDate,
+            cartolaAmount: cAmt
+          });
+        });
+      }
     };
 
     // 1. Process all saved reconciliations for this bank account
@@ -336,7 +376,7 @@ export default function ConciliacionBancariaView({
       statementLines.forEach(l => recordMatch(l, selectedPeriod));
     }
 
-    return { idMap, numberMap };
+    return { idMap, legacyNumberPeriodMap };
   }, [savedReconciliations, statementLines, selectedBankAccount, selectedBankAccountId, selectedPeriod]);
 
   // All Bank Vouchers in accounting (any period)
@@ -351,7 +391,10 @@ export default function ConciliacionBancariaView({
       gloss: string;
       isMatchedInCurrent: boolean;
       isMatchedInOther: boolean;
+      isMatchedInFuture: boolean;
+      isMatchedInPast: boolean;
       matchedInOtherPeriod?: string;
+      matchedCartolaInfo?: string;
     }[] = [];
 
     if (!selectedBankAccount) return list;
@@ -364,13 +407,17 @@ export default function ConciliacionBancariaView({
 
         v.lines.forEach(l => {
           if (l.accountId === selectedBankAccount.id || l.accountCode === selectedBankAccount.code) {
-            // Match by ID, String(Number), or raw Voucher Number
-            const matchById = activeAndSavedMatches.idMap.get(v.id) || (vNum ? activeAndSavedMatches.idMap.get(String(vNum)) : undefined);
-            const matchByNum = vNum ? activeAndSavedMatches.numberMap.get(vNum) : undefined;
+            // Match primarily by unique Voucher ID; fallback to period-scoped voucherNumber only for legacy entries
+            const matchById = activeAndSavedMatches.idMap.get(v.id);
+            const matchByNum = !matchById && vNum
+              ? activeAndSavedMatches.legacyNumberPeriodMap.get(`${vNum}_${vPeriod}`)
+              : undefined;
             const match = matchById || matchByNum;
 
             const isMatchedInCurrent = !!match && match.period === selectedPeriod;
             const isMatchedInOther = !!match && match.period !== selectedPeriod;
+            const isMatchedInFuture = !!match && match.period > selectedPeriod;
+            const isMatchedInPast = !!match && match.period < selectedPeriod;
 
             list.push({
               voucher: v,
@@ -382,7 +429,10 @@ export default function ConciliacionBancariaView({
               gloss: l.gloss || v.gloss,
               isMatchedInCurrent,
               isMatchedInOther,
-              matchedInOtherPeriod: match?.period
+              isMatchedInFuture,
+              isMatchedInPast,
+              matchedInOtherPeriod: match?.period,
+              matchedCartolaInfo: match?.cartolaDesc ? `${match.cartolaDate ? match.cartolaDate + ' - ' : ''}${match.cartolaDesc}` : undefined
             });
           }
         });
@@ -405,13 +455,17 @@ export default function ConciliacionBancariaView({
       const year = selectedPeriod.slice(0, 4);
       list = list.filter(bv => bv.period.startsWith(year));
     } else if (voucherPeriodScope === 'PENDIENTES_TODOS') {
-      list = list.filter(bv => !bv.isMatchedInOther);
+      // Pending vouchers: unmatched anywhere OR matched in a future period (in-transit as of selectedPeriod)
+      list = list.filter(bv => !bv.isMatchedInCurrent && (!bv.isMatchedInOther || bv.isMatchedInFuture));
     }
 
     if (filterVouchers === 'Conciliados') {
-      list = list.filter(bv => bv.isMatchedInCurrent || bv.isMatchedInOther);
+      list = list.filter(bv => bv.isMatchedInCurrent || (bv.isMatchedInOther && !bv.isMatchedInFuture));
     } else if (filterVouchers === 'Pendiente') {
-      list = list.filter(bv => !bv.isMatchedInCurrent && !bv.isMatchedInOther);
+      // Include completely pending AND in transit to a future period
+      list = list.filter(bv => (!bv.isMatchedInCurrent && !bv.isMatchedInOther) || bv.isMatchedInFuture);
+    } else if (filterVouchers === 'EnTransito') {
+      list = list.filter(bv => bv.isMatchedInFuture);
     }
 
     if (voucherSearchQuery.trim()) {
@@ -1903,49 +1957,49 @@ export default function ConciliacionBancariaView({
   };
 
   return (
-    <div className={isEmbedded ? "flex flex-col w-full h-full overflow-hidden bg-slate-900 text-slate-100 relative" : "fixed inset-0 z-50 bg-[#0b1329]/70 backdrop-blur-xs flex flex-col w-screen h-screen overflow-hidden animate-in fade-in duration-150"}>
-      {/* HEADER DE VENTANA EMERGENTE - PANTALLA COMPLETA SIN DISTRACTORES */}
-      <div className="bg-slate-900 text-white px-4 py-2.5 flex items-center justify-between border-b border-slate-800 shrink-0 shadow-lg z-20">
+    <div className={isEmbedded ? "flex flex-col w-full h-full overflow-hidden bg-slate-100/70 text-slate-900 relative" : "fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex flex-col w-screen h-screen overflow-hidden animate-in fade-in duration-150"}>
+      {/* HEADER DE VENTANA - ESTILO LINEAR / RAMP */}
+      <div className="bg-white text-slate-900 px-4 py-2.5 flex items-center justify-between border-b border-slate-200 shrink-0 shadow-2xs z-20">
         {/* Lado Izquierdo: Icono, Título y Nombre Empresa */}
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white border border-indigo-400/40 shadow-inner shrink-0">
-            <Landmark className="w-4 h-4 text-indigo-100" />
+          <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white shadow-2xs shrink-0">
+            <Landmark className="w-4 h-4 text-white" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-bold tracking-tight text-white uppercase">
+              <h2 className="text-sm font-bold tracking-tight text-slate-900 uppercase">
                 Conciliación Bancaria Inteligente
               </h2>
-              <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-mono px-2 py-0.5 rounded-full uppercase font-bold tracking-wider">
+              <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-mono px-2 py-0.5 rounded-full uppercase font-bold tracking-wider">
                 Pantalla Completa
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 font-medium">
+            <p className="text-[11px] text-slate-500 font-medium">
               {company.name} • RUT: {company.rut}
             </p>
           </div>
         </div>
 
         {/* Lado Derecho: Auto-guardado, Guardar, Acciones y Botón Cerrar */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
           {/* Indicador de Auto-guardado en tiempo real */}
-          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700">
+          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-50 text-slate-600 border border-slate-200 shadow-2xs">
             {autoSaveStatus === 'SAVING' && (
               <>
-                <span className="animate-spin text-indigo-400">⏳</span>
-                <span className="text-indigo-300">Guardando...</span>
+                <span className="animate-spin text-slate-500">⏳</span>
+                <span className="text-slate-600 font-medium">Guardando...</span>
               </>
             )}
             {autoSaveStatus === 'SAVED' && (
               <>
-                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span className="text-emerald-300">Grabado automático ({lastSavedTime})</span>
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="text-slate-700 font-medium">Grabado automático ({lastSavedTime})</span>
               </>
             )}
             {autoSaveStatus === 'ERROR' && (
               <>
-                <span className="text-rose-400">⚠️</span>
-                <span className="text-rose-300">{saveMessage || 'Error al guardar'}</span>
+                <span className="text-rose-500">⚠️</span>
+                <span className="text-rose-600 font-medium">{saveMessage || 'Error al guardar'}</span>
               </>
             )}
           </div>
@@ -1953,12 +2007,24 @@ export default function ConciliacionBancariaView({
           <button
             onClick={async () => {
               await persistReconciliation(selectedPeriod, statementLines, bankInitialBalanceInput, bankFinalBalanceInput);
-              alert('💾 Conciliación bancaria verificada y sincronizada.');
+              notify.success('💾 Conciliación bancaria verificada y sincronizada.');
             }}
-            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer border border-emerald-500"
+            className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-2xs transition-colors flex items-center gap-1.5 border border-slate-900 cursor-pointer"
           >
-            <Save className="w-3.5 h-3.5 text-emerald-100" />
+            <Save className="w-3.5 h-3.5 text-slate-300" />
             <span>Guardar Acta</span>
+          </button>
+
+          {/* Agente 1: Conciliador Autónomo con IA (Gemini 3.8 Flash) */}
+          <button
+            type="button"
+            onClick={() => setShowAgent1Modal(true)}
+            className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg shadow-2xs flex items-center gap-1.5 cursor-pointer transition-all border border-slate-200 group"
+            title="Agente 1: Analizar y clasificar inteligentemente la cartola bancaria con Gemini 3.8 Flash"
+          >
+            <Bot className="w-3.5 h-3.5 text-slate-900 group-hover:scale-110 transition-transform" />
+            <span>Agente 1: Conciliador IA</span>
+            <span className="bg-slate-100 text-slate-600 text-[9px] px-1 py-0.2 rounded font-mono font-medium">3.8 Flash</span>
           </button>
 
           {/* Dedicated Interbank Transfer Button */}
@@ -1966,10 +2032,10 @@ export default function ConciliacionBancariaView({
             <button
               type="button"
               onClick={() => setShowInterbankModal(true)}
-              className="px-3 py-1.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white text-xs font-bold rounded-lg shadow-xs flex items-center gap-1.5 cursor-pointer transition-all border border-teal-500/40"
+              className="px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg shadow-2xs flex items-center gap-1.5 cursor-pointer transition-all border border-slate-200"
               title="Detectar y contabilizar automáticamente traspasos entre cuentas bancarias de la misma sociedad (1 a 1, N a 1 y N a M)"
             >
-              <ArrowRightLeft className="w-3.5 h-3.5 text-teal-100" />
+              <ArrowRightLeft className="w-3.5 h-3.5 text-slate-500" />
               <span>Traspaso entre Cuentas</span>
             </button>
           )}
@@ -1979,10 +2045,10 @@ export default function ConciliacionBancariaView({
             <button
               type="button"
               onClick={() => setIsActionsDropdownOpen(!isActionsDropdownOpen)}
-              className="px-3 py-1.5 bg-[#533AFD] hover:bg-indigo-600 text-white text-xs font-bold rounded-lg shadow-xs flex items-center gap-1.5 cursor-pointer transition-all border border-indigo-400/30"
+              className="px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg shadow-2xs flex items-center gap-1.5 cursor-pointer transition-all border border-slate-200"
             >
-              <span>⚡ Acciones y Herramientas</span>
-              <ChevronDown className="w-3.5 h-3.5" />
+              <span>Acciones y Herramientas</span>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
             </button>
 
             {isActionsDropdownOpen && (
@@ -1998,7 +2064,7 @@ export default function ConciliacionBancariaView({
                   <div className="py-1">
                     <button
                       onClick={() => { setIsActionsDropdownOpen(false); setShowSmartImportModal(true); }}
-                      className="w-full text-left px-3 py-1.5 text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 font-semibold flex items-center gap-2 cursor-pointer"
+                      className="w-full text-left px-3 py-1.5 text-slate-700 hover:bg-slate-50 font-semibold flex items-center gap-2 cursor-pointer"
                     >
                       <span className="text-base">🏦</span>
                       <div>
@@ -2008,7 +2074,7 @@ export default function ConciliacionBancariaView({
                     </button>
                     <button
                       onClick={() => { setIsActionsDropdownOpen(false); setImportInitialBalance(bankInitialBalanceInput); setShowImportModal(true); }}
-                      className="w-full text-left px-3 py-1.5 text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 font-semibold flex items-center gap-2 cursor-pointer"
+                      className="w-full text-left px-3 py-1.5 text-slate-700 hover:bg-slate-50 font-semibold flex items-center gap-2 cursor-pointer"
                     >
                       <span className="text-base">📥</span>
                       <div>
@@ -2028,7 +2094,7 @@ export default function ConciliacionBancariaView({
                         link.click();
                         document.body.removeChild(link);
                       }}
-                      className="w-full text-left px-3 py-1.5 text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 font-semibold flex items-center gap-2 cursor-pointer"
+                      className="w-full text-left px-3 py-1.5 text-slate-700 hover:bg-slate-50 font-semibold flex items-center gap-2 cursor-pointer"
                     >
                       <span className="text-base">📊</span>
                       <div>
@@ -2039,12 +2105,25 @@ export default function ConciliacionBancariaView({
                   </div>
 
                   <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    Automatización & Cruces
+                    Automatización & Agentes IA
                   </div>
                   <div className="py-1">
                     <button
+                      onClick={() => { setIsActionsDropdownOpen(false); setShowAgent1Modal(true); }}
+                      className="w-full text-left px-3 py-1.5 text-slate-800 hover:bg-slate-50 font-semibold flex items-center gap-2 cursor-pointer border-b border-slate-100"
+                    >
+                      <span className="text-base">🤖</span>
+                      <div>
+                        <div className="font-bold text-slate-900 flex items-center gap-1">
+                          <span>Agente 1: Conciliador IA</span>
+                          <span className="text-[9px] bg-slate-100 text-slate-700 px-1 py-0.2 rounded font-mono">Gemini 3.8</span>
+                        </div>
+                        <div className="text-[10px] text-slate-500 font-normal">Clasificación y enrutamiento inteligente</div>
+                      </div>
+                    </button>
+                    <button
                       onClick={() => { setIsActionsDropdownOpen(false); handleAutoMatch(); }}
-                      className="w-full text-left px-3 py-1.5 text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 font-semibold flex items-center gap-2 cursor-pointer"
+                      className="w-full text-left px-3 py-1.5 text-slate-700 hover:bg-slate-50 font-semibold flex items-center gap-2 cursor-pointer"
                     >
                       <span className="text-base">⚡</span>
                       <div>
@@ -2054,33 +2133,33 @@ export default function ConciliacionBancariaView({
                     </button>
                     <button
                       onClick={() => { setIsActionsDropdownOpen(false); setShowAutoRutModal(true); }}
-                      className="w-full text-left px-3 py-1.5 text-amber-900 hover:bg-amber-50 font-semibold flex items-center gap-2 cursor-pointer"
+                      className="w-full text-left px-3 py-1.5 text-slate-700 hover:bg-slate-50 font-semibold flex items-center gap-2 cursor-pointer"
                     >
                       <span className="text-base">🧠</span>
                       <div>
-                        <div className="font-bold text-amber-900">Nuez Mariposa (RUT Match)</div>
-                        <div className="text-[10px] text-amber-700 font-normal">Match y asiento automático por RUT</div>
+                        <div className="font-bold text-slate-800">Nuez Mariposa (RUT Match)</div>
+                        <div className="text-[10px] text-slate-500 font-normal">Match y asiento automático por RUT</div>
                       </div>
                     </button>
                     <button
                       onClick={() => { setIsActionsDropdownOpen(false); setShowJuniorGlossModal(true); }}
-                      className="w-full text-left px-3 py-1.5 text-indigo-900 hover:bg-indigo-50 font-semibold flex items-center gap-2 cursor-pointer"
+                      className="w-full text-left px-3 py-1.5 text-slate-700 hover:bg-slate-50 font-semibold flex items-center gap-2 cursor-pointer"
                     >
                       <span className="text-base">🤖</span>
                       <div>
-                        <div className="font-bold text-indigo-900">Junior: Contabilizar por Glosa</div>
-                        <div className="text-[10px] text-indigo-700 font-normal">Reglas automáticas por glosa</div>
+                        <div className="font-bold text-slate-800">Junior: Contabilizar por Glosa</div>
+                        <div className="text-[10px] text-slate-500 font-normal">Reglas automáticas por glosa</div>
                       </div>
                     </button>
                     {bankAccounts.length >= 2 && (
                       <button
                         onClick={() => { setIsActionsDropdownOpen(false); setShowInterbankModal(true); }}
-                        className="w-full text-left px-3 py-1.5 text-teal-900 hover:bg-teal-50 font-semibold flex items-center gap-2 cursor-pointer"
+                        className="w-full text-left px-3 py-1.5 text-slate-700 hover:bg-slate-50 font-semibold flex items-center gap-2 cursor-pointer"
                       >
                         <span className="text-base">🔄</span>
                         <div>
-                          <div className="font-bold text-teal-900">Traspaso entre Cuentas (Interbancario)</div>
-                          <div className="text-[10px] text-teal-700 font-normal">Cruce y asiento automático entre bancos propios (1 a 1 y N a 1)</div>
+                          <div className="font-bold text-slate-800">Traspaso entre Cuentas (Interbancario)</div>
+                          <div className="text-[10px] text-slate-500 font-normal">Cruce y asiento automático entre bancos propios (1 a 1 y N a 1)</div>
                         </div>
                       </button>
                     )}
@@ -2092,7 +2171,7 @@ export default function ConciliacionBancariaView({
                   <div className="py-1">
                     <button
                       onClick={() => { setIsActionsDropdownOpen(false); setShowPendingReportModal(true); }}
-                      className="w-full text-left px-3 py-1.5 text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 font-semibold flex items-center gap-2 cursor-pointer"
+                      className="w-full text-left px-3 py-1.5 text-slate-700 hover:bg-slate-50 font-semibold flex items-center gap-2 cursor-pointer"
                     >
                       <span className="text-base">📑</span>
                       <div>
@@ -2131,10 +2210,10 @@ export default function ConciliacionBancariaView({
             <button
               type="button"
               onClick={onClose}
-              className="px-3 py-1.5 bg-slate-800 hover:bg-rose-950/80 hover:border-rose-600/60 text-slate-300 hover:text-rose-200 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer border border-slate-700 group ml-1"
+              className="px-3 py-1.5 bg-white hover:bg-rose-50 hover:border-rose-200 text-slate-600 hover:text-rose-700 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer border border-slate-200 group ml-1 shadow-2xs"
               title="Cerrar ventana emergente de conciliación bancaria"
             >
-              <X className="w-4 h-4 text-slate-400 group-hover:text-rose-300" />
+              <X className="w-4 h-4 text-slate-400 group-hover:text-rose-500" />
               <span>Cerrar</span>
             </button>
           )}
@@ -2348,9 +2427,9 @@ export default function ConciliacionBancariaView({
             {/* Left Column: Cartola Bancaria (with cumulative balance) */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden flex flex-col">
           {/* Top Header */}
-          <div className="p-3 bg-slate-900 text-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+          <div className="p-3 bg-slate-50 text-slate-900 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-bold text-xs uppercase tracking-wide flex items-center gap-1.5">
+              <span className="font-bold text-xs uppercase tracking-wide flex items-center gap-1.5 text-slate-900">
                 <span>📄</span> Cartola Bancaria ({displayLines.length} de {unifiedHistoricalCartola.length > 0 ? unifiedHistoricalCartola.length : statementLines.length})
               </span>
 
@@ -2362,10 +2441,10 @@ export default function ConciliacionBancariaView({
                     const targetYr = cartolaYearFilter !== 'TODOS' ? cartolaYearFilter : selectedPeriod.slice(0, 4);
                     setSelectedPeriod(`${targetYr}-${cartolaSelectedMonths[0]}`);
                   }}
-                  className="bg-amber-400 hover:bg-amber-300 text-amber-950 px-2 py-0.5 rounded text-[10px] font-black flex items-center gap-1 shadow-2xs transition-colors animate-pulse"
+                  className="bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 shadow-2xs transition-colors"
                   title="Sincronizar el Acta de Conciliación y los saldos del Libro Mayor con este mes"
                 >
-                  <ArrowRight className="w-3 h-3" />
+                  <ArrowRight className="w-3 h-3 text-amber-700" />
                   <span>Sincronizar Acta con {MONTH_NAMES[cartolaSelectedMonths[0]]} {cartolaYearFilter !== 'TODOS' ? cartolaYearFilter : selectedPeriod.slice(0, 4)}</span>
                 </button>
               )}
@@ -2374,24 +2453,24 @@ export default function ConciliacionBancariaView({
             <div className="flex items-center gap-2">
               <button
                 onClick={handleClearCartolaPeriod}
-                className="p-1 bg-rose-900/80 hover:bg-rose-800 text-rose-200 rounded border border-rose-700/60 transition-colors text-[10px] font-bold flex items-center gap-1 px-2"
+                className="p-1 bg-white hover:bg-rose-50 text-rose-600 hover:text-rose-700 rounded border border-slate-200 transition-colors text-[10px] font-semibold flex items-center gap-1 px-2 shadow-2xs"
                 title="Anular / Limpiar la cartola cargada de este período (si no hay movimientos conciliados)"
               >
-                <Trash2 className="w-3 h-3" />
+                <Trash2 className="w-3 h-3 text-rose-500" />
                 <span className="hidden sm:inline">Anular Cartola Mes</span>
               </button>
             </div>
           </div>
 
           {/* Excel-style Toolbar */}
-          <div className="p-2.5 bg-slate-800 text-white border-b border-slate-700 flex flex-wrap items-center gap-2 text-xs">
+          <div className="p-2.5 bg-slate-100/70 text-slate-800 border-b border-slate-200 flex flex-wrap items-center gap-2 text-xs">
             {/* Year Filter */}
             <div className="flex items-center gap-1">
-              <span className="text-[10px] text-slate-300 font-bold uppercase">Año:</span>
+              <span className="text-[10px] text-slate-500 font-bold uppercase">Año:</span>
               <select
                 value={cartolaYearFilter}
                 onChange={(e) => setCartolaYearFilter(e.target.value)}
-                className="text-[11px] bg-slate-900 text-white font-bold px-2 py-1 rounded border border-slate-700 hover:border-slate-500 focus:ring-1 focus:ring-indigo-400"
+                className="text-[11px] bg-white text-slate-900 font-bold px-2 py-1 rounded border border-slate-200 hover:border-slate-300 focus:ring-1 focus:ring-slate-400 shadow-2xs"
               >
                 <option value="TODOS">Todos los Años</option>
                 {availableYears.map(yr => (
@@ -2405,14 +2484,14 @@ export default function ConciliacionBancariaView({
               <button
                 type="button"
                 onClick={() => setIsMonthDropdownOpen(!isMonthDropdownOpen)}
-                className={`flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded border font-bold transition-all ${
+                className={`flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded border font-bold transition-all shadow-2xs ${
                   cartolaSelectedMonths.length > 0 && cartolaSelectedMonths[0] !== '99'
-                    ? 'bg-indigo-600 text-white border-indigo-400 shadow-xs'
-                    : 'bg-slate-900 text-slate-200 border-slate-700 hover:bg-slate-750'
+                    ? 'bg-slate-900 text-white border-slate-900'
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                 }`}
                 title="Filtrar uno o varios meses específicos estilo Excel"
               >
-                <Calendar className="w-3.5 h-3.5 text-indigo-300" />
+                <Calendar className="w-3.5 h-3.5 text-slate-500" />
                 <span>
                   {cartolaSelectedMonths.length === 0
                     ? 'Meses: Todos'
@@ -2871,13 +2950,13 @@ export default function ConciliacionBancariaView({
 
         {/* Right Column: Movimientos en Libro Mayor (Cross-period view) */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden flex flex-col">
-          <div className="p-3 bg-slate-900 text-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+          <div className="p-3 bg-slate-50 text-slate-900 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-xs uppercase tracking-wide flex items-center gap-1.5">
+              <span className="font-bold text-xs uppercase tracking-wide flex items-center gap-1.5 text-slate-900">
                 <span>📚</span> Asientos en Libros ({filteredBankVouchers.length})
               </span>
               {selectedVoucherKeys.size > 0 && (
-                <span className="bg-indigo-500/30 text-indigo-300 border border-indigo-400/40 text-[10px] px-1.5 py-0.5 rounded font-bold font-mono">
+                <span className="bg-slate-100 text-slate-700 border border-slate-200 text-[10px] px-1.5 py-0.5 rounded font-bold font-mono">
                   ✓ {selectedVoucherKeys.size} marcados
                 </span>
               )}
@@ -2887,14 +2966,14 @@ export default function ConciliacionBancariaView({
               <button
                 type="button"
                 onClick={handleSelectOnlyPendingVouchers}
-                className="text-[10px] text-indigo-300 hover:text-white font-sans font-semibold underline mr-1"
+                className="text-[10px] text-slate-600 hover:text-slate-900 font-sans font-semibold underline mr-1 cursor-pointer"
               >
                 Marcar Pendientes
               </button>
               <select
                 value={voucherPeriodScope}
                 onChange={(e) => setVoucherPeriodScope(e.target.value as any)}
-                className="text-[10px] bg-slate-800 text-slate-200 px-2 py-0.5 rounded border border-slate-700 font-bold"
+                className="text-[10px] bg-white text-slate-800 px-2 py-1 rounded border border-slate-200 font-bold shadow-2xs"
                 title="Filtrar alcance de comprobantes"
               >
                 <option value="PENDIENTES_TODOS">Todos los Pendientes (Multimes)</option>
@@ -2907,11 +2986,12 @@ export default function ConciliacionBancariaView({
               <select
                 value={filterVouchers}
                 onChange={(e) => setFilterVouchers(e.target.value as any)}
-                className="text-[10px] bg-slate-800 text-slate-200 px-2 py-0.5 rounded border border-slate-700"
+                className="text-[10px] bg-white text-slate-800 px-2 py-1 rounded border border-slate-200 font-bold shadow-2xs"
               >
                 <option value="Todos">Todos</option>
-                <option value="Conciliados">Conciliados</option>
-                <option value="Pendiente">Pendientes</option>
+                <option value="Pendiente">Pendientes y En Tránsito</option>
+                <option value="EnTransito">Solo En Tránsito (Multimes)</option>
+                <option value="Conciliados">Conciliados (Mes y Otros)</option>
               </select>
             </div>
           </div>
@@ -2941,7 +3021,23 @@ export default function ConciliacionBancariaView({
                 {filteredBankVouchers.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="py-8 text-center text-slate-400 font-sans italic">
-                      No hay comprobantes contables registrados para esta cuenta en el alcance seleccionado.
+                      <div>No hay comprobantes contables registrados para esta cuenta en el alcance seleccionado.</div>
+                      {reconciliationSummary.depositsInTransit > 0 && (
+                        <div className="mt-2 text-indigo-700 not-italic font-medium text-xs">
+                          💡 Hay <strong>Depósitos en Tránsito</strong> por{' '}
+                          <strong>${reconciliationSummary.depositsInTransit.toLocaleString('es-CL')}</strong> registrados en contabilidad.{' '}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFilterVouchers('Pendiente');
+                              setVoucherPeriodScope('PENDIENTES_TODOS');
+                            }}
+                            className="text-indigo-900 underline font-bold hover:text-indigo-950 cursor-pointer"
+                          >
+                            Mostrar Asientos en Tránsito
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ) : (
@@ -2957,6 +3053,8 @@ export default function ConciliacionBancariaView({
                             ? 'bg-indigo-50/90 ring-1 ring-indigo-400 font-medium'
                             : bv.isMatchedInCurrent
                             ? 'bg-emerald-50/50'
+                            : bv.isMatchedInFuture
+                            ? 'bg-indigo-50/40 text-slate-800'
                             : bv.isMatchedInOther
                             ? 'bg-slate-100/70 text-slate-400'
                             : 'hover:bg-slate-50'
@@ -3007,8 +3105,19 @@ export default function ConciliacionBancariaView({
                             <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
                               ✓ Este Mes
                             </span>
+                          ) : bv.isMatchedInFuture ? (
+                            <span
+                              className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-100 text-indigo-900 border border-indigo-300 inline-flex items-center gap-1 shadow-2xs"
+                              title={`Depósito/Giro en Tránsito: Registrado en libros en ${bv.period} y calzado en cartola en ${bv.matchedInOtherPeriod}. Partida en tránsito al cierre de ${selectedPeriod}.`}
+                            >
+                              <span>⏳ En Tránsito</span>
+                              <span className="text-[8px] bg-indigo-200/90 px-1 rounded font-mono">Cartola {bv.matchedInOtherPeriod}</span>
+                            </span>
                           ) : bv.isMatchedInOther ? (
-                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-300">
+                            <span
+                              className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-300"
+                              title={bv.matchedCartolaInfo ? `Conciliado con cartola (${bv.matchedInOtherPeriod}): ${bv.matchedCartolaInfo}` : `Conciliado en período ${bv.matchedInOtherPeriod}`}
+                            >
                               ✓ Conciliado ({bv.matchedInOtherPeriod})
                             </span>
                           ) : (
@@ -3076,18 +3185,18 @@ export default function ConciliacionBancariaView({
         } shrink-0 bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden flex flex-col self-stretch transition-all duration-200 sticky top-4`}
       >
         {/* Panel Top Header */}
-        <div className="p-3 bg-slate-900 text-white flex items-center justify-between gap-2 border-b border-slate-800">
+        <div className="p-3 bg-slate-50 text-slate-900 flex items-center justify-between gap-2 border-b border-slate-200">
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className="font-bold text-xs uppercase tracking-wide truncate">
+            <span className="font-bold text-xs uppercase tracking-wide truncate text-slate-900">
               📋 Resumen Conciliación
             </span>
-            <span className="text-[10px] text-slate-400 font-mono">({selectedPeriod})</span>
+            <span className="text-[10px] text-slate-500 font-mono font-medium">({selectedPeriod})</span>
           </div>
           <div className="flex items-center gap-1">
             <button
               type="button"
               onClick={() => setSummaryPanelState(summaryPanelState === 'expanded' ? 'normal' : 'expanded')}
-              className="p-1 rounded text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+              className="p-1 rounded text-slate-400 hover:text-slate-800 hover:bg-slate-200 transition-colors cursor-pointer"
               title={summaryPanelState === 'expanded' ? 'Reducir a tamaño moderado' : 'Ampliar vista hacia el costado'}
             >
               {summaryPanelState === 'expanded' ? (
@@ -3099,7 +3208,7 @@ export default function ConciliacionBancariaView({
             <button
               type="button"
               onClick={() => setSummaryPanelState('collapsed')}
-              className="p-1 rounded text-slate-300 hover:text-rose-400 hover:bg-slate-800 transition-colors"
+              className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
               title="Minimizar panel a la derecha"
             >
               <ChevronRight className="w-4 h-4" />
@@ -3126,8 +3235,16 @@ export default function ConciliacionBancariaView({
               </span>
             </div>
             {reconciliationSummary.crossPeriodLines.length > 0 && (
-              <div className="mt-1 text-[10px] text-indigo-800 font-sans font-medium">
-                🔄 {reconciliationSummary.crossPeriodLines.length} partidas regularizadas multimes
+              <div
+                onClick={() => {
+                  setFilterVouchers('Pendiente');
+                  setVoucherPeriodScope('PENDIENTES_TODOS');
+                }}
+                className="mt-1 text-[10px] text-indigo-800 font-sans font-bold cursor-pointer hover:underline flex items-center justify-center gap-1 bg-indigo-50 py-0.5 px-1.5 rounded border border-indigo-200"
+                title="Haz clic para ver las partidas regularizadas en la tabla"
+              >
+                <span>🔄 {reconciliationSummary.crossPeriodLines.length} partidas regularizadas multimes</span>
+                <span className="text-[9px] text-indigo-600">(Ver 👁️)</span>
               </div>
             )}
           </div>
@@ -3153,12 +3270,29 @@ export default function ConciliacionBancariaView({
                 <span className="font-sans">(-) Abonos No Cont.:</span>
                 <span className="font-bold">-${reconciliationSummary.unmatchedDeposits.toLocaleString('es-CL')}</span>
               </div>
-              <div className="flex justify-between text-rose-700 px-1">
+              <div
+                onClick={() => {
+                  setFilterVouchers('Pendiente');
+                  setVoucherPeriodScope('PENDIENTES_TODOS');
+                }}
+                className="flex justify-between text-rose-700 px-1 py-0.5 rounded hover:bg-rose-50 cursor-pointer transition-colors group"
+                title="Haz clic para ver los cheques en tránsito en la tabla de asientos"
+              >
                 <span className="font-sans">(-) Cheques en Tránsito:</span>
                 <span className="font-bold">-${reconciliationSummary.outstandingChecks.toLocaleString('es-CL')}</span>
               </div>
-              <div className="flex justify-between text-indigo-800 px-1">
-                <span className="font-sans">(+) Depósitos en Tránsito:</span>
+              <div
+                onClick={() => {
+                  setFilterVouchers('Pendiente');
+                  setVoucherPeriodScope('PENDIENTES_TODOS');
+                }}
+                className="flex justify-between text-indigo-800 px-1 py-0.5 rounded hover:bg-indigo-100/70 cursor-pointer transition-colors group"
+                title="Haz clic para ver los depósitos en tránsito en los asientos de contabilidad"
+              >
+                <span className="font-sans flex items-center gap-1">
+                  <span className="underline decoration-dotted">(+) Depósitos en Tránsito:</span>
+                  <span className="text-[9px] bg-indigo-200 text-indigo-900 px-1 rounded font-bold group-hover:bg-indigo-300">Ver 👁️</span>
+                </span>
                 <span className="font-bold">+${reconciliationSummary.depositsInTransit.toLocaleString('es-CL')}</span>
               </div>
               {reconciliationSummary.futureMatchedCharges > 0 && (
@@ -3201,12 +3335,29 @@ export default function ConciliacionBancariaView({
                 <span className="font-sans">Saldo Contabilidad:</span>
                 <span className="font-mono text-slate-950">${bookFinalBalance.toLocaleString('es-CL')}</span>
               </div>
-              <div className="flex justify-between text-indigo-800 px-1">
+              <div
+                onClick={() => {
+                  setFilterVouchers('Pendiente');
+                  setVoucherPeriodScope('PENDIENTES_TODOS');
+                }}
+                className="flex justify-between text-indigo-800 px-1 py-0.5 rounded hover:bg-indigo-50 cursor-pointer transition-colors group"
+                title="Haz clic para ver los cheques en tránsito en la tabla de asientos"
+              >
                 <span className="font-sans">(+) Cheques en Tránsito:</span>
                 <span className="font-bold">+${reconciliationSummary.outstandingChecks.toLocaleString('es-CL')}</span>
               </div>
-              <div className="flex justify-between text-rose-700 px-1">
-                <span className="font-sans">(-) Depósitos en Tránsito:</span>
+              <div
+                onClick={() => {
+                  setFilterVouchers('Pendiente');
+                  setVoucherPeriodScope('PENDIENTES_TODOS');
+                }}
+                className="flex justify-between text-rose-700 px-1 py-0.5 rounded hover:bg-rose-100/70 cursor-pointer transition-colors group"
+                title="Haz clic para ver los depósitos en tránsito en los asientos de contabilidad"
+              >
+                <span className="font-sans flex items-center gap-1">
+                  <span className="underline decoration-dotted">(-) Depósitos en Tránsito:</span>
+                  <span className="text-[9px] bg-rose-200 text-rose-900 px-1 rounded font-bold group-hover:bg-rose-300">Ver 👁️</span>
+                </span>
                 <span className="font-bold">-${reconciliationSummary.depositsInTransit.toLocaleString('es-CL')}</span>
               </div>
               <div className="flex justify-between text-rose-700 px-1">
@@ -3563,8 +3714,8 @@ export default function ConciliacionBancariaView({
         bookFinalBalance={bookFinalBalance}
         unmatchedCharges={statementLines.filter(l => l.matchedStatus !== 'Conciliado' && (l.charge || 0) > 0)}
         unmatchedDeposits={statementLines.filter(l => l.matchedStatus !== 'Conciliado' && (l.deposit || 0) > 0)}
-        outstandingChecks={allBankVouchers.filter(bv => !bv.isMatchedInCurrent && !bv.isMatchedInOther && (bv.credit || 0) > 0)}
-        depositsInTransit={allBankVouchers.filter(bv => !bv.isMatchedInCurrent && !bv.isMatchedInOther && (bv.debit || 0) > 0)}
+        outstandingChecks={allBankVouchers.filter(bv => bv.period <= selectedPeriod && ((!bv.isMatchedInCurrent && !bv.isMatchedInOther) || bv.isMatchedInFuture) && (bv.credit || 0) > 0)}
+        depositsInTransit={allBankVouchers.filter(bv => bv.period <= selectedPeriod && ((!bv.isMatchedInCurrent && !bv.isMatchedInOther) || bv.isMatchedInFuture) && (bv.debit || 0) > 0)}
         onOpenVoucher={onOpenVoucher}
       />
 
@@ -3602,6 +3753,26 @@ export default function ConciliacionBancariaView({
         fiscalYears={fiscalYears}
         initialPeriod={selectedPeriod}
         onOpenVoucher={onOpenVoucher}
+        onSuccess={async () => {
+          await fetchReconciliations();
+          if (onVouchersUpdated) {
+            onVouchersUpdated();
+          }
+        }}
+      />
+
+      <Agent1ConciliadorModal
+        isOpen={showAgent1Modal}
+        onClose={() => setShowAgent1Modal(false)}
+        studyId={studyId}
+        company={company}
+        bankAccount={selectedBankAccount}
+        period={selectedPeriod}
+        statementLines={statementLines}
+        accounts={accounts}
+        vouchers={vouchers}
+        auxiliaries={auxiliaries}
+        fiscalYears={fiscalYears}
         onSuccess={async () => {
           await fetchReconciliations();
           if (onVouchersUpdated) {

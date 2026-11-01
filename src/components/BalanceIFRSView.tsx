@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   TrendingUp
 } from 'lucide-react';
+import { BalanceIFRSPrintModal } from './BalanceIFRSPrintModal';
 
 interface BalanceIFRSViewProps {
   company: Company;
@@ -55,6 +56,7 @@ export default function BalanceIFRSView({
   const [dateTo, setDateTo] = useState<string>('');
   const [showZeroBalances, setShowZeroBalances] = useState<boolean>(false);
   const [showAccountDetails, setShowAccountDetails] = useState<boolean>(true);
+  const [showPrintModal, setShowPrintModal] = useState<boolean>(false);
   const [expandedRubros, setExpandedRubros] = useState<Record<string, boolean>>({
     '1101': true,
     '1102': true,
@@ -69,12 +71,42 @@ export default function BalanceIFRSView({
     setExpandedRubros(prev => ({ ...prev, [rubroId]: !prev[rubroId] }));
   };
 
+  // Enfoque acumulativo para el Balance IFRS (Estado de Situación Financiera)
+  const handlePeriodChange = (val: string) => {
+    setPeriodFilter(val);
+    if (val !== 'Todos') {
+      const year = val.slice(0, 4);
+      setDateFrom(`${year}-01-01`);
+      const parts = val.split('-');
+      const y = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10);
+      const lastDay = new Date(y, m, 0).getDate();
+      setDateTo(`${val}-${String(lastDay).padStart(2, '0')}`);
+    } else {
+      setDateFrom('');
+      setDateTo('');
+    }
+  };
+
+  const handleDateFromChange = (date: string) => {
+    setDateFrom(date);
+  };
+
+  const handleDateToChange = (date: string) => {
+    if (dateFrom && date && date < dateFrom) {
+      alert("La fecha de término no puede ser anterior a la fecha de inicio.");
+      return;
+    }
+    setDateTo(date);
+  };
+
   // Available periods from vouchers
   const availablePeriods = useMemo(() => {
     const periodsSet = new Set<string>();
     vouchers.forEach(v => {
-      if (v.date && v.date.length >= 7) {
-        periodsSet.add(v.date.slice(0, 7));
+      const p = v.period || (v.date && v.date.length >= 7 ? v.date.slice(0, 7) : '');
+      if (p && p.length === 7) {
+        periodsSet.add(p);
       }
     });
     return Array.from(periodsSet).sort().reverse();
@@ -110,16 +142,31 @@ export default function BalanceIFRSView({
     isBalanced,
     descuadradosCount
   } = useMemo(() => {
-    // 1. Filtrar comprobantes válidos y equilibrados
+    // 1. Filtrar comprobantes válidos y equilibrados (Enfoque Acumulativo de Balance)
     const validVouchers: Voucher[] = [];
     const descuadradosVouchers: Voucher[] = [];
 
     vouchers.forEach(v => {
       if (v.status === 'Anulado') return;
 
-      if (periodFilter !== 'Todos' && v.date && !v.date.startsWith(periodFilter)) return;
-      if (dateFrom && v.date && v.date < dateFrom) return;
-      if (dateTo && v.date && v.date > dateTo) return;
+      const vDate = v.date || '';
+      const vPeriod = v.period || (vDate ? vDate.slice(0, 7) : '');
+
+      // El Balance IFRS es un Estado de Situación Financiera que acumula saldos a la fecha de corte.
+      // Al seleccionar un período (ej: 2026-10), acumula todos los comprobantes desde el inicio
+      // del ejercicio comercial (enero o apertura) hasta dicho período.
+      if (periodFilter !== 'Todos') {
+        const year = periodFilter.slice(0, 4);
+        if (vPeriod) {
+          if (vPeriod < `${year}-01` || vPeriod > periodFilter) return;
+        } else if (vDate) {
+          if (vDate < `${year}-01-01` || vDate.slice(0, 7) > periodFilter) return;
+        }
+      }
+
+      // Filtro por rango de fechas (Desde / Hasta)
+      if (dateFrom && vDate && vDate < dateFrom) return;
+      if (dateTo && vDate && vDate > dateTo) return;
 
       const vDebe = (v.lines || []).reduce((s, l) => s + (Number(l.debit) || 0), 0);
       const vHaber = (v.lines || []).reduce((s, l) => s + (Number(l.credit) || 0), 0);
@@ -537,11 +584,16 @@ export default function BalanceIFRSView({
               <Scale className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase">
-                Balance Clasificado IFRS / FECU
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase">
+                  Balance Clasificado IFRS / FECU
+                </h3>
+                <span className="text-[10px] bg-indigo-50 border border-indigo-200 text-indigo-700 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  Acumulativo al Corte
+                </span>
+              </div>
               <p className="text-xs text-slate-500">
-                Estado de Situación Financiera agrupado por Cuentas Padre IFRS ({company.name} - RUT: {company.rut})
+                Estado de Situación Financiera acumulado por Cuentas Padre IFRS ({company.name} - RUT: {company.rut})
               </p>
             </div>
           </div>
@@ -551,7 +603,7 @@ export default function BalanceIFRSView({
           {onOpenEstadoResultados && (
             <button
               onClick={onOpenEstadoResultados}
-              className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors shadow-2xs border border-emerald-600"
+              className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors shadow-2xs border border-emerald-600 cursor-pointer"
               title="Abrir Estado de Resultados IFRS por Función"
             >
               <TrendingUp className="w-3.5 h-3.5 text-emerald-200" />
@@ -561,7 +613,7 @@ export default function BalanceIFRSView({
           {onOpenAuditor && (
             <button
               onClick={onOpenAuditor}
-              className="px-3 py-1.5 bg-indigo-900 hover:bg-indigo-950 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors shadow-2xs border border-indigo-700"
+              className="px-3 py-1.5 bg-indigo-900 hover:bg-indigo-950 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors shadow-2xs border border-indigo-700 cursor-pointer"
               title="Auditar Balance Clasificado IFRS y emitir Dictamen Oficial"
             >
               <ShieldCheck className="w-3.5 h-3.5 text-indigo-300" />
@@ -570,24 +622,26 @@ export default function BalanceIFRSView({
           )}
           <button
             onClick={() => setShowAccountDetails(!showAccountDetails)}
-            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg border border-slate-300 flex items-center gap-1.5 transition-colors shadow-2xs"
+            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg border border-slate-300 flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
           >
             {showAccountDetails ? <EyeOff className="w-3.5 h-3.5 text-slate-600" /> : <Eye className="w-3.5 h-3.5 text-slate-600" />}
             <span>{showAccountDetails ? 'Ver Sólo Rubros Padre' : 'Mostrar Cuentas Analíticas'}</span>
           </button>
           <button
             onClick={handleExportCSV}
-            className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-semibold rounded-lg border border-emerald-300 flex items-center gap-1.5 transition-colors shadow-2xs"
+            className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-semibold rounded-lg border border-emerald-300 flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+            title="Exportar Balance Clasificado a CSV / Excel"
           >
             <Download className="w-3.5 h-3.5 text-emerald-700" />
             <span>Exportar CSV / Excel</span>
           </button>
           <button
-            onClick={() => window.print()}
-            className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-xs font-semibold rounded-lg border border-indigo-300 flex items-center gap-1.5 transition-colors shadow-2xs"
+            onClick={() => setShowPrintModal(true)}
+            className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-xs font-semibold rounded-lg border border-indigo-300 flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+            title="Imprimir o Descargar PDF Oficial de Balance IFRS"
           >
             <Printer className="w-3.5 h-3.5 text-indigo-700" />
-            <span>Imprimir</span>
+            <span>Imprimir / PDF</span>
           </button>
         </div>
       </div>
@@ -596,15 +650,15 @@ export default function BalanceIFRSView({
       <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 shadow-xs flex flex-wrap gap-3 items-center justify-between">
         <div className="flex items-center gap-3 flex-wrap text-xs">
           <div className="flex items-center gap-1.5">
-            <label className="font-semibold text-slate-700">Período:</label>
+            <label className="font-semibold text-slate-700">Período de Corte:</label>
             <select
               value={periodFilter}
-              onChange={(e) => setPeriodFilter(e.target.value)}
+              onChange={(e) => handlePeriodChange(e.target.value)}
               className="bg-white border border-slate-300 rounded-md px-2.5 py-1 text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
             >
-              <option value="Todos">Todo el Ejercicio</option>
+              <option value="Todos">Todo el Ejercicio (Acumulado)</option>
               {availablePeriods.map(p => (
-                <option key={p} value={p}>{p}</option>
+                <option key={p} value={p}>{p} (Acumulado a {p})</option>
               ))}
             </select>
           </div>
@@ -614,7 +668,7 @@ export default function BalanceIFRSView({
             <input
               type="date"
               value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
+              onChange={(e) => handleDateFromChange(e.target.value)}
               className="bg-white border border-slate-300 rounded-md px-2 py-1 text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
             />
           </div>
@@ -624,7 +678,7 @@ export default function BalanceIFRSView({
             <input
               type="date"
               value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
+              onChange={(e) => handleDateToChange(e.target.value)}
               className="bg-white border border-slate-300 rounded-md px-2 py-1 text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
             />
           </div>
@@ -818,6 +872,31 @@ export default function BalanceIFRSView({
           </div>
         </div>
       </div>
+
+      {/* Modal de Impresión y Descarga de PDF Balance Clasificado IFRS */}
+      <BalanceIFRSPrintModal
+        isOpen={showPrintModal}
+        onClose={() => setShowPrintModal(false)}
+        company={company}
+        activosCorrientes={activosCorrientesRubros}
+        activosNoCorrientes={activosNoCorrientesRubros}
+        totalActivosCorrientes={totalActivosCorrientes}
+        totalActivosNoCorrientes={totalActivosNoCorrientes}
+        totalActivos={totalActivos}
+        pasivosCorrientes={pasivosCorrientesRubros}
+        pasivosNoCorrientes={pasivosNoCorrientesRubros}
+        totalPasivosCorrientes={totalPasivosCorrientes}
+        totalPasivosNoCorrientes={totalPasivosNoCorrientes}
+        totalPasivos={totalPasivos}
+        patrimonioRubros={patrimonioRubros}
+        resultadoEjercicio={resultadoEjercicio}
+        totalPatrimonioNeto={totalPatrimonioNeto}
+        totalPasivoMasPatrimonio={totalPasivoMasPatrimonio}
+        periodFilter={periodFilter}
+        dateFrom={dateFrom}
+        dateTo={dateTo}
+        isBalanced={isBalanced}
+      />
     </div>
   );
 }

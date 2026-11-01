@@ -12,6 +12,7 @@ import {
   MatchedLineRef
 } from '../types';
 import { logAuditEvent } from '../utils/auditLogger';
+import { triggerIframePrint } from '../utils/printUtils';
 import { 
   Search, 
   Filter, 
@@ -1006,98 +1007,69 @@ export default function AnalisisCuentasView({
   const handleExportAccountAnalysis = () => {
     if (!selectedAccount) return;
 
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
     const openLines = accountLines.filter(l => !l.matchId);
     const dateStr = new Date().toLocaleDateString('es-CL');
 
     const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Análisis de Cuenta - ${selectedAccount.code} ${selectedAccount.name}</title>
-          <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 12px; color: #1e293b; padding: 20px; }
-            .header { border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 20px; }
-            .header h1 { margin: 0; font-size: 18px; color: #0f172a; }
-            .header p { margin: 4px 0 0 0; color: #64748b; font-size: 11px; }
-            .kpi-row { display: flex; gap: 15px; margin-bottom: 20px; }
-            .kpi-card { background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px 14px; border-radius: 6px; flex: 1; }
-            .kpi-card .label { font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase; }
-            .kpi-card .val { font-size: 16px; font-weight: bold; color: #0f172a; margin-top: 4px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
-            th { background: #f1f5f9; text-align: left; padding: 8px; border-bottom: 2px solid #cbd5e1; font-weight: 600; color: #334155; }
-            td { padding: 8px; border-bottom: 1px solid #e2e8f0; }
-            .num { text-align: right; font-family: monospace; }
-            .footer { margin-top: 30px; border-top: 1px solid #cbd5e1; padding-top: 10px; display: flex; justify-content: space-between; font-size: 10px; color: #64748b; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>ANÁLISIS DE CUENTA CONTABLE: ${selectedAccount.code} - ${selectedAccount.name}</h1>
-            <p>Empresa: <strong>${company.name}</strong> (RUT: ${company.rut}) | Fecha de Emisión: ${dateStr}</p>
-          </div>
+      <div class="header">
+        <h1>ANÁLISIS DE CUENTA CONTABLE: ${selectedAccount.code} - ${selectedAccount.name}</h1>
+        <p>Empresa: <strong>${company.name}</strong> (RUT: ${company.rut}) | Fecha de Emisión: ${dateStr}</p>
+      </div>
 
-          <div class="kpi-row">
-            <div class="kpi-card">
-              <div class="label">Saldo Libro Mayor</div>
-              <div class="val">$${accountStats.netLedgerBalance.toLocaleString('es-CL')}</div>
-            </div>
-            <div class="kpi-card">
-              <div class="label">Composición Saldo Pendiente</div>
-              <div class="val">$${accountStats.netPendingBalance.toLocaleString('es-CL')}</div>
-            </div>
-            <div class="kpi-card">
-              <div class="label">Partidas Abiertas</div>
-              <div class="val">${accountStats.pendingCount} / ${accountStats.totalLinesCount} (${accountStats.matchPercentage}% Conciliado)</div>
-            </div>
-          </div>
+      <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px 14px; border-radius: 6px; flex: 1;">
+          <div style="font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase;">Saldo Libro Mayor</div>
+          <div style="font-size: 16px; font-weight: bold; color: #0f172a; margin-top: 4px;">$${accountStats.netLedgerBalance.toLocaleString('es-CL')}</div>
+        </div>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px 14px; border-radius: 6px; flex: 1;">
+          <div style="font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase;">Composición Saldo Pendiente</div>
+          <div style="font-size: 16px; font-weight: bold; color: #0f172a; margin-top: 4px;">$${accountStats.netPendingBalance.toLocaleString('es-CL')}</div>
+        </div>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px 14px; border-radius: 6px; flex: 1;">
+          <div style="font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase;">Partidas Abiertas</div>
+          <div style="font-size: 16px; font-weight: bold; color: #0f172a; margin-top: 4px;">${accountStats.pendingCount} / ${accountStats.totalLinesCount} (${accountStats.matchPercentage}% Conciliado)</div>
+        </div>
+      </div>
 
-          <h3>Detalle de Partidas Abiertas (Composición del Saldo)</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Voucher</th>
-                <th>Tipo</th>
-                <th>RUT / Auxiliar</th>
-                <th>Documento</th>
-                <th>Glosa / Detalle</th>
-                <th class="num">Cargo (Debe)</th>
-                <th class="num">Abono (Haber)</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${openLines.map(l => `
-                <tr>
-                  <td>${l.voucherDate}</td>
-                  <td>#${l.voucherNumber}</td>
-                  <td>${l.voucherType}</td>
-                  <td>${l.auxiliaryRut ? `${l.auxiliaryRut} - ${l.auxiliaryName || ''}` : '-'}</td>
-                  <td>${l.documentRef || '-'}</td>
-                  <td>${l.gloss}</td>
-                  <td class="num">${l.debit > 0 ? '$' + l.debit.toLocaleString('es-CL') : '-'}</td>
-                  <td class="num">${l.credit > 0 ? '$' + l.credit.toLocaleString('es-CL') : '-'}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
+      <h3>Detalle de Partidas Abiertas (Composición del Saldo)</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Voucher</th>
+            <th>Tipo</th>
+            <th>RUT / Auxiliar</th>
+            <th>Documento</th>
+            <th>Glosa / Detalle</th>
+            <th class="text-right">Cargo (Debe)</th>
+            <th class="text-right">Abono (Haber)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${openLines.map(l => `
+            <tr>
+              <td>${l.voucherDate}</td>
+              <td>#${l.voucherNumber}</td>
+              <td>${l.voucherType}</td>
+              <td>${l.auxiliaryRut ? `${l.auxiliaryRut} - ${l.auxiliaryName || ''}` : '-'}</td>
+              <td>${l.documentRef || '-'}</td>
+              <td>${l.gloss}</td>
+              <td class="text-right">${l.debit > 0 ? '$' + l.debit.toLocaleString('es-CL') : '-'}</td>
+              <td class="text-right">${l.credit > 0 ? '$' + l.credit.toLocaleString('es-CL') : '-'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
 
-          <div class="footer">
-            <span>Gest_OK Contabilidad Integral Chile</span>
-            <span>Informe firmado y preparado por el departamento contable</span>
-          </div>
-
-          <script>
-            window.onload = function() { window.print(); }
-          </script>
-        </body>
-      </html>
+      <div class="footer-box">
+        <span>Gest_OK Contabilidad Integral Chile &bull; Informe firmado y preparado por departamento contable</span>
+      </div>
     `;
 
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
+    triggerIframePrint({
+      title: `Análisis de Cuenta - ${selectedAccount.code} ${selectedAccount.name}`,
+      htmlContent
+    });
   };
 
   const monthsList = [

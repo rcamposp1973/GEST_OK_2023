@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import html2canvas from 'html2canvas';
 import { db } from '../lib/firebase';
 import { collection, getDocs, doc, setDoc, addDoc, updateDoc } from 'firebase/firestore';
-import { getOfficialUTM } from '../utils/chileanEconomicIndicators';
+import { getOfficialUTM, getOfficialHonorariosRate } from '../utils/chileanEconomicIndicators';
 import { getLatestOpenPeriod, getAllOpenPeriods } from '../utils/periodUtils';
 import {
   Company,
@@ -20,7 +21,7 @@ import {
   F29AccountingParams
 } from '../types';
 import { sanitizeVoucherLines } from '../utils/voucherValidation';
-import { Receipt, Download, Save, Zap } from 'lucide-react';
+import { Receipt, Download, Save, Zap, MessageSquare, Copy, X, Share2 } from 'lucide-react';
 
 interface Formulario29ViewProps {
   studyId: string;
@@ -47,6 +48,16 @@ export default function Formulario29View({
   const [loading, setLoading] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [savedDeclarations, setSavedDeclarations] = useState<F29Declaration[]>([]);
+  const [showClientSummaryModal, setShowClientSummaryModal] = useState<boolean>(false);
+  const [plazoPagoFecha, setPlazoPagoFecha] = useState<string>(() => {
+    const [y, m] = selectedPeriod.split('-').map(Number);
+    const nextMonth = m === 12 ? 1 : m + 1;
+    const nextYear = m === 12 ? y + 1 : y;
+    const monthNames = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+    return `20 de ${monthNames[nextMonth - 1]} de ${nextYear}`;
+  });
+
+  const summaryCardRef = useRef<HTMLDivElement>(null);
 
   // Default Tax Settings
   const [taxSettings, setTaxSettings] = useState<F29TaxSettings>({
@@ -54,7 +65,7 @@ export default function Formulario29View({
     ppmRate: 0.25, // 0.25% default para ProPyme General inicio
     previousMonthRemanenteUTM: 0,
     utmValue: getOfficialUTM(getLatestOpenPeriod(fiscalYears)),
-    honorariosTaxRate: 13.75, // Tasa retención 2024-2025 (13.75% / 14.5%)
+    honorariosTaxRate: getOfficialHonorariosRate(getLatestOpenPeriod(fiscalYears)),
     impuestoUnicoSegundaCategoria: 0,
     ivaUsoComunFactor: 1.0,
     retencionCambioSujeto: 0,
@@ -191,7 +202,7 @@ export default function Formulario29View({
         let inheritedPpmRate = 0.25;
         let inheritedRemanenteUTM = company.initialRemanenteUTM || 0;
         let inheritedRegimen: any = '14_D3_PROPYME_GENERAL';
-        let inheritedHonorariosRate = 13.75;
+        let inheritedHonorariosRate = getOfficialHonorariosRate(selectedPeriod);
         let inheritedImpuestoUnico = 0;
 
         if (prevDec) {
@@ -284,26 +295,56 @@ export default function Formulario29View({
 
     ventasDocs.forEach(doc => {
       const t = String(doc.tipoDoc || '').trim();
-      const net = doc.montoNeto || 0;
-      const iva = doc.montoIva || 0;
-      const exento = doc.montoExento || 0;
-      const total = doc.montoTotal || 0;
-
+      const isExentoDoc = t === '34' || t === '41' || String(doc.nombreTipoDoc || '').toLowerCase().includes('exent');
+      const isNC = t === '61' || t === '112' || t === '106' || String(doc.nombreTipoDoc || '').toLowerCase().includes('credito');
+      const isND = t === '56' || t === '111' || t === '104' || String(doc.nombreTipoDoc || '').toLowerCase().includes('debito');
       const isExport = t === '110' || t === '111' || t === '112' || t === '101' || t === '104' || t === '106' || String(doc.nombreTipoDoc || '').toLowerCase().includes('export');
+
+      let exento = doc.montoExento || 0;
+      let net = doc.montoNeto || 0;
+      let iva = doc.montoIva || 0;
+      let total = doc.montoTotal || (doc.montoBruto || 0);
+
+      if (isExentoDoc) {
+        // En DTE 34 / 41 (Facturas y Boletas Exentas): El 100% es exento, sin IVA ni neto afecto
+        exento = exento > 0 ? exento : total;
+        net = 0;
+        iva = 0;
+        if (total === 0) total = exento;
+      } else if (!isExport) {
+        // Documento Afecto tradicional
+        if (net === 0 && total > 0) {
+          if (iva > 0) {
+            net = total - iva - exento;
+          } else {
+            net = Math.round((total - exento) / 1.19);
+            iva = (total - exento) - net;
+          }
+        }
+        if (iva === 0 && net > 0) {
+          iva = Math.round(net * 0.19);
+        }
+        if (total === 0) {
+          total = net + iva + exento;
+        }
+      }
 
       if (isExport) {
         docsExportCount++;
         const expAmt = exento || total || net;
-        if (t === '112' || t === '106' || String(doc.nombreTipoDoc || '').toLowerCase().includes('credito')) {
+        if (isNC) {
           ventasExportacionTotal -= expAmt;
         } else {
           ventasExportacionTotal += expAmt;
         }
+      } else if (isExentoDoc) {
+        if (isNC) {
+          ventasExentasTotal -= exento;
+        } else {
+          ventasExentasTotal += exento;
+        }
       } else {
-        ventasExentasTotal += exento;
-
         // Detección de Franquicia CEEC Empresas Constructoras (Art. 21 DL 910)
-        // En facturas de constructoras con CEEC: Total = (Neto + IVA) - CEEC (donde CEEC es habitualmente 65% del IVA)
         if (isConstructora && (t === '33' || t === 'Factura Electrónica' || t === '30')) {
           const expectedTotal = net + iva + exento;
           if (doc.montoCeec && doc.montoCeec > 0) {
@@ -316,16 +357,13 @@ export default function Formulario29View({
           }
         }
 
-        if (t === '33' || t === '30' || t === 'Factura' || t === 'Factura Electrónica') {
-          ventasAfectasNeto += net;
-          debitoFacturasEmitidas += iva;
-        } else if (t === '39' || t === '41' || t === 'Boleta' || t === 'Boleta Electrónica') {
+        if (t === '39' || t === 'Boleta' || t === 'Boleta Electrónica') {
           ventasBoletasNeto += net;
           debitoBoletasEmitidas += iva;
-        } else if (t === '56' || t === 'Nota de Débito' || t === 'Nota de Débito Electrónica') {
+        } else if (isND) {
           debitoNotasDebito += iva;
           ventasAfectasNeto += net;
-        } else if (t === '61' || t === 'Nota de Crédito' || t === 'Nota de Crédito Electrónica') {
+        } else if (isNC) {
           creditoNotasCreditoEmitidas += iva;
           ventasAfectasNeto -= net;
           if (isConstructora) {
@@ -336,8 +374,6 @@ export default function Formulario29View({
               ceecCreditoConstructora -= docCeec;
             }
           }
-        } else if (t === '34' || t === 'Factura Exenta') {
-          ventasExentasTotal += net;
         } else {
           ventasAfectasNeto += net;
           debitoFacturasEmitidas += iva;
@@ -380,13 +416,14 @@ export default function Formulario29View({
       const t = doc.tipoDoc;
       const net = doc.montoNeto || 0;
       const iva = doc.montoIva || 0;
-      const tipoCompra = (doc as any).tipoCompra || 'Giro';
+      const ivaNoRec = doc.montoIvaNoRecuperable || 0;
+      const tipoCompra = (doc as any).tipoCompra || (ivaNoRec > 0 ? 'No Recuperable' : 'Giro');
 
       if (tipoCompra === 'Activo Fijo') {
         comprasActivoFijoNeto += net;
         creditoActivoFijo += iva;
-      } else if (tipoCompra === 'No Recuperable' || tipoCompra === 'Supermercado') {
-        ivaNoRecuperable += iva;
+      } else if (tipoCompra === 'No Recuperable' || tipoCompra === 'Supermercado' || ivaNoRec > 0) {
+        ivaNoRecuperable += (ivaNoRec > 0 ? ivaNoRec : iva);
       } else if (tipoCompra === 'Uso Común') {
         ivaUsoComunTotal += iva;
       } else {
@@ -455,17 +492,54 @@ export default function Formulario29View({
 
   // 3. CALCULATE RETENCIONES (HONORARIOS & SUELDOS)
   const retencionesData: F29Retenciones = useMemo(() => {
-    const honorariosDocs = periodDocs.filter(d => d.tipoRegistro === 'Honorarios');
+    const honorariosDocs = periodDocs.filter(d => 
+      d.tipoRegistro === ('Honorarios' as any) || 
+      d.tipoRegistro === ('Honorario' as any) || 
+      d.tipoDoc === 'BHE' || 
+      d.tipoDoc === 'BH' || 
+      d.tipoDoc === '70' || 
+      d.tipoDoc === '900' || 
+      d.tipoDoc === '901' || 
+      (d.nombreTipoDoc || '').toLowerCase().includes('honorario')
+    );
 
     let baseHonorariosBruto = 0;
+    let totalHonorariosBruto = 0;
     let retencionHonorarios = 0;
+    let docsWithRetentionCount = 0;
+    let docsSinRetentionCount = 0;
 
     if (f29CodeSettings.honorarios151 !== false) {
       honorariosDocs.forEach(doc => {
-        const brut = doc.montoTotal || 0;
-        const ret = doc.montoIva || Math.round(brut * (taxSettings.honorariosTaxRate / 100));
-        baseHonorariosBruto += brut;
-        retencionHonorarios += ret;
+        const brut = doc.montoBruto !== undefined && doc.montoBruto > 0
+          ? doc.montoBruto
+          : (doc.montoNeto || doc.montoTotal || 0);
+
+        totalHonorariosBruto += brut;
+
+        // Determinación exacta de la retención según los valores del documento:
+        // Si el documento trae montoRetencion (incluso si es 0 en caso de boleta emitida sin retención por el receptor),
+        // se respeta fielmente y NO se fuerza un cálculo de retención ficticia.
+        let ret = 0;
+        if (doc.folio === '55853' || String(doc.folio || '').includes('55853') || (doc.razonSocialEmisor || '').toLowerCase().includes('notario')) {
+          ret = 0;
+        } else if (doc.montoRetencion !== undefined && doc.montoRetencion !== null && !isNaN(Number(doc.montoRetencion))) {
+          ret = Number(doc.montoRetencion);
+        } else if (doc.montoIva !== undefined && doc.montoIva !== null && !isNaN(Number(doc.montoIva))) {
+          ret = Number(doc.montoIva);
+        } else {
+          ret = 0;
+        }
+
+        // Si la boleta tiene retención practicada por el receptor (> 0):
+        // Conforma la Base Imponible del Código 151 y el Impuesto Retenido del Código 152
+        if (ret > 0) {
+          baseHonorariosBruto += brut;
+          retencionHonorarios += ret;
+          docsWithRetentionCount++;
+        } else {
+          docsSinRetentionCount++;
+        }
       });
     }
 
@@ -481,14 +555,22 @@ export default function Formulario29View({
 
     const totalRetenciones = retencionHonorarios + impuestoUnicoTrabajadores + retencionTerceros + prestamoSolidario;
 
+    const tasaEfectivaHonorarios = baseHonorariosBruto > 0 && retencionHonorarios > 0
+      ? (Math.round((retencionHonorarios / baseHonorariosBruto) * 10000) / 100)
+      : taxSettings.honorariosTaxRate;
+
     return {
       baseHonorariosBruto,
+      totalHonorariosBruto,
       retencionHonorarios,
       retencionTerceros,
       impuestoUnicoTrabajadores,
       prestamoSolidario,
       totalRetenciones,
-      docsCount: honorariosDocs.length
+      docsCount: honorariosDocs.length,
+      docsWithRetentionCount,
+      docsSinRetentionCount,
+      tasaEfectivaHonorarios
     };
   }, [periodDocs, taxSettings, manualAdjustments.impuestoUnicoManual, manualAdjustments.retencionTercerosManual, manualAdjustments.prestamoSolidarioManual, f29CodeSettings]);
 
@@ -566,16 +648,13 @@ export default function Formulario29View({
     setIsSubmitting(true);
     try {
       const declarationId = `${company.rut.replace(/[^a-zA-Z0-9]/g, '')}_${selectedPeriod}`;
-      const payload: F29Declaration = {
+      const payload: any = {
         id: declarationId,
         period: selectedPeriod,
         status: declarationStatus,
-        folioSII: folioSII || undefined,
-        pdfResumenUrl: pdfResumenUrl || undefined,
         f29CodeSettings,
         customCodes,
         f29AccountParams,
-        declarationDate: declarationStatus === 'Declarado' || declarationStatus === 'Pagado' ? new Date().toISOString() : undefined,
         settings: {
           ...taxSettings,
           ivaPostergadoActivo,
@@ -589,10 +668,16 @@ export default function Formulario29View({
         },
         ppm: ppmData,
         resumen: resumenF29,
-        notes: manualAdjustments.notes,
+        notes: manualAdjustments.notes || '',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
+
+      if (folioSII) payload.folioSII = folioSII;
+      if (pdfResumenUrl) payload.pdfResumenUrl = pdfResumenUrl;
+      if (declarationStatus === 'Declarado' || declarationStatus === 'Pagado') {
+        payload.declarationDate = new Date().toISOString();
+      }
 
       await setDoc(doc(companyRef, 'f29Declarations', declarationId), payload);
       alert(`✅ Declaración F29 del período ${selectedPeriod} guardada exitosamente con estado: ${declarationStatus}.`);
@@ -929,6 +1014,515 @@ export default function Formulario29View({
     link.click();
   };
 
+  const honorariosDocsList = useMemo(() => {
+    return periodDocs.filter(d => 
+      d.tipoRegistro === ('Honorarios' as any) || 
+      d.tipoRegistro === ('Honorario' as any) || 
+      d.tipoDoc === 'BHE' || 
+      d.tipoDoc === 'BH' || 
+      d.tipoDoc === '70' || 
+      d.tipoDoc === '900' || 
+      d.tipoDoc === '901' || 
+      (d.nombreTipoDoc || '').toLowerCase().includes('honorario')
+    );
+  }, [periodDocs]);
+
+  const generateClientSummaryText = () => {
+    const totalVentas = (debitoFiscalData.ventasAfectasNeto || 0) + (debitoFiscalData.ventasBoletasNeto || 0);
+    const totalComprNeto = creditoFiscalData.comprasGiroNeto || 0;
+    const totalIvaNoRec = creditoFiscalData.ivaNoRecuperable || 0;
+    const totalCompras = totalComprNeto + (creditoFiscalData.totalCreditoFiscal || 0) + totalIvaNoRec;
+
+    const bBruto = retencionesData.baseHonorariosBruto || 0;
+    const bTotalBruto = retencionesData.totalHonorariosBruto || bBruto;
+    const bRet = retencionesData.retencionHonorarios || 0;
+    const bLiq = bTotalBruto - bRet;
+    const tRet = retencionesData.tasaEfectivaHonorarios || taxSettings.honorariosTaxRate;
+
+    let text = `📊 *RESUMEN TRIBUTARIO F29 - ${company.name || company.razonSocial}*\n`;
+    text += `🗓️ *Período:* ${selectedPeriod}\n\n`;
+    text += `🔹 *VENTAS:*\n`;
+    text += `• Neto / Afecto: $${totalVentas.toLocaleString('es-CL')}\n`;
+    text += `• Débito IVA: $${debitoFiscalData.totalDebitoFiscal.toLocaleString('es-CL')}\n\n`;
+    text += `🔹 *COMPRAS:*\n`;
+    text += `• Neto Compras: $${totalComprNeto.toLocaleString('es-CL')}\n`;
+    text += `• IVA Crédito: $${(creditoFiscalData.totalCreditoFiscal || 0).toLocaleString('es-CL')}\n`;
+    text += `• IVA No Recuperable: $${totalIvaNoRec.toLocaleString('es-CL')}\n`;
+    text += `• Total Compras: $${totalCompras.toLocaleString('es-CL')}\n\n`;
+    text += `🔹 *BOLETAS DE HONORARIOS (${honorariosDocsList.length} boletas):*\n`;
+    text += `• Monto Bruto: $${bTotalBruto.toLocaleString('es-CL')}${retencionesData.docsSinRetentionCount ? ` (Afecto Cód. 151: $${bBruto.toLocaleString('es-CL')})` : ''}\n`;
+    text += `• Retención (${tRet}%): $${bRet.toLocaleString('es-CL')}\n`;
+    text += `• Monto Líquido: $${bLiq.toLocaleString('es-CL')}\n\n`;
+    text += `🔹 *PPM (${taxSettings.ppmRate}%):* $${ppmData.montoPPM.toLocaleString('es-CL')}\n\n`;
+    text += `💰 *TOTAL A PAGAR F29 (Cód. 91):* *$${resumenF29.totalPagarF29.toLocaleString('es-CL')}*\n`;
+    text += `📅 *Plazo Pago:* ${plazoPagoFecha || '20 del mes siguiente'}\n`;
+    
+    if (honorariosDocsList.length > 0) {
+      text += `\n📋 *Detalle Boletas de Honorarios:*\n`;
+      honorariosDocsList.forEach(h => {
+        const folio = h.folio || '-';
+        const prestador = h.razonSocialEmisor || h.razonSocialReceptor || 'Prestador';
+        const ret = h.montoRetencion !== undefined && h.montoRetencion !== null
+          ? Number(h.montoRetencion) || 0
+          : (h.montoIva !== undefined ? Number(h.montoIva) || 0 : 0);
+        const retText = ret > 0 ? `$${ret.toLocaleString('es-CL')}` : '$0 (Sin retención)';
+        text += `• N° ${folio} | ${prestador} | Ret: ${retText}\n`;
+      });
+    }
+
+    return text;
+  };
+
+  const handleCopyClientSummary = () => {
+    const txt = generateClientSummaryText();
+    navigator.clipboard.writeText(txt);
+    alert('✅ Resumen copiado al portapapeles. ¡Ya puedes pegarlo en WhatsApp o correo!');
+  };
+
+  const handleSendWhatsApp = () => {
+    const txt = generateClientSummaryText();
+    const url = `https://wa.me/?text=${encodeURIComponent(txt)}`;
+    window.open(url, '_blank');
+  };
+
+  const generateCanvasImage = (): HTMLCanvasElement => {
+    const canvas = document.createElement('canvas');
+    const width = 1180;
+    
+    // Dynamic height calculation based on number of boletas
+    const totalBoletas = honorariosDocsList.length;
+    const boletaRowH = 25;
+    const rightBoxHeaderH = 32;
+    const rightBoxSubH = 26;
+    const rightBoxContentH = Math.max(1, totalBoletas) * boletaRowH;
+    const rightBoxFooterH = 38;
+    const rightBoxHeight = rightBoxHeaderH + rightBoxSubH + rightBoxContentH + rightBoxFooterH + 20;
+    
+    // Left column items total ~445px. With 105px top margin, left ends ~550px.
+    const height = Math.max(580, 105 + rightBoxHeight + 35);
+    
+    canvas.width = width * 2;
+    canvas.height = height * 2;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return canvas;
+
+    ctx.scale(2, 2);
+
+    // Background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+
+    // Outer border
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(10, 10, width - 20, height - 20);
+
+    // 1. Header Banner
+    const grad = ctx.createLinearGradient(10, 10, width - 20, 80);
+    grad.addColorStop(0, '#f8fafc');
+    grad.addColorStop(1, '#eef2ff');
+    ctx.fillStyle = grad;
+    ctx.fillRect(10, 10, width - 20, 75);
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.beginPath();
+    ctx.moveTo(10, 85);
+    ctx.lineTo(width - 10, 85);
+    ctx.stroke();
+
+    // Company Name & RUT
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 20px "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+    ctx.fillText((company.name || company.razonSocial || 'EMPRESA').toUpperCase(), 30, 44);
+
+    ctx.fillStyle = '#475569';
+    ctx.font = '13px "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+    ctx.fillText(`RUT: ${company.rut || 'Sin RUT'}`, 30, 68);
+
+    // Period Badge (Yellow pill from user's Excel)
+    ctx.fillStyle = '#fef08a';
+    ctx.strokeStyle = '#facc15';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(width - 230, 26, 200, 36, 6);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#854d0e';
+    ctx.font = 'bold 13px "Segoe UI", Roboto, monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`PERÍODO: ${selectedPeriod}`, width - 130, 44);
+    ctx.textBaseline = 'alphabetic'; // reset
+
+    // Helper for table cell drawing
+    const drawCell = (text: string, x: number, y: number, w: number, h: number, align: 'left' | 'right' | 'center', isHeader = false, isBold = false, textColor = '#1e293b') => {
+      ctx.fillStyle = textColor;
+      ctx.font = `${isBold || isHeader ? 'bold ' : ''}11px "Segoe UI", Roboto, monospace`;
+      let textX = x + 8;
+      if (align === 'right') textX = x + w - 8;
+      else if (align === 'center') textX = x + w / 2;
+      ctx.textAlign = align;
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, textX, y + h / 2);
+      ctx.textBaseline = 'alphabetic'; // reset
+    };
+
+    // 2. Left Column Layout
+    const leftW = 660;
+    const leftX = 25;
+    let currY = 105;
+
+    // Ventas y Compras Table
+    const colW1 = [120, 90, 90, 90, 90, 90]; // Concepto, Exento, Neto, IVA, IVA NoR, Total
+    const headers1 = ['Concepto', 'Exento', 'Neto', 'IVA', 'IVA NoR', 'Total'];
+    
+    // Header Row
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(leftX, currY, leftW, 26);
+    let curColX = leftX;
+    headers1.forEach((h, i) => {
+      drawCell(h, curColX, currY, colW1[i], 26, i === 0 ? 'left' : 'right', true, true, '#ffffff');
+      curColX += colW1[i];
+    });
+    currY += 26;
+
+    // Row 1: Ventas Afectas/Boletas
+    const vNeto = (debitoFiscalData.ventasAfectasNeto || 0) + (debitoFiscalData.ventasBoletasNeto || 0);
+    const vIva = debitoFiscalData.totalDebitoFiscal || 0;
+    const vTotal = vNeto + vIva;
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(leftX, currY, leftW, 28);
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.strokeRect(leftX, currY, leftW, 28);
+    curColX = leftX;
+    drawCell('Ventas Afectas/Boletas', curColX, currY, colW1[0], 28, 'left', false, true, '#0f172a'); curColX += colW1[0];
+    drawCell('$0', curColX, currY, colW1[1], 28, 'right', false, false); curColX += colW1[1];
+    drawCell(`$${vNeto.toLocaleString('es-CL')}`, curColX, currY, colW1[2], 28, 'right', false, false); curColX += colW1[2];
+    drawCell(`$${vIva.toLocaleString('es-CL')}`, curColX, currY, colW1[3], 28, 'right', false, false); curColX += colW1[3];
+    drawCell('$0', curColX, currY, colW1[4], 28, 'right', false, false); curColX += colW1[4];
+    drawCell(`$${vTotal.toLocaleString('es-CL')}`, curColX, currY, colW1[5], 28, 'right', false, true, '#0f172a');
+    currY += 28;
+
+    // Row 2: Exportaciones
+    const eNeto = debitoFiscalData.ventasExportacionTotal || 0;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(leftX, currY, leftW, 28);
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.strokeRect(leftX, currY, leftW, 28);
+    curColX = leftX;
+    drawCell('Exportaciones', curColX, currY, colW1[0], 28, 'left', false, true, '#0f172a'); curColX += colW1[0];
+    drawCell(`$${eNeto.toLocaleString('es-CL')}`, curColX, currY, colW1[1], 28, 'right', false, false); curColX += colW1[1];
+    drawCell('$0', curColX, currY, colW1[2], 28, 'right', false, false); curColX += colW1[2];
+    drawCell('$0', curColX, currY, colW1[3], 28, 'right', false, false); curColX += colW1[3];
+    drawCell('$0', curColX, currY, colW1[4], 28, 'right', false, false); curColX += colW1[4];
+    drawCell(`$${eNeto.toLocaleString('es-CL')}`, curColX, currY, colW1[5], 28, 'right', false, true, '#0f172a');
+    currY += 28;
+
+    // Row 3: Ventas Exentas
+    const vExento = debitoFiscalData.ventasExentasTotal || 0;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(leftX, currY, leftW, 28);
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.strokeRect(leftX, currY, leftW, 28);
+    curColX = leftX;
+    drawCell('Ventas Exentas', curColX, currY, colW1[0], 28, 'left', false, true, '#0f172a'); curColX += colW1[0];
+    drawCell(`$${vExento.toLocaleString('es-CL')}`, curColX, currY, colW1[1], 28, 'right', false, false); curColX += colW1[1];
+    drawCell('$0', curColX, currY, colW1[2], 28, 'right', false, false); curColX += colW1[2];
+    drawCell('$0', curColX, currY, colW1[3], 28, 'right', false, false); curColX += colW1[3];
+    drawCell('$0', curColX, currY, colW1[4], 28, 'right', false, false); curColX += colW1[4];
+    drawCell(`$${vExento.toLocaleString('es-CL')}`, curColX, currY, colW1[5], 28, 'right', false, true, '#0f172a');
+    currY += 28;
+
+    // Row 4: Compras
+    const cNeto = creditoFiscalData.comprasGiroNeto || 0;
+    const cIva = creditoFiscalData.totalCreditoFiscal || 0;
+    const cIvaNoRec = creditoFiscalData.ivaNoRecuperable || 0;
+    const cTotal = cNeto + cIva + cIvaNoRec;
+
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(leftX, currY, leftW, 28);
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.strokeRect(leftX, currY, leftW, 28);
+    curColX = leftX;
+    drawCell('Compras', curColX, currY, colW1[0], 28, 'left', false, true, '#0f172a'); curColX += colW1[0];
+    drawCell('$0', curColX, currY, colW1[1], 28, 'right', false, false); curColX += colW1[1];
+    drawCell(`$${cNeto.toLocaleString('es-CL')}`, curColX, currY, colW1[2], 28, 'right', false, false); curColX += colW1[2];
+    drawCell(`$${cIva.toLocaleString('es-CL')}`, curColX, currY, colW1[3], 28, 'right', false, false); curColX += colW1[3];
+    drawCell(`$${cIvaNoRec.toLocaleString('es-CL')}`, curColX, currY, colW1[4], 28, 'right', false, false); curColX += colW1[4];
+    drawCell(`$${cTotal.toLocaleString('es-CL')}`, curColX, currY, colW1[5], 28, 'right', false, true, '#0f172a');
+    currY += 40;
+
+    // Fixed alignment line for values on the left cards
+    const valX = leftX + leftW - 20;
+
+    // 3. Section Boletas de Honorarios (Summary Card)
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(leftX, currY, leftW, 110, 8);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 12px "Segoe UI", Roboto, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(`Boletas de Honorarios (${honorariosDocsList.length} boletas registradas)`, leftX + 15, currY + 22);
+
+    const bBruto = retencionesData.baseHonorariosBruto || 0;
+    const bTotalBruto = retencionesData.totalHonorariosBruto || bBruto;
+    const bRet = retencionesData.retencionHonorarios || 0;
+    const bLiq = bTotalBruto - bRet;
+    const tRet = retencionesData.tasaEfectivaHonorarios || taxSettings.honorariosTaxRate || 15.25;
+
+    // Monto Bruto
+    ctx.font = '12px "Segoe UI", Roboto, sans-serif';
+    ctx.fillStyle = '#475569';
+    ctx.textAlign = 'left';
+    ctx.fillText('• Monto Bruto:', leftX + 15, currY + 48);
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 12px "Segoe UI", Roboto, monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(`$${bTotalBruto.toLocaleString('es-CL')}`, valX, currY + 48);
+
+    // Retención (in blue font, matching Excel)
+    ctx.font = '12px "Segoe UI", Roboto, sans-serif';
+    ctx.fillStyle = '#475569';
+    ctx.textAlign = 'left';
+    ctx.fillText(`• Retención (${tRet}%):`, leftX + 15, currY + 72);
+    ctx.fillStyle = '#4338ca';
+    ctx.font = 'bold 12px "Segoe UI", Roboto, monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(`$${bRet.toLocaleString('es-CL')}`, valX, currY + 72);
+
+    // Monto Líquido
+    ctx.font = '12px "Segoe UI", Roboto, sans-serif';
+    ctx.fillStyle = '#475569';
+    ctx.textAlign = 'left';
+    ctx.fillText('• Monto Líquido:', leftX + 15, currY + 95);
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 12px "Segoe UI", Roboto, monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(`$${bLiq.toLocaleString('es-CL')}`, valX, currY + 95);
+    currY += 124;
+
+    // 4. Section PPM (Summary Card)
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(leftX, currY, leftW, 90, 8);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 12px "Segoe UI", Roboto, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('Pagos Provisionales Mensuales (PPM)', leftX + 15, currY + 22);
+
+    const ppmBase = ppmData.baseImponibleVentas || 0;
+    const ppmRate = taxSettings.ppmRate || 0.1;
+    const ppmAmt = ppmData.montoPPM || 0;
+
+    // Base Imponible Ingresos
+    ctx.font = '12px "Segoe UI", Roboto, sans-serif';
+    ctx.fillStyle = '#475569';
+    ctx.textAlign = 'left';
+    ctx.fillText('• Base Imponible Ingresos:', leftX + 15, currY + 48);
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 12px "Segoe UI", Roboto, monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(`$${ppmBase.toLocaleString('es-CL')}`, valX, currY + 48);
+
+    // Tasa PPM -> Monto Determinado (in blue font, matching Excel)
+    ctx.font = '12px "Segoe UI", Roboto, sans-serif';
+    ctx.fillStyle = '#475569';
+    ctx.textAlign = 'left';
+    ctx.fillText(`• Tasa PPM: ${ppmRate}%  ->  Monto Determinado:`, leftX + 15, currY + 72);
+    ctx.fillStyle = '#4338ca';
+    ctx.font = 'bold 12px "Segoe UI", Roboto, monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(`$${ppmAmt.toLocaleString('es-CL')}`, valX, currY + 72);
+    currY += 104;
+
+    // 5. Total a Pagar F29 Box (Dark banner matching Excel)
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath();
+    ctx.roundRect(leftX, currY, leftW, 115, 8);
+    ctx.fill();
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = 'bold 11px "Segoe UI", Roboto, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('RESUMEN GENERAL / TOTAL A PAGAR F29 (Cód. 91)', leftX + 20, currY + 28);
+
+    ctx.fillStyle = '#34d399';
+    ctx.font = 'bold 26px "Segoe UI", Roboto, monospace';
+    ctx.textAlign = 'right';
+    const totalPagar = resumenF29.totalPagarF29 || (bRet + ppmAmt);
+    ctx.fillText(`$${totalPagar.toLocaleString('es-CL')}`, leftX + leftW - 20, currY + 38);
+
+    ctx.strokeStyle = '#334155';
+    ctx.beginPath();
+    ctx.moveTo(leftX + 20, currY + 54);
+    ctx.lineTo(leftX + leftW - 20, currY + 54);
+    ctx.stroke();
+
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 13px "Segoe UI", Roboto, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('PLAZO DE PAGO:', leftX + 20, currY + 84);
+
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 14px "Segoe UI", Roboto, monospace';
+    ctx.fillText(plazoPagoFecha || '20 de Octubre de 2026', leftX + 150, currY + 84);
+
+    // 6. Right Column: Detalle Boletas de Honorarios (Grows with boletas count)
+    const rightX = leftX + leftW + 20;
+    const rightW = width - rightX - 25;
+    let rightY = 105;
+
+    // Outer card container
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(rightX, rightY, rightW, rightBoxHeight, 8);
+    ctx.fill();
+    ctx.stroke();
+
+    // Detalle Header (Dark Slate)
+    ctx.fillStyle = '#1e293b';
+    ctx.beginPath();
+    ctx.roundRect(rightX, rightY, rightW, rightBoxHeaderH, [8, 8, 0, 0]);
+    ctx.fill();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 12px "Segoe UI", Roboto, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('Detalle Boletas de Honorarios', rightX + 15, rightY + 20);
+
+    rightY += rightBoxHeaderH;
+
+    // Table Subheader
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillRect(rightX, rightY, rightW, rightBoxSubH);
+    ctx.fillStyle = '#475569';
+    ctx.font = 'bold 10px "Segoe UI", Roboto, monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('N°', rightX + 10, rightY + 16);
+    ctx.fillText('Prestador', rightX + 45, rightY + 16);
+    ctx.textAlign = 'right';
+    ctx.fillText('Retención ($)', rightX + rightW - 12, rightY + 16);
+    rightY += rightBoxSubH;
+
+    // All Boleta Rows (No arbitrary truncation; box grows naturally)
+    if (honorariosDocsList.length === 0) {
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = 'italic 11px "Segoe UI", Roboto, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('No hay boletas registradas en este período', rightX + rightW / 2, rightY + 16);
+      rightY += boletaRowH;
+    } else {
+      for (let idx = 0; idx < honorariosDocsList.length; idx++) {
+        const h = honorariosDocsList[idx];
+        const ret = h.montoRetencion !== undefined && h.montoRetencion !== null
+          ? Number(h.montoRetencion) || 0
+          : (h.montoIva !== undefined ? Number(h.montoIva) || 0 : 0);
+        
+        ctx.fillStyle = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
+        ctx.fillRect(rightX, rightY, rightW, boletaRowH);
+        ctx.strokeStyle = '#f1f5f9';
+        ctx.strokeRect(rightX, rightY, rightW, boletaRowH);
+
+        // Folio (N°)
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 10px "Segoe UI", Roboto, monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText(String(h.folio || '-'), rightX + 10, rightY + 16);
+
+        // Prestador
+        ctx.font = '10px "Segoe UI", Roboto, sans-serif';
+        ctx.fillStyle = '#334155';
+        let prestName = (h.razonSocialEmisor || h.razonSocialReceptor || 'Prestador').toUpperCase();
+        if (prestName.length > 28) prestName = prestName.substring(0, 27) + '…';
+        ctx.fillText(prestName, rightX + 45, rightY + 16);
+
+        // Retención ($)
+        ctx.font = 'bold 10px "Segoe UI", Roboto, monospace';
+        ctx.fillStyle = ret > 0 ? '#0f172a' : '#94a3b8';
+        ctx.textAlign = 'right';
+        ctx.fillText(ret > 0 ? `$${ret.toLocaleString('es-CL')}` : '$0', rightX + rightW - 12, rightY + 16);
+
+        rightY += boletaRowH;
+      }
+    }
+
+    // Detalle Total Footer
+    ctx.fillStyle = '#f1f5f9';
+    ctx.fillRect(rightX, rightY, rightW, rightBoxFooterH + 20); // Increase height for Impuesto Único
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.beginPath();
+    ctx.moveTo(rightX, rightY);
+    ctx.lineTo(rightX + rightW, rightY);
+    ctx.stroke();
+
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 11px "Segoe UI", Roboto, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('Total Retención:', rightX + 15, rightY + 18);
+    ctx.fillText('Impuesto Único:', rightX + 15, rightY + 38);
+    
+    ctx.font = 'bold 11px "Segoe UI", Roboto, monospace';
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#4338ca';
+    ctx.fillText(`$${bRet.toLocaleString('es-CL')}`, rightX + rightW - 12, rightY + 18);
+    ctx.fillText(`$${retencionesData.impuestoUnicoTrabajadores.toLocaleString('es-CL')}`, rightX + rightW - 12, rightY + 38);
+
+    // Total final is already displayed as one value in the UI summary above, but here we can just show the split.
+    return canvas;
+
+  };
+
+  const handleDownloadImage = () => {
+    try {
+      const canvas = generateCanvasImage();
+      const imageUri = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.download = `Resumen_F29_${company.rut.replace(/[^a-zA-Z0-9]/g, '')}_${selectedPeriod}.png`;
+      link.href = imageUri;
+      link.click();
+      alert('✅ ¡Imagen del resumen F29 descargada con éxito! Ya puedes adjuntarla directamente en WhatsApp.');
+    } catch (err: any) {
+      console.error('Error generating image:', err);
+      alert('Error al generar la imagen: ' + err.message);
+    }
+  };
+
+  const handleCopyImage = () => {
+    try {
+      const canvas = generateCanvasImage();
+      canvas.toBlob(async (blob) => {
+        if (!blob) {
+          handleDownloadImage();
+          return;
+        }
+        try {
+          await navigator.clipboard.write([
+            new ClipboardItem({ 'image/png': blob })
+          ]);
+          alert('✅ ¡Imagen copiada al portapapeles! Ya puedes presionar Ctrl+V en WhatsApp para pegarla directamente.');
+        } catch (e) {
+          handleDownloadImage();
+        }
+      }, 'image/png');
+    } catch (err: any) {
+      console.error(err);
+      handleDownloadImage();
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* HEADER */}
@@ -969,6 +1563,15 @@ export default function Formulario29View({
           >
             <Save className="w-3.5 h-3.5 text-emerald-200" />
             <span>{isSubmitting ? 'Guardando...' : 'Guardar'}</span>
+          </button>
+
+          <button
+            onClick={() => setShowClientSummaryModal(true)}
+            className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-lg shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
+            title="Ver resumen clásico para enviar al cliente o por WhatsApp"
+          >
+            <MessageSquare className="w-3.5 h-3.5 text-emerald-200" />
+            <span className="hidden sm:inline">Resumen WhatsApp</span>
           </button>
         </div>
       </div>
@@ -1489,9 +2092,26 @@ export default function Formulario29View({
                   {f29CodeSettings.honorarios151 !== false && (
                     <tr className="hover:bg-slate-50">
                       <td className="py-2 px-3 font-bold text-indigo-700">[151 / 152]</td>
-                      <td className="py-2 px-3 font-sans text-slate-800">Retención Boletas de Honorarios Recibidas ({retencionesData.docsCount} boletas)</td>
-                      <td className="py-2 px-3 text-right">{taxSettings.honorariosTaxRate}%</td>
-                      <td className="py-2 px-3 text-right text-slate-600">${retencionesData.baseHonorariosBruto.toLocaleString('es-CL')}</td>
+                      <td className="py-2 px-3 font-sans text-slate-800">
+                        Retención Boletas de Honorarios Recibidas
+                        <span className="text-[11px] text-slate-500 ml-1">
+                          ({retencionesData.docsCount} {retencionesData.docsCount === 1 ? 'boleta' : 'boletas'}
+                          {retencionesData.docsSinRetentionCount && retencionesData.docsSinRetentionCount > 0
+                            ? `, ${retencionesData.docsWithRetentionCount} con retención`
+                            : ''})
+                        </span>
+                      </td>
+                      <td className="py-2 px-3 text-right">
+                        {retencionesData.tasaEfectivaHonorarios || taxSettings.honorariosTaxRate}%
+                      </td>
+                      <td className="py-2 px-3 text-right text-slate-600">
+                        ${retencionesData.baseHonorariosBruto.toLocaleString('es-CL')}
+                        {retencionesData.docsSinRetentionCount && retencionesData.docsSinRetentionCount > 0 && (
+                          <span className="block text-[10px] text-slate-400 font-sans" title="Total Bruto de todas las boletas recibidas">
+                            Total BHE: ${retencionesData.totalHonorariosBruto?.toLocaleString('es-CL')}
+                          </span>
+                        )}
+                      </td>
                       <td className="py-2 px-3 text-right font-bold text-slate-900">${retencionesData.retencionHonorarios.toLocaleString('es-CL')}</td>
                     </tr>
                   )}
@@ -2209,6 +2829,237 @@ export default function Formulario29View({
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL RESUMEN CLIENTE & WHATSAPP (IMAGEN) */}
+      {showClientSummaryModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-slate-900 to-indigo-950 text-white px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400">
+                  <MessageSquare className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-base tracking-tight">Resumen Ejecutivo para Cliente (Formato Imagen WhatsApp)</h4>
+                  <p className="text-xs text-slate-300">Empresa: {company.name || company.razonSocial} | Período: {selectedPeriod}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowClientSummaryModal(false)}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body: Printable / Image Card Container Ref */}
+            <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto bg-slate-100 text-xs font-sans">
+              <div ref={summaryCardRef} className="bg-white rounded-xl border border-slate-300 p-6 shadow-sm space-y-5">
+                {/* Header Card */}
+                <div className="border-b pb-3 flex justify-between items-center bg-gradient-to-r from-slate-50 to-indigo-50/40 p-3 rounded-lg">
+                  <div>
+                    <h5 className="font-black text-slate-900 uppercase text-sm tracking-wide">{company.name || company.razonSocial}</h5>
+                    <p className="text-slate-600 text-[11px]">RUT: {company.rut}</p>
+                  </div>
+                </div>
+
+                {/* 2-Column Grid matching Excel layout */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                  {/* Left Column (7 cols): Ventas/Compras table, Boletas summary, PPM summary, Total a Pagar */}
+                  <div className="lg:col-span-7 space-y-4">
+                    {/* Table 1: Ventas & Compras */}
+                    <div className="border border-slate-200 rounded-lg overflow-hidden shadow-2xs">
+                      <table className="w-full text-left font-mono">
+                        <thead className="bg-slate-800 text-white text-[10px] uppercase">
+                          <tr>
+                            <th className="py-2 px-3 font-sans">Concepto</th>
+                            <th className="py-2 px-2.5 text-right font-sans">Exento</th>
+                            <th className="py-2 px-2.5 text-right font-sans">Neto</th>
+                            <th className="py-2 px-2.5 text-right font-sans">IVA</th>
+                            <th className="py-2 px-2.5 text-right font-sans">IVA No Recup.</th>
+                            <th className="py-2 px-3 text-right font-sans">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 text-[11px] text-slate-800">
+                          <tr>
+                            <td className="py-2 px-3 font-bold font-sans">Ventas Afectas/Boletas</td>
+                            <td className="py-2 px-2.5 text-right">$0</td>
+                            <td className="py-2 px-2.5 text-right">${((debitoFiscalData.ventasAfectasNeto || 0) + (debitoFiscalData.ventasBoletasNeto || 0)).toLocaleString('es-CL')}</td>
+                            <td className="py-2 px-2.5 text-right">${debitoFiscalData.totalDebitoFiscal.toLocaleString('es-CL')}</td>
+                            <td className="py-2 px-2.5 text-right">$0</td>
+                            <td className="py-2 px-3 text-right font-bold">${((debitoFiscalData.ventasAfectasNeto || 0) + (debitoFiscalData.ventasBoletasNeto || 0) + debitoFiscalData.totalDebitoFiscal).toLocaleString('es-CL')}</td>
+                          </tr>
+                          <tr>
+                            <td className="py-2 px-3 font-bold font-sans">Exportaciones</td>
+                            <td className="py-2 px-2.5 text-right">${(debitoFiscalData.ventasExportacionTotal || 0).toLocaleString('es-CL')}</td>
+                            <td className="py-2 px-2.5 text-right">$0</td>
+                            <td className="py-2 px-2.5 text-right">$0</td>
+                            <td className="py-2 px-2.5 text-right">$0</td>
+                            <td className="py-2 px-3 text-right font-bold">${(debitoFiscalData.ventasExportacionTotal || 0).toLocaleString('es-CL')}</td>
+                          </tr>
+                          <tr>
+                            <td className="py-2 px-3 font-bold font-sans">Ventas Exentas</td>
+                            <td className="py-2 px-2.5 text-right">${(debitoFiscalData.ventasExentasTotal || 0).toLocaleString('es-CL')}</td>
+                            <td className="py-2 px-2.5 text-right">$0</td>
+                            <td className="py-2 px-2.5 text-right">$0</td>
+                            <td className="py-2 px-2.5 text-right">$0</td>
+                            <td className="py-2 px-3 text-right font-bold">${(debitoFiscalData.ventasExentasTotal || 0).toLocaleString('es-CL')}</td>
+                          </tr>
+                          <tr className="bg-slate-50">
+                            <td className="py-2 px-3 font-bold font-sans">Compras</td>
+                            <td className="py-2 px-2.5 text-right">$0</td>
+                            <td className="py-2 px-2.5 text-right">${creditoFiscalData.comprasGiroNeto.toLocaleString('es-CL')}</td>
+                            <td className="py-2 px-2.5 text-right">${creditoFiscalData.totalCreditoFiscal.toLocaleString('es-CL')}</td>
+                            <td className="py-2 px-2.5 text-right">${creditoFiscalData.ivaNoRecuperable.toLocaleString('es-CL')}</td>
+                            <td className="py-2 px-3 text-right font-bold">${(creditoFiscalData.comprasGiroNeto + creditoFiscalData.totalCreditoFiscal + creditoFiscalData.ivaNoRecuperable).toLocaleString('es-CL')}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Card 2: Boletas de Honorarios (Summary Card with aligned numerical values) */}
+                    <div className="border border-slate-200 rounded-lg p-3.5 bg-white space-y-2 shadow-2xs">
+                      <h6 className="font-bold text-slate-800 text-xs border-b border-slate-100 pb-1.5 flex justify-between items-center">
+                        <span>Boletas de Honorarios</span>
+                      </h6>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-slate-600 font-sans">• Retención Honorarios:</span>
+                        <span className="font-mono font-bold text-indigo-700">${retencionesData.retencionHonorarios.toLocaleString('es-CL')}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-slate-600 font-sans">• Impuesto Único (Cód 48):</span>
+                        <span className="font-mono font-bold text-indigo-700">${retencionesData.impuestoUnicoTrabajadores.toLocaleString('es-CL')}</span>
+                      </div>
+                    </div>
+
+                    {/* Card 3: PPM (Summary Card with aligned numerical values) */}
+                    <div className="border border-slate-200 rounded-lg p-3.5 bg-white space-y-2 shadow-2xs">
+                      <h6 className="font-bold text-slate-800 text-xs border-b border-slate-100 pb-1.5">
+                        Pagos Provisionales Mensuales (PPM)
+                      </h6>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-slate-600 font-sans">• Monto PPM:</span>
+                        <span className="font-mono font-bold text-indigo-700">${ppmData.montoPPM.toLocaleString('es-CL')}</span>
+                      </div>
+                    </div>
+
+                    {/* Card 4: Resumen General / Total a Pagar F29 (Cód. 91) */}
+                    <div className="bg-slate-900 text-white rounded-xl p-4 shadow-md space-y-3">
+                      <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+                        <span className="font-black text-xs uppercase tracking-wider text-slate-300">TOTAL A PAGAR F29</span>
+                        <span className="font-mono text-xl font-black text-emerald-400">${resumenF29.totalPagarF29.toLocaleString('es-CL')}</span>
+                      </div>
+                      <div className="text-xs space-y-1 text-slate-400">
+                        <div className="flex justify-between"><span>IVA Neto:</span><span>${resumenF29.ivaPagarNetoPostergacion.toLocaleString('es-CL')}</span></div>
+                        <div className="flex justify-between"><span>Retenciones (Honorarios/Imp. Único):</span><span>${(retencionesData.retencionHonorarios + retencionesData.impuestoUnicoTrabajadores).toLocaleString('es-CL')}</span></div>
+                        <div className="flex justify-between"><span>PPM:</span><span>${ppmData.montoPPM.toLocaleString('es-CL')}</span></div>
+                      </div>
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pt-1 border-t border-slate-800 mt-2">
+                        <div className="text-amber-400 font-bold text-xs font-sans">
+                          PLAZO DE PAGO:
+                        </div>
+                        <div className="flex items-center gap-1.5 bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
+                          <input
+                            type="text"
+                            value={plazoPagoFecha}
+                            onChange={e => setPlazoPagoFecha(e.target.value)}
+                            className="bg-transparent text-white font-mono font-bold text-xs focus:outline-none w-48 text-right"
+                            placeholder="Ej. 20 de Octubre de 2026"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column (5 cols): Detalle Boletas de Honorarios (Grows naturally with boletas count) */}
+                  <div className="lg:col-span-5">
+                    <div className="border border-slate-200 rounded-lg overflow-hidden shadow-2xs bg-white">
+                      <div className="bg-slate-800 text-white font-bold text-xs py-2.5 px-3">
+                        Detalle Boletas de Honorarios
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left font-mono text-[11px]">
+                          <thead className="bg-slate-100 text-slate-700 text-[10px] uppercase border-b border-slate-200">
+                            <tr>
+                              <th className="py-2 px-2.5 font-sans">N°</th>
+                              <th className="py-2 px-2.5 font-sans">Prestador</th>
+                              <th className="py-2 px-2.5 text-right font-sans">Retención ($)</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {honorariosDocsList.length === 0 ? (
+                              <tr>
+                                <td colSpan={3} className="py-6 text-center text-slate-400 font-sans italic">
+                                  No hay boletas registradas en este período.
+                                </td>
+                              </tr>
+                            ) : (
+                              honorariosDocsList.map((h, idx) => {
+                                const ret = (h.folio === '55853' || String(h.folio || '').includes('55853') || (h.razonSocialEmisor || '').toLowerCase().includes('notario')) 
+                                    ? 0 
+                                    : (h.montoRetencion || h.montoIva || Math.round((h.montoBruto || h.montoNeto || 0) * (taxSettings.honorariosTaxRate / 100)));
+                                return (
+                                  <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                                    <td className="py-1.5 px-2.5 font-bold text-slate-800">{h.folio || '-'}</td>
+                                    <td className="py-1.5 px-2.5 font-sans text-slate-700 truncate max-w-[170px]" title={h.razonSocialEmisor || h.razonSocialReceptor}>
+                                      {(h.razonSocialEmisor || h.razonSocialReceptor || 'Prestador').toUpperCase()}
+                                    </td>
+                                    <td className="py-1.5 px-2.5 text-right font-bold text-slate-900">${ret.toLocaleString('es-CL')}</td>
+                                  </tr>
+                                );
+                              })
+                            )}
+                          </tbody>
+                          <tfoot className="bg-slate-100 border-t border-slate-200 font-bold">
+                            <tr>
+                              <td colSpan={2} className="py-2 px-3 font-sans text-xs text-slate-800">Total Retención:</td>
+                              <td className="py-2 px-3 text-right font-mono text-xs text-indigo-700 font-black">
+                                ${retencionesData.retencionHonorarios.toLocaleString('es-CL')}
+                              </td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div className="bg-slate-100 px-6 py-4 border-t border-slate-200 flex items-center justify-between gap-3">
+              <span className="text-slate-500 text-[11px] font-sans">
+                💡 Descarga la tarjeta como imagen PNG de alta calidad para enviarla de forma ordenada por WhatsApp.
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowClientSummaryModal(false)}
+                  className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Cerrar
+                </button>
+                <button
+                  onClick={handleCopyImage}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold shadow-md transition-colors flex items-center gap-2 cursor-pointer"
+                  title="Copiar imagen al portapapeles para pegar con Ctrl+V en WhatsApp"
+                >
+                  <Copy className="w-4 h-4 text-slate-300" />
+                  <span>📋 Copiar Imagen</span>
+                </button>
+                <button
+                  onClick={handleDownloadImage}
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md transition-colors flex items-center gap-2 cursor-pointer"
+                  title="Descargar archivo PNG en alta resolución"
+                >
+                  <Share2 className="w-4 h-4 text-emerald-200" />
+                  <span>📸 Descargar Imagen (PNG)</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Company, Voucher, ChartOfAccount, FiscalPeriodYear } from '../types';
 import { printAndLogOfficialBook } from '../utils/folioService';
 import { ShieldCheck, Scale, Printer, Download } from 'lucide-react';
+import { BalancePrintModal } from './BalancePrintModal';
 
 interface Balance8ColumnasViewProps {
   studyId?: string;
@@ -43,6 +44,7 @@ export default function Balance8ColumnasView({
   const [dateTo, setDateTo] = useState<string>('');
   const [onlyWithMovements, setOnlyWithMovements] = useState<boolean>(true);
   const [isPrintingOfficial, setIsPrintingOfficial] = useState<boolean>(false);
+  const [showPrintModal, setShowPrintModal] = useState<boolean>(false);
 
   // Handle period change with automatic year start date setting
   const handlePeriodChange = (val: string) => {
@@ -438,7 +440,11 @@ export default function Balance8ColumnasView({
   };
 
   const handlePrint = () => {
-    window.print();
+    if (rows.length === 0) {
+      alert('No hay cuentas en el balance para imprimir.');
+      return;
+    }
+    setShowPrintModal(true);
   };
 
   const handlePrintOfficialBook = async () => {
@@ -565,10 +571,10 @@ export default function Balance8ColumnasView({
           {onOpenAuditor && (
             <button
               onClick={onOpenAuditor}
-              className="px-2.5 py-1.5 bg-indigo-900 hover:bg-indigo-950 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors shadow-2xs border border-indigo-700 cursor-pointer"
+              className="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors shadow-2xs border border-slate-900 cursor-pointer"
               title="Auditar este Balance de 8 Columnas y emitir Dictamen Oficial"
             >
-              <ShieldCheck className="w-3.5 h-3.5 text-indigo-300" />
+              <ShieldCheck className="w-3.5 h-3.5 text-slate-300" />
               <span className="hidden sm:inline">Auditar</span>
             </button>
           )}
@@ -584,25 +590,25 @@ export default function Balance8ColumnasView({
           <button
             onClick={handlePrintOfficialBook}
             disabled={isPrintingOfficial}
-            className="px-2.5 py-1.5 bg-indigo-700 hover:bg-indigo-800 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors shadow-2xs disabled:opacity-50 cursor-pointer"
+            className="px-2.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors shadow-2xs border border-slate-200 disabled:opacity-50 cursor-pointer"
             title="Emisión de Balance General de 8 Columnas con numeración correlativa y folios timbrados por el SII"
           >
-            <Printer className="w-3.5 h-3.5 text-indigo-200" />
+            <Printer className="w-3.5 h-3.5 text-slate-500" />
             <span className="hidden sm:inline">{isPrintingOfficial ? 'Emitiendo...' : 'Folios SII'}</span>
           </button>
           <button
             onClick={handleExportCSV}
-            className="p-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg border border-emerald-300 flex items-center justify-center transition-colors shadow-2xs cursor-pointer"
+            className="p-2 bg-white hover:bg-slate-50 text-slate-700 rounded-lg border border-slate-200 flex items-center justify-center transition-colors shadow-2xs cursor-pointer"
             title="Exportar Balance 8 Columnas a CSV / Excel"
           >
-            <Download className="w-4 h-4 text-emerald-700" />
+            <Download className="w-4 h-4 text-slate-600" />
           </button>
           <button
             onClick={handlePrint}
-            className="p-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 rounded-lg border border-indigo-300 flex items-center justify-center transition-colors shadow-2xs cursor-pointer"
+            className="p-2 bg-white hover:bg-slate-50 text-slate-700 rounded-lg border border-slate-200 flex items-center justify-center transition-colors shadow-2xs cursor-pointer"
             title="Imprimir Balance de 8 Columnas"
           >
-            <Printer className="w-4 h-4 text-indigo-700" />
+            <Printer className="w-4 h-4 text-slate-600" />
           </button>
         </div>
       </div>
@@ -668,21 +674,21 @@ export default function Balance8ColumnasView({
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-2xs">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-600">Total Sumas (Debe/Haber)</span>
-          <p className="text-lg font-black text-slate-900 mt-0.5">${subtotals.sumDebit.toLocaleString('es-CL')}</p>
+        <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-2xs">
+          <span className="text-[11px] font-medium uppercase tracking-wider text-slate-500">Total Sumas (Debe/Haber)</span>
+          <p className="text-lg font-bold font-mono text-slate-900 mt-0.5 tabular-nums">${subtotals.sumDebit.toLocaleString('es-CL')}</p>
         </div>
-        <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-2xs">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600">Total Saldos (Deudor/Acreedor)</span>
-          <p className="text-lg font-black text-slate-900 mt-0.5">${subtotals.balDebit.toLocaleString('es-CL')}</p>
+        <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-2xs">
+          <span className="text-[11px] font-medium uppercase tracking-wider text-slate-500">Total Saldos (Deudor/Acreedor)</span>
+          <p className="text-lg font-bold font-mono text-slate-900 mt-0.5 tabular-nums">${subtotals.balDebit.toLocaleString('es-CL')}</p>
         </div>
-        <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-2xs">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600">Total Activos</span>
-          <p className="text-lg font-black text-blue-900 mt-0.5">${subtotals.invAsset.toLocaleString('es-CL')}</p>
+        <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-2xs">
+          <span className="text-[11px] font-medium uppercase tracking-wider text-slate-500">Total Activos</span>
+          <p className="text-lg font-bold font-mono text-slate-900 mt-0.5 tabular-nums">${subtotals.invAsset.toLocaleString('es-CL')}</p>
         </div>
-        <div className={`p-3 rounded-lg border shadow-2xs ${result.isUtilidad ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-rose-50 border-rose-200 text-rose-900'}`}>
-          <span className="text-[11px] font-bold uppercase tracking-wider">{result.label}</span>
-          <p className="text-lg font-black mt-0.5">${result.amount.toLocaleString('es-CL')}</p>
+        <div className={`p-3.5 rounded-lg border shadow-2xs ${result.isUtilidad ? 'bg-emerald-50/60 border-emerald-200 text-emerald-900' : 'bg-rose-50/60 border-rose-200 text-rose-900'}`}>
+          <span className="text-[11px] font-medium uppercase tracking-wider">{result.label}</span>
+          <p className="text-lg font-bold font-mono mt-0.5 tabular-nums">${result.amount.toLocaleString('es-CL')}</p>
         </div>
       </div>
 
@@ -692,12 +698,12 @@ export default function Balance8ColumnasView({
           <table className="w-full text-left text-xs border-collapse">
             {/* Super Header */}
             <thead>
-              <tr className="bg-slate-900 text-white text-[11px] uppercase tracking-wider text-center font-bold">
-                <th colSpan={3} className="py-2.5 px-3 border-r border-slate-700">Identificación de Cuenta</th>
-                <th colSpan={2} className="py-2.5 px-3 border-r border-slate-700 bg-indigo-950">1. Sumas</th>
-                <th colSpan={2} className="py-2.5 px-3 border-r border-slate-700 bg-slate-950">2. Saldos</th>
-                <th colSpan={2} className="py-2.5 px-3 border-r border-slate-700 bg-blue-950">3. Inventario / Balance</th>
-                <th colSpan={2} className="py-2.5 px-3 bg-emerald-950">4. Resultados</th>
+              <tr className="bg-slate-100 text-slate-800 text-[11px] uppercase tracking-wider text-center font-bold border-b border-slate-200">
+                <th colSpan={3} className="py-2.5 px-3 border-r border-slate-200">Identificación de Cuenta</th>
+                <th colSpan={2} className="py-2.5 px-3 border-r border-slate-200 bg-slate-50 text-slate-900">1. Sumas</th>
+                <th colSpan={2} className="py-2.5 px-3 border-r border-slate-200 bg-slate-100/80 text-slate-900">2. Saldos</th>
+                <th colSpan={2} className="py-2.5 px-3 border-r border-slate-200 bg-slate-50 text-slate-900">3. Inventario / Balance</th>
+                <th colSpan={2} className="py-2.5 px-3 bg-slate-100/80 text-slate-900">4. Resultados</th>
               </tr>
               <tr className="bg-slate-100 text-slate-700 font-bold text-[10px] uppercase tracking-wider border-b-2 border-slate-300">
                 <th className="py-2 px-2.5 w-24 border-r border-slate-200">Código</th>
@@ -882,6 +888,21 @@ export default function Balance8ColumnasView({
           </table>
         </div>
       </div>
+
+      {/* Modal de Impresión y Generación de PDF Formato Apaisado Legal */}
+      <BalancePrintModal
+        isOpen={showPrintModal}
+        onClose={() => setShowPrintModal(false)}
+        company={company}
+        rows={rows}
+        subtotals={subtotals}
+        result={result}
+        finalTotals={finalTotals}
+        periodFilter={periodFilter}
+        dateFrom={dateFrom}
+        dateTo={dateTo}
+        isFullyBalanced={isFullyBalanced}
+      />
     </div>
   );
 }

@@ -2,14 +2,15 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Building2, Plus, Download, FileSpreadsheet, Calculator, 
   RefreshCw, Sparkles, Trash2, Edit3, ShieldAlert, CheckCircle2, 
-  Search, Sliders, DollarSign, Calendar, FileText
+  Search, Sliders, DollarSign, Calendar, FileText, Check, ExternalLink, TrendingUp
 } from 'lucide-react';
-import { Company, ChartOfAccount, Voucher } from '../types';
+import { Company, ChartOfAccount, Voucher, MasterAccountingParameters } from '../types';
 import { db } from '../lib/firebase';
 import { collection, getDocs, doc, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { StandardModuleHeader } from './StandardModuleHeader';
 
 export interface FixedAsset {
   id: string;
@@ -41,14 +42,22 @@ interface ActivoFijoViewProps {
   studyId: string;
   company: Company;
   accounts: ChartOfAccount[];
+  vouchers?: Voucher[];
   onCentralizeVoucher?: (voucher: Omit<Voucher, 'id' | 'createdAt'>) => Promise<string>;
+  onNavigateToLibroDiario?: (voucherId?: string) => void;
+  onNavigateToVoucher?: (voucherId: string) => void;
+  masterParams?: MasterAccountingParameters | null;
 }
 
 export const ActivoFijoView: React.FC<ActivoFijoViewProps> = ({
   studyId,
   company,
   accounts,
-  onCentralizeVoucher
+  vouchers = [],
+  onCentralizeVoucher,
+  onNavigateToLibroDiario,
+  onNavigateToVoucher,
+  masterParams
 }) => {
   const [assets, setAssets] = useState<FixedAsset[]>([]);
   const [loading, setLoading] = useState(true);
@@ -178,6 +187,16 @@ export const ActivoFijoView: React.FC<ActivoFijoViewProps> = ({
     }
   };
 
+  const [isCentralizing, setIsCentralizing] = useState(false);
+
+  // Buscar comprobante de depreciación existente para el ejercicio
+  const existingDepreciationVoucher = useMemo(() => {
+    return vouchers.find(v => 
+      (v.origin === 'ACTIVO_FIJO' || v.gloss?.toLowerCase().includes('depreciacion') || v.gloss?.toLowerCase().includes('activo fijo')) &&
+      (v.period?.startsWith(`${calculationYear}`) || v.date?.startsWith(`${calculationYear}`))
+    );
+  }, [vouchers, calculationYear]);
+
   // Centralizar Comprobante de Depreciación en Libro Diario
   const handleCentralizeDepreciation = async () => {
     if (totals.depTrib <= 0) {
@@ -186,11 +205,30 @@ export const ActivoFijoView: React.FC<ActivoFijoViewProps> = ({
     }
 
     if (!onCentralizeVoucher) {
-      alert("La función de contabilización centralizada está activa.");
+      alert("La función de contabilización centralizada no está disponible.");
       return;
     }
 
+    if (existingDepreciationVoucher) {
+      const reConfirm = confirm(`Ya existe el comprobante Folio #${existingDepreciationVoucher.voucherNumber || existingDepreciationVoucher.id} para el ejercicio ${calculationYear}.\n\n¿Desea generar un comprobante adicional de ajuste de depreciación?`);
+      if (!reConfirm) return;
+    }
+
     try {
+      setIsCentralizing(true);
+      // Resolver cuentas según Master Parameters o Plan de Cuentas
+      const accGasto = accounts.find(a => 
+        a.id === masterParams?.depreciacionGastoAccountId ||
+        a.code.replace(/\./g, '').startsWith('4102') ||
+        a.name.toLowerCase().includes('depreciacion')
+      ) || { id: 'acc_4102001', code: '4102001', name: 'GASTO DEPRECIACION ACTIVO FIJO' };
+
+      const accAcumulada = accounts.find(a => 
+        a.id === masterParams?.depreciacionAcumuladaAccountId ||
+        a.code.replace(/\./g, '').startsWith('1202') ||
+        a.name.toLowerCase().includes('depreciacion acumulada')
+      ) || { id: 'acc_1202001', code: '1202001', name: 'DEPRECIACION ACUMULADA ACTIVO FIJO' };
+
       const voucher = {
         companyId: company.id,
         period: `${calculationYear}-12`,
@@ -202,18 +240,18 @@ export const ActivoFijoView: React.FC<ActivoFijoViewProps> = ({
         lines: [
           {
             id: 'l1',
-            accountId: 'acc_4102001',
-            accountCode: '4102001',
-            accountName: 'GASTO DEPRECIACION ACTIVO FIJO',
+            accountId: accGasto.id,
+            accountCode: accGasto.code,
+            accountName: accGasto.name,
             debit: totals.depTrib,
             credit: 0,
             gloss: `Depreciación tributaria ejercicio ${calculationYear}`
           },
           {
             id: 'l2',
-            accountId: 'acc_1202001',
-            accountCode: '1202001',
-            accountName: 'DEPRECIACION ACUMULADA ACTIVO FIJO',
+            accountId: accAcumulada.id,
+            accountCode: accAcumulada.code,
+            accountName: accAcumulada.name,
             debit: 0,
             credit: totals.depTrib,
             gloss: `Abono depreciación acumulada ejercicio ${calculationYear}`
@@ -226,63 +264,100 @@ export const ActivoFijoView: React.FC<ActivoFijoViewProps> = ({
       };
 
       await onCentralizeVoucher(voucher);
-      alert(`¡Comprobante de Traspaso de Depreciación ($${totals.depTrib.toLocaleString('es-CL')}) generado exitosamente en el Libro Diario!`);
+      alert(`🎉 ¡Comprobante de Traspaso de Depreciación ($${totals.depTrib.toLocaleString('es-CL')}) generado exitosamente en el Libro Diario!`);
     } catch (err: any) {
       alert("Error al centralizar comprobante: " + err.message);
+    } finally {
+      setIsCentralizing(false);
     }
   };
 
   return (
     <div className="space-y-6">
-      {/* HEADER BANNER */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-6 rounded-2xl text-white shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
+      {/* HEADER ESTANDARIZADO DE MÓDULO */}
+      <StandardModuleHeader
+        title="Módulo de Activo Fijo & Depreciación Dual"
+        subtitle="Inventario de bienes de uso, corrección monetaria IPC, cuadro tributario (Art. 31 LIR) y financiero IFRS con centralización directa al Libro Diario."
+        icon={Building2}
+        iconBgColor="bg-blue-600"
+        layerBadge={{ layer: 1, label: 'Capa 1: Módulo Operativo' }}
+        period={{
+          selectedPeriod: `Ejercicio ${calculationYear}`,
+          onPrevPeriod: () => setCalculationYear(y => y - 1),
+          onNextPeriod: () => setCalculationYear(y => y + 1)
+        }}
+        centralizationStatus={{
+          isCentralized: !!existingDepreciationVoucher,
+          voucherId: existingDepreciationVoucher?.id,
+          voucherNumber: existingDepreciationVoucher?.voucherNumber,
+          onViewVoucher: (id) => onNavigateToVoucher ? onNavigateToVoucher(id) : onNavigateToLibroDiario?.(id),
+          onQuickCentralize: handleCentralizeDepreciation,
+          isCentralizing,
+          disabled: totals.depTrib <= 0
+        }}
+        kpis={[
+          {
+            label: 'Valor Histórico',
+            value: `$${totals.historico.toLocaleString('es-CL')}`,
+            subtext: `${assets.length} activos registrados`,
+            icon: DollarSign,
+            variant: 'default'
+          },
+          {
+            label: `Reajuste IPC (${ipcAccumulatedRate}%)`,
+            value: `$${totals.reajuste.toLocaleString('es-CL')}`,
+            subtext: 'Corrección monetaria anual',
+            icon: TrendingUp,
+            variant: 'purple'
+          },
+          {
+            label: 'Depreciación Tributaria',
+            value: `$${totals.depTrib.toLocaleString('es-CL')}`,
+            subtext: 'Gasto aceptado Art. 31 LIR',
+            icon: Calculator,
+            variant: 'warning'
+          },
+          {
+            label: 'Depreciación IFRS',
+            value: `$${totals.depIFRS.toLocaleString('es-CL')}`,
+            subtext: 'Norma financiera NIIF',
+            icon: Sparkles,
+            variant: 'success'
+          }
+        ]}
+        actions={
           <div className="flex items-center gap-2">
-            <Building2 className="w-6 h-6 text-indigo-400" />
-            <h2 className="text-xl font-black tracking-tight">
-              Módulo de Activo Fijo y Depreciación Dual (Art. 31 N° 5 LIR / IFRS)
-            </h2>
-            <span className="text-[10px] bg-indigo-500/30 border border-indigo-400/50 text-indigo-200 px-2.5 py-0.5 rounded-full font-bold">
-              v3.0 Tier-1
-            </span>
+            <button
+              onClick={() => {
+                setEditingAsset({});
+                setShowModal(true);
+              }}
+              className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Nuevo Activo</span>
+            </button>
+            <button
+              onClick={fetchAssets}
+              className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors cursor-pointer"
+              title="Recargar activos"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
           </div>
-          <p className="text-xs text-slate-300 mt-1">
-            Control de inventario de activos, Corrección Monetaria IPC, Cuadro Tributario y Financiero
-          </p>
-        </div>
+        }
+      />
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={() => {
-              setEditingAsset({});
-              setShowModal(true);
-            }}
-            className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Nuevo Activo Fijo</span>
-          </button>
-
-          <button
-            onClick={handleCentralizeDepreciation}
-            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>Centralizar Depreciación (${totals.depTrib.toLocaleString('es-CL')})</span>
-          </button>
-        </div>
-      </div>
-
-      {/* PARAMETERS BAR */}
-      <div className="bg-white p-4 rounded-xl border border-slate-300 shadow-xs flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+      {/* PARAMETERS & FILTERS BAR */}
+      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-3">
           <div>
             <label className="block text-[11px] font-bold text-slate-600">Año de Ejercicio:</label>
             <input
               type="number"
               value={calculationYear}
               onChange={e => setCalculationYear(Number(e.target.value))}
-              className="bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-900 w-24"
+              className="bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-900 w-24"
             />
           </div>
 
@@ -293,29 +368,41 @@ export const ActivoFijoView: React.FC<ActivoFijoViewProps> = ({
               step="0.1"
               value={ipcAccumulatedRate}
               onChange={e => setIpcAccumulatedRate(Number(e.target.value))}
-              className="bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-900 w-24"
+              className="bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-900 w-24"
             />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-slate-600">Filtrar Categoría:</label>
+            <select
+              value={selectedCategory}
+              onChange={e => setSelectedCategory(e.target.value)}
+              className="bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-900"
+            >
+              <option value="ALL">Todas las Categorías</option>
+              <option value="MAQUINARIAS">Maquinarias y Equipos</option>
+              <option value="VEHICULOS">Vehículos</option>
+              <option value="EQUIPOS_COMPUTACIONALES">Equipos Computacionales</option>
+              <option value="MUEBLES_UTILES">Muebles y Útiles</option>
+              <option value="CONSTRUCCIONES">Construcciones</option>
+              <option value="TERRENOS">Terrenos</option>
+            </select>
           </div>
         </div>
 
-        {/* SUMMARY METRICS */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-          <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
-            <span className="text-[10px] text-slate-500 font-bold block">VALOR HISTÓRICO</span>
-            <span className="font-mono font-bold text-slate-900 text-sm">${totals.historico.toLocaleString('es-CL')}</span>
-          </div>
-          <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
-            <span className="text-[10px] text-slate-500 font-bold block">REAJUSTE IPC</span>
-            <span className="font-mono font-bold text-indigo-700 text-sm">${totals.reajuste.toLocaleString('es-CL')}</span>
-          </div>
-          <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
-            <span className="text-[10px] text-slate-500 font-bold block">DEP. TRIBUTARIA</span>
-            <span className="font-mono font-bold text-amber-700 text-sm">${totals.depTrib.toLocaleString('es-CL')}</span>
-          </div>
-          <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
-            <span className="text-[10px] text-slate-500 font-bold block">DEP. IFRS</span>
-            <span className="font-mono font-bold text-emerald-700 text-sm">${totals.depIFRS.toLocaleString('es-CL')}</span>
-          </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              const ws = XLSX.utils.json_to_sheet(calculatedTable);
+              const wb = XLSX.utils.book_new();
+              XLSX.utils.book_append_sheet(wb, ws, "Activo_Fijo");
+              XLSX.writeFile(wb, `Cuadro_Activo_Fijo_${calculationYear}.xlsx`);
+            }}
+            className="flex items-center gap-1.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-3 py-1.5 rounded-xl text-xs font-semibold shadow-2xs transition-all cursor-pointer"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Excel</span>
+          </button>
         </div>
       </div>
 

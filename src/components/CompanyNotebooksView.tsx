@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Company, ChartOfAccount, Voucher, RCVDocument, Auxiliary, UserRole } from '../types';
-import { db } from '../lib/firebase';
+import { db, auth } from '../lib/firebase';
 import { doc, collection, getDocs, setDoc, deleteDoc, Timestamp } from 'firebase/firestore';
 import { 
   BookOpen, Sparkles, Plus, Trash2, Edit3, Save, ArrowLeft, Lock, 
@@ -252,9 +252,19 @@ export default function CompanyNotebooksView({
         totalAuxiliaries: auxiliaries.length
       };
 
+      const idToken = await auth.currentUser?.getIdToken();
+      if (!idToken) {
+        setAiResponse("Sesión expirada. Vuelve a iniciar sesión.");
+        setAiLoading(false);
+        return;
+      }
+
       const res = await fetch('/api/notebook-ai', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
         body: JSON.stringify({
           prompt: aiPrompt,
           companyContext,

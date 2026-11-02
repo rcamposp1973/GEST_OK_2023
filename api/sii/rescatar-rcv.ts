@@ -4,7 +4,11 @@ import * as adminImport from 'firebase-admin';
 import { getApps, initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
-import firebaseConfig from '../../firebase-applet-config.json';
+// Configuracion fija del proyecto (en Vercel no se puede importar el .json sin atributo especial).
+const firebaseConfig = {
+  projectId: process.env.FIREBASE_PROJECT_ID || 'gen-lang-client-0478013396',
+  firestoreDatabaseId: process.env.FIREBASE_DATABASE_ID || 'ai-studio-gestor-0fa27d4a-5ce2-4999-afdb-eb28b01c6d8d'
+};
 
 // Inicializacion de Firebase Admin (compartida con server.ts).
 // En Vercel se necesita la variable FIREBASE_SERVICE_ACCOUNT (JSON de la cuenta de servicio).

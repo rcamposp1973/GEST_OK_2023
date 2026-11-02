@@ -313,6 +313,17 @@ export function parseBankCartola(
 
     if (!rawDate && !rawDesc) continue;
 
+    // Una fila de movimiento debe traer una fecha real; "Saldo final", totales u otros textos no son movimientos.
+    if (rawDate) {
+      const dStr = String(rawDate).trim();
+      const looksLikeDate =
+        rawDate instanceof Date ||
+        (typeof rawDate === 'number' && rawDate > 20000 && rawDate < 80000) ||
+        /^\d{1,4}[\/\-.]\d{1,2}([\/\-.]\d{1,4})?$/.test(dStr) ||
+        !isNaN(Date.parse(dStr));
+      if (!looksLikeDate) continue;
+    }
+
     const date = normalizeDate(rawDate, selectedPeriod);
     const description = String(rawDesc || 'MOVIMIENTO BANCARIO').trim().replace(/\s+/g, ' ');
     

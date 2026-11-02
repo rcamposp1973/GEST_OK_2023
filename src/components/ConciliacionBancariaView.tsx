@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { getNextVoucherNumber } from '../utils/voucherCounter';
 import { db, auth } from '../lib/firebase';
 import { collection, getDocs, getDoc, addDoc, doc, setDoc, updateDoc, query, where } from 'firebase/firestore';
@@ -22,6 +22,8 @@ import { checkIsPeriodClosed, getLatestOpenPeriod, getNextOpenPeriodAndDate } fr
 import { logAuditEvent } from '../utils/auditLogger';
 import { sanitizeVoucherLines } from '../utils/voucherValidation';
 import { notify } from '../context/ToastContext';
+import { classifyMovement, MovementProposal } from '../utils/bankMovementClassifier';
+import { loadJuniorGlossRules } from '../utils/juniorGlossEngine';
 import {
   getPreviousPeriod,
   getNextPeriod,
@@ -181,6 +183,7 @@ export default function ConciliacionBancariaView({
 
   const [quickVoucherLine, setQuickVoucherLine] = useState<BankStatementLine | null>(null);
   const [quickExpenseAccountId, setQuickExpenseAccountId] = useState<string>('');
+  const juniorRulesCacheRef = useRef<any[] | null>(null);
   const [quickGloss, setQuickGloss] = useState<string>('');
   const [quickVoucherPeriod, setQuickVoucherPeriod] = useState<string>('');
 
@@ -2914,18 +2917,38 @@ export default function ConciliacionBancariaView({
                                   Match
                                 </button>
                                 <button
-                                  onClick={() => {
+                                  onClick={async () => {
                                     const shift = getNextOpenPeriodAndDate(l.date, fiscalYears);
                                     setQuickVoucherLine(l);
                                     setQuickGloss(l.description);
                                     setQuickVoucherPeriod(shift.period);
-                                    const defaultExpense = accounts.find(
-                                      a =>
-                                        (a.code || '').startsWith('4-2-01') ||
-                                        (a.name || '').toLowerCase().includes('comision') ||
-                                        (a.name || '').toLowerCase().includes('bancari')
-                                    );
-                                    if (defaultExpense) setQuickExpenseAccountId(defaultExpense.id);
+                                    // Limpia la cuenta anterior para no arrastrar una propuesta equivocada
+                                    setQuickExpenseAccountId('');
+                                    try {
+                                      if (!juniorRulesCacheRef.current) {
+                                        juniorRulesCacheRef.current = await loadJuniorGlossRules(studyId, company.id);
+                                      }
+                                      const proposal: MovementProposal | null = classifyMovement(l, {
+                                        accounts,
+                                        vouchers,
+                                        rules: juniorRulesCacheRef.current || [],
+                                        bankAccountId: selectedBankAccount?.id || ''
+                                      });
+                                      if (proposal && proposal.accountId) {
+                                        setQuickExpenseAccountId(proposal.accountId);
+                                      }
+                                      if (proposal) {
+                                        const icon = proposal.level === 'VERDE' ? '🟢' : proposal.level === 'AMARILLO' ? '🟡' : '🔴';
+                                        notify.info(
+                                          proposal.accountId
+                                            ? `${icon} Propuesta: ${proposal.accountCode} ${proposal.accountName}. ${proposal.reason}`
+                                            : `${icon} ${proposal.reason}`,
+                                          proposal.category
+                                        );
+                                      }
+                                    } catch (e) {
+                                      console.warn('No se pudo calcular la propuesta de cuenta:', e);
+                                    }
                                   }}
                                   className="px-1.5 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold rounded text-[10px]"
                                   title="Crear asiento contable rápido"

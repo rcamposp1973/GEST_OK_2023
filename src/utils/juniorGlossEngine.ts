@@ -1,4 +1,5 @@
 import { db } from '../lib/firebase';
+import { reserveVoucherNumberBatch } from './voucherCounter';
 import { 
   collection, 
   getDocs, 
@@ -556,9 +557,14 @@ export async function executeJuniorGlossAutomation(
   const vouchersCol = collection(companyRef, 'vouchers');
 
   // Determine starting correlative voucher number
-  let currentMaxVoucherNumber = options.existingVouchers.length > 0 
+  const existingMaxVoucherNumber = options.existingVouchers.length > 0 
     ? Math.max(...options.existingVouchers.map(v => v.voucherNumber || 0)) 
     : 0;
+  // Reserva atómica de un bloque de correlativos (evita choques entre sesiones/pestañas)
+  const reservedBlock = await reserveVoucherNumberBatch(
+    studyId, company.id, 0, itemsToProcess.length, existingMaxVoucherNumber
+  );
+  let currentMaxVoucherNumber = reservedBlock.startNumber - 1;
 
   const vouchersCreated: Voucher[] = [];
   let totalProcessedAmount = 0;

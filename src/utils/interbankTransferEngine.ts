@@ -1,4 +1,5 @@
 import { db, auth } from '../lib/firebase';
+import { reserveVoucherNumberBatch } from './voucherCounter';
 import { 
   collection, 
   getDocs, 
@@ -613,7 +614,12 @@ export async function executeInterbankTransfers(
     const existingVouchers = vouchersSnap.docs.map(d => ({ id: d.id, ...d.data() } as Voucher));
     
     // Group existing voucher numbers by type and year
-    let maxVoucherNumber = existingVouchers.reduce((max, v) => Math.max(max, Number(v.voucherNumber || 0)), 0);
+    const existingMaxVoucherNumber = existingVouchers.reduce((max, v) => Math.max(max, Number(v.voucherNumber || 0)), 0);
+    // Reserva atómica de correlativos (un comprobante por propuesta seleccionada)
+    const reservedBlock = await reserveVoucherNumberBatch(
+      studyId, company.id, 0, selectedProposals.length, existingMaxVoucherNumber
+    );
+    let maxVoucherNumber = reservedBlock.startNumber - 1;
 
     // 2. Fetch all bankReconciliations to update them
     const recsSnap = await getDocs(collection(companyRef, 'bankReconciliations'));

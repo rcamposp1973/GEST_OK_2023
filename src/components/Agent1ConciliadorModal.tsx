@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { getNextVoucherNumber } from '../utils/voucherCounter';
 import { 
   X, 
   Sparkles, 
@@ -128,7 +129,10 @@ export default function Agent1ConciliadorModal({
       }
 
       // Siguiente número de comprobante
-      const nextVoucherNum = (vouchers.reduce((max, v) => Math.max(max, Number(v.voucherNumber) || 0), 0) + 1);
+      const nextVoucherNum = await getNextVoucherNumber(
+        studyId, company.id, 0,
+        vouchers.reduce((max, v) => Math.max(max, Number(v.voucherNumber) || 0), 0)
+      );
 
       // Partida Doble Perfecta: Debe Gasto Bancario / Haber Banco
       const newVoucher = {

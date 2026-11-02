@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { getNextVoucherNumber } from '../utils/voucherCounter';
 import { db, auth } from '../lib/firebase';
 import { collection, getDocs, getDoc, addDoc, doc, setDoc, updateDoc, query, where } from 'firebase/firestore';
 import {
@@ -1378,7 +1379,10 @@ export default function ConciliacionBancariaView({
     }
 
     try {
-      const nextVoucherNumber = (vouchers.length > 0 ? Math.max(...vouchers.map(v => v.voucherNumber || 0)) : 0) + 1;
+      const nextVoucherNumber = await getNextVoucherNumber(
+        studyId, company.id, 0,
+        vouchers.length > 0 ? Math.max(...vouchers.map(v => v.voucherNumber || 0)) : 0
+      );
       const isCharge = quickVoucherLine.charge > 0;
       const amount = isCharge ? quickVoucherLine.charge : quickVoucherLine.deposit;
 

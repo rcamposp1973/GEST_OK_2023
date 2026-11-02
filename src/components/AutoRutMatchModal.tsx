@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { reserveVoucherNumberBatch } from '../utils/voucherCounter';
 import { db } from '../lib/firebase';
 import { collection, addDoc, doc, setDoc, getDocs, updateDoc, query } from 'firebase/firestore';
 import {
@@ -420,9 +421,14 @@ function AutoRutMatchModalContent({
       const bankAcc = accounts.find(a => a.id === bankAccountId);
 
       // Determine initial sequential voucherNumber from existing accounting vouchers
-      let currentNextVoucherNumber = vouchers && vouchers.length > 0
+      const existingMaxVoucherNumber = vouchers && vouchers.length > 0
         ? Math.max(...vouchers.map(v => Number(v.voucherNumber) || 0))
         : 0;
+      // Reserva atómica de un bloque de correlativos
+      const reservedBlock = await reserveVoucherNumberBatch(
+        studyId, company.id, 0, selectedMatches.length, existingMaxVoucherNumber
+      );
+      let currentNextVoucherNumber = reservedBlock.startNumber - 1;
 
       for (const item of selectedMatches) {
         currentNextVoucherNumber++;

@@ -45,6 +45,9 @@ export default function BankCartolaSmartImportModal({
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [parseError, setParseError] = useState<string | null>(null);
 
+  // El hook debe ir ANTES de cualquier return condicional (regla de React)
+  const { dragProps, modalStyle } = useDraggableModal({ isOpen });
+
   if (!isOpen) return null;
 
   const linesForDedup = allExistingLines && allExistingLines.length > 0 ? allExistingLines : existingLines;
@@ -142,8 +145,6 @@ export default function BankCartolaSmartImportModal({
   };
 
   const conciliatedCount = existingLines.filter(l => l.matchedStatus === 'Conciliado').length;
-
-  const { dragProps, modalStyle } = useDraggableModal({ isOpen });
 
   if (!isOpen) return null;
 

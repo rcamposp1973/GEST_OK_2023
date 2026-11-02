@@ -22,7 +22,7 @@ import { checkIsPeriodClosed, getLatestOpenPeriod, getNextOpenPeriodAndDate } fr
 import { logAuditEvent } from '../utils/auditLogger';
 import { sanitizeVoucherLines } from '../utils/voucherValidation';
 import { notify } from '../context/ToastContext';
-import { classifyMovement, MovementProposal } from '../utils/bankMovementClassifier';
+import { classifyMovement, MovementProposal, glossKey } from '../utils/bankMovementClassifier';
 import { loadJuniorGlossRules } from '../utils/juniorGlossEngine';
 import {
   getPreviousPeriod,
@@ -1338,6 +1338,74 @@ export default function ConciliacionBancariaView({
     notify.success(`Se desconciliaron ${conciliated.length} movimientos del período ${selectedPeriod}.`, 'Desconciliación Masiva');
   };
 
+  // Aprendizaje: guarda una regla solo cuando hace falta (el contador eligió/cambió la cuenta
+  // o completó auxiliar/centro de costos y todavía no existe una regla para ese movimiento).
+  const maybeLearnRule = async (
+    line: BankStatementLine,
+    voucherLines: VoucherLine[] | undefined,
+    counterAccId: string
+  ) => {
+    try {
+      if (!selectedBankAccount) return;
+      const nonBank = (voucherLines || []).filter(l => l.accountId && l.accountId !== selectedBankAccount.id);
+      // Solo se aprenden contabilizaciones de una contrapartida (los repartos Previred/F29 quedan para después)
+      if (voucherLines && voucherLines.length > 0 && new Set(nonBank.map(l => l.accountId)).size !== 1) return;
+      const finalAccId = counterAccId || nonBank[0]?.accountId;
+      const acc = accounts.find(a => a.id === finalAccId);
+      if (!acc) return;
+      const key = glossKey(line.description);
+      if (!key) return;
+      const src = nonBank[0];
+      const aux = src?.auxiliaryRut || '';
+      const cc = src?.costCenter || '';
+      const proposalOk = !!quickProposal && quickProposal.accountId === acc.id;
+      const hadRule = quickProposal?.source === 'REGLA';
+      const addedExtras = !!aux || !!cc;
+      // Si la propuesta fue aceptada tal cual y no hay datos extra, no hay nada nuevo que aprender
+      if (proposalOk && !addedExtras) return;
+      if (hadRule && proposalOk) return;
+      // Evita duplicar una regla que ya existe para esta clave y cuenta
+      const existing = (juniorRulesCacheRef.current || []).find(
+        (r: any) => r.pattern === key && (r.accountId === acc.id || r.accountCode === acc.code)
+      );
+      if (existing) return;
+
+      const isCharge = (line.charge || 0) > 0;
+      const detalle = `${acc.code} ${acc.name}` + (aux ? `\nAuxiliar: ${src?.auxiliaryName || ''} (${aux})` : '') + (cc ? `\nCentro de costos: ${cc}` : '');
+      const ok = window.confirm(
+        `¿Recordar esta clasificación para movimientos parecidos?\n\nCuando la glosa contenga "${key}" (${isCharge ? 'cargo' : 'abono'}):\n${detalle}`
+      );
+      if (!ok) return;
+
+      const now = new Date().toISOString();
+      const rule: any = {
+        studyId,
+        companyId: company.id,
+        title: `Aprendida: ${key}`,
+        pattern: key,
+        matchType: 'CONTAINS',
+        movementType: isCharge ? 'CARGO' : 'ABONO',
+        accountId: acc.id,
+        accountCode: acc.code,
+        accountName: acc.name,
+        auxiliaryRut: aux || undefined,
+        auxiliaryName: src?.auxiliaryName || undefined,
+        costCenter: cc || undefined,
+        expenseItem: src?.expenseItem || undefined,
+        project: src?.project || undefined,
+        product: src?.product || undefined,
+        isActive: true,
+        createdAt: now,
+        timesUsed: 0
+      };
+      const ref = await addDoc(collection(companyRef, 'juniorGlossRules'), sanitizeForFirestore(rule));
+      juniorRulesCacheRef.current = [...(juniorRulesCacheRef.current || []), { ...rule, id: ref.id }];
+      notify.success(`Regla guardada: "${key}" → ${acc.code} ${acc.name}.`, 'Aprendizaje');
+    } catch (e) {
+      console.warn('No se pudo guardar la regla aprendida:', e);
+    }
+  };
+
   // 6. Quick Post Unaccounted Bank Fee or Income + Auto-Match + Immediate Auto-Save
   const handleQuickPostVoucher = async (customData?: {
     period: string;
@@ -1546,6 +1614,7 @@ export default function ConciliacionBancariaView({
         '✅ Comprobante Contabilizado y Conciliado',
         4200
       );
+      await maybeLearnRule(quickVoucherLine, customData?.lines, counterAccId);
       if (onVouchersUpdated) onVouchersUpdated();
     } catch (err: any) {
       console.error('Error posting quick voucher:', err);

@@ -29,6 +29,13 @@ export interface MovementProposal {
   requiresSplit?: boolean;
   /** true cuando NO debe contabilizarse como gasto/ingreso (ej. traspaso entre cuentas propias) */
   isInternalTransfer?: boolean;
+  /** Datos de análisis que una regla guardada ya conoce (se rellenan solos) */
+  auxiliaryRut?: string;
+  auxiliaryName?: string;
+  costCenter?: string;
+  expenseItem?: string;
+  project?: string;
+  product?: string;
 }
 
 export function levelFromConfidence(c: number): ProposalLevel {
@@ -162,7 +169,7 @@ export interface ClassifierContext {
   bankAccountId: string;
 }
 
-function ruleMatches(rule: JuniorGlossRule, glosa: string, isCharge: boolean): boolean {
+function ruleMatches(rule: JuniorGlossRule, glosa: string, lineKey: string, isCharge: boolean): boolean {
   if (rule.isActive === false) return false;
   if (rule.movementType === 'CARGO' && !isCharge) return false;
   if (rule.movementType === 'ABONO' && isCharge) return false;
@@ -171,7 +178,7 @@ function ruleMatches(rule: JuniorGlossRule, glosa: string, isCharge: boolean): b
   switch (rule.matchType) {
     case 'EXACT': return glosa === pat;
     case 'STARTS_WITH': return glosa.startsWith(pat);
-    default: return glosa.includes(pat);
+    default: return glosa.includes(pat) || (lineKey !== '' && lineKey.includes(pat));
   }
 }
 
@@ -228,7 +235,7 @@ export function classifyMovement(
 
   // 1) Reglas guardadas
   for (const r of ctx.rules) {
-    if (!ruleMatches(r, glosa, isCharge)) continue;
+    if (!ruleMatches(r, glosa, glossKey(line.description), isCharge)) continue;
     const acc = ctx.accounts.find(a => a.id === r.accountId || a.code === r.accountCode);
     if (!acc) continue; // regla apunta a una cuenta que ya no existe: se ignora
     return {
@@ -240,7 +247,13 @@ export function classifyMovement(
       level: 'VERDE',
       source: 'REGLA',
       category: r.title || 'Regla guardada',
-      reason: `Regla guardada: glosa que contiene "${r.pattern}".`
+      reason: `Regla guardada: glosa que contiene "${r.pattern}".`,
+      auxiliaryRut: r.auxiliaryRut,
+      auxiliaryName: r.auxiliaryName,
+      costCenter: r.costCenter,
+      expenseItem: r.expenseItem,
+      project: r.project,
+      product: r.product
     };
   }
 

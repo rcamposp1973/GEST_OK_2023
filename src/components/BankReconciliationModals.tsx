@@ -1666,6 +1666,20 @@ function QuickVoucherModalContent({
     }
   };
 
+  // Si la propuesta viene de una regla guardada, rellena auxiliar y análisis que la regla ya conoce
+  useEffect(() => {
+    if (!quickProposal || quickProposal.source !== 'REGLA') return;
+    if (quickProposal.accountId !== quickExpenseAccountId) return;
+    if (quickProposal.auxiliaryRut) {
+      setSelectedAuxiliaryRut(quickProposal.auxiliaryRut);
+      setSelectedAuxiliaryName((quickProposal.auxiliaryName || '').toUpperCase());
+    }
+    if (quickProposal.costCenter) setCostCenter(quickProposal.costCenter);
+    if (quickProposal.expenseItem) setExpenseItem(quickProposal.expenseItem);
+    if (quickProposal.project) setProject(quickProposal.project);
+    if (quickProposal.product) setProduct(quickProposal.product);
+  }, [quickProposal, quickExpenseAccountId]);
+
   // Global F2 keyboard shortcut to submit voucher
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

@@ -184,6 +184,7 @@ export default function ConciliacionBancariaView({
   const [quickVoucherLine, setQuickVoucherLine] = useState<BankStatementLine | null>(null);
   const [quickExpenseAccountId, setQuickExpenseAccountId] = useState<string>('');
   const juniorRulesCacheRef = useRef<any[] | null>(null);
+  const [quickProposal, setQuickProposal] = useState<MovementProposal | null>(null);
   const [quickGloss, setQuickGloss] = useState<string>('');
   const [quickVoucherPeriod, setQuickVoucherPeriod] = useState<string>('');
 
@@ -2924,6 +2925,7 @@ export default function ConciliacionBancariaView({
                                     setQuickVoucherPeriod(shift.period);
                                     // Limpia la cuenta anterior para no arrastrar una propuesta equivocada
                                     setQuickExpenseAccountId('');
+                                    setQuickProposal(null);
                                     try {
                                       if (!juniorRulesCacheRef.current) {
                                         juniorRulesCacheRef.current = await loadJuniorGlossRules(studyId, company.id);
@@ -2934,17 +2936,9 @@ export default function ConciliacionBancariaView({
                                         rules: juniorRulesCacheRef.current || [],
                                         bankAccountId: selectedBankAccount?.id || ''
                                       });
+                                      setQuickProposal(proposal);
                                       if (proposal && proposal.accountId) {
                                         setQuickExpenseAccountId(proposal.accountId);
-                                      }
-                                      if (proposal) {
-                                        const icon = proposal.level === 'VERDE' ? '🟢' : proposal.level === 'AMARILLO' ? '🟡' : '🔴';
-                                        notify.info(
-                                          proposal.accountId
-                                            ? `${icon} Propuesta: ${proposal.accountCode} ${proposal.accountName}. ${proposal.reason}`
-                                            : `${icon} ${proposal.reason}`,
-                                          proposal.category
-                                        );
                                       }
                                     } catch (e) {
                                       console.warn('No se pudo calcular la propuesta de cuenta:', e);
@@ -3701,6 +3695,7 @@ export default function ConciliacionBancariaView({
         customColumns={company.customAccountColumns || []}
         selectedBankAccount={selectedBankAccount}
         quickExpenseAccountId={quickExpenseAccountId}
+        quickProposal={quickProposal}
         setQuickExpenseAccountId={setQuickExpenseAccountId}
         quickGloss={quickGloss}
         setQuickGloss={setQuickGloss}

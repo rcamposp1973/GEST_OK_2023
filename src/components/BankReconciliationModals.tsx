@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import type { MovementProposal } from '../utils/bankMovementClassifier';
 import {
   BankStatementLine,
   ChartOfAccount,
@@ -536,6 +537,7 @@ export interface QuickVoucherModalProps {
   customColumns?: string[];
   selectedBankAccount: ChartOfAccount | null;
   quickExpenseAccountId: string;
+  quickProposal?: MovementProposal | null;
   setQuickExpenseAccountId: (val: string) => void;
   quickGloss: string;
   setQuickGloss: (val: string) => void;
@@ -574,6 +576,7 @@ function QuickVoucherModalContent({
   customColumns = [],
   selectedBankAccount,
   quickExpenseAccountId,
+  quickProposal,
   setQuickExpenseAccountId,
   quickGloss,
   setQuickGloss,
@@ -1834,6 +1837,29 @@ function QuickVoucherModalContent({
 
             {voucherMode === 'SINGLE' ? (
               <div className="md:col-span-2">
+                {quickProposal && (
+                  <div
+                    className={`mb-2 rounded-lg border px-3 py-2 text-[11px] leading-snug ${
+                      quickProposal.level === 'VERDE'
+                        ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                        : quickProposal.level === 'AMARILLO'
+                        ? 'bg-amber-50 border-amber-300 text-amber-900'
+                        : 'bg-rose-50 border-rose-300 text-rose-900'
+                    }`}
+                  >
+                    <div className="font-bold">
+                      {quickProposal.level === 'VERDE' ? '🟢 Propuesta con alta confianza' : quickProposal.level === 'AMARILLO' ? '🟡 Propuesta: por favor revisa' : '🔴 Sin propuesta clara'}
+                      {' · '}{quickProposal.category}
+                    </div>
+                    <div>
+                      {quickProposal.accountId ? <>Cuenta sugerida: <strong>{quickProposal.accountCode} {quickProposal.accountName}</strong>. </> : null}
+                      {quickProposal.reason}
+                    </div>
+                    {quickProposal.requiresSplit && (
+                      <div className="mt-0.5 font-semibold">Este pago normalmente se reparte entre varias cuentas: usa "Pago Multi-Cuentas".</div>
+                    )}
+                  </div>
+                )}
                 <label className="block font-bold text-slate-800 mb-1">
                   📊 Cuenta Contable de Contrapartida: <span className="text-rose-600 font-bold">*</span>
                 </label>

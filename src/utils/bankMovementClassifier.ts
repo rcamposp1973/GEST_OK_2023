@@ -81,6 +81,8 @@ interface DictEntry {
   reason: string;
   requiresSplit?: boolean;
   isInternalTransfer?: boolean;
+  /** Nombre sugerido si la empresa no tiene una cuenta adecuada */
+  suggestedNewAccountName?: string;
 }
 
 const DICTIONARY: DictEntry[] = [
@@ -91,7 +93,8 @@ const DICTIONARY: DictEntry[] = [
     types: ['Activo'],
     voucherType: 'Egreso',
     confidence: 0.7,
-    reason: 'IVA cobrado por el banco sobre una comisión: normalmente va a IVA crédito fiscal.'
+    reason: 'IVA cobrado por el banco sobre una comisión: normalmente va a IVA crédito fiscal.',
+    suggestedNewAccountName: 'IVA Crédito Fiscal'
   },
   {
     category: 'Comisión bancaria',
@@ -100,7 +103,8 @@ const DICTIONARY: DictEntry[] = [
     types: ['Gasto'],
     voucherType: 'Egreso',
     confidence: 0.93,
-    reason: 'Cargo del banco por comisión o mantención de cuenta.'
+    reason: 'Cargo del banco por comisión o mantención de cuenta.',
+    suggestedNewAccountName: 'Gastos y Comisiones Bancarias'
   },
   {
     category: 'Leyes sociales (Previred)',
@@ -115,7 +119,7 @@ const DICTIONARY: DictEntry[] = [
   {
     category: 'Impuestos (F29 / Tesorería)',
     test: (g, c) => c && /TESORERIA|TGR|F29|SERVICIO DE IMPUESTOS|SII\b/.test(g),
-    patterns: [/IVA.*PAGAR/, /IMPUESTOS?.*PAGAR/, /F[\s-]?29/, /RETENCIONES?.*PAGAR/],
+    patterns: [/IVA.*PAGAR/, /F[\s-]?29/, /IVA.*DEBITO/, /IMPUESTOS?.*PAGAR/, /RETENCIONES?.*PAGAR/],
     types: ['Pasivo'],
     voucherType: 'Egreso',
     confidence: 0.75,
@@ -125,10 +129,10 @@ const DICTIONARY: DictEntry[] = [
   {
     category: 'Liquidación de tarjetas (Transbank)',
     test: (g, c) => !c && /TRANSBANK|TBK|WEBPAY|REDCOMPRA|GETNET|MERCADOPAGO|SUMUP|KLAP/.test(g),
-    patterns: [/TRANSBANK/, /TARJETAS?.*POR.*COBRAR/, /TARJETAS?.*CREDITO.*COBRAR/, /DOCUMENTOS?.*POR.*COBRAR/],
+    patterns: [/TRANSBANK/, /TARJETAS?.*POR.*COBRAR/, /TARJETAS?.*CREDITO.*COBRAR/, /DOCUMENTOS?.*POR.*COBRAR/, /DEUDORES.*VENTAS/, /CLIENTES/],
     types: ['Activo'],
     voucherType: 'Ingreso',
-    confidence: 0.7,
+    confidence: 0.65,
     reason: 'Abono de un procesador de pagos: normalmente cancela ventas con tarjeta por cobrar.'
   },
   {
@@ -264,7 +268,8 @@ export function classifyMovement(
         voucherType: e.voucherType,
         confidence: 0.3, level: 'ROJO',
         source: 'DICCIONARIO', category: e.category,
-        reason: `${e.reason} No encontré una cuenta adecuada en el plan de cuentas de esta empresa: elige una.`,
+        reason: `${e.reason} No encontré una cuenta adecuada en el plan de cuentas de esta empresa.` +
+          (e.suggestedNewAccountName ? ` Sugerencia: crea la cuenta "${e.suggestedNewAccountName}" o elige una manualmente.` : ' Elige una manualmente.'),
         requiresSplit: e.requiresSplit
       };
     }

@@ -32,7 +32,6 @@ import SuperAdminIndicatorsCenter from './components/SuperAdminIndicatorsCenter'
 import LandingHome from './components/LandingHome';
 import { logAuditEvent } from './utils/auditLogger';
 import { APP_VERSION } from './constants/version';
-import { purgeDiagonConstruccionesData } from './utils/diagonPurge';
 import { useCrossTabSessionSync } from './utils/useCrossTabSessionSync';
 import { Building2, PlusCircle, CreditCard, ShieldCheck, Users, ShieldAlert, History, Sparkles, LogOut, Megaphone, Activity, Quote, Trash2, Search, X, TrendingUp } from 'lucide-react';
 
@@ -50,7 +49,6 @@ function Dashboard() {
   const [role, setRole] = useState<UserRole | null>(null);
   const [activeCompany, setActiveCompany] = useState<Company | null>(null);
   const [showGlobalIndicatorsModal, setShowGlobalIndicatorsModal] = useState(false);
-  const [isPurgingDiagonApp, setIsPurgingDiagonApp] = useState(false);
 
   // Sync active format when a study is selected or loaded
   useEffect(() => {
@@ -256,25 +254,6 @@ function Dashboard() {
     );
   }
 
-  const handlePurgeDiagonGlobal = async () => {
-    if (!window.confirm("¿Estás seguro de eliminar todos los RCV y comprobantes (vouchers) de la empresa Diagon Construcciones SpA del estudio Ricardo Ibarra Pérez?")) {
-      return;
-    }
-    setIsPurgingDiagonApp(true);
-    try {
-      const res = await purgeDiagonConstruccionesData();
-      if (res.success) {
-        alert(res.message);
-      } else {
-        alert("Error: " + res.error);
-      }
-    } catch (e: any) {
-      alert("Error: " + e.message);
-    } finally {
-      setIsPurgingDiagonApp(false);
-    }
-  };
-
   const handleDeleteStudy = async (studyId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (window.confirm('¿Seguro que deseas eliminar este estudio contable y todos sus datos asociados?')) {
@@ -315,27 +294,6 @@ function Dashboard() {
             />
           ) : (
           <div className="space-y-6 max-w-7xl mx-auto">
-            {/* ACCIÓN ESPECIAL SOLICITADA: PURGAR DIAGON CONSTRUCCIONES */}
-            <div className="bg-slate-900 text-white p-4 rounded-xl shadow-2xs border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
-              <div className="space-y-1 text-center md:text-left">
-                <h3 className="text-sm font-semibold flex items-center justify-center md:justify-start gap-2">
-                  <Trash2 className="w-4 h-4 text-rose-400" />
-                  <span>Depuración Urgente: Diagon Construcciones SpA (Ricardo Ibarra Pérez)</span>
-                </h3>
-                <p className="text-xs text-slate-400">
-                  Borra todos los documentos RCV subidos y todos los comprobantes (vouchers) de esta empresa de forma instantánea.
-                </p>
-              </div>
-              <button
-                onClick={handlePurgeDiagonGlobal}
-                disabled={isPurgingDiagonApp}
-                className="bg-white hover:bg-slate-100 text-slate-900 px-4 py-2 rounded-lg font-medium text-xs shadow-2xs transition-colors cursor-pointer disabled:opacity-50 shrink-0 flex items-center gap-2"
-              >
-                <Trash2 className="w-4 h-4 text-rose-600" />
-                {isPurgingDiagonApp ? 'Eliminando RCV y Vouchers...' : 'Borrar RCV y Comprobantes de Diagon'}
-              </button>
-            </div>
-
             {/* SUPER ADMIN NAVIGATION TABS */}
             <div className="bg-white p-1.5 rounded-xl border border-slate-200 shadow-2xs flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-wrap items-center gap-1">

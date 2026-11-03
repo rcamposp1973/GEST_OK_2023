@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import type { MovementProposal } from '../utils/bankMovementClassifier';
 import { nameMatchesGloss, findDocSubset } from '../utils/bankMovementClassifier';
+import { extractRutFromGloss, areRutsEqual as areRutsEqualRut } from '../utils/rutMatcher';
 import {
   BankStatementLine,
   ChartOfAccount,
@@ -976,6 +977,17 @@ function QuickVoucherModalContent({
       return;
     }
 
+    // RUT en formato de banco sin puntos ni guion (ej. Santander: "0775317647" = 77.531.764-7)
+    const rutBanco = extractRutFromGloss(desc);
+    if (rutBanco && rutBanco.isValidModulo11) {
+      setSelectedAuxiliaryRut(rutBanco.rutFormatted);
+      const foundAux = auxiliaries.find(a => areRutsEqualRut(a.rut, rutBanco.rutFormatted));
+      if (foundAux) {
+        setSelectedAuxiliaryName((foundAux.name || '').toUpperCase());
+      }
+      return;
+    }
+
     // Match words against auxiliary names
     if (auxiliaries.length > 0) {
       const match = auxiliaries.find(a => {
@@ -1681,6 +1693,12 @@ function QuickVoucherModalContent({
     const monto = Math.round(bankAmount);
     const glosa = quickVoucherLine.description || '';
     const fmt = (n: number) => '$' + Math.round(n).toLocaleString('es-CL');
+    // El RUT que el banco pone en la glosa es la señal más confiable; el nombre es el respaldo.
+    const rutGlosa = extractRutFromGloss(glosa);
+    const rutValido = rutGlosa && rutGlosa.isValidModulo11 ? rutGlosa : null;
+    const delProveedor = (i: { auxiliaryRut: string; auxiliaryName: string }) =>
+      rutValido ? areRutsEqualRut(i.auxiliaryRut, rutValido.rutFormatted) : nameMatchesGloss(i.auxiliaryName, glosa);
+    const origen = rutValido ? `RUT ${rutValido.rutFormatted} de la glosa` : 'nombre de la glosa';
     const aplicar = (items: typeof openItems, texto: string, nivel: 'VERDE' | 'AMARILLO') => {
       const sel: { [id: string]: number } = {};
       items.forEach(i => { sel[i.id] = Math.round(i.openBalance); });
@@ -1698,15 +1716,16 @@ function QuickVoucherModalContent({
     const exactos = openItems.filter(i => Math.round(i.openBalance) === monto);
     if (exactos.length === 1) {
       const d = exactos[0];
-      aplicar([d], `Calce exacto: documento ${d.docNumber} de ${d.auxiliaryName || d.auxiliaryRut} por ${fmt(d.openBalance)}.`,
-        nameMatchesGloss(d.auxiliaryName, glosa) ? 'VERDE' : 'AMARILLO');
+      aplicar([d], `Calce exacto: documento ${d.docNumber} de ${d.auxiliaryName || d.auxiliaryRut} por ${fmt(d.openBalance)}.` +
+        (delProveedor(d) ? ` Coincide el ${origen}.` : ''),
+        delProveedor(d) ? 'VERDE' : 'AMARILLO');
       return;
     }
     if (exactos.length > 1) {
-      const conNombre = exactos.filter(d => nameMatchesGloss(d.auxiliaryName, glosa));
+      const conNombre = exactos.filter(d => delProveedor(d));
       if (conNombre.length === 1) {
         const d = conNombre[0];
-        aplicar([d], `Calce exacto por monto y nombre: documento ${d.docNumber} de ${d.auxiliaryName} por ${fmt(d.openBalance)}.`, 'VERDE');
+        aplicar([d], `Calce exacto por monto y ${rutValido ? 'RUT' : 'nombre'}: documento ${d.docNumber} de ${d.auxiliaryName} por ${fmt(d.openBalance)}.`, 'VERDE');
       } else {
         setAutoMatchNote({ level: 'AMARILLO', text: `Hay ${exactos.length} documentos pendientes por ${fmt(monto)}. Elige el correcto.` });
       }
@@ -1714,19 +1733,21 @@ function QuickVoucherModalContent({
     }
 
     // 2) Suma exacta de varios documentos del proveedor/cliente cuyo nombre aparece en la glosa
-    const candidatos = openItems.filter(i => nameMatchesGloss(i.auxiliaryName, glosa));
+    const candidatos = openItems.filter(i => delProveedor(i));
     const ruts = Array.from(new Set(candidatos.map(i => (i.auxiliaryRut || '').toUpperCase())));
     for (const rut of ruts) {
       const grupo = candidatos.filter(i => (i.auxiliaryRut || '').toUpperCase() === rut);
       const ids = findDocSubset(grupo.map(i => ({ id: i.id, amount: Math.round(i.openBalance) })), monto);
       if (ids && ids.length > 0) {
         const elegidos = grupo.filter(i => ids.includes(i.id));
-        aplicar(elegidos, `Calce exacto con ${elegidos.length} documentos de ${elegidos[0].auxiliaryName || rut} que suman ${fmt(monto)}.`, 'VERDE');
+        aplicar(elegidos, `Calce exacto con ${elegidos.length} documentos de ${elegidos[0].auxiliaryName || rut} que suman ${fmt(monto)}. Coincide el ${origen}.`, 'VERDE');
         return;
       }
     }
     if (candidatos.length > 0) {
       setAutoMatchNote({ level: 'AMARILLO', text: `Encontré documentos de ${candidatos[0].auxiliaryName || 'esa contraparte'}, pero ninguna combinación suma exactamente ${fmt(monto)}. Revisa descuentos, retenciones o pagos parciales.` });
+    } else if (rutValido) {
+      setAutoMatchNote({ level: 'AMARILLO', text: `La glosa trae el RUT ${rutValido.rutFormatted}, pero no tiene documentos pendientes en esta cuenta. Puede ser un anticipo, otra cuenta (honorarios, préstamos) o una factura aún no contabilizada.` });
     }
   }, [quickVoucherLine, selectedAccount, openItems, voucherMode]);
 

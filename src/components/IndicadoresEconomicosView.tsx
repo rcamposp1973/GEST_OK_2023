@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
 import { collection, getDocs, doc, setDoc, writeBatch } from 'firebase/firestore';
 import { ExchangeRate } from '../types';
-import { syncOnlineChileanIndicators, generateOfficialChileanIndicators } from '../utils/chileanEconomicIndicators';
+import { syncOnlineChileanIndicators } from '../utils/chileanEconomicIndicators';
 import { useProcess } from '../context/ProcessContext';
 import { 
   TrendingUp, 
@@ -63,90 +63,13 @@ export default function IndicadoresEconomicosView({ studyId, selectedYear }: Ind
   const loadRates = async (yearToLoad: number) => {
     setLoading(true);
     try {
-      const ratesRef = collection(db, 'studies', studyId, 'exchangeRates');
-      const snapshot = await getDocs(ratesRef);
-      let list = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as ExchangeRate));
-
-      // Filtrar por año
-      list = list.filter(r => r.date && r.date.startsWith(`${yearToLoad}-`));
-
-      // Generar la serie oficial completa de todo el año
-      const fullYearGenerated = generateOfficialChileanIndicators(`${yearToLoad}-01-01`).filter(item => item.date.startsWith(`${yearToLoad}-`));
-      const existingMap = new Map(list.map(r => [r.date, r]));
-      let needsBatchUpdate = false;
-      const completeList: ExchangeRate[] = [];
-
-      fullYearGenerated.forEach(expected => {
-        const existing = existingMap.get(expected.date);
-        if (!existing) {
-          // Día faltante (ej. día 3 de octubre en adelante) -> agregar valor oficial
-          needsBatchUpdate = true;
-          completeList.push({
-            id: expected.date,
-            date: expected.date,
-            uf: expected.uf,
-            dolar: expected.dolar,
-            utm: expected.utm,
-            euro: expected.euro,
-            yen: expected.yen,
-            ipc: expected.ipc,
-            ipcAcomulado: expected.ipcAcomulado
-          });
-        } else {
-          // Verificar si el valor existente difiere de la tabla oficial
-          const isUfMismatch = Math.abs((existing.uf || 0) - expected.uf) > 0.001;
-          const isDolarMismatch = Math.abs((existing.dolar || 0) - expected.dolar) > 0.001;
-          const isEuroMismatch = Math.abs((existing.euro || 0) - expected.euro) > 0.001;
-          const isUtmMismatch = Math.abs((existing.utm || 0) - expected.utm) > 0.001;
-
-          if (isUfMismatch || isDolarMismatch || isEuroMismatch || isUtmMismatch) {
-            needsBatchUpdate = true;
-            completeList.push({
-              ...existing,
-              uf: expected.uf,
-              dolar: expected.dolar,
-              euro: expected.euro,
-              utm: expected.utm,
-              yen: expected.yen,
-              ipc: expected.ipc !== undefined ? expected.ipc : existing.ipc,
-              ipcAcomulado: expected.ipcAcomulado !== undefined ? expected.ipcAcomulado : existing.ipcAcomulado
-            });
-          } else {
-            completeList.push(existing);
-          }
-        }
-      });
-
-      // Establecer de inmediato la lista completa en la interfaz para visualización instantánea
-      completeList.sort((a, b) => a.date.localeCompare(b.date));
-      setRates(completeList);
-
-      if (needsBatchUpdate && studyId) {
-        try {
-          const itemsToSave = completeList.filter(item => {
-            const ex = existingMap.get(item.date);
-            if (!ex) return true;
-            return Math.abs((ex.uf || 0) - (item.uf || 0)) > 0.001 ||
-                   Math.abs((ex.dolar || 0) - (item.dolar || 0)) > 0.001 ||
-                   Math.abs((ex.euro || 0) - (item.euro || 0)) > 0.001 ||
-                   Math.abs((ex.utm || 0) - (item.utm || 0)) > 0.001;
-          });
-
-          // Guardar en lotes de máximo 250 docs para cumplir con límites de Firestore
-          const chunkSize = 250;
-          for (let i = 0; i < itemsToSave.length; i += chunkSize) {
-            const chunk = itemsToSave.slice(i, i + chunkSize);
-            const batch = writeBatch(db);
-            chunk.forEach(item => {
-              const docRef = doc(db, 'studies', studyId, 'exchangeRates', item.date);
-              batch.set(docRef, item);
-            });
-            await batch.commit();
-          }
-        } catch (saveErr) {
-          console.warn("Auto-healing indicators database background save:", saveErr);
-        }
-      }
+      // Única fuente: indicadores oficiales publicados centralmente por el servidor.
+      const serie = await syncOnlineChileanIndicators(yearToLoad);
+      const list: ExchangeRate[] = serie
+        .filter(r => r.date.startsWith(`${yearToLoad}-`))
+        .map(r => ({ id: r.date, date: r.date, uf: r.uf, dolar: r.dolar, utm: r.utm, euro: r.euro, yen: r.yen, ipc: r.ipc, ipcAcomulado: r.ipcAcomulado }));
+      list.sort((a, b) => a.date.localeCompare(b.date));
+      setRates(list);
     } catch (err: any) {
       console.error("Error cargando indicadores económicos:", err);
       setStatusMessage({
@@ -176,39 +99,9 @@ export default function IndicadoresEconomicosView({ studyId, selectedYear }: Ind
           });
           const dailyList = await syncOnlineChileanIndicators(currentYear);
           const yearList = dailyList.filter(d => d.date.startsWith(`${currentYear}-`));
-
-          updateProgress({
-            current: yearList.length,
-            total: yearList.length,
-            message: `Guardando ${yearList.length} valores oficiales en la base de datos...`,
-            stage: `Año ${currentYear}`
-          });
-          
-          // Guardar en lotes de 250 docs
-          const chunkSize = 250;
-          for (let i = 0; i < yearList.length; i += chunkSize) {
-            const chunk = yearList.slice(i, i + chunkSize);
-            const batch = writeBatch(db);
-            chunk.forEach(item => {
-              const docRef = doc(db, 'studies', studyId, 'exchangeRates', item.date);
-              batch.set(docRef, {
-                id: item.date,
-                date: item.date,
-                uf: item.uf,
-                dolar: item.dolar,
-                utm: item.utm,
-                euro: item.euro,
-                yen: item.yen,
-                ipc: item.ipc,
-                ipcAcomulado: item.ipcAcomulado
-              });
-            });
-            await batch.commit();
-          }
-
           setStatusMessage({
             type: 'success',
-            text: `Se han sincronizado exitosamente ${yearList.length} registros del año ${currentYear} con las fuentes oficiales.`
+            text: `Indicadores oficiales actualizados: ${yearList.length} días disponibles del año ${currentYear}.`
           });
           await loadRates(currentYear);
         }

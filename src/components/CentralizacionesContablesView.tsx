@@ -120,7 +120,8 @@ export const CentralizacionesContablesView: React.FC<CentralizacionesContablesVi
     if (matchingRates.length > 0) {
       return matchingRates[matchingRates.length - 1];
     }
-    return exchangeRates[exchangeRates.length - 1] || { id: 'fallback', date: `${selectedPeriod}-01`, dolar: 955, uf: 38250, utm: 66500, euro: 1040, yen: 6.3 };
+    const previos = exchangeRates.filter(r => r.date <= `${selectedPeriod}-31`);
+    return previos[previos.length - 1] || { id: 'sin-dato', date: `${selectedPeriod}-01`, dolar: 0, uf: 0, utm: 0, euro: 0, yen: 0 };
   }, [exchangeRates, selectedPeriod]);
 
   // Sincronizar formulario si cambian las props externas
@@ -913,12 +914,12 @@ export const CentralizacionesContablesView: React.FC<CentralizacionesContablesVi
             <div className="flex items-center gap-4 text-xs font-mono bg-slate-800/80 px-3.5 py-2 rounded-xl border border-slate-700/60">
               <div>
                 <span className="text-slate-400 block text-[10px] uppercase">Dólar Observado</span>
-                <span className="text-emerald-400 font-bold">${currentExchangeRate.dolar?.toLocaleString('es-CL')}</span>
+                <span className="text-emerald-400 font-bold">{currentExchangeRate.dolar ? '$' + currentExchangeRate.dolar.toLocaleString('es-CL') : 'No disponible'}</span>
               </div>
               <div className="w-px h-6 bg-slate-700" />
               <div>
                 <span className="text-slate-400 block text-[10px] uppercase">UF Oficial</span>
-                <span className="text-indigo-400 font-bold">${currentExchangeRate.uf?.toLocaleString('es-CL')}</span>
+                <span className="text-indigo-400 font-bold">{currentExchangeRate.uf ? '$' + currentExchangeRate.uf.toLocaleString('es-CL') : 'No disponible'}</span>
               </div>
             </div>
           </div>
@@ -1815,7 +1816,7 @@ export const CentralizacionesContablesView: React.FC<CentralizacionesContablesVi
                 <span>2. Dólar y Divisas</span>
               </div>
               <p className="text-xs text-slate-600">
-                Tipo de cambio oficial Banco Central para {selectedPeriod}: <strong>${currentExchangeRate.dolar} CLP</strong>.
+                Tipo de cambio oficial Banco Central para {selectedPeriod}: <strong>{currentExchangeRate.dolar ? '$' + currentExchangeRate.dolar + ' CLP' : 'no disponible (sin dato oficial)'}</strong>.
               </p>
               <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-800">
                 Tasa Observada Aplicada

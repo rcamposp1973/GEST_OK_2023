@@ -6,7 +6,7 @@ import { collection, getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc, setDoc,
 import { Company, DTEConfig, ChartOfAccount, Auxiliary, ExchangeRate, FiscalPeriodYear, RCVDocument, Voucher, VoucherLine, RCVAccountingParams, MasterAccountingParameters, BankReconciliation, UserRole, CostCenterMaster, ExpenseItemMaster, NonSiiDocTypeMaster, ProjectMaster, ProductMaster, CustomAnalysisTableItem, CommercialDocument, InventoryMovement, ProductService, Employee, PayrollSlip, Warehouse } from '../types';
 import { EmployeesView } from './EmployeesView';
 import { LiquidacionSueldosView } from './LiquidacionSueldosView';
-import { syncOnlineChileanIndicators, generateOfficialChileanIndicators } from '../utils/chileanEconomicIndicators';
+import { syncOnlineChileanIndicators } from '../utils/chileanEconomicIndicators';
 import { logAuditEvent } from '../utils/auditLogger';
 import { notify } from '../context/ToastContext';
 import LibroDiarioView from './LibroDiarioView';
@@ -1373,56 +1373,24 @@ export default function CompanyAccountingDashboard({
         })();
       }
 
-      const exSnap = await getDocs(collection(companyRef, 'exchangeRates'));
-      let fetchedRates = exSnap.docs.map(d => ({ ...d.data(), id: d.id } as ExchangeRate));
-      fetchedRates.sort((a, b) => a.date.localeCompare(b.date));
-
-      // Verificación de exactitud oficial: Si no hay registros o si los registros son de prueba/aleatorios (ej. UF 2026 fuera de rango)
-      const hasBogusRates = fetchedRates.some(r => {
-        if (r.date.startsWith('2026') && (r.uf < 39000 || r.uf > 45000 || r.utm < 69000)) return true;
-        if (r.date.startsWith('2025') && (r.uf < 38000 || r.uf > 41000 || r.utm < 67000)) return true;
-        if (r.date.startsWith('2024') && (r.uf < 36000 || r.uf > 39000 || r.utm < 64000)) return true;
-        return false;
-      });
-
-      if (fetchedRates.length === 0 || hasBogusRates) {
-        const officialSeries = generateOfficialChileanIndicators('2020-01-01');
-        const mappedOfficial: ExchangeRate[] = officialSeries.map(item => ({
-          id: item.date,
-          date: item.date,
-          uf: item.uf,
-          dolar: item.dolar,
-          utm: item.utm,
-          euro: item.euro,
-          yen: item.yen,
-          ipc: item.ipc,
-          ipcAcomulado: item.ipcAcomulado
-        }));
-        setExchangeRates(mappedOfficial);
-      } else {
-        setExchangeRates(fetchedRates);
-      }
-
-      // Sincronización en segundo plano con mindicador.cl para enriquecer datos en tiempo real
+      // Indicadores: ÚNICA fuente oficial central (el servidor copia de Banco Central/SII y publica).
+      // Ya no se leen ni se generan tablas por empresa ni valores de respaldo.
       setTimeout(async () => {
         try {
           const syncedList = await syncOnlineChileanIndicators();
-          if (syncedList && syncedList.length > 0) {
-            const mappedRates: ExchangeRate[] = syncedList.map(item => ({
-              id: item.date,
-              date: item.date,
-              uf: item.uf,
-              dolar: item.dolar,
-              utm: item.utm,
-              euro: item.euro,
-              yen: item.yen,
-              ipc: item.ipc,
-              ipcAcomulado: item.ipcAcomulado
-            }));
-            setExchangeRates(mappedRates);
-          }
+          setExchangeRates(syncedList.map(item => ({
+            id: item.date,
+            date: item.date,
+            uf: item.uf,
+            dolar: item.dolar,
+            utm: item.utm,
+            euro: item.euro,
+            yen: item.yen,
+            ipc: item.ipc,
+            ipcAcomulado: item.ipcAcomulado
+          })));
         } catch (e) {
-          console.info("Serie de indicadores oficiales cargada exitosamente.");
+          console.warn("No se pudieron cargar los indicadores oficiales.", e);
         }
       }, 100);
 
@@ -5033,68 +5001,9 @@ export default function CompanyAccountingDashboard({
 
   // Seed Historical Exchange Rates from Jan 2020 to Date
   const handleSeedExchangeRates = async () => {
-    if (isReadOnly) {
-      alert('Modo Solo Lectura: El perfil Observador no puede generar ni modificar indicadores históricos.');
-      return;
-    }
-    if (exchangeRates.length > 500) {
-      alert('El histórico de factores ya se encuentra cargado.');
-      return;
-    }
-
-    if (!window.confirm('¿Desea generar y cargar el histórico diario de indicadores económicos (UF, Dólar, UTM, Euro, Yen) desde Enero 2020 a la fecha?')) return;
-
-    try {
-      const startDate = new Date('2020-01-01');
-      const endDate = new Date();
-      let currentDate = new Date(startDate);
-
-      // Base values for Jan 2020
-      let baseUf = 28300;
-      let baseDolar = 750;
-      let baseUtm = 49000;
-      let baseEuro = 830;
-      let baseYen = 6.9;
-
-      const batchList: ExchangeRate[] = [];
-
-      while (currentDate <= endDate) {
-        const dateStr = currentDate.toISOString().split('T')[0];
-        
-        // Slight realistic random fluctuation
-        baseUf += (Math.random() * 4 - 1.8);
-        baseDolar += (Math.random() * 3 - 1.4);
-        if (currentDate.getDate() === 1) {
-          baseUtm += 450; // UTM rises monthly
-        }
-        baseEuro += (Math.random() * 3 - 1.4);
-        baseYen += (Math.random() * 0.05 - 0.02);
-
-        batchList.push({
-          id: dateStr,
-          date: dateStr,
-          uf: parseFloat(baseUf.toFixed(2)),
-          dolar: parseFloat(baseDolar.toFixed(2)),
-          utm: parseFloat(baseUtm.toFixed(2)),
-          euro: parseFloat(baseEuro.toFixed(2)),
-          yen: parseFloat(baseYen.toFixed(2))
-        });
-
-        currentDate.setDate(currentDate.getDate() + 1);
-      }
-
-      // Save to Firestore in batches or individual docs
-      for (const item of batchList) {
-        await setDoc(doc(companyRef, 'exchangeRates', item.id), item);
-      }
-
-      alert(`Histórico cargado exitosamente (${batchList.length} registros desde 2020).`);
-      await fetchData();
-    } catch (err: any) {
-      console.error("Error seeding exchange rates:", err);
-      alert('Error al cargar histórico: ' + err.message);
-    }
+    alert('Los indicadores (UF, Dólar, Euro, UTM) se copian automáticamente desde las fuentes oficiales. Ya no se generan valores manualmente.');
   };
+
 
   // Save Account
   const handleSaveAccount = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -5489,7 +5398,7 @@ export default function CompanyAccountingDashboard({
 
   // Today exchange rate or latest
   const todayStr = new Date().toISOString().split('T')[0];
-  const currentRate = exchangeRates.find(r => r.date === todayStr) || exchangeRates[exchangeRates.length - 1] || { id: 'fallback', date: todayStr, uf: 38250, dolar: 955, utm: 66500, euro: 1040, yen: 6.3 };
+  const currentRate = exchangeRates.find(r => r.date === todayStr) || [...exchangeRates].reverse().find(r => r.date <= todayStr) || { id: 'sin-dato', date: todayStr, uf: 0, dolar: 0, utm: 0, euro: 0, yen: 0 };
 
   const getSubRibbonBtnClass = (isActive: boolean, variant: 'normal' | 'indigo' | 'gradient' = 'normal') => {
     if (isActive) {

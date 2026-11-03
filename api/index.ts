@@ -246,6 +246,68 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
+// Endpoint: Sincronización de indicadores económicos oficiales (UF, Dólar, Euro, UTM)
+// Copia desde la fuente oficial (mindicador.cl, que replica Banco Central y SII) y publica en
+// Firestore `globalExchangeRates/{fecha}`, único lugar del que leen todas las pantallas.
+// No inventa valores: solo guarda lo que la fuente publica. Se limita a 1 ejecución cada 30 min.
+async function sincronizarIndicadoresOficiales(force = false) {
+  const metaRef = adminDb.collection('systemMeta').doc('indicadores');
+  const metaSnap = await metaRef.get();
+  const ultimo = metaSnap.exists ? (metaSnap.data() as any)?.ultimoIntentoOk : null;
+  if (!force && ultimo && Date.now() - new Date(ultimo).getTime() < 30 * 60 * 1000) {
+    return { omitido: true, ultimaActualizacion: (metaSnap.data() as any)?.ultimaActualizacion || ultimo };
+  }
+  const hoy = new Date();
+  const years = [hoy.getFullYear()];
+  if (hoy.getMonth() >= 10) years.push(hoy.getFullYear() + 1); // la UF de dic/ene se publica por adelantado
+  if (hoy.getMonth() === 0) years.push(hoy.getFullYear() - 1);
+  const porFecha: Record<string, any> = {};
+  const errores: string[] = [];
+  for (const yr of years) {
+    for (const ind of ['uf', 'dolar', 'euro', 'utm'] as const) {
+      try {
+        const r = await fetch(`https://mindicador.cl/api/${ind}/${yr}`, { signal: AbortSignal.timeout(15000) });
+        if (!r.ok) { errores.push(`${ind}/${yr}: HTTP ${r.status}`); continue; }
+        const j: any = await r.json();
+        for (const it of (j?.serie || [])) {
+          const v = Number(it?.valor);
+          const f = String(it?.fecha || '').slice(0, 10);
+          if (!f || !isFinite(v) || v <= 0) continue;
+          porFecha[f] = porFecha[f] || {};
+          porFecha[f][ind] = v;
+        }
+      } catch (e: any) { errores.push(`${ind}/${yr}: ${e?.message || 'error'}`); }
+    }
+  }
+  const fechas = Object.keys(porFecha);
+  if (fechas.length === 0) {
+    return { ok: false, errores };
+  }
+  let escritos = 0;
+  for (let i = 0; i < fechas.length; i += 400) {
+    const batch = adminDb.batch();
+    for (const f of fechas.slice(i, i + 400)) {
+      batch.set(adminDb.collection('globalExchangeRates').doc(f), {
+        id: f, date: f, ...porFecha[f], fuente: 'mindicador.cl (Banco Central / SII)', actualizadoEn: new Date().toISOString()
+      }, { merge: true });
+      escritos++;
+    }
+    await batch.commit();
+  }
+  const ahora = new Date().toISOString();
+  await metaRef.set({ ultimoIntentoOk: ahora, ultimaActualizacion: ahora, registros: escritos, errores }, { merge: true });
+  return { ok: true, escritos, errores, ultimaActualizacion: ahora };
+}
+
+app.all("/api/indicators/sync", async (req, res) => {
+  try {
+    const out = await sincronizarIndicadoresOficiales(req.query.force === '1');
+    res.json(out);
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: e?.message || 'Error sincronizando indicadores' });
+  }
+});
+
 // Endpoint: Cifrado y resguardo de secretos de empresa (Clave SII y Certificado)
 app.post("/api/companies/:companyId/secrets", verifyFirebaseAuth, async (req: AuthenticatedRequest, res) => {
   try {

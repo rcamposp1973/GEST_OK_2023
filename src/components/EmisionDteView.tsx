@@ -75,7 +75,7 @@ export default function EmisionDteView({
   // Export Specific State (DTE 110, 111, 112)
   const isExportDoc = tipoDTE === '110' || tipoDTE === '111' || tipoDTE === '112';
   const [exportMoneda, setExportMoneda] = useState<'USD' | 'EUR' | 'CLP' | 'UF'>('USD');
-  const [exportTipoCambio, setExportTipoCambio] = useState<number>(() => getOfficialDolar(new Date().toISOString().split('T')[0]) || 983.84);
+  const [exportTipoCambio, setExportTipoCambio] = useState<number>(() => getOfficialDolar(new Date().toISOString().split('T')[0]) || 0);
   const [exportClausula, setExportClausula] = useState<string>('FOB');
   const [exportModalidad, setExportModalidad] = useState<string>('A Firme');
   const [exportViaTransp, setExportViaTransp] = useState<string>('Marítimo');

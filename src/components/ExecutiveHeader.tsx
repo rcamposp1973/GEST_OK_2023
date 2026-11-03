@@ -86,6 +86,8 @@ export default function ExecutiveHeader({
             setLatestRate(series[0]);
           }
         }
+      } else {
+        setLatestRate(null);
       }
     };
     loadIndicators();
@@ -110,7 +112,7 @@ export default function ExecutiveHeader({
   const formatVal = (key: string, rateObj: DailyIndicator | null) => {
     if (!rateObj) return '...';
     const raw = (rateObj as any)[key];
-    if (raw === undefined || raw === null) return 'N/A';
+    if (raw === undefined || raw === null || (key !== 'ipc' && Number(raw) <= 0)) return 'No disp.';
     if (key === 'ipc') {
       const num = Number(raw);
       return `${num > 0 ? '+' : ''}${num.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 2 })}%`;

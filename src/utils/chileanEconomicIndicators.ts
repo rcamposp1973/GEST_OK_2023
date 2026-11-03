@@ -7,6 +7,8 @@
 // La UF se calcula y publica mensualmente (del 10 al 9 del mes siguiente), permitiendo conocer días futuros.
 
 import officialHistoricalData from './officialChileanIndicatorsData.json';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 export interface DailyIndicator {
   date: string; // YYYY-MM-DD
@@ -141,18 +143,10 @@ const OFFICIAL_MONTHLY_IPC: { [period: string]: { monthly: number; accumulated: 
  */
 export function getOfficialUTM(period: string): number {
   const [yearStr] = period.split('-');
-  const year = parseInt(yearStr, 10) || 2026;
-  if (dynamicCache[year]?.utm?.[period]) {
-    return dynamicCache[year].utm[period];
-  }
-  if (OFFICIAL_MONTHLY_UTM[period]) {
-    return OFFICIAL_MONTHLY_UTM[period];
-  }
-  if (year >= 2026) {
-    const base2026 = 72151;
-    return Math.round(base2026 * Math.pow(1.035, year - 2026));
-  }
-  return 67429;
+  const year = parseInt(yearStr, 10);
+  if (dynamicCache[year]?.utm?.[period]) return dynamicCache[year].utm[period];
+  if (OFFICIAL_MONTHLY_UTM[period]) return OFFICIAL_MONTHLY_UTM[period];
+  return 0; // Sin dato oficial: NO se inventa. 0 = "no disponible".
 }
 
 /**
@@ -184,217 +178,107 @@ export function getOfficialHonorariosRate(period: string): number {
   return 17.0;
 }
 
-/**
- * Obtiene el valor oficial de la UF para una fecha específica 'YYYY-MM-DD' (Fuente: SII / Banco Central)
- * Si la fecha es posterior al día 9 del mes, calcula la continuidad mensual exacta del período con la tasa oficial.
- */
+/** Busca el valor exacto; para monedas sin cotización en fin de semana/feriado, usa el último día hábil previo (máx. 10 días). */
+function buscarConArrastre(serie: 'uf' | 'dolar' | 'euro', dateStr: string, arrastrar: boolean): number {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  if (!y || !m || !d) return 0;
+  const limite = arrastrar ? 10 : 0;
+  for (let i = 0; i <= limite; i++) {
+    const dt = new Date(Date.UTC(y, m - 1, d - i));
+    const k = dt.toISOString().slice(0, 10);
+    const v = dynamicCache[dt.getUTCFullYear()]?.[serie]?.[k];
+    if (v) return v;
+  }
+  return 0;
+}
+
+/** UF oficial de la fecha (SII / Banco Central). 0 si aún no está publicada. NO se proyecta ni se inventa. */
 export function getOfficialUF(dateStr: string): number {
-  const parts = dateStr.split('-');
-  if (parts.length < 3) return 41065.38;
-  const y = parseInt(parts[0], 10);
-  const m = parseInt(parts[1], 10);
-  const d = parseInt(parts[2], 10);
-  
-  // 1. Buscar primero en el dataset oficial certificado
-  if (dynamicCache[y]?.uf?.[dateStr]) {
-    return dynamicCache[y].uf[dateStr];
-  }
+  return buscarConArrastre('uf', dateStr, false);
+}
 
-  // 2. Si es para días posteriores al último publicado del mes (ej. días 10 al 31):
-  // La UF se calcula oficialmente de forma mensual mediante la fórmula oficial del Banco Central/SII
-  const day9Str = `${y}-${String(m).padStart(2, '0')}-09`;
-  const baseDay9 = dynamicCache[y]?.uf?.[day9Str] || 41130.94;
-  const daysInMonth = new Date(y, m, 0).getDate();
-  const periodStr = `${parts[0]}-${parts[1]}`;
-  const ipcVal = (OFFICIAL_MONTHLY_IPC[periodStr]?.monthly ?? 0.4) / 100;
-  
-  if (d > 9) {
-    const progress = (d - 9) / daysInMonth;
-    const computed = baseDay9 * Math.pow(1 + ipcVal, progress);
-    return parseFloat(computed.toFixed(2));
-  }
+/** Dólar observado oficial (Banco Central). 0 si no hay dato. El segundo parámetro se ignora (ya no se usan valores de respaldo inventados). */
+export function getOfficialDolar(dateStr: string, _ignorado?: number): number {
+  return buscarConArrastre('dolar', dateStr, true);
+}
 
-  const baseStart = OFFICIAL_UF_MONTHLY_START[periodStr] || 41065.38;
-  return baseStart;
+/** Euro oficial (Banco Central). 0 si no hay dato. */
+export function getOfficialEuro(dateStr: string, _ignorado?: number): number {
+  return buscarConArrastre('euro', dateStr, true);
 }
 
 /**
- * Obtiene el valor oficial del Dólar Observado (USD/CLP) para una fecha específica 'YYYY-MM-DD' (Fuente: Banco Central de Chile)
- */
-export function getOfficialDolar(dateStr: string, fallbackLastKnown: number = 983.84): number {
-  const parts = dateStr.split('-');
-  if (parts.length < 3) return fallbackLastKnown;
-  const y = parseInt(parts[0], 10);
-
-  if (dynamicCache[y]?.dolar?.[dateStr]) {
-    return dynamicCache[y].dolar[dateStr];
-  }
-
-  // En fin de semana o feriado donde el Banco Central no cotiza, rige el día hábil previo
-  return fallbackLastKnown;
-}
-
-/**
- * Obtiene el valor oficial del Euro (EUR/CLP) para una fecha específica 'YYYY-MM-DD' (Fuente: Banco Central de Chile)
- */
-export function getOfficialEuro(dateStr: string, fallbackLastKnown: number = 1104.57): number {
-  const parts = dateStr.split('-');
-  if (parts.length < 3) return fallbackLastKnown;
-  const y = parseInt(parts[0], 10);
-
-  if (dynamicCache[y]?.euro?.[dateStr]) {
-    return dynamicCache[y].euro[dateStr];
-  }
-
-  return fallbackLastKnown;
-}
-
-/**
- * Genera la serie cronológica diaria oficial completa para todo el año calendario
- * Incluye todos los días del mes (1 al 28/30/31), con arrastre de monedas en fines de semana
- * y serie mensual de UF completa (días presentes y futuros).
+ * Serie diaria construida SOLO con datos oficiales publicados. Los días sin dato oficial
+ * (p. ej. UF aún no publicada) no se incluyen y no se rellenan con valores inventados.
  */
 export function generateOfficialChileanIndicators(startDateStr = '2020-01-01', endDate?: Date): DailyIndicator[] {
-  const start = new Date(startDateStr);
-  const startYear = start.getFullYear();
-  
-  // Por defecto, si se solicita un año, generar el año calendario completo (hasta 31 de diciembre)
-  const end = endDate || new Date(startYear, 11, 31);
+  const startYear = parseInt(startDateStr.slice(0, 4), 10);
+  const endYear = endDate ? endDate.getFullYear() : startYear;
   const result: DailyIndicator[] = [];
-
-  let current = new Date(start);
-  let lastKnownDolar = 983.84;
-  let lastKnownEuro = 1104.57;
-
-  // Inicializar último dólar y euro conocido previo al período si existe
-  if (dynamicCache[startYear]?.dolar) {
-    const sortedDates = Object.keys(dynamicCache[startYear].dolar).sort();
-    if (sortedDates.length > 0) {
-      lastKnownDolar = dynamicCache[startYear].dolar[sortedDates[0]];
+  for (let y = startYear; y <= endYear; y++) {
+    const fechas = Object.keys(dynamicCache[y]?.uf || {}).sort();
+    for (const dateStr of fechas) {
+      if (dateStr < startDateStr) continue;
+      if (endDate && dateStr > endDate.toISOString().slice(0, 10)) continue;
+      const periodStr = dateStr.slice(0, 7);
+      const ipcData = OFFICIAL_MONTHLY_IPC[periodStr];
+      result.push({
+        date: dateStr,
+        uf: getOfficialUF(dateStr),
+        dolar: getOfficialDolar(dateStr),
+        utm: getOfficialUTM(periodStr),
+        euro: getOfficialEuro(dateStr),
+        yen: 0, // la fuente oficial usada no publica yen: se muestra como no disponible
+        ipc: ipcData?.monthly,
+        ipcAcomulado: ipcData?.accumulated,
+      });
     }
   }
-  if (dynamicCache[startYear]?.euro) {
-    const sortedDates = Object.keys(dynamicCache[startYear].euro).sort();
-    if (sortedDates.length > 0) {
-      lastKnownEuro = dynamicCache[startYear].euro[sortedDates[0]];
-    }
-  }
-
-  while (current <= end) {
-    const y = current.getFullYear();
-    const m = current.getMonth() + 1;
-    const d = current.getDate();
-    const periodStr = `${y}-${String(m).padStart(2, '0')}`;
-    const dateStr = `${periodStr}-${String(d).padStart(2, '0')}`;
-
-    // 1. UF Oficial (SII / Banco Central) - Incluye serie publicada y proyección mensual oficial
-    const ufVal = getOfficialUF(dateStr);
-
-    // 2. Dólar Observado (Banco Central) - En fines de semana o feriados arrastra el último día hábil oficial
-    const exactDolar = dynamicCache[y]?.dolar?.[dateStr];
-    if (exactDolar) {
-      lastKnownDolar = exactDolar;
-    }
-    const dolarVal = exactDolar || lastKnownDolar;
-
-    // 3. Euro Oficial (Banco Central) - En fines de semana o feriados arrastra el último día hábil oficial
-    const exactEuro = dynamicCache[y]?.euro?.[dateStr];
-    if (exactEuro) {
-      lastKnownEuro = exactEuro;
-    }
-    const euroVal = exactEuro || lastKnownEuro;
-
-    // 4. UTM Mensual Oficial (SII)
-    const utmVal = getOfficialUTM(periodStr);
-
-    // 5. Yen Japonés (Banco Central)
-    const yenVal = parseFloat((dolarVal / 150.5).toFixed(2));
-
-    // 6. IPC Oficial Mensual (INE / SII)
-    const ipcData = getOfficialIPC(periodStr);
-
-    result.push({
-      date: dateStr,
-      uf: ufVal,
-      dolar: dolarVal,
-      utm: utmVal,
-      euro: euroVal,
-      yen: yenVal,
-      ipc: ipcData.monthly,
-      ipcAcomulado: ipcData.accumulated,
-    });
-
-    current.setDate(current.getDate() + 1);
-  }
-
   return result;
 }
 
+export interface EstadoIndicadores {
+  ok: boolean;
+  ultimaFecha?: string; // última fecha con UF publicada
+  error?: string;
+}
+let estadoIndicadores: EstadoIndicadores = { ok: false };
+export function getEstadoIndicadores(): EstadoIndicadores { return estadoIndicadores; }
+
 /**
- * Sincroniza en vivo los indicadores desde las APIs oficiales de Chile (mindicador.cl / Banco Central / SII)
+ * Pide al servidor que copie los indicadores desde la fuente oficial (si corresponde) y luego
+ * lee la ÚNICA fuente central (Firestore `globalExchangeRates`) para todas las pantallas.
  */
 export async function syncOnlineChileanIndicators(targetYear?: number): Promise<DailyIndicator[]> {
-  const yearsToSync = targetYear ? [targetYear] : [2024, 2025, 2026];
-
-  for (const yr of yearsToSync) {
-    try {
-      const [ufRes, usdRes, eurRes, utmRes] = await Promise.all([
-        fetch(`https://mindicador.cl/api/uf/${yr}`).then(r => r.ok ? r.json() : null).catch(() => null),
-        fetch(`https://mindicador.cl/api/dolar/${yr}`).then(r => r.ok ? r.json() : null).catch(() => null),
-        fetch(`https://mindicador.cl/api/euro/${yr}`).then(r => r.ok ? r.json() : null).catch(() => null),
-        fetch(`https://mindicador.cl/api/utm/${yr}`).then(r => r.ok ? r.json() : null).catch(() => null)
-      ]);
-
-      if (!dynamicCache[yr]) {
-        dynamicCache[yr] = { uf: {}, dolar: {}, euro: {}, utm: {} };
+  try {
+    await fetch('/api/indicators/sync').catch(() => null);
+  } catch { /* el servidor puede estar sin conexión; se lee lo ya publicado */ }
+  try {
+    const snap = await getDocs(collection(db, 'globalExchangeRates'));
+    snap.docs.forEach(docu => {
+      const r: any = docu.data();
+      const date: string = r.date || docu.id;
+      const y = parseInt(date.slice(0, 4), 10);
+      if (!y) return;
+      if (!dynamicCache[y]) dynamicCache[y] = { uf: {}, dolar: {}, euro: {}, utm: {} };
+      if (Number(r.uf) > 0) dynamicCache[y].uf[date] = Number(r.uf);
+      if (Number(r.dolar) > 0) dynamicCache[y].dolar[date] = Number(r.dolar);
+      if (Number(r.euro) > 0) dynamicCache[y].euro[date] = Number(r.euro);
+      if (Number(r.utm) > 0) {
+        const per = date.slice(0, 7);
+        dynamicCache[y].utm[per] = Number(r.utm);
+        OFFICIAL_MONTHLY_UTM[per] = Number(r.utm);
       }
-
-      if (ufRes?.serie && Array.isArray(ufRes.serie)) {
-        ufRes.serie.forEach((item: any) => {
-          if (item?.fecha && item?.valor) {
-            const d = item.fecha.split('T')[0];
-            dynamicCache[yr].uf[d] = Number(item.valor);
-          }
-        });
-      }
-
-      if (usdRes?.serie && Array.isArray(usdRes.serie)) {
-        usdRes.serie.forEach((item: any) => {
-          if (item?.fecha && item?.valor) {
-            const d = item.fecha.split('T')[0];
-            dynamicCache[yr].dolar[d] = Number(item.valor);
-          }
-        });
-      }
-
-      if (eurRes?.serie && Array.isArray(eurRes.serie)) {
-        eurRes.serie.forEach((item: any) => {
-          if (item?.fecha && item?.valor) {
-            const d = item.fecha.split('T')[0];
-            dynamicCache[yr].euro[d] = Number(item.valor);
-          }
-        });
-      }
-
-      if (utmRes?.serie && Array.isArray(utmRes.serie)) {
-        utmRes.serie.forEach((item: any) => {
-          if (item?.fecha && item?.valor) {
-            const p = item.fecha.split('T')[0].substring(0, 7);
-            dynamicCache[yr].utm[p] = Number(item.valor);
-            OFFICIAL_MONTHLY_UTM[p] = Number(item.valor);
-          }
-        });
-      }
-    } catch (e) {
-      console.warn(`No se pudo actualizar año ${yr} desde API en línea, usando dataset oficial local.`);
-    }
+    });
+    const todos = Object.keys(dynamicCache).flatMap(y => Object.keys(dynamicCache[Number(y)].uf || {})).sort();
+    estadoIndicadores = { ok: todos.length > 0, ultimaFecha: todos[todos.length - 1] };
+  } catch (e: any) {
+    estadoIndicadores = { ok: false, error: e?.message || 'No se pudo leer los indicadores' };
   }
-
-  const baseYear = targetYear || 2026;
-  return generateOfficialChileanIndicators(`${baseYear}-01-01`, new Date(baseYear, 11, 31));
+  const baseYear = targetYear || new Date().getFullYear();
+  return generateOfficialChileanIndicators(`${baseYear - 1}-01-01`, new Date(baseYear + 1, 11, 31)).filter(i => !targetYear || i.date.startsWith(`${targetYear}-`));
 }
 
-// TABLA OFICIAL DEL INGRESO MÍNIMO MENSUAL (IMM) - LEYES N° 21.456, 21.578 Y REAJUSTES LEY DE LA RENTA
 export const OFFICIAL_MONTHLY_IMM: { [period: string]: number } = {
   // 2020 - 2022
   '2020-01': 320000, '2020-09': 326500,

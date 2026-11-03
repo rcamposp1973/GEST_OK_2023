@@ -9,6 +9,12 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## [Pruebas] Indicadores económicos oficiales (sin valores inventados)
+- El servidor copia UF, Dólar, Euro y UTM desde la fuente oficial (mindicador.cl, que replica Banco Central y SII) y los publica en un solo lugar (`globalExchangeRates`). Todas las pantallas leen de ahí.
+- La UF se toma completa según se publica (un mes por adelantado junto con el IPC); no se proyecta ni se estima.
+- Eliminados todos los valores de respaldo inventados (UF 38.250, dólar 955, yen, UTM proyectada) y el generador de valores aleatorios por empresa.
+- Si un dato no existe, se muestra "No disponible" en lugar de un número falso.
+
 ## 1.1.0 — 3 de noviembre de 2026
 
 ### Conciliación bancaria

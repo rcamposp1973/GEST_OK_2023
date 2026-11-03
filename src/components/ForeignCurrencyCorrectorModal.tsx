@@ -122,7 +122,7 @@ export default function ForeignCurrencyCorrectorModal({
 
       // Check date and official exchange rate
       const vDate = v.date || '2026-01-01';
-      const officialUsdRate = getOfficialDolar(vDate, 931.57);
+      const officialUsdRate = getOfficialDolar(vDate);
       const officialUfRate = getOfficialUF(vDate);
 
       // Analyze every line in this voucher

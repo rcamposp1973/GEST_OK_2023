@@ -171,37 +171,38 @@ export function getNextOpenPeriodAndDate(
   };
 }
 
+/** Mes calendario actual (YYYY-MM) según la hora local. */
+export function getCurrentPeriodStr(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+/** Limita un período para que nunca sea futuro (si lo es, devuelve el mes actual). */
+export function clampPeriodToNow(period: string): string {
+  const now = getCurrentPeriodStr();
+  return period > now ? now : period;
+}
+
 /**
- * Devuelve el período de trabajo activo más conveniente.
- * Prioriza el año operativo (por defecto 2025), buscando el mes abierto activo.
+ * Período de trabajo por defecto de una empresa: el ÚLTIMO período ABIERTO, sin pasar del mes actual
+ * (nunca un período futuro). Si no hay ninguno abierto hasta hoy, usa el mes actual.
  */
 export function getLatestOpenPeriod(
   fiscalYears: FiscalPeriodYear[] = [],
-  preferredYear: number = 2026
+  _preferredYear?: number
 ): string {
-  const targetPrefYear = Math.max(MIN_SYSTEM_YEAR, preferredYear);
-  // 1. Buscar en el año preferido (ej. 2026 o 2025)
-  const prefFy = fiscalYears.find(f => Number(f.id || f.year) === targetPrefYear);
-  if (prefFy && prefFy.months) {
-    for (let m = 1; m <= 12; m++) {
-      if (prefFy.months[m] === 'Abierto') {
-        return `${targetPrefYear}-${String(m).padStart(2, '0')}`;
-      }
-    }
-  }
-
-  // 2. Si no hay meses abiertos en targetPrefYear, buscar en otros años disponibles (>= 2025)
+  const now = getCurrentPeriodStr();
+  let best = '';
   for (const fy of fiscalYears) {
     const y = Number(fy.id || fy.year);
     if (!y || y < MIN_SYSTEM_YEAR || !fy.months) continue;
     for (let m = 1; m <= 12; m++) {
-      if (fy.months[m] === 'Abierto') {
-        return `${y}-${String(m).padStart(2, '0')}`;
-      }
+      if (fy.months[m] !== 'Abierto') continue;
+      const per = `${y}-${String(m).padStart(2, '0')}`;
+      if (per <= now && per > best) best = per;
     }
   }
-
-  return `${targetPrefYear}-01`;
+  return best || now;
 }
 
 /**

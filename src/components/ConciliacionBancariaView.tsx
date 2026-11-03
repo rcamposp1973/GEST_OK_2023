@@ -135,13 +135,12 @@ export default function ConciliacionBancariaView({
   const [selectedBankAccountId, setSelectedBankAccountId] = useState<string>('');
   const [selectedPeriod, setSelectedPeriod] = useState<string>(() => getLatestOpenPeriod(fiscalYears));
 
-  // Default selectedPeriod to latest open accounting period whenever fiscalYears loads or updates
+  // Período por defecto: último período abierto (nunca futuro); se aplica una vez al cargar los períodos
+  const periodoInicialAplicado = useRef(false);
   useEffect(() => {
-    if (fiscalYears && fiscalYears.length > 0) {
-      const latestOpen = getLatestOpenPeriod(fiscalYears);
-      if (latestOpen && (!selectedPeriod || selectedPeriod === new Date().toISOString().slice(0, 7))) {
-        setSelectedPeriod(latestOpen);
-      }
+    if (!periodoInicialAplicado.current && fiscalYears && fiscalYears.length > 0) {
+      periodoInicialAplicado.current = true;
+      setSelectedPeriod(getLatestOpenPeriod(fiscalYears));
     }
   }, [fiscalYears]);
   const [statementLines, setStatementLines] = useState<BankStatementLine[]>([]);
@@ -2856,7 +2855,7 @@ export default function ConciliacionBancariaView({
         <div>
           <label className="block font-bold text-slate-700 mb-1">Período Conciliación:</label>
           <input
-            type="month"
+            type="month" max={new Date().toISOString().slice(0, 7)}
             value={selectedPeriod}
             onChange={(e) => setSelectedPeriod(e.target.value)}
             className="w-full bg-white border border-slate-300 rounded-md px-2.5 py-1.5 font-semibold text-xs"

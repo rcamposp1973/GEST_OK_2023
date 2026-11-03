@@ -1683,7 +1683,7 @@ function QuickVoucherModalContent({
                  Período Imputación:
               </label>
               <input
-                type="month"
+                type="month" max={new Date().toISOString().slice(0, 7)}
                 value={quickVoucherPeriod}
                 onChange={(e) => {
                   const val = e.target.value;

@@ -61,7 +61,7 @@ import AgenticPymeHub2040 from './AgenticPymeHub2040';
 import * as XLSX from 'xlsx';
 import { useProcess } from '../context/ProcessContext';
 import { validateVoucherLine, isCustomAnalysisRequired, sanitizeVoucherLine, sanitizeVoucherLines } from '../utils/voucherValidation';
-import { getLatestOpenPeriod, checkIsPeriodClosed as checkIsPeriodClosedUtil, getNextOpenPeriodAndDate } from '../utils/periodUtils';
+import { getLatestOpenPeriod, getCurrentPeriodStr, checkIsPeriodClosed as checkIsPeriodClosedUtil, getNextOpenPeriodAndDate } from '../utils/periodUtils';
 import { fetchRcvFromSii } from '../utils/siiRcvClient';
 import { formatRut } from '../utils/rutMatcher';
 import DemoFerreteriaManagerModal from './DemoFerreteriaManagerModal';
@@ -955,37 +955,10 @@ export default function CompanyAccountingDashboard({
   } | null>(null);
   const [actionLoading, setActionLoading] = useState<boolean>(false);
 
-  const [selectedYear, setSelectedYear] = useState<number>(() => {
-    try {
-      const saved = localStorage.getItem(`gest_ok_last_period_${company.id}`) || localStorage.getItem('gest_ok_last_open_period');
-      if (saved && /^\d{4}-\d{2}$/.test(saved)) {
-        const y = parseInt(saved.split('-')[0], 10);
-        if (y <= 2026) return y;
-      }
-    } catch {}
-    return 2026;
-  });
-
-  const [selectedRcvPeriod, setSelectedRcvPeriod] = useState<string>(() => {
-    try {
-      const saved = localStorage.getItem(`gest_ok_last_period_${company.id}`) || localStorage.getItem('gest_ok_last_open_period');
-      if (saved && /^\d{4}-\d{2}$/.test(saved)) {
-        const y = parseInt(saved.split('-')[0], 10);
-        if (y <= 2026) return saved;
-      }
-    } catch {}
-    return '2026-01';
-  });
-
-  // Persistir período seleccionado en almacenamiento local
-  useEffect(() => {
-    if (selectedRcvPeriod && /^\d{4}-\d{2}$/.test(selectedRcvPeriod)) {
-      try {
-        localStorage.setItem(`gest_ok_last_period_${company.id}`, selectedRcvPeriod);
-        localStorage.setItem('gest_ok_last_open_period', selectedRcvPeriod);
-      } catch {}
-    }
-  }, [selectedRcvPeriod, company.id]);
+  // Período por defecto: último período abierto (nunca futuro). Se ajusta apenas cargan los períodos de la empresa.
+  const [selectedYear, setSelectedYear] = useState<number>(() => parseInt(getCurrentPeriodStr().slice(0, 4), 10));
+  const [selectedRcvPeriod, setSelectedRcvPeriod] = useState<string>(() => getCurrentPeriodStr());
+  const periodoInicialAplicado = useRef(false);
 
   // Helper para determinar automáticamente el mes abierto más adecuado para un año fiscal (nunca el mes que estamos viviendo por defecto)
   const getBestActiveMonthForYear = (year: number, currentFyList: FiscalPeriodYear[]): string => {
@@ -1433,6 +1406,12 @@ export default function CompanyAccountingDashboard({
 
       const loadedFys = fySnap.docs.map(d => ({ ...d.data(), id: d.id } as FiscalPeriodYear));
       setFiscalYears(loadedFys);
+      if (!periodoInicialAplicado.current) {
+        periodoInicialAplicado.current = true;
+        const inicial = getLatestOpenPeriod(loadedFys);
+        setSelectedRcvPeriod(inicial);
+        setSelectedYear(parseInt(inicial.slice(0, 4), 10));
+      }
 
       // Limpieza de documentos demo
       const demoDocs = rcvSnap.docs.filter(d => {
@@ -6310,9 +6289,9 @@ export default function CompanyAccountingDashboard({
               <div>
                 <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Período Fiscal</label>
                 <input
-                  type="month"
+                  type="month" max={new Date().toISOString().slice(0, 7)}
                   value={selectedRcvPeriod}
-                  onChange={(e) => setSelectedRcvPeriod(e.target.value)}
+                  onChange={(e) => { const v = e.target.value; if (v) setSelectedRcvPeriod(v > new Date().toISOString().slice(0, 7) ? new Date().toISOString().slice(0, 7) : v); }}
                   className="bg-slate-50 border border-slate-300 text-slate-900 text-xs font-semibold rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none shadow-xs"
                 />
               </div>

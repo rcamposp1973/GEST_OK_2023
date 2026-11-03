@@ -822,7 +822,7 @@ export const CentralizacionesContablesView: React.FC<CentralizacionesContablesVi
             <Calendar className="w-4 h-4 text-indigo-600" />
             <span className="text-xs font-semibold text-slate-700">Período:</span>
             <input
-              type="month"
+              type="month" max={new Date().toISOString().slice(0, 7)}
               value={selectedPeriod}
               onChange={(e) => onChangePeriod(e.target.value)}
               className="text-xs font-bold text-slate-900 bg-transparent border-0 focus:ring-0 p-0 cursor-pointer"

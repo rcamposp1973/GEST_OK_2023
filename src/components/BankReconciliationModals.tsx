@@ -1700,9 +1700,18 @@ function QuickVoucherModalContent({
     const delProveedor = (i: { auxiliaryRut: string; auxiliaryName: string }) =>
       rutValido ? areRutsEqualRut(i.auxiliaryRut, rutValido.rutFormatted) : nameMatchesGloss(i.auxiliaryName, glosa);
     const origen = rutValido ? `RUT ${rutValido.rutFormatted} de la glosa` : 'nombre de la glosa';
+    const TOLERANCIA = 2; // pesos de diferencia de redondeo entre banco y factura
     const aplicar = (items: typeof openItems, texto: string, nivel: 'VERDE' | 'AMARILLO') => {
       const sel: { [id: string]: number } = {};
       items.forEach(i => { sel[i.id] = Math.round(i.openBalance); });
+      // Diferencia de redondeo (hasta $2): el banco manda el monto real y el asiento debe cuadrar con él
+      const suma = Object.values(sel).reduce((s, v) => s + v, 0);
+      const dif = monto - suma;
+      if (dif !== 0 && Math.abs(dif) <= TOLERANCIA) {
+        const ultimo = items[items.length - 1];
+        sel[ultimo.id] = Math.max(0, sel[ultimo.id] + dif);
+        texto += ` Diferencia de ${fmt(Math.abs(dif))} por redondeo: se aplicó el monto exacto del banco.`;
+      }
       setSelectedDocIds(sel);
       const first = items[0];
       if (first && first.auxiliaryRut) {
@@ -1721,7 +1730,7 @@ function QuickVoucherModalContent({
     };
 
     // 1) Una sola factura con saldo exacto
-    const exactos = openItems.filter(i => Math.round(i.openBalance) === monto);
+    const exactos = openItems.filter(i => Math.abs(Math.round(i.openBalance) - monto) <= TOLERANCIA);
     if (exactos.length === 1) {
       const d = exactos[0];
       aplicar([d], `Calce exacto: documento ${d.docNumber} de ${d.auxiliaryName || d.auxiliaryRut} por ${fmt(d.openBalance)}.` +
@@ -1745,7 +1754,12 @@ function QuickVoucherModalContent({
     const ruts = Array.from(new Set(candidatos.map(i => (i.auxiliaryRut || '').toUpperCase())));
     for (const rut of ruts) {
       const grupo = candidatos.filter(i => (i.auxiliaryRut || '').toUpperCase() === rut);
-      const ids = findDocSubset(grupo.map(i => ({ id: i.id, amount: Math.round(i.openBalance) })), monto);
+      const pool = grupo.map(i => ({ id: i.id, amount: Math.round(i.openBalance) }));
+      let ids: string[] | null = null;
+      for (const delta of [0, 1, -1, 2, -2]) {
+        ids = findDocSubset(pool, monto + delta);
+        if (ids && ids.length > 0) break;
+      }
       if (ids && ids.length > 0) {
         const elegidos = grupo.filter(i => ids.includes(i.id));
         aplicar(elegidos, `Calce exacto con ${elegidos.length} documentos de ${elegidos[0].auxiliaryName || rut} que suman ${fmt(monto)}. Coincide el ${origen}.`, 'VERDE');

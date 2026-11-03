@@ -4168,7 +4168,7 @@ export default function ConciliacionBancariaView({
         classify={clasificarParaBandeja}
         calzar={calzarParaBandeja}
         onApprove={handleBatchApprove}
-        onOpenLine={(l) => { setShowBandeja(false); abrirAsiento(l); }}
+        onOpenLine={(l) => { abrirAsiento(l); }}
       />
 
       <Agent1ConciliadorModal

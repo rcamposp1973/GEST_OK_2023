@@ -149,7 +149,7 @@ export default function BandejaMovimientosModal({ isOpen, onClose, lines, accoun
   );
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-3 sm:p-4">
+    <div className="fixed inset-0 z-40 bg-black/40 flex items-center justify-center p-3 sm:p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col border border-slate-200 overflow-hidden">
         <div className="px-5 py-4 bg-slate-900 text-white flex items-center justify-between">
           <div>

@@ -74,6 +74,11 @@ export default function BandejaMovimientosModal({ isOpen, onClose, lines, accoun
   const [filtro, setFiltro] = useState<'TODOS' | ProposalLevel>('TODOS');
   const [seleccion, setSeleccion] = useState<Set<string>>(new Set());
   const [procesando, setProcesando] = useState(false);
+  const [fFecha, setFFecha] = useState('');
+  const [fGlosa, setFGlosa] = useState('');
+  const [fMonto, setFMonto] = useState('');
+  const [fTipo, setFTipo] = useState<'TODOS' | 'CARGO' | 'ABONO'>('TODOS');
+  const [fPropuesta, setFPropuesta] = useState('');
 
   const rows = useMemo<BandejaRow[]>(() => {
     if (!isOpen) return [];
@@ -109,15 +114,55 @@ export default function BandejaMovimientosModal({ isOpen, onClose, lines, accoun
     return c;
   }, [rows]);
 
-  const visibles = useMemo(
-    () => rows.filter(r => filtro === 'TODOS' || r.nivel === filtro),
-    [rows, filtro]
-  );
+  const visibles = useMemo(() => {
+    const norm = (x: string) => (x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const qGlosa = norm(fGlosa.trim());
+    const qProp = norm(fPropuesta.trim());
+    const qFecha = fFecha.trim();
+    const qMonto = fMonto.trim().replace(/\s/g, '');
+    return rows.filter(r => {
+      if (filtro !== 'TODOS' && r.nivel !== filtro) return false;
+      const esCargo = (r.line.charge || 0) > 0;
+      if (fTipo === 'CARGO' && !esCargo) return false;
+      if (fTipo === 'ABONO' && esCargo) return false;
+      if (qFecha && !(r.line.date || '').includes(qFecha)) return false;
+      if (qGlosa && !norm(r.line.description).includes(qGlosa)) return false;
+      if (qProp) {
+        const txt = norm(`${r.proposal?.accountCode || ''} ${r.proposal?.accountName || ''} ${r.proposal?.reason || ''} ${r.motivo || ''} ${r.calce?.text || ''}`);
+        if (!txt.includes(qProp)) return false;
+      }
+      if (qMonto) {
+        const monto = Math.round(esCargo ? r.line.charge : r.line.deposit);
+        const m = qMonto.match(/^([<>]=?)\s*([\d.,]+)$/);
+        if (m) {
+          const n = parseInt(m[2].replace(/[.,]/g, ''), 10);
+          if (isNaN(n)) return false;
+          if (m[1].startsWith('>') ? (m[1] === '>=' ? monto < n : monto <= n) : (m[1] === '<=' ? monto > n : monto >= n)) return false;
+        } else if (!String(monto).includes(qMonto.replace(/[.,]/g, ''))) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [rows, filtro, fFecha, fGlosa, fMonto, fTipo, fPropuesta]);
+
+  const hayFiltros = !!(fFecha || fGlosa || fMonto || fPropuesta || fTipo !== 'TODOS');
+  const limpiarFiltros = () => { setFFecha(''); setFGlosa(''); setFMonto(''); setFPropuesta(''); setFTipo('TODOS'); };
 
   const seleccionados = rows.filter(r => r.aprobable && seleccion.has(r.line.id));
   const totalSel = seleccionados.reduce((s, r) => s + ((r.line.charge || 0) > 0 ? r.line.charge : r.line.deposit), 0);
 
   if (!isOpen) return null;
+
+  const aprobablesVisibles = visibles.filter(r => r.aprobable);
+  const todosMarcados = aprobablesVisibles.length > 0 && aprobablesVisibles.every(r => seleccion.has(r.line.id));
+  const toggleVisibles = () =>
+    setSeleccion(prev => {
+      const n = new Set(prev);
+      if (todosMarcados) aprobablesVisibles.forEach(r => n.delete(r.line.id));
+      else aprobablesVisibles.forEach(r => n.add(r.line.id));
+      return n;
+    });
 
   const toggle = (id: string) =>
     setSeleccion(prev => {
@@ -166,18 +211,64 @@ export default function BandejaMovimientosModal({ isOpen, onClose, lines, accoun
           {chip('VERDE', 'Seguros', conteo.VERDE)}
           {chip('AMARILLO', 'Por revisar', conteo.AMARILLO)}
           {chip('ROJO', 'Sin propuesta', conteo.ROJO)}
+          <span className="ml-auto text-xs text-slate-500">Mostrando {visibles.length} de {rows.length}</span>
         </div>
 
         <div className="overflow-y-auto flex-1">
           <table className="w-full text-xs">
             <thead className="sticky top-0 bg-slate-50 text-slate-600 border-b border-slate-200">
               <tr>
-                <th className="w-10 px-3 py-2"></th>
+                <th className="w-10 px-3 py-2">
+                  {aprobablesVisibles.length > 0 && (
+                    <input
+                      type="checkbox"
+                      checked={todosMarcados}
+                      onChange={toggleVisibles}
+                      title="Marcar o desmarcar todos los seguros que se ven"
+                      className="h-4 w-4 accent-emerald-600"
+                    />
+                  )}
+                </th>
                 <th className="text-left px-2 py-2">Fecha</th>
                 <th className="text-left px-2 py-2">Glosa del banco</th>
                 <th className="text-right px-2 py-2">Monto</th>
                 <th className="text-left px-2 py-2">Propuesta</th>
                 <th className="text-right px-3 py-2"></th>
+              </tr>
+              <tr className="bg-white border-b border-slate-200">
+                <th className="px-3 py-1.5"></th>
+                <th className="px-2 py-1.5">
+                  <input value={fFecha} onChange={e => setFFecha(e.target.value)} placeholder="2026-05"
+                    className="w-24 border border-slate-300 rounded px-1.5 py-1 text-xs font-normal text-slate-800" />
+                </th>
+                <th className="px-2 py-1.5">
+                  <input value={fGlosa} onChange={e => setFGlosa(e.target.value)} placeholder="Buscar en la glosa"
+                    className="w-full border border-slate-300 rounded px-1.5 py-1 text-xs font-normal text-slate-800" />
+                </th>
+                <th className="px-2 py-1.5">
+                  <div className="flex items-center gap-1 justify-end">
+                    <select value={fTipo} onChange={e => setFTipo(e.target.value as 'TODOS' | 'CARGO' | 'ABONO')}
+                      className="border border-slate-300 rounded px-1 py-1 text-xs font-normal text-slate-800 bg-white">
+                      <option value="TODOS">Todos</option>
+                      <option value="CARGO">Cargos</option>
+                      <option value="ABONO">Abonos</option>
+                    </select>
+                    <input value={fMonto} onChange={e => setFMonto(e.target.value)} placeholder="monto, >1000000"
+                      className="w-28 border border-slate-300 rounded px-1.5 py-1 text-xs font-normal text-slate-800" />
+                  </div>
+                </th>
+                <th className="px-2 py-1.5">
+                  <input value={fPropuesta} onChange={e => setFPropuesta(e.target.value)} placeholder="Cuenta o motivo"
+                    className="w-full border border-slate-300 rounded px-1.5 py-1 text-xs font-normal text-slate-800" />
+                </th>
+                <th className="px-3 py-1.5 text-right">
+                  {hayFiltros && (
+                    <button type="button" onClick={limpiarFiltros}
+                      className="px-2 py-1 border border-slate-300 rounded text-xs font-semibold text-slate-700 hover:bg-slate-50">
+                      Limpiar
+                    </button>
+                  )}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -230,7 +321,7 @@ export default function BandejaMovimientosModal({ isOpen, onClose, lines, accoun
                 );
               })}
               {visibles.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-10 text-center text-slate-500">No hay movimientos en esta categoría.</td></tr>
+                <tr><td colSpan={6} className="px-4 py-10 text-center text-slate-500">No hay movimientos con estos filtros.</td></tr>
               )}
             </tbody>
           </table>

@@ -348,7 +348,7 @@ async function sincronizarIndicadoresOficiales(force = false) {
   }
   const ahora = new Date().toISOString();
   await metaRef.set({ ultimoIntentoOk: ahora, ultimaActualizacion: ahora, registros: escritos, errores, aniosHistoricosListos: Array.from(new Set([...hechos, ...lote.filter(y => okAnio[y])])) }, { merge: true });
-  return { ok: true, escritos, errores, aniosListos: Object.keys(okAnio).filter(y => okAnio[Number(y)]), ultimaActualizacion: ahora };
+  return { ok: true, escritos, muestra: ['2026-11-03','2026-12-09','2026-11-01','2025-07-15','2026-01-01'].map(f => ({ f, ...porFecha[f] })), errores, aniosListos: Object.keys(okAnio).filter(y => okAnio[Number(y)]), ultimaActualizacion: ahora };
 }
 
 app.all("/api/indicators/sync", async (req, res) => {

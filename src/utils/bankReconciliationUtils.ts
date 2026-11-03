@@ -93,40 +93,48 @@ export function mergeStatementLines(
   existingLines: BankStatementLine[],
   newLines: BankStatementLine[]
 ): MergeStatementLinesResult {
-  const existingFingerprints = new Set<string>();
+  const existing = existingLines || [];
   const existingIds = new Set<string>();
+  existing.forEach(l => { if (l.id) existingIds.add(l.id); });
+  // Cada movimiento existente solo puede "absorber" un movimiento nuevo (conteo, no conjunto):
+  // así una cartola provisoria y la definitiva se reconocen aunque la glosa cambie,
+  // y dos movimientos legítimos idénticos en el mismo día no se pierden.
+  const usado = new Set<number>();
+  const normDesc = (d?: string) => (d || '').trim().toUpperCase().replace(/\s+/g, ' ');
+  const normDoc = (d?: string) => { const x = (d || '').trim().toUpperCase(); return (x === '0' || x === '-' || x === 'S/N' || x === 'SN') ? '' : x; };
+  const dayDiff = (a: string, b: string) => Math.abs((new Date(a).getTime() - new Date(b).getTime()) / 86400000);
 
-  (existingLines || []).forEach(l => {
-    if (l.id) existingIds.add(l.id);
-    const fp = createLineFingerprint(l);
-    existingFingerprints.add(fp);
-  });
-
-  const merged = [...(existingLines || [])];
+  const merged = [...existing];
   let addedCount = 0;
   let duplicateCount = 0;
 
   (newLines || []).forEach(l => {
-    const fp = createLineFingerprint(l);
-    if ((l.id && existingIds.has(l.id)) || existingFingerprints.has(fp)) {
+    if (l.id && existingIds.has(l.id)) { duplicateCount++; return; }
+    const chg = Math.round(l.charge || 0);
+    const dep = Math.round(l.deposit || 0);
+    const mismoMonto = (e: BankStatementLine) => Math.round(e.charge || 0) === chg && Math.round(e.deposit || 0) === dep;
+    let idx = -1;
+    // 1) misma fecha y mismo monto (la glosa puede variar entre provisoria y definitiva)
+    idx = existing.findIndex((e, i) => !usado.has(i) && e.date === l.date && mismoMonto(e));
+    // 2) mismo N° de documento y monto (fecha puede variar unos días)
+    if (idx < 0 && normDoc(l.documentNumber)) {
+      idx = existing.findIndex((e, i) => !usado.has(i) && normDoc(e.documentNumber) === normDoc(l.documentNumber) && mismoMonto(e) && dayDiff(e.date, l.date) <= 5);
+    }
+    // 3) mismo monto y misma glosa con hasta 3 días de diferencia
+    if (idx < 0) {
+      idx = existing.findIndex((e, i) => !usado.has(i) && mismoMonto(e) && normDesc(e.description) === normDesc(l.description) && dayDiff(e.date, l.date) <= 3);
+    }
+    if (idx >= 0) {
+      usado.add(idx);
       duplicateCount++;
     } else {
-      merged.push({
-        ...l,
-        matchedStatus: l.matchedStatus || 'Pendiente'
-      });
-      existingFingerprints.add(fp);
+      merged.push({ ...l, matchedStatus: l.matchedStatus || 'Pendiente' });
       if (l.id) existingIds.add(l.id);
       addedCount++;
     }
   });
 
-  // Sort chronologically by date (YYYY-MM-DD)
-  merged.sort((a, b) => {
-    const dateComp = (a.date || '').localeCompare(b.date || '');
-    if (dateComp !== 0) return dateComp;
-    return 0;
-  });
+  merged.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
   const earliestDate = merged.length > 0 ? merged[0].date : null;
   const latestDate = merged.length > 0 ? merged[merged.length - 1].date : null;
@@ -135,7 +143,7 @@ export function mergeStatementLines(
     mergedLines: merged,
     addedCount,
     duplicateCount,
-    existingPreservedCount: (existingLines || []).length,
+    existingPreservedCount: existing.length,
     earliestDate,
     latestDate
   };

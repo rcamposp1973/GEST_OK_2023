@@ -9,6 +9,11 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## [Pruebas] Cartola: sin duplicados al cargar provisoria + definitiva
+- Al importar una cartola, un movimiento se considera ya existente si coincide fecha y monto (la glosa puede cambiar entre provisoria y definitiva), o mismo N° de documento y monto, o mismo monto y glosa con pocos días de diferencia.
+- Movimientos legítimos idénticos dentro de una misma cartola ya no se descartan.
+- Nuevo botón "Limpiar duplicados" para eliminar movimientos pendientes repetidos ya cargados (no toca los conciliados).
+
 ## [Pruebas] Períodos ordenados
 - Al entrar a una empresa, todas las pantallas (Centralizaciones, Conciliación, F29, etc.) parten en el último período abierto, nunca uno futuro.
 - Ya no se recuerda un período antiguo de otra sesión/empresa: el usuario puede ir a uno anterior, pero al volver a entrar parte en el último abierto.

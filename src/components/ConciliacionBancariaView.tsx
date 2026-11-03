@@ -895,6 +895,56 @@ export default function ConciliacionBancariaView({
     }
   };
 
+  // Limpia movimientos duplicados de la cartola (misma fecha y monto, p. ej. por haber cargado una provisoria y luego la definitiva).
+  // Conserva siempre los conciliados; solo elimina movimientos PENDIENTES repetidos.
+  const handleLimpiarDuplicadosCartola = async () => {
+    const periodos = savedReconciliations
+      .filter(r => isMatchingBankReconciliation(r, selectedBankAccount, selectedBankAccountId))
+      .map(r => ({ period: r.period, lines: (r.period === selectedPeriod ? statementLines : (r.lines || [])), initial: r.period === selectedPeriod ? bankInitialBalanceInput : (r.bankInitialBalance || 0) }));
+    if (!periodos.some(p => p.period === selectedPeriod)) {
+      periodos.push({ period: selectedPeriod, lines: statementLines, initial: bankInitialBalanceInput });
+    }
+    const plan: { period: string; initial: number; keep: BankStatementLine[]; removed: BankStatementLine[]; sinCambio: boolean }[] = [];
+    for (const p of periodos) {
+      const grupos = new Map<string, BankStatementLine[]>();
+      p.lines.forEach(l => {
+        const k = `${l.date}|${Math.round(l.charge || 0)}|${Math.round(l.deposit || 0)}`;
+        if (!grupos.has(k)) grupos.set(k, []);
+        grupos.get(k)!.push(l);
+      });
+      const removed: BankStatementLine[] = [];
+      grupos.forEach(arr => {
+        if (arr.length < 2) return;
+        const conciliados = arr.filter(l => l.matchedStatus === 'Conciliado');
+        const pendientes = arr.filter(l => l.matchedStatus !== 'Conciliado');
+        // cuántos movimientos reales debería haber: al menos los conciliados; si ninguno, 1
+        const mantener = Math.max(conciliados.length, 1);
+        const sobrantes = arr.length - mantener;
+        if (sobrantes > 0) removed.push(...pendientes.slice(pendientes.length - Math.min(sobrantes, pendientes.length)));
+      });
+      const idsFuera = new Set(removed.map(l => l.id));
+      plan.push({ period: p.period, initial: p.initial, keep: p.lines.filter(l => !idsFuera.has(l.id)), removed, sinCambio: removed.length === 0 });
+    }
+    const total = plan.reduce((a, p) => a + p.removed.length, 0);
+    if (total === 0) {
+      notify.info('No se encontraron movimientos pendientes repetidos para limpiar.', 'Sin duplicados');
+      return;
+    }
+    const ejemplo = plan.flatMap(p => p.removed).slice(0, 8).map(l => `• ${l.date}  ${l.description}  $${((l.charge || 0) + (l.deposit || 0)).toLocaleString('es-CL')}`).join('\n');
+    if (!window.confirm(`Se eliminarán ${total} movimientos PENDIENTES repetidos (misma fecha y monto que otro movimiento). Los conciliados no se tocan.\n\nEjemplos:\n${ejemplo}\n\nOJO: si el banco realmente tuvo dos movimientos idénticos el mismo día, revisa antes. ¿Continuar?`)) return;
+    for (const p of plan) {
+      if (p.sinCambio) continue;
+      const { updatedLines, finalBalance } = recalculateRunningBalances(p.keep, p.initial);
+      await persistReconciliation(p.period, updatedLines, p.initial, finalBalance);
+      if (p.period === selectedPeriod) {
+        setStatementLines(updatedLines);
+        setBankFinalBalanceInput(finalBalance);
+      }
+    }
+    await fetchReconciliations();
+    notify.success(`${total} movimientos repetidos eliminados. Saldos recalculados.`, 'Cartola limpia');
+  };
+
   // 1. Manual change to Initial Balance -> Recalculate + Cascade + Auto-Save
   const handleUpdateInitialBalance = async (newInitial: number) => {
     setBankInitialBalanceInput(newInitial);
@@ -2184,7 +2234,7 @@ export default function ConciliacionBancariaView({
       const dep = Math.round(l.deposit || 0);
       const desc = (l.description || '').toLowerCase().trim().replace(/\s+/g, ' ');
       const amt = chg > 0 ? `C_${chg}` : `D_${dep}`;
-      const fp = `${d}__${amt}__${desc}`;
+      const fp = `${d}__${amt}`;
 
       if (!map.has(fp)) {
         map.set(fp, { count: 0, lineIds: new Set() });
@@ -2246,7 +2296,7 @@ export default function ConciliacionBancariaView({
         const dep = Math.round(l.deposit || 0);
         const desc = (l.description || '').toLowerCase().trim().replace(/\s+/g, ' ');
         const amt = chg > 0 ? `C_${chg}` : `D_${dep}`;
-        const fp = `${d}__${amt}__${desc}`;
+        const fp = `${d}__${amt}`;
         const dup = statementDuplicatesMap.get(fp);
         if (!dup || dup.count < 2) return false;
       }
@@ -3268,6 +3318,16 @@ export default function ConciliacionBancariaView({
                    Posibles Duplicados ({duplicateLinesCount})
                 </option>
               </select>
+              {duplicateLinesCount > 0 && (
+                <button
+                  type="button"
+                  onClick={handleLimpiarDuplicadosCartola}
+                  className="text-[11px] font-bold px-2 py-1 rounded border bg-amber-500 text-slate-950 border-amber-400 hover:bg-amber-400 cursor-pointer"
+                  title="Elimina los movimientos pendientes repetidos (misma fecha y monto). No toca los conciliados."
+                >
+                  Limpiar duplicados
+                </button>
+              )}
             </div>
 
             {/* Search Input */}
@@ -3380,7 +3440,7 @@ export default function ConciliacionBancariaView({
                     const dep = Math.round(l.deposit || 0);
                     const desc = (l.description || '').toLowerCase().trim().replace(/\s+/g, ' ');
                     const amt = chg > 0 ? `C_${chg}` : `D_${dep}`;
-                    const fp = `${d}__${amt}__${desc}`;
+                    const fp = `${d}__${amt}`;
                     const dupInfo = statementDuplicatesMap.get(fp);
                     const isPotentialDuplicate = dupInfo && dupInfo.count >= 2;
                     const isChecked = selectedStatementLineIds.has(l.id);

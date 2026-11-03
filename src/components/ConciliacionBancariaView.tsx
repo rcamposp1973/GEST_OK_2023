@@ -1624,6 +1624,26 @@ export default function ConciliacionBancariaView({
               })
               .filter(l => (l.debit || 0) > 0 || (l.credit || 0) > 0);
             vGloss = `PAGO FACTURA N° ${calce.items[0].docNumber} - ${glosa}`.toUpperCase();
+          } else if (p.proposal.rutItems && p.proposal.rutItems.length > 0 && p.proposal.source === 'RUT') {
+            // Saldo por folio de la persona (remuneraciones, anticipos, préstamos): mismo folio que el original para cerrarlo
+            counterLines = p.proposal.rutItems.map((it, idx): VoucherLine => {
+              const sumaItems = p.proposal.rutItems!.reduce((s, x) => s + x.amount, 0);
+              // el monto del banco manda: si hay diferencia de redondeo, se ajusta el último documento
+              const amt = idx === p.proposal.rutItems!.length - 1 ? it.amount + (amount - sumaItems) : it.amount;
+              return {
+                id: `line_counter_${idx + 1}`,
+                accountId: acc.id,
+                accountCode: acc.code,
+                accountName: acc.name,
+                debit: isCharge ? amt : 0,
+                credit: isCharge ? 0 : amt,
+                auxiliaryRut: p.proposal.auxiliaryRut ? p.proposal.auxiliaryRut.toUpperCase() : undefined,
+                auxiliaryName: p.proposal.auxiliaryName ? p.proposal.auxiliaryName.toUpperCase() : undefined,
+                documentRef: (it.docRef || ref).toUpperCase(),
+                ...comunes,
+                gloss: glosa
+              };
+            }).filter(l => (l.debit || 0) > 0 || (l.credit || 0) > 0);
           } else {
             counterLines = [{
               id: 'line_counter_1',

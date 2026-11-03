@@ -1,4 +1,5 @@
 import { BankStatementLine, ChartOfAccount, Voucher, JuniorGlossRule } from '../types';
+import { proponerPorRut } from './rutLedger';
 
 /**
  * Clasificador por capas de movimientos de cartola.
@@ -7,12 +8,13 @@ import { BankStatementLine, ChartOfAccount, Voucher, JuniorGlossRule } from '../
  *
  * Capas (de la más confiable a la menos):
  *   1. REGLA        -> reglas guardadas por el contador (juniorGlossRules)
+ *   1b. RUT         -> RUT de la glosa: saldos pendientes y movimientos previos de esa persona
  *   2. HISTORIAL    -> cómo se contabilizó antes un movimiento parecido en esta empresa
  *   3. DICCIONARIO  -> conceptos típicos (comisiones, leyes sociales, impuestos...) resueltos
  *                      contra los nombres reales del plan de cuentas
  */
 
-export type ProposalSource = 'REGLA' | 'HISTORIAL' | 'DICCIONARIO';
+export type ProposalSource = 'REGLA' | 'RUT' | 'HISTORIAL' | 'DICCIONARIO';
 export type ProposalLevel = 'VERDE' | 'AMARILLO' | 'ROJO';
 
 export interface MovementProposal {
@@ -32,6 +34,8 @@ export interface MovementProposal {
   /** Datos de análisis que una regla guardada ya conoce (se rellenan solos) */
   auxiliaryRut?: string;
   auxiliaryName?: string;
+  /** documentos (folios) abiertos del RUT que este pago salda; así el saldo por folio queda cerrado */
+  rutItems?: { docRef: string; amount: number }[];
   costCenter?: string;
   expenseItem?: string;
   project?: string;
@@ -325,6 +329,14 @@ export function classifyMovement(
       project: r.project,
       product: r.product
     };
+  }
+
+  // 1.5) RUT de la glosa: saldos y movimientos previos de esa persona (trabajadores, proveedores)
+  try {
+    const porRut = proponerPorRut(line, isCharge, ctx, findDocSubset);
+    if (porRut) return porRut;
+  } catch (e) {
+    console.warn('Clasificación por RUT no disponible:', e);
   }
 
   // 2) Historial

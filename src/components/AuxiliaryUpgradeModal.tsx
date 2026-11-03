@@ -772,9 +772,6 @@ export default function AuxiliaryUpgradeModal({
                 <h3 className="text-base font-black tracking-tight text-white">
                   Upgrade y Actualización Masiva de Auxiliares desde Excel
                 </h3>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-500/30 text-indigo-200 border border-indigo-400/30">
-                  {companyName}
-                </span>
               </div>
               <p className="text-xs text-slate-300">
                 Descarga la base a Excel, edita configuraciones y cuentas en lote, y vuelve a cargarla para actualizarla al instante.
@@ -1144,7 +1141,7 @@ export default function AuxiliaryUpgradeModal({
               <div className="space-y-1">
                 <h4 className="text-lg font-black text-slate-900">¡Upgrade Masivo Completado con Éxito!</h4>
                 <p className="text-xs text-slate-600">
-                  La base de auxiliares de <strong>{companyName}</strong> ha sido actualizada y sincronizada en tiempo real.
+                  La base de auxiliares ha sido actualizada y sincronizada en tiempo real.
                 </p>
               </div>
 

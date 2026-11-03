@@ -411,7 +411,7 @@ export default function JuniorGlossAutomationModal({
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <div>
-                  <h4 className="font-black text-slate-900 text-sm">Reglas Activas de Junior para {company.name}</h4>
+                  <h4 className="font-black text-slate-900 text-sm">Reglas activas de Junior</h4>
                   <p className="text-xs text-slate-500">
                     Junior ejecuta estas reglas para contabilizar cartolas de forma desatendida o a pedido.
                   </p>
@@ -898,7 +898,7 @@ export default function JuniorGlossAutomationModal({
         <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-between items-center text-xs text-slate-500">
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-            <span>Reglas aisladas en la memoria contable de <strong>{company.name}</strong></span>
+            <span>Reglas aisladas para esta empresa</span>
           </div>
           <button
             onClick={onClose}

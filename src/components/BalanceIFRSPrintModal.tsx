@@ -131,7 +131,7 @@ export const BalanceIFRSPrintModal: React.FC<BalanceIFRSPrintModalProps> = ({
                 </span>
               </h2>
               <p className="text-xs text-slate-500">
-                {company.name} • RUT: {company.rut} • {periodLabel}
+                {periodLabel}
               </p>
             </div>
           </div>

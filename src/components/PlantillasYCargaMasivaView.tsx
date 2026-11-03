@@ -628,7 +628,7 @@ export default function PlantillasYCargaMasivaView({
             </h3>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Descarga de formatos Excel/CSV estándar e importación masiva para Plan de Cuentas, Clientes, Proveedores y Asientos Contables ({company.name})
+            Descarga de formatos Excel/CSV estándar e importación masiva para Plan de Cuentas, Clientes, Proveedores y Asientos Contables
           </p>
         </div>
       </div>

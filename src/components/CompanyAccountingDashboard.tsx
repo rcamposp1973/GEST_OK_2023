@@ -6133,7 +6133,7 @@ export default function CompanyAccountingDashboard({
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-200 pb-4 gap-4">
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-lg font-bold text-slate-900">Maestro y Configuración de Códigos F.29 ({company.name})</h3>
+                <h3 className="text-lg font-bold text-slate-900">Maestro y Configuración de Códigos F.29</h3>
               </div>
               <p className="text-xs text-slate-500 mt-1">
                 Selecciona qué códigos del Formulario 29 utiliza habitualmente esta sociedad. En el Centro de Pre-declaración F.29 solo se desplegarán y calcularán los códigos que estén activados aquí.
@@ -6391,7 +6391,7 @@ export default function CompanyAccountingDashboard({
                 </h3>
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                Consulta directa y contabilización de Compras, Ventas y Boletas de Honorarios para <strong>{company.name}</strong> ({company.rut}).
+                Consulta directa y contabilización de Compras, Ventas y Boletas de Honorarios.
               </p>
             </div>
 

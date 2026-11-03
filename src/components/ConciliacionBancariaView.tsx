@@ -2370,9 +2370,6 @@ export default function ConciliacionBancariaView({
                 Conciliación Bancaria
               </h2>
             </div>
-            <p className="text-[11px] text-slate-500 font-medium">
-              {company.name} • RUT: {company.rut}
-            </p>
           </div>
         </div>
 

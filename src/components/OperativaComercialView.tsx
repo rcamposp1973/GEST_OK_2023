@@ -495,7 +495,7 @@ export const OperativaComercialView: React.FC<OperativaComercialViewProps> = ({
             <h1 className="text-xl font-bold text-slate-800">Operaciones Comerciales ERP & Integración Contable</h1>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Empresa: <strong className="text-slate-700">{companyName}</strong> — Flujo de Compras, Ventas, Control de Kardex PMP y Asientos Automáticos.
+            Flujo de Compras, Ventas, Control de Kardex PMP y Asientos Automáticos.
           </p>
         </div>
 

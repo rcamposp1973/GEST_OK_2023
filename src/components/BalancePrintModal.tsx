@@ -147,7 +147,7 @@ export const BalancePrintModal: React.FC<BalancePrintModalProps> = ({
                 </span>
               </h3>
               <p className="text-xs text-slate-400">
-                {company.name} ({company.rut}) • {cleanPeriod}
+                {cleanPeriod}
               </p>
             </div>
           </div>

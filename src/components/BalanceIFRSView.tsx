@@ -593,7 +593,7 @@ export default function BalanceIFRSView({
                 </span>
               </div>
               <p className="text-xs text-slate-500">
-                Estado de Situación Financiera acumulado por Cuentas Padre IFRS ({company.name} - RUT: {company.rut})
+                Estado de Situación Financiera acumulado por Cuentas Padre IFRS
               </p>
             </div>
           </div>

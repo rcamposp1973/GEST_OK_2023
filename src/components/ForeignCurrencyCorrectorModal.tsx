@@ -405,10 +405,6 @@ export default function ForeignCurrencyCorrectorModal({
         {/* Company Info Alert */}
         <div className="bg-emerald-50 border-b border-emerald-100 px-6 py-3 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-xs text-emerald-950 font-medium">
-            <span className="font-bold text-emerald-800">{companyName}</span>
-            <span className="text-emerald-500">•</span>
-            <span className="font-mono text-emerald-700">{companyRut}</span>
-            <span className="text-emerald-500">•</span>
             <span className="bg-emerald-200/60 text-emerald-800 px-2 py-0.5 rounded text-[11px] font-bold">
               {items.length} líneas en moneda extranjera detectadas
             </span>

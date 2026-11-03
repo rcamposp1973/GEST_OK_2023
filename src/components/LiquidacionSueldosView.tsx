@@ -2744,7 +2744,6 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
                   <span className="px-2.5 py-0.5 text-xs font-bold bg-indigo-100 text-indigo-800 rounded-full">
                     Apertura Dinámica de Haberes y Descuentos
                   </span>
-                  <span className="text-xs text-slate-500 font-mono">Empresa: {companyName}</span>
                 </div>
                 <h2 className="text-base font-bold text-slate-900">
                   Conceptos de Remuneraciones, Bonos, Comisiones y Viáticos

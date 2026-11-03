@@ -288,7 +288,7 @@ async function sincronizarIndicadoresOficiales(force = false) {
   // Respaldo oficial: tablas publicadas por el SII (UF diaria, dólar diario, UTM mensual)
   async function desdeSII(ind: string, yr: number): Promise<Array<{ f: string; v: number }> | null> {
     if (!['uf', 'dolar', 'utm'].includes(ind)) return null;
-    const r = await get(`https://www.sii.cl/valores_y_fechas/${ind}/${ind}${yr}.htm`, 12000);
+    const r = await get(`https://www.sii.cl/valores_y_fechas/${ind}/${ind}${yr}.htm`, 8000);
     if (!r) return null;
     const html = await r.text();
     const out: Array<{ f: string; v: number }> = [];
@@ -307,17 +307,27 @@ async function sincronizarIndicadoresOficiales(force = false) {
     }
     return out.length ? out : null;
   }
+  let mindicadorCaido = false;
+  async function desdeMindicador(ind: string, yr: number): Promise<Array<{ f: string; v: number }> | null> {
+    if (mindicadorCaido) return null;
+    try {
+      const r = await fetch(`https://mindicador.cl/api/${ind}/${yr}`, { signal: AbortSignal.timeout(6000) });
+      if (!r.ok) { mindicadorCaido = true; return null; }
+      const j: any = await r.json();
+      const arr = (j?.serie || []).map((it: any) => ({ f: String(it?.fecha || '').slice(0, 10), v: Number(it?.valor) })).filter((x: any) => x.f && isFinite(x.v) && (ind === 'ipc' || x.v > 0));
+      return arr.length ? arr : null;
+    } catch { mindicadorCaido = true; return null; }
+  }
   async function serie(ind: string, yr: number) {
+    // UF, dólar y UTM: SII (fuente oficial) primero; euro e IPC: mindicador.cl
     let datos: Array<{ f: string; v: number }> | null = null;
-    const r = await get(`https://mindicador.cl/api/${ind}/${yr}`, 10000);
-    if (r) {
-      try {
-        const j: any = await r.json();
-        const arr = (j?.serie || []).map((it: any) => ({ f: String(it?.fecha || '').slice(0, 10), v: Number(it?.valor) })).filter((x: any) => x.f && isFinite(x.v) && (ind === 'ipc' || x.v > 0));
-        if (arr.length) datos = arr;
-      } catch { /* cae al respaldo */ }
+    let origen = '';
+    if (['uf', 'dolar', 'utm'].includes(ind)) {
+      datos = await desdeSII(ind, yr); origen = 'SII';
+      if (!datos) { datos = await desdeMindicador(ind, yr); origen = 'mindicador'; }
+    } else {
+      datos = await desdeMindicador(ind, yr); origen = 'mindicador';
     }
-    if (!datos) { datos = await desdeSII(ind, yr); if (datos) errores.push(`${ind}/${yr}: tomado del SII (respaldo)`); }
     if (!datos) { errores.push(`${ind}/${yr}: sin datos de ninguna fuente`); return false; }
     for (const { f, v } of datos) { porFecha[f] = porFecha[f] || {}; porFecha[f][ind] = v; }
     return true;

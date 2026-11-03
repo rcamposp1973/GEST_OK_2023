@@ -7,7 +7,7 @@ import {
   ArrowLeft, CheckCircle2, Activity, ArrowRight
 } from 'lucide-react';
 import { logAuditEvent } from '../utils/auditLogger';
-import { APP_VERSION } from '../constants/version';
+import { APP_VERSION_FULL } from '../constants/version';
 
 interface LoginProps {
   onBackToLanding?: () => void;
@@ -173,7 +173,7 @@ export default function Login({ onBackToLanding, initialEmail = '' }: LoginProps
             )}
 
             <span className="text-[10px] font-mono font-medium tracking-wide px-2 py-0.5 rounded bg-slate-100 text-slate-600 uppercase border border-slate-200">
-              {APP_VERSION.startsWith('v') ? APP_VERSION : `v${APP_VERSION}`}
+              {APP_VERSION_FULL}
             </span>
           </div>
 

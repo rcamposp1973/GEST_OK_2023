@@ -3,7 +3,7 @@ import { UserRole, Company, Study } from '../types';
 import { generateOfficialChileanIndicators, syncOnlineChileanIndicators, DailyIndicator } from '../utils/chileanEconomicIndicators';
 import { Building2, Home, LogOut, Settings, BarChart3, ChevronDown, Check, X, Key, Activity, ShieldCheck, Sparkles } from 'lucide-react';
 import ChangePasswordModal from './ChangePasswordModal';
-import { APP_VERSION } from '../constants/version';
+import { APP_VERSION_FULL } from '../constants/version';
 import FormatSwitcherDropdown from './FormatSwitcherDropdown';
 import { isDemoFerreteriaCompany } from '../utils/demoFerreteriaGenerator';
 
@@ -149,9 +149,9 @@ export default function ExecutiveHeader({
                   </span>
                   <span 
                     className="text-[9px] font-mono text-slate-400 px-1 py-0.5 leading-none hidden sm:inline" 
-                    title={`Versión actual de la plataforma (${APP_VERSION})`}
+                    title={`Versión actual de la plataforma (${APP_VERSION_FULL})`}
                   >
-                    v{APP_VERSION}
+                    {APP_VERSION_FULL}
                   </span>
                 </div>
                 <div className="text-[10px] text-slate-500 hidden xl:block font-normal">

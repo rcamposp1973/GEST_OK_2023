@@ -7306,7 +7306,24 @@ export default function CompanyAccountingDashboard({
       )}
 
       {/* INICIO: panel de accesos a módulos */}
-      {activeTab === 'home' && <HomeModulesView onOpenModule={handleOpenModuleInTab} />}
+      {activeTab === 'home' && (() => {
+        const delPeriodo = vouchers.filter(v => v.period === selectedRcvPeriod);
+        const docsPeriodo = rcvDocuments.filter(d => d.period === selectedRcvPeriod);
+        const n = (x: number) => x.toLocaleString('es-CL');
+        return (
+          <HomeModulesView
+            onOpenModule={handleOpenModuleInTab}
+            pinnedIds={pinnedQuickAccessIds}
+            periodLabel={selectedRcvPeriod}
+            stats={[
+              { label: 'Comprobantes del período', value: n(delPeriodo.length), hint: `${n(vouchers.length)} en total` },
+              { label: 'Movimiento del período', value: '$' + n(Math.round(delPeriodo.reduce((s, v) => s + (v.totalDebit || 0), 0))), hint: 'suma del debe' },
+              { label: 'Documentos RCV del período', value: n(docsPeriodo.length), hint: `${n(docsPeriodo.filter(d => d.tipoRegistro === 'Compra').length)} compras · ${n(docsPeriodo.filter(d => d.tipoRegistro === 'Venta').length)} ventas` },
+              { label: 'Cuentas / auxiliares', value: `${n(accounts.length)} / ${n(auxiliaries.length)}`, hint: 'plan de cuentas y maestro' },
+            ]}
+          />
+        );
+      })()}
 
       {/* FINANZAS: buscador de comprobantes */}
       {activeTab === 'buscadorComprobantes' && (

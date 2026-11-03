@@ -1166,7 +1166,7 @@ function QuickVoucherModalContent({
               auxiliaryRut: rawRut || vEntry.rawRut,
               auxiliaryName: rawName || vEntry.rawName,
               issueDate: doc.fechaEmision || vEntry.issueDate,
-              dueDate: vEntry.dueDate,
+              dueDate: vEntry.dueDate || doc.fechaVencimiento || undefined,
               costCenter: vEntry.costCenter,
               expenseItem: vEntry.expenseItem,
               project: vEntry.project,
@@ -1208,6 +1208,7 @@ function QuickVoucherModalContent({
             auxiliaryRut: rawRut || '',
             auxiliaryName: rawName || '',
             issueDate: doc.fechaEmision,
+            dueDate: doc.fechaVencimiento || undefined,
             originalAmount: docTotal,
             paidAmount: paid,
             openBalance: pending,
@@ -1708,6 +1709,13 @@ function QuickVoucherModalContent({
         setSelectedAuxiliaryRut(first.auxiliaryRut);
         setSelectedAuxiliaryName(first.auxiliaryName);
         setDocumentRef(formatFriendlyDocumentRef(first.docType, first.docNumber));
+        // Vencimiento: el del documento; si no lo trae, la fecha de emisión
+        const venc = first.dueDate || first.issueDate;
+        if (venc) setDueDate(venc);
+        if (first.costCenter) setCostCenter(first.costCenter);
+        if (first.expenseItem) setExpenseItem(first.expenseItem);
+        if (first.project) setProject(first.project);
+        if (first.product) setProduct(first.product);
       }
       setAutoMatchNote({ level: nivel, text: texto });
     };
@@ -1745,7 +1753,23 @@ function QuickVoucherModalContent({
       }
     }
     if (candidatos.length > 0) {
-      setAutoMatchNote({ level: 'AMARILLO', text: `Encontré documentos de ${candidatos[0].auxiliaryName || 'esa contraparte'}, pero ninguna combinación suma exactamente ${fmt(monto)}. Revisa descuentos, retenciones o pagos parciales.` });
+      // Sin suma exacta: proponer las más antiguas (FIFO) sin pasarse del monto, para que el usuario ajuste
+      const ordenados = [...candidatos]
+        .filter(i => i.openBalance > 0)
+        .sort((a, b) => String(a.issueDate || '').localeCompare(String(b.issueDate || '')));
+      const elegidos: typeof candidatos = [];
+      let acum = 0;
+      for (const d of ordenados) {
+        const s = Math.round(d.openBalance);
+        if (acum + s <= monto) { elegidos.push(d); acum += s; }
+      }
+      if (elegidos.length > 0) {
+        aplicar(elegidos,
+          `No hay una combinación que sume exacto ${fmt(monto)}. Marqué las ${elegidos.length} facturas más antiguas de ${elegidos[0].auxiliaryName || 'esa contraparte'} (${fmt(acum)}); quedan ${fmt(monto - acum)} sin asignar. Ajusta si hubo descuento, retención o pago parcial.`,
+          'AMARILLO');
+      } else {
+        setAutoMatchNote({ level: 'AMARILLO', text: `Encontré documentos de ${candidatos[0].auxiliaryName || 'esa contraparte'}, pero ninguno cabe en ${fmt(monto)}. Revisa descuentos, retenciones o pagos parciales.` });
+      }
     } else if (rutValido) {
       setAutoMatchNote({ level: 'AMARILLO', text: `La glosa trae el RUT ${rutValido.rutFormatted}, pero no tiene documentos pendientes en esta cuenta. Puede ser un anticipo, otra cuenta (honorarios, préstamos) o una factura aún no contabilizada.` });
     }

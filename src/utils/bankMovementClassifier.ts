@@ -189,24 +189,37 @@ export function nameMatchesGloss(auxName: string, glosa: string): boolean {
 export function findDocSubset(
   items: { id: string; amount: number }[],
   target: number,
-  maxItems = 16
+  maxItems = 32
 ): string[] | null {
   const pool = items.filter(i => i.amount > 0 && i.amount <= target).sort((a, b) => b.amount - a.amount).slice(0, maxItems);
   if (pool.length === 0 || target <= 0) return null;
-  const suffix: number[] = new Array(pool.length + 1).fill(0);
-  for (let i = pool.length - 1; i >= 0; i--) suffix[i] = suffix[i + 1] + pool[i].amount;
-  let pasos = 0;
-  const elegidos: string[] = [];
-  const dfs = (i: number, resto: number): boolean => {
-    if (resto === 0) return true;
-    if (i >= pool.length || resto < 0 || suffix[i] < resto) return false;
-    if (++pasos > 200000) return false;
-    elegidos.push(pool[i].id);
-    if (dfs(i + 1, resto - pool[i].amount)) return true;
-    elegidos.pop();
-    return dfs(i + 1, resto);
+  // Encuentro en el medio: mitades de hasta 16 documentos (65.536 sumas cada una)
+  const mid = Math.ceil(pool.length / 2);
+  const A = pool.slice(0, mid);
+  const B = pool.slice(mid);
+  const sums = (arr: typeof pool): Map<number, number> => {
+    const m = new Map<number, number>();
+    const total = 1 << arr.length;
+    for (let mask = 0; mask < total; mask++) {
+      let s = 0;
+      for (let k = 0; k < arr.length; k++) if (mask & (1 << k)) s += arr[k].amount;
+      if (s <= target && !m.has(s)) m.set(s, mask);
+    }
+    return m;
   };
-  return dfs(0, Math.round(target)) ? [...elegidos] : null;
+  const target0 = Math.round(target);
+  const mb = sums(B);
+  const ma = sums(A);
+  const best: { ids: string[] | null } = { ids: null };
+  ma.forEach((maskA, sA) => {
+    const maskB = mb.get(target0 - sA);
+    if (maskB === undefined) return;
+    const ids: string[] = [];
+    A.forEach((it, k) => { if (maskA & (1 << k)) ids.push(it.id); });
+    B.forEach((it, k) => { if (maskB & (1 << k)) ids.push(it.id); });
+    if (ids.length > 0 && (!best.ids || ids.length < best.ids.length)) best.ids = ids;
+  });
+  return best.ids;
 }
 
 export interface ClassifierContext {

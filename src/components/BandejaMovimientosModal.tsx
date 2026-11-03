@@ -138,7 +138,7 @@ export default function BandejaMovimientosModal({ isOpen, onClose, lines, accoun
           <div>
             <h4 className="text-sm font-bold tracking-wide">Bandeja de movimientos pendientes</h4>
             <p className="text-xs text-slate-300 mt-0.5">
-              {rows.length} movimientos sin contabilizar. Los marcados como Seguro se pueden aprobar de una vez.
+              {lines.length} movimientos sin contabilizar. Los marcados como Seguro se pueden aprobar de una vez.
             </p>
           </div>
           <button onClick={onClose} className="text-slate-300 hover:text-white text-lg px-2 rounded hover:bg-white/10">✕</button>

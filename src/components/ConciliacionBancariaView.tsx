@@ -1457,10 +1457,11 @@ export default function ConciliacionBancariaView({
       }),
     [accounts, vouchers, selectedBankAccount, showBandeja]
   );
-  const pendientesBandeja = useMemo(
-    () => statementLines.filter(l => l.matchedStatus === 'Pendiente'),
-    [statementLines]
-  );
+  // Misma fuente que la tabla de la cartola: todos los meses, solo los pendientes
+  const pendientesBandeja = useMemo(() => {
+    const fuente: BankStatementLine[] = unifiedHistoricalCartola.length > 0 ? unifiedHistoricalCartola : statementLines;
+    return fuente.filter(l => l.matchedStatus === 'Pendiente');
+  }, [unifiedHistoricalCartola, statementLines]);
 
   const handleBatchApprove = async (items: { line: BankStatementLine; proposal: MovementProposal }[]) => {
     if (!selectedBankAccount) {
@@ -1549,14 +1550,25 @@ export default function ConciliacionBancariaView({
 
       // 3) Marcar conciliados y guardar una sola vez
       if (resultado.size > 0) {
-        const updated = statementLines.map(l => {
+        const marcar = (l: BankStatementLine): BankStatementLine => {
           const r = resultado.get(l.id);
           return r
             ? { ...l, matchedStatus: 'Conciliado' as const, matchedVoucherId: r.voucherId, matchedVoucherNumber: r.number, matchedVoucherPeriod: r.period }
             : l;
-        });
-        setStatementLines(updated);
-        await persistReconciliation(selectedPeriod, updated, bankInitialBalanceInput, bankFinalBalanceInput);
+        };
+        // Mes abierto en pantalla
+        if (statementLines.some(l => resultado.has(l.id))) {
+          const updated = statementLines.map(marcar);
+          setStatementLines(updated);
+          await persistReconciliation(selectedPeriod, updated, bankInitialBalanceInput, bankFinalBalanceInput);
+        }
+        // Otros meses ya guardados: se actualiza cada conciliación que contenga movimientos aprobados
+        for (const rec of savedReconciliations) {
+          if (rec.period === selectedPeriod) continue;
+          if (!isMatchingBankReconciliation(rec, selectedBankAccount, selectedBankAccountId) || !rec.lines) continue;
+          if (!rec.lines.some(l => resultado.has(l.id))) continue;
+          await persistReconciliation(rec.period, rec.lines.map(marcar), rec.bankInitialBalance || 0, rec.bankFinalBalance || 0);
+        }
         if (onVouchersUpdated) onVouchersUpdated();
       }
       const partes = [`${resultado.size} contabilizados y conciliados`];

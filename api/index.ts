@@ -260,7 +260,7 @@ async function sincronizarIndicadoresOficiales(force = false) {
   const hoy = new Date();
   const metaData: any = metaSnap.exists ? metaSnap.data() : {};
   const anioActual = hoy.getFullYear();
-  const hechos: number[] = Array.isArray(metaData?.aniosHistoricosListos) ? metaData.aniosHistoricosListos : [];
+  const hechos: number[] = Array.isArray(metaData?.aniosHistoricosListosV2) ? metaData.aniosHistoricosListosV2 : [];
   // Año actual siempre (+ siguiente en nov/dic por la UF adelantada) y hasta 2 años históricos pendientes por llamada
   const years: number[] = [anioActual];
   if (hoy.getMonth() >= 10) years.push(anioActual + 1);
@@ -274,7 +274,14 @@ async function sincronizarIndicadoresOficiales(force = false) {
   const okAnio: Record<number, boolean> = {};
 
   const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-  const num = (t: string) => { const n = parseFloat(t.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, '').replace(/\./g, '').replace(',', '.').trim()); return isFinite(n) ? n : NaN; };
+  const num = (t: string) => {
+    const x = t.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, '').trim();
+    let n: number;
+    if (x.includes(',')) n = parseFloat(x.replace(/\./g, '').replace(',', '.'));      // 41.263,57 -> 41263.57
+    else if (/^\d{1,3}(\.\d{3})+$/.test(x)) n = parseFloat(x.replace(/\./g, ''));   // 72.440 -> 72440
+    else n = parseFloat(x);                                                           // 927.46 -> 927.46
+    return isFinite(n) ? n : NaN;
+  };
   const celdas = (tr: string) => [...tr.matchAll(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi)].map(m => m[1]);
   async function get(url: string, ms: number) {
     for (let i = 0; i < 2; i++) {
@@ -357,7 +364,7 @@ async function sincronizarIndicadoresOficiales(force = false) {
     await batch.commit();
   }
   const ahora = new Date().toISOString();
-  await metaRef.set({ ultimoIntentoOk: ahora, ultimaActualizacion: ahora, registros: escritos, errores, aniosHistoricosListos: Array.from(new Set([...hechos, ...lote.filter(y => okAnio[y])])) }, { merge: true });
+  await metaRef.set({ ultimoIntentoOk: ahora, ultimaActualizacion: ahora, registros: escritos, errores, aniosHistoricosListosV2: Array.from(new Set([...hechos, ...lote.filter(y => okAnio[y])])) }, { merge: true });
   return { ok: true, escritos, muestra: ['2026-11-03','2026-12-09','2026-11-01','2025-07-15','2026-01-01'].map(f => ({ f, ...porFecha[f] })), errores, aniosListos: Object.keys(okAnio).filter(y => okAnio[Number(y)]), ultimaActualizacion: ahora };
 }
 

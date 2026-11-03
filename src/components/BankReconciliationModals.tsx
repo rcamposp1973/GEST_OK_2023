@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import type { MovementProposal } from '../utils/bankMovementClassifier';
+import { nameMatchesGloss, findDocSubset } from '../utils/bankMovementClassifier';
 import {
   BankStatementLine,
   ChartOfAccount,
@@ -1666,6 +1667,69 @@ function QuickVoucherModalContent({
     }
   };
 
+  // Calce automático con facturas pendientes: monto exacto (una factura) o suma exacta de varias del mismo proveedor/cliente.
+  const [autoMatchNote, setAutoMatchNote] = useState<{ level: 'VERDE' | 'AMARILLO'; text: string } | null>(null);
+  const autoMatchKeyRef = React.useRef<string>('');
+  useEffect(() => {
+    if (!quickVoucherLine || !selectedAccount || voucherMode !== 'SINGLE') { setAutoMatchNote(null); return; }
+    const key = `${quickVoucherLine.id}|${selectedAccount.id}`;
+    if (autoMatchKeyRef.current === key) return;
+    if (openItems.length === 0) return;
+    autoMatchKeyRef.current = key;
+    if (Object.keys(selectedDocIds).length > 0) return; // no pisar lo que el usuario ya eligió
+
+    const monto = Math.round(bankAmount);
+    const glosa = quickVoucherLine.description || '';
+    const fmt = (n: number) => '$' + Math.round(n).toLocaleString('es-CL');
+    const aplicar = (items: typeof openItems, texto: string, nivel: 'VERDE' | 'AMARILLO') => {
+      const sel: { [id: string]: number } = {};
+      items.forEach(i => { sel[i.id] = Math.round(i.openBalance); });
+      setSelectedDocIds(sel);
+      const first = items[0];
+      if (first && first.auxiliaryRut) {
+        setSelectedAuxiliaryRut(first.auxiliaryRut);
+        setSelectedAuxiliaryName(first.auxiliaryName);
+        setDocumentRef(formatFriendlyDocumentRef(first.docType, first.docNumber));
+      }
+      setAutoMatchNote({ level: nivel, text: texto });
+    };
+
+    // 1) Una sola factura con saldo exacto
+    const exactos = openItems.filter(i => Math.round(i.openBalance) === monto);
+    if (exactos.length === 1) {
+      const d = exactos[0];
+      aplicar([d], `Calce exacto: documento ${d.docNumber} de ${d.auxiliaryName || d.auxiliaryRut} por ${fmt(d.openBalance)}.`,
+        nameMatchesGloss(d.auxiliaryName, glosa) ? 'VERDE' : 'AMARILLO');
+      return;
+    }
+    if (exactos.length > 1) {
+      const conNombre = exactos.filter(d => nameMatchesGloss(d.auxiliaryName, glosa));
+      if (conNombre.length === 1) {
+        const d = conNombre[0];
+        aplicar([d], `Calce exacto por monto y nombre: documento ${d.docNumber} de ${d.auxiliaryName} por ${fmt(d.openBalance)}.`, 'VERDE');
+      } else {
+        setAutoMatchNote({ level: 'AMARILLO', text: `Hay ${exactos.length} documentos pendientes por ${fmt(monto)}. Elige el correcto.` });
+      }
+      return;
+    }
+
+    // 2) Suma exacta de varios documentos del proveedor/cliente cuyo nombre aparece en la glosa
+    const candidatos = openItems.filter(i => nameMatchesGloss(i.auxiliaryName, glosa));
+    const ruts = Array.from(new Set(candidatos.map(i => (i.auxiliaryRut || '').toUpperCase())));
+    for (const rut of ruts) {
+      const grupo = candidatos.filter(i => (i.auxiliaryRut || '').toUpperCase() === rut);
+      const ids = findDocSubset(grupo.map(i => ({ id: i.id, amount: Math.round(i.openBalance) })), monto);
+      if (ids && ids.length > 0) {
+        const elegidos = grupo.filter(i => ids.includes(i.id));
+        aplicar(elegidos, `Calce exacto con ${elegidos.length} documentos de ${elegidos[0].auxiliaryName || rut} que suman ${fmt(monto)}.`, 'VERDE');
+        return;
+      }
+    }
+    if (candidatos.length > 0) {
+      setAutoMatchNote({ level: 'AMARILLO', text: `Encontré documentos de ${candidatos[0].auxiliaryName || 'esa contraparte'}, pero ninguna combinación suma exactamente ${fmt(monto)}. Revisa descuentos, retenciones o pagos parciales.` });
+    }
+  }, [quickVoucherLine, selectedAccount, openItems, voucherMode]);
+
   // Si la propuesta viene de una regla guardada, rellena auxiliar y análisis que la regla ya conoce
   useEffect(() => {
     if (!quickProposal || quickProposal.source !== 'REGLA') return;
@@ -1861,8 +1925,13 @@ function QuickVoucherModalContent({
                         : 'bg-rose-50 border-rose-300 text-rose-900'
                     }`}
                   >
-                    <div className="font-bold">
-                      {quickProposal.level === 'VERDE' ? '🟢 Propuesta con alta confianza' : quickProposal.level === 'AMARILLO' ? '🟡 Propuesta: por favor revisa' : '🔴 Sin propuesta clara'}
+                    <div className="font-bold flex items-center gap-1.5">
+                      <span
+                        className={`inline-block w-2 h-2 rounded-full ${
+                          quickProposal.level === 'VERDE' ? 'bg-emerald-500' : quickProposal.level === 'AMARILLO' ? 'bg-amber-500' : 'bg-rose-500'
+                        }`}
+                      />
+                      {quickProposal.level === 'VERDE' ? 'Propuesta con alta confianza' : quickProposal.level === 'AMARILLO' ? 'Propuesta: por favor revisa' : 'Sin propuesta clara'}
                       {' · '}{quickProposal.category}
                     </div>
                     <div>
@@ -1872,6 +1941,16 @@ function QuickVoucherModalContent({
                     {quickProposal.requiresSplit && (
                       <div className="mt-0.5 font-semibold">Este pago normalmente se reparte entre varias cuentas: usa "Pago Multi-Cuentas".</div>
                     )}
+                  </div>
+                )}
+                {autoMatchNote && (
+                  <div
+                    className={`mb-2 rounded-lg border px-3 py-2 text-[11px] leading-snug flex items-start gap-1.5 ${
+                      autoMatchNote.level === 'VERDE' ? 'bg-emerald-50 border-emerald-300 text-emerald-900' : 'bg-amber-50 border-amber-300 text-amber-900'
+                    }`}
+                  >
+                    <span className={`mt-1 inline-block w-2 h-2 rounded-full shrink-0 ${autoMatchNote.level === 'VERDE' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                    <span>{autoMatchNote.text}</span>
                   </div>
                 )}
                 <label className="block font-bold text-slate-800 mb-1">

@@ -162,6 +162,53 @@ const DICTIONARY: DictEntry[] = [
   }
 ];
 
+const NOMBRE_RUIDO = new Set([
+  'TRANSF', 'TRANSFERENCIA', 'PAGO', 'PROVEEDOR', 'PROVEEDORES', 'LINEA', 'CHEQUE', 'BANCO', 'DEPOSITO',
+  'ABONO', 'CARGO', 'CLIENTE', 'FACTURA', 'FACTURAS', 'CANJE', 'RECIBIDO', 'OTRO', 'CUENTA', 'PAGOS', 'COBRO'
+]);
+
+/** Palabras de la glosa que podrían ser el nombre de la contraparte (sin números ni palabras genéricas). */
+export function nameTokens(glosa: string): string[] {
+  return norm(glosa)
+    .replace(/[0-9.\-/]+/g, ' ')
+    .split(' ')
+    .filter(w => w.length >= 4 && !NOMBRE_RUIDO.has(w));
+}
+
+/** true si el nombre del auxiliar comparte alguna palabra relevante con la glosa del banco. */
+export function nameMatchesGloss(auxName: string, glosa: string): boolean {
+  const aux = norm(auxName);
+  if (!aux) return false;
+  return nameTokens(glosa).some(t => aux.includes(t));
+}
+
+/**
+ * Busca un subconjunto de documentos cuyo saldo sume exactamente el monto del banco.
+ * Acotado (máx. 16 documentos y límite de pasos) para que nunca congele la pantalla.
+ */
+export function findDocSubset(
+  items: { id: string; amount: number }[],
+  target: number,
+  maxItems = 16
+): string[] | null {
+  const pool = items.filter(i => i.amount > 0 && i.amount <= target).sort((a, b) => b.amount - a.amount).slice(0, maxItems);
+  if (pool.length === 0 || target <= 0) return null;
+  const suffix: number[] = new Array(pool.length + 1).fill(0);
+  for (let i = pool.length - 1; i >= 0; i--) suffix[i] = suffix[i + 1] + pool[i].amount;
+  let pasos = 0;
+  const elegidos: string[] = [];
+  const dfs = (i: number, resto: number): boolean => {
+    if (resto === 0) return true;
+    if (i >= pool.length || resto < 0 || suffix[i] < resto) return false;
+    if (++pasos > 200000) return false;
+    elegidos.push(pool[i].id);
+    if (dfs(i + 1, resto - pool[i].amount)) return true;
+    elegidos.pop();
+    return dfs(i + 1, resto);
+  };
+  return dfs(0, Math.round(target)) ? [...elegidos] : null;
+}
+
 export interface ClassifierContext {
   accounts: ChartOfAccount[];
   vouchers: Voucher[];
@@ -295,6 +342,31 @@ export function classifyMovement(
     };
   }
 
-  // 4) Historial débil como último recurso (amarillo/rojo)
+  // 4) Pagos y cobros genéricos a terceros: la cuenta probable es Proveedores (cargo) o Clientes (abono).
+  //    Es una propuesta amarilla: el calce con facturas pendientes (en la ventana) confirma o corrige.
+  if (isCharge && /TRANSF A|TRF A|TRANSFERENCIA A|PAGO PROVEEDOR|PAGO A /.test(glosa)) {
+    const acc = findAccount(ctx.accounts, [/FACTURAS?.*PAGAR/, /PROVEEDORES?/, /CUENTAS?.*PAGAR/], ['Pasivo']);
+    if (acc) {
+      return {
+        accountId: acc.id, accountCode: acc.code, accountName: acc.name,
+        voucherType: 'Egreso', confidence: 0.62, level: levelFromConfidence(0.62),
+        source: 'DICCIONARIO', category: 'Pago a tercero',
+        reason: 'Transferencia a un tercero: lo más probable es el pago de una factura de proveedor. Confirma con las facturas pendientes.'
+      };
+    }
+  }
+  if (!isCharge && /PAGO PROVEEDOR|TRANSF DE|TRANSFERENCIA DE|TRF DE|DEPOSITO|ABONO/.test(glosa)) {
+    const acc = findAccount(ctx.accounts, [/CLIENTES?/, /DEUDORES.*VENTAS/, /FACTURAS?.*COBRAR/], ['Activo']);
+    if (acc) {
+      return {
+        accountId: acc.id, accountCode: acc.code, accountName: acc.name,
+        voucherType: 'Ingreso', confidence: 0.62, level: levelFromConfidence(0.62),
+        source: 'DICCIONARIO', category: 'Cobro de cliente',
+        reason: 'Abono de un tercero: lo más probable es el cobro de facturas de clientes. Confirma con las facturas pendientes.'
+      };
+    }
+  }
+
+  // 5) Historial débil como último recurso (amarillo/rojo)
   return hist;
 }

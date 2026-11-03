@@ -258,30 +258,52 @@ async function sincronizarIndicadoresOficiales(force = false) {
     return { omitido: true, ultimaActualizacion: (metaSnap.data() as any)?.ultimaActualizacion || ultimo };
   }
   const hoy = new Date();
-  const years = [hoy.getFullYear()];
+  const metaData: any = metaSnap.exists ? metaSnap.data() : {};
+  const years: number[] = [];
+  const desde = metaData?.historicoCompleto ? hoy.getFullYear() - (hoy.getMonth() === 0 ? 1 : 0) : 2020;
+  for (let y = desde; y <= hoy.getFullYear(); y++) years.push(y);
   if (hoy.getMonth() >= 10) years.push(hoy.getFullYear() + 1); // la UF de dic/ene se publica por adelantado
-  if (hoy.getMonth() === 0) years.push(hoy.getFullYear() - 1);
   const porFecha: Record<string, any> = {};
   const errores: string[] = [];
+  const tareas: Promise<void>[] = [];
   for (const yr of years) {
-    for (const ind of ['uf', 'dolar', 'euro', 'utm'] as const) {
-      try {
-        const r = await fetch(`https://mindicador.cl/api/${ind}/${yr}`, { signal: AbortSignal.timeout(15000) });
-        if (!r.ok) { errores.push(`${ind}/${yr}: HTTP ${r.status}`); continue; }
-        const j: any = await r.json();
-        for (const it of (j?.serie || [])) {
-          const v = Number(it?.valor);
-          const f = String(it?.fecha || '').slice(0, 10);
-          if (!f || !isFinite(v) || v <= 0) continue;
-          porFecha[f] = porFecha[f] || {};
-          porFecha[f][ind] = v;
-        }
-      } catch (e: any) { errores.push(`${ind}/${yr}: ${e?.message || 'error'}`); }
+    for (const ind of ['uf', 'dolar', 'euro', 'utm', 'ipc'] as const) {
+      tareas.push((async () => {
+        try {
+          const r = await fetch(`https://mindicador.cl/api/${ind}/${yr}`, { signal: AbortSignal.timeout(20000) });
+          if (!r.ok) { errores.push(`${ind}/${yr}: HTTP ${r.status}`); return; }
+          const j: any = await r.json();
+          for (const it of (j?.serie || [])) {
+            const v = Number(it?.valor);
+            const f = String(it?.fecha || '').slice(0, 10);
+            if (!f || !isFinite(v) || (ind !== 'ipc' && v <= 0)) continue;
+            porFecha[f] = porFecha[f] || {};
+            porFecha[f][ind] = v;
+          }
+        } catch (e: any) { errores.push(`${ind}/${yr}: ${e?.message || 'error'}`); }
+      })());
     }
   }
+  await Promise.all(tareas);
   const fechas = Object.keys(porFecha);
   if (fechas.length === 0) {
     return { ok: false, errores };
+  }
+  // Limpieza única: quita valores antiguos que la fuente oficial no confirma (p. ej. datos previos inventados o yen).
+  let corregidos = 0;
+  if (!metaData?.historicoCompleto && errores.length === 0) {
+    const previos = await adminDb.collection('globalExchangeRates').get();
+    let lote = adminDb.batch(); let n = 0;
+    for (const d of previos.docs) {
+      const data: any = d.data(); const oficial = porFecha[d.id] || {};
+      const borrar: any = {};
+      for (const campo of ['uf', 'dolar', 'euro', 'utm', 'yen']) {
+        if (data[campo] !== undefined && (campo === 'yen' || oficial[campo] === undefined)) borrar[campo] = FieldValue.delete();
+      }
+      // Si la fuente no confirma UF/dólar/euro/UTM de esa fecha, el valor viejo se elimina (el dólar de fin de semana se arrastra al leer).
+      if (Object.keys(borrar).length) { lote.update(d.ref, borrar); corregidos++; n++; if (n >= 400) { await lote.commit(); lote = adminDb.batch(); n = 0; } }
+    }
+    if (n > 0) await lote.commit();
   }
   let escritos = 0;
   for (let i = 0; i < fechas.length; i += 400) {
@@ -295,8 +317,8 @@ async function sincronizarIndicadoresOficiales(force = false) {
     await batch.commit();
   }
   const ahora = new Date().toISOString();
-  await metaRef.set({ ultimoIntentoOk: ahora, ultimaActualizacion: ahora, registros: escritos, errores }, { merge: true });
-  return { ok: true, escritos, errores, ultimaActualizacion: ahora };
+  await metaRef.set({ ultimoIntentoOk: ahora, ultimaActualizacion: ahora, registros: escritos, errores, ...(desde <= 2020 && errores.length === 0 ? { historicoCompleto: true } : {}) }, { merge: true });
+  return { ok: true, escritos, corregidos, errores, ultimaActualizacion: ahora };
 }
 
 app.all("/api/indicators/sync", async (req, res) => {

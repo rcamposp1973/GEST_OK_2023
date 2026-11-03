@@ -6,7 +6,6 @@
 // adoptan el valor oficial del último día hábil bancario anterior.
 // La UF se calcula y publica mensualmente (del 10 al 9 del mes siguiente), permitiendo conocer días futuros.
 
-import officialHistoricalData from './officialChileanIndicatorsData.json';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
@@ -29,7 +28,9 @@ const dynamicCache: {
     euro: { [date: string]: number };
     utm: { [period: string]: number };
   };
-} = { ...(officialHistoricalData as any) };
+} = {};
+// IPC mensual oficial publicado (INE) por período YYYY-MM
+const ipcCache: { [period: string]: number } = {};
 
 // 1. TABLA OFICIAL CERTIFICADA DE UTM MENSUAL (SII)
 export const OFFICIAL_MONTHLY_UTM: { [period: string]: number } = {
@@ -145,7 +146,6 @@ export function getOfficialUTM(period: string): number {
   const [yearStr] = period.split('-');
   const year = parseInt(yearStr, 10);
   if (dynamicCache[year]?.utm?.[period]) return dynamicCache[year].utm[period];
-  if (OFFICIAL_MONTHLY_UTM[period]) return OFFICIAL_MONTHLY_UTM[period];
   return 0; // Sin dato oficial: NO se inventa. 0 = "no disponible".
 }
 
@@ -153,10 +153,14 @@ export function getOfficialUTM(period: string): number {
  * Obtiene la variación oficial de IPC para un período 'YYYY-MM' (Fuente: INE / SII)
  */
 export function getOfficialIPC(period: string): { monthly: number; accumulated: number } {
-  if (OFFICIAL_MONTHLY_IPC[period]) {
-    return OFFICIAL_MONTHLY_IPC[period];
+  if (ipcCache[period] === undefined) return { monthly: 0, accumulated: 0 }; // sin dato oficial
+  const [y, m] = period.split('-').map(Number);
+  let factor = 1;
+  for (let i = 1; i <= m; i++) {
+    const v = ipcCache[`${y}-${String(i).padStart(2, '0')}`];
+    if (v !== undefined) factor *= 1 + v / 100;
   }
-  return { monthly: 0.3, accumulated: 2.5 };
+  return { monthly: ipcCache[period], accumulated: parseFloat(((factor - 1) * 100).toFixed(2)) };
 }
 
 /**
@@ -221,7 +225,7 @@ export function generateOfficialChileanIndicators(startDateStr = '2020-01-01', e
       if (dateStr < startDateStr) continue;
       if (endDate && dateStr > endDate.toISOString().slice(0, 10)) continue;
       const periodStr = dateStr.slice(0, 7);
-      const ipcData = OFFICIAL_MONTHLY_IPC[periodStr];
+      const ipcData = ipcCache[periodStr] !== undefined ? getOfficialIPC(periodStr) : undefined;
       result.push({
         date: dateStr,
         uf: getOfficialUF(dateStr),
@@ -264,6 +268,7 @@ export async function syncOnlineChileanIndicators(targetYear?: number): Promise<
       if (Number(r.uf) > 0) dynamicCache[y].uf[date] = Number(r.uf);
       if (Number(r.dolar) > 0) dynamicCache[y].dolar[date] = Number(r.dolar);
       if (Number(r.euro) > 0) dynamicCache[y].euro[date] = Number(r.euro);
+      if (typeof r.ipc === 'number') ipcCache[date.slice(0, 7)] = r.ipc;
       if (Number(r.utm) > 0) {
         const per = date.slice(0, 7);
         dynamicCache[y].utm[per] = Number(r.utm);

@@ -259,51 +259,81 @@ async function sincronizarIndicadoresOficiales(force = false) {
   }
   const hoy = new Date();
   const metaData: any = metaSnap.exists ? metaSnap.data() : {};
-  const years: number[] = [];
-  const desde = metaData?.historicoCompleto ? hoy.getFullYear() - (hoy.getMonth() === 0 ? 1 : 0) : 2020;
-  for (let y = desde; y <= hoy.getFullYear(); y++) years.push(y);
-  if (hoy.getMonth() >= 10) years.push(hoy.getFullYear() + 1); // la UF de dic/ene se publica por adelantado
+  const anioActual = hoy.getFullYear();
+  const hechos: number[] = Array.isArray(metaData?.aniosHistoricosListos) ? metaData.aniosHistoricosListos : [];
+  // Año actual siempre (+ siguiente en nov/dic por la UF adelantada) y hasta 2 años históricos pendientes por llamada
+  const years: number[] = [anioActual];
+  if (hoy.getMonth() >= 10) years.push(anioActual + 1);
+  if (hoy.getMonth() === 0) years.push(anioActual - 1);
+  const pendientes: number[] = [];
+  for (let y = anioActual - 1; y >= 2020; y--) if (!hechos.includes(y) && !years.includes(y)) pendientes.push(y);
+  const lote = pendientes.slice(0, 2);
+  years.push(...lote);
   const porFecha: Record<string, any> = {};
   const errores: string[] = [];
-  const tareas: Promise<void>[] = [];
+  const okAnio: Record<number, boolean> = {};
+
+  const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const num = (t: string) => { const n = parseFloat(t.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, '').replace(/\./g, '').replace(',', '.').trim()); return isFinite(n) ? n : NaN; };
+  const celdas = (tr: string) => [...tr.matchAll(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi)].map(m => m[1]);
+  async function get(url: string, ms: number) {
+    for (let i = 0; i < 2; i++) {
+      try {
+        const r = await fetch(url, { signal: AbortSignal.timeout(ms), headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PulsoContable)' } });
+        if (r.ok) return r;
+      } catch { /* reintenta */ }
+    }
+    return null;
+  }
+  // Respaldo oficial: tablas publicadas por el SII (UF diaria, dólar diario, UTM mensual)
+  async function desdeSII(ind: string, yr: number): Promise<Array<{ f: string; v: number }> | null> {
+    if (!['uf', 'dolar', 'utm'].includes(ind)) return null;
+    const r = await get(`https://www.sii.cl/valores_y_fechas/${ind}/${ind}${yr}.htm`, 12000);
+    if (!r) return null;
+    const html = await r.text();
+    const out: Array<{ f: string; v: number }> = [];
+    const filas = [...html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)].map(m => celdas(m[1]));
+    if (ind === 'utm') {
+      for (const c of filas) {
+        const mi = MESES.indexOf((c[0] || '').replace(/<[^>]+>/g, '').trim().toLowerCase());
+        if (mi >= 0 && c[1] !== undefined) { const v = num(c[1]); if (v > 0) out.push({ f: `${yr}-${String(mi + 1).padStart(2, '0')}-01`, v }); }
+      }
+    } else {
+      for (const c of filas) {
+        const dia = parseInt((c[0] || '').replace(/<[^>]+>/g, '').trim(), 10);
+        if (!(dia >= 1 && dia <= 31)) continue;
+        for (let m = 0; m < 12; m++) { const v = c[m + 1] !== undefined ? num(c[m + 1]) : NaN; if (v > 0) out.push({ f: `${yr}-${String(m + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`, v }); }
+      }
+    }
+    return out.length ? out : null;
+  }
+  async function serie(ind: string, yr: number) {
+    let datos: Array<{ f: string; v: number }> | null = null;
+    const r = await get(`https://mindicador.cl/api/${ind}/${yr}`, 10000);
+    if (r) {
+      try {
+        const j: any = await r.json();
+        const arr = (j?.serie || []).map((it: any) => ({ f: String(it?.fecha || '').slice(0, 10), v: Number(it?.valor) })).filter((x: any) => x.f && isFinite(x.v) && (ind === 'ipc' || x.v > 0));
+        if (arr.length) datos = arr;
+      } catch { /* cae al respaldo */ }
+    }
+    if (!datos) { datos = await desdeSII(ind, yr); if (datos) errores.push(`${ind}/${yr}: tomado del SII (respaldo)`); }
+    if (!datos) { errores.push(`${ind}/${yr}: sin datos de ninguna fuente`); return false; }
+    for (const { f, v } of datos) { porFecha[f] = porFecha[f] || {}; porFecha[f][ind] = v; }
+    return true;
+  }
   for (const yr of years) {
-    for (const ind of ['uf', 'dolar', 'euro', 'utm', 'ipc'] as const) {
-      tareas.push((async () => {
-        try {
-          const r = await fetch(`https://mindicador.cl/api/${ind}/${yr}`, { signal: AbortSignal.timeout(20000) });
-          if (!r.ok) { errores.push(`${ind}/${yr}: HTTP ${r.status}`); return; }
-          const j: any = await r.json();
-          for (const it of (j?.serie || [])) {
-            const v = Number(it?.valor);
-            const f = String(it?.fecha || '').slice(0, 10);
-            if (!f || !isFinite(v) || (ind !== 'ipc' && v <= 0)) continue;
-            porFecha[f] = porFecha[f] || {};
-            porFecha[f][ind] = v;
-          }
-        } catch (e: any) { errores.push(`${ind}/${yr}: ${e?.message || 'error'}`); }
-      })());
+    okAnio[yr] = true;
+    const inds = ['uf', 'dolar', 'euro', 'utm', 'ipc'];
+    for (let i = 0; i < inds.length; i += 3) {
+      const res = await Promise.all(inds.slice(i, i + 3).map(ind => serie(ind, yr)));
+      // solo exigimos uf, dolar y utm para dar el año por completo (el euro/IPC pueden faltar en el SII)
+      res.forEach((ok, k) => { if (!ok && ['uf', 'dolar', 'utm'].includes(inds[i + k]) && !(yr === anioActual + 1)) okAnio[yr] = false; });
     }
   }
-  await Promise.all(tareas);
   const fechas = Object.keys(porFecha);
   if (fechas.length === 0) {
     return { ok: false, errores };
-  }
-  // Limpieza única: quita valores antiguos que la fuente oficial no confirma (p. ej. datos previos inventados o yen).
-  let corregidos = 0;
-  if (!metaData?.historicoCompleto && errores.length === 0) {
-    const previos = await adminDb.collection('globalExchangeRates').get();
-    let lote = adminDb.batch(); let n = 0;
-    for (const d of previos.docs) {
-      const data: any = d.data(); const oficial = porFecha[d.id] || {};
-      const borrar: any = {};
-      for (const campo of ['uf', 'dolar', 'euro', 'utm', 'yen']) {
-        if (data[campo] !== undefined && (campo === 'yen' || oficial[campo] === undefined)) borrar[campo] = FieldValue.delete();
-      }
-      // Si la fuente no confirma UF/dólar/euro/UTM de esa fecha, el valor viejo se elimina (el dólar de fin de semana se arrastra al leer).
-      if (Object.keys(borrar).length) { lote.update(d.ref, borrar); corregidos++; n++; if (n >= 400) { await lote.commit(); lote = adminDb.batch(); n = 0; } }
-    }
-    if (n > 0) await lote.commit();
   }
   let escritos = 0;
   for (let i = 0; i < fechas.length; i += 400) {
@@ -317,8 +347,8 @@ async function sincronizarIndicadoresOficiales(force = false) {
     await batch.commit();
   }
   const ahora = new Date().toISOString();
-  await metaRef.set({ ultimoIntentoOk: ahora, ultimaActualizacion: ahora, registros: escritos, errores, ...(desde <= 2020 && errores.length === 0 ? { historicoCompleto: true } : {}) }, { merge: true });
-  return { ok: true, escritos, corregidos, errores, ultimaActualizacion: ahora };
+  await metaRef.set({ ultimoIntentoOk: ahora, ultimaActualizacion: ahora, registros: escritos, errores, aniosHistoricosListos: Array.from(new Set([...hechos, ...lote.filter(y => okAnio[y])])) }, { merge: true });
+  return { ok: true, escritos, errores, aniosListos: Object.keys(okAnio).filter(y => okAnio[Number(y)]), ultimaActualizacion: ahora };
 }
 
 app.all("/api/indicators/sync", async (req, res) => {

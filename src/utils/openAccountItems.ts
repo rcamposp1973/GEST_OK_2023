@@ -127,8 +127,16 @@ export function computeOpenItems(
     });
 
     // Nota de crédito (tipo 61): código, o texto del documento
+    // El comprobante de centralización guarda la referencia como "<tipo> #<folio>" (ej. "61 #200"); 61 y 112 son notas de crédito
+    const tipoDesdeRef = (ref: any): string => {
+      const m = /^\s*(?:DTE\s*)?(\d{2,3})\s*#/i.exec(String(ref || ''));
+      return m ? m[1] : '';
+    };
     const esNC = (type: any, ref?: any): boolean => {
-      if (normalizeDocType(type) === '61') return true;
+      const t0 = normalizeDocType(type);
+      if (t0 === '61' || t0 === '112') return true;
+      const tr = tipoDesdeRef(ref);
+      if (tr === '61' || tr === '112') return true;
       const t = `${type || ''} ${ref || ''}`.toUpperCase();
       return /NOTA\s*(DE)?\s*CR[EÉ]DITO|\bNC\b/.test(t);
     };
@@ -249,10 +257,12 @@ export function computeOpenItems(
       const netBalance = isAP ? (data.creditSum - data.debitSum) : (data.debitSum - data.creditSum);
       const voucherEsNC = esNC(data.rawDocType, data.rawDocNumber);
       if (netBalance > 0 || (voucherEsNC && netBalance < 0)) {
+        const tipoRef = tipoDesdeRef(data.rawDocNumber);
+        const folioRef = /#\s*(\S+)\s*$/.exec(data.rawDocNumber)?.[1] || '';
         items.push({
           id: `voucher_${key}`,
-          docType: data.rawDocType,
-          docNumber: data.rawDocNumber,
+          docType: tipoRef || data.rawDocType,
+          docNumber: tipoRef && folioRef ? folioRef : data.rawDocNumber,
           auxiliaryRut: data.rawRut,
           auxiliaryName: data.rawName,
           issueDate: data.issueDate,

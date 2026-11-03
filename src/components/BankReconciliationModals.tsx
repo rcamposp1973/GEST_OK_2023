@@ -2223,9 +2223,7 @@ function QuickVoucherModalContent({
                             </td>
                             <td className="p-2 font-bold text-indigo-900">
                               <span className="font-semibold">
-                                {item.docNumber && item.docType && item.docNumber.toUpperCase().includes(item.docType.toUpperCase())
-                                  ? item.docNumber
-                                  : `${item.docType ? item.docType + ' ' : ''}${item.docNumber}`}
+                                {formatFriendlyDocumentRef(item.docType, item.docNumber)}
                               </span>
                               {item.source === 'RCV' ? (
                                 <span className={`ml-1.5 text-[9px] font-sans font-semibold px-1.5 py-0.5 rounded ${

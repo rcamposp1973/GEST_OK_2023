@@ -58,6 +58,8 @@ export default function EstadoResultadosView({
   const [showZeroBalances, setShowZeroBalances] = useState<boolean>(false);
   const [showAccountDetails, setShowAccountDetails] = useState<boolean>(true);
   const [viewFormat, setViewFormat] = useState<'ifrs_cascada' | 'mensual_matriz'>('ifrs_cascada');
+  // Norma de presentación: NIC 1 (vigente) o NIIF 18 (obligatoria desde 1-ene-2027, aplicación anticipada permitida)
+  const [norma, setNorma] = useState<'NIC1' | 'NIIF18'>('NIC1');
   const [showPrintModal, setShowPrintModal] = useState<boolean>(false);
 
   const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
@@ -249,6 +251,17 @@ export default function EstadoResultadosView({
     const totalProfitBeforeTax = totalOperatingResult + totalFinInc - totalFinCosts + totalOtherInc - totalOtherExp;
     const totalIncomeTax = sumUpToCutoff(monthlyIncomeTax);
     const totalNetIncome = totalProfitBeforeTax - totalIncomeTax;
+
+    // NIIF 18: Operación (categoría residual) · Inversión · Financiamiento · Impuestos
+    const niif18 = {
+      operating: totalOpRevenues - totalCostOfSales - totalOpExpenses + totalOtherInc - totalOtherExp,
+      investing: totalFinInc,
+      financing: totalFinCosts,
+      beforeFinancingAndTax: 0,
+      personal: sumUpToCutoff(rubroGastosRemuneraciones.monthlyTotals),
+      depreciation: sumUpToCutoff(rubroDepreciacionAmort.monthlyTotals)
+    };
+    niif18.beforeFinancingAndTax = niif18.operating + niif18.investing;
     const netMarginPercent = totalOpRevenues > 0 ? ((totalNetIncome / totalOpRevenues) * 100).toFixed(1) : '0.0';
 
     return {
@@ -295,7 +308,8 @@ export default function EstadoResultadosView({
         incomeTax: totalIncomeTax,
         netIncome: totalNetIncome,
         netMarginPercent,
-        isProfit: totalNetIncome >= 0
+        isProfit: totalNetIncome >= 0,
+        niif18
       }
     };
   }, [accounts, vouchers, accountMap, selectedYear, showZeroBalances, cutoffMonth]);
@@ -422,6 +436,22 @@ export default function EstadoResultadosView({
               }`}
             >
               Matriz 12 Meses
+            </button>
+          </div>
+
+          {/* Selector de Norma */}
+          <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs" title="NIIF 18 reemplaza a la NIC 1 desde el 1 de enero de 2027 (aplicación anticipada permitida)">
+            <button
+              onClick={() => setNorma('NIC1')}
+              className={`px-3 py-1 rounded-md font-bold transition-all ${norma === 'NIC1' ? 'bg-white text-indigo-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
+            >
+              NIC 1 (vigente)
+            </button>
+            <button
+              onClick={() => setNorma('NIIF18')}
+              className={`px-3 py-1 rounded-md font-bold transition-all ${norma === 'NIIF18' ? 'bg-white text-indigo-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
+            >
+              NIIF 18 (desde 2027)
             </button>
           </div>
 
@@ -593,8 +623,8 @@ export default function EstadoResultadosView({
         </div>
       </div>
 
-      {/* VISTA 1: CASCADA IFRS */}
-      {viewFormat === 'ifrs_cascada' && (
+      {/* VISTA 1: CASCADA NIC 1 */}
+      {viewFormat === 'ifrs_cascada' && norma === 'NIC1' && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
           <div className="p-4 bg-slate-900 text-white flex justify-between items-center">
             <div className="flex items-center gap-2">
@@ -722,6 +752,98 @@ export default function EstadoResultadosView({
           </div>
         </div>
       )}
+
+      {/* VISTA 1B: CASCADA NIIF 18 */}
+      {viewFormat === 'ifrs_cascada' && norma === 'NIIF18' && (() => {
+        const t = statementData.totals;
+        const n = t.niif18;
+        const fmt = (v: number) => `${v < 0 ? '-' : ''}$${Math.abs(v).toLocaleString('es-CL')}`;
+        const Bloque = ({ titulo, valor, children }: { titulo: string; valor: number; children?: React.ReactNode }) => (
+          <div>
+            <div className="flex justify-between items-center text-xs font-bold text-slate-800 uppercase tracking-wide border-b border-slate-200 pb-1 mb-2">
+              <span>{titulo}</span>
+              <span className="font-mono text-slate-800">{fmt(valor)}</span>
+            </div>
+            {children}
+          </div>
+        );
+        const Subtotal = ({ titulo, nota, valor, fuerte }: { titulo: string; nota?: string; valor: number; fuerte?: boolean }) => (
+          <div className={`${fuerte ? 'bg-indigo-900 text-white' : 'bg-slate-100 border border-slate-300 text-slate-900'} p-3 rounded-xl flex justify-between items-center`}>
+            <div>
+              <span className="text-xs font-black uppercase tracking-wide">{titulo}</span>
+              {nota && <p className={`text-[11px] ${fuerte ? 'text-indigo-200' : 'text-slate-500'}`}>{nota}</p>}
+            </div>
+            <div className="font-mono font-black text-base">{fmt(valor)}</div>
+          </div>
+        );
+        return (
+          <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+            <div className="p-4 bg-slate-900 text-white flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <FolderTree className="w-5 h-5 text-emerald-400" />
+                <div>
+                  <h4 className="font-bold text-sm uppercase tracking-wide">Estado de Resultados NIIF 18 ({selectedYear})</h4>
+                  <p className="text-[11px] text-slate-300">Categorías: Operación · Inversión · Financiamiento · Impuestos a las ganancias</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="text-xs text-slate-400">Resultado del ejercicio:</span>
+                <div className={`font-mono font-black text-base ${t.isProfit ? 'text-emerald-300' : 'text-rose-300'}`}>{fmt(t.netIncome)}</div>
+              </div>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-[11px] text-amber-900">
+                <strong>Vista preliminar.</strong> La NIIF 18 es obligatoria para ejercicios que comienzan desde el 1 de enero de 2027 (con comparativo reexpresado). El cierre 2025 se presenta en NIC 1.
+                Clasificación usada: <em>Operación</em> es la categoría residual (incluye otras ganancias y pérdidas); <em>Inversión</em> recoge ingresos financieros y reajustes; <em>Financiamiento</em> recoge intereses y gastos bancarios.
+                Las diferencias de cambio y los reajustes deben seguir la categoría de la partida que los origina; revísalos cuando existan.
+              </div>
+
+              {/* OPERACIÓN */}
+              <Bloque titulo="Categoría de Operación" valor={n.operating}>
+                {renderRubroLine(statementData.rubros.ingresosOperacionales)}
+                {renderRubroLine(statementData.rubros.costosVentas, true)}
+                {renderRubroLine(statementData.rubros.gastosRemuneraciones, true)}
+                {renderRubroLine(statementData.rubros.gastosAdministracion, true)}
+                {renderRubroLine(statementData.rubros.depreciacionAmort, true)}
+                {renderRubroLine(statementData.rubros.otrosIngresosOp)}
+                {renderRubroLine(statementData.rubros.otrosGastosNoOp, true)}
+              </Bloque>
+
+              <Subtotal fuerte titulo="(=) Resultado Operacional" nota={`Subtotal obligatorio NIIF 18 · ${t.opRevenues > 0 ? ((n.operating / t.opRevenues) * 100).toFixed(1) : '0.0'}% sobre ingresos ordinarios`} valor={n.operating} />
+
+              {/* INVERSIÓN */}
+              <Bloque titulo="Categoría de Inversión" valor={n.investing}>
+                {renderRubroLine(statementData.rubros.ingresosFinancieros)}
+              </Bloque>
+
+              <Subtotal titulo="(=) Resultado antes de Financiamiento e Impuestos a las Ganancias" nota="Subtotal obligatorio NIIF 18 (Operación + Inversión)" valor={n.beforeFinancingAndTax} />
+
+              {/* FINANCIAMIENTO */}
+              <Bloque titulo="Categoría de Financiamiento" valor={-n.financing}>
+                {renderRubroLine(statementData.rubros.costosFinancieros, true)}
+              </Bloque>
+
+              <Subtotal titulo="(=) Resultado antes de Impuestos a las Ganancias" valor={t.profitBeforeTax} />
+
+              {/* IMPUESTOS */}
+              <Bloque titulo="Impuestos a las Ganancias" valor={-t.incomeTax}>
+                {renderRubroLine(statementData.rubros.impuestoRenta, true)}
+              </Bloque>
+
+              <Subtotal fuerte titulo={`(=) Resultado del Ejercicio (${t.isProfit ? 'Utilidad' : 'Pérdida'})`} valor={t.netIncome} />
+
+              {/* Información por naturaleza (exigida si los gastos operativos se presentan por función) */}
+              <div className="border border-slate-200 rounded-lg p-3 text-xs">
+                <p className="font-bold text-slate-800 mb-1.5">Nota: gastos operacionales por naturaleza</p>
+                <p className="text-[11px] text-slate-500 mb-2">La NIIF 18 exige desglosar por naturaleza ciertos gastos cuando el estado se presenta por función.</p>
+                <div className="flex justify-between py-1 border-b border-slate-100"><span>Gastos de personal y remuneraciones</span><span className="font-mono">{fmt(n.personal)}</span></div>
+                <div className="flex justify-between py-1"><span>Depreciación y amortización</span><span className="font-mono">{fmt(n.depreciation)}</span></div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* VISTA 2: MATRIZ MENSUAL (12 MESES) */}
       {viewFormat === 'mensual_matriz' && (

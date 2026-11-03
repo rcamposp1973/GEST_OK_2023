@@ -9,6 +9,11 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## [Pruebas] Estado de Resultados: vista NIIF 18
+- Selector "NIC 1 (vigente) / NIIF 18 (desde 2027)" en el Estado de Resultados.
+- Vista NIIF 18: categorías Operación, Inversión y Financiamiento, con los subtotales "Resultado Operacional" y "Resultado antes de Financiamiento e Impuestos", impuestos y resultado del ejercicio, más nota de gastos por naturaleza (personal, depreciación).
+- Es una vista preliminar: el cierre 2025 se presenta en NIC 1. La matriz de 12 meses, la exportación y la impresión siguen en NIC 1.
+
 ## [Pruebas] Estados financieros IFRS: una sola clasificación
 - Nuevo motor único de clasificación para Balance IFRS y Estado de Resultados (antes cada uno tenía reglas propias y se contradecían: el código 5 era gasto en uno e ingreso en el otro).
 - Naturaleza de la cuenta: primero su Tipo; luego la convención 1 Activo · 2 Pasivo · 23 Patrimonio · 3 Ingresos · 4 Gastos.

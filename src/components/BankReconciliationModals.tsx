@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import type { MovementProposal } from '../utils/bankMovementClassifier';
 import { nameMatchesGloss, findDocSubset } from '../utils/bankMovementClassifier';
 import { computeOpenItems, type OpenAccountItem } from '../utils/openAccountItems';
-import { calzarFacturas } from '../utils/docCalce';
+import { calzarFacturas, buscarCuentaRedondeo } from '../utils/docCalce';
 import { extractRutFromGloss, areRutsEqual as areRutsEqualRut } from '../utils/rutMatcher';
 import {
   BankStatementLine,
@@ -542,6 +542,8 @@ export interface QuickVoucherModalProps {
     matchedDocIds?: string[];
   }) => Promise<void>;
   onPost?: () => void;
+  /** devuelve la cuenta de ajuste por redondeo (la crea si no existe, previa confirmación) */
+  onEnsureRoundingAccount?: () => Promise<ChartOfAccount | null>;
 }
 
 export function QuickVoucherModal(props: QuickVoucherModalProps) {
@@ -572,7 +574,8 @@ function QuickVoucherModalContent({
   setQuickVoucherPeriod,
   fiscalYears = [],
   onPostVoucherWithLines,
-  onPost
+  onPost,
+  onEnsureRoundingAccount
 }: QuickVoucherModalProps & { quickVoucherLine: BankStatementLine }) {
   const isCharge = quickVoucherLine.charge > 0;
   const bankAmount = isCharge ? quickVoucherLine.charge : quickVoucherLine.deposit;
@@ -1418,6 +1421,32 @@ function QuickVoucherModalContent({
       });
     }
 
+    // Diferencia de redondeo (hasta $2) entre el banco y las facturas: va a la cuenta de ajuste por redondeo
+    if (selectedDocsList.length > 0) {
+      const totalDocs = lines
+        .filter(l => l.id.startsWith('line_counter_'))
+        .reduce((sum, l) => sum + (Number(l.debit) || 0) + (Number(l.credit) || 0), 0);
+      const dif = Math.round(bankAmount) - Math.round(totalDocs);
+      if (dif !== 0 && Math.abs(dif) <= 2) {
+        const aj = onEnsureRoundingAccount ? await onEnsureRoundingAccount() : (buscarCuentaRedondeo(accounts) as ChartOfAccount | undefined) || null;
+        if (!aj) {
+          setValidationError(`⚠️ Hay una diferencia de $${Math.abs(dif)} por redondeo y no existe la cuenta "Ajuste por redondeo". Créala en el plan de cuentas o ajusta los montos a mano.`);
+          return;
+        }
+        const aDebe = isCharge ? dif > 0 : dif < 0;
+        lines.push({
+          id: 'line_rounding',
+          accountId: aj.id,
+          accountCode: aj.code,
+          accountName: aj.name,
+          debit: aDebe ? Math.abs(dif) : 0,
+          credit: aDebe ? 0 : Math.abs(dif),
+          documentRef: (quickVoucherLine.documentNumber || 'BANCO').toUpperCase(),
+          gloss: `AJUSTE POR REDONDEO - ${defaultGloss}`
+        });
+      }
+    }
+
     // Period closing validation
     const pCheck = checkIsPeriodClosed(quickVoucherPeriod, fiscalYears);
     if (pCheck.isClosed) {
@@ -2240,6 +2269,10 @@ function QuickVoucherModalContent({
                     <div>
                       {totalAllocatedAmount === bankAmount ? (
                         <span className="text-emerald-300 font-sans font-black">✓ Calce Perfecto</span>
+                      ) : Object.keys(selectedDocIds).length > 0 && Math.abs(bankAmount - totalAllocatedAmount) <= 2 ? (
+                        <span className="text-emerald-300 font-sans font-bold">
+                          Ajuste por redondeo: ${Math.abs(bankAmount - totalAllocatedAmount).toLocaleString('es-CL')}
+                        </span>
                       ) : (
                         <span className="text-amber-300 font-sans">
                           Diferencia: ${Math.abs(bankAmount - totalAllocatedAmount).toLocaleString('es-CL')}

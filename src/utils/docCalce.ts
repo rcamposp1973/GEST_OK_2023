@@ -11,6 +11,8 @@ export interface CalceResult {
   amounts: { [id: string]: number };
   level: 'VERDE' | 'AMARILLO';
   text: string;
+  /** diferencia de redondeo (banco - documentos, en pesos, |x| <= 2); va a la cuenta de ajuste por redondeo */
+  ajuste: number;
   /** true cuando la contraparte se identificó por RUT válido de la glosa (señal fuerte) */
   porRut: boolean;
 }
@@ -62,14 +64,14 @@ export function calzarFacturas(
     items.forEach(i => { amounts[i.id] = Math.round(i.openBalance); });
     const suma = Object.values(amounts).reduce((s, v) => s + v, 0);
     const dif = monto - suma;
+    let ajuste = 0;
     if (dif !== 0 && Math.abs(dif) <= TOLERANCIA_REDONDEO) {
-      const ultimo = items[items.length - 1];
-      amounts[ultimo.id] = Math.max(0, amounts[ultimo.id] + dif);
-      texto += ` Diferencia de ${fmt(Math.abs(dif))} por redondeo: se aplicó el monto exacto del banco.`;
+      ajuste = dif;
+      texto += ` Diferencia de ${fmt(Math.abs(dif))} por redondeo: irá a la cuenta Ajuste por redondeo.`;
     }
-    return { items, amounts, level, text: texto, porRut };
+    return { items, amounts, level, text: texto, porRut, ajuste };
   };
-  const aviso = (texto: string): CalceResult => ({ items: [], amounts: {}, level: 'AMARILLO', text: texto, porRut });
+  const aviso = (texto: string): CalceResult => ({ items: [], amounts: {}, level: 'AMARILLO', text: texto, porRut, ajuste: 0 });
 
   // 1) Una sola factura con el saldo exacto
   const exactos = openItems.filter(i => Math.abs(Math.round(i.openBalance) - monto) <= TOLERANCIA_REDONDEO);
@@ -126,4 +128,34 @@ export function calzarFacturas(
     return aviso(`La glosa trae el RUT ${rutValido.rutFormatted}, pero no tiene documentos pendientes en esta cuenta. Puede ser un anticipo, otra cuenta (honorarios, préstamos) o una factura aún no contabilizada.`);
   }
   return null;
+}
+
+/** Busca la cuenta de ajuste por redondeo en el plan de cuentas de la empresa. */
+export function buscarCuentaRedondeo<T extends { name: string; estado?: string; isImputable?: boolean }>(accounts: T[]): T | undefined {
+  const norm = (x: string) => (x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  return accounts.find(a => norm(a.name).includes('redondeo') && a.estado !== 'Inactivo' && a.isImputable !== false);
+}
+
+/** Código y datos sugeridos para crear la cuenta: hermana de las cuentas de gasto bancario/financiero, con el siguiente código libre. */
+export function proponerCuentaRedondeo<T extends { code: string; name: string; type: string; blce8Columnas?: any; codigoIFRS?: string; rubroBalance?: string; rubroResultado?: string; parentCode?: string }>(
+  accounts: T[]
+): { code: string; base?: T } | null {
+  const gastos = accounts.filter(a => a.type === 'Gasto' && /^\d+$/.test((a.code || '').replace(/\./g, '')));
+  if (gastos.length === 0) return null;
+  const norm = (x: string) => (x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const base = gastos.find(a => /comision|bancari|financier|interes/.test(norm(a.name))) || gastos[0];
+  const baseCode = base.code.replace(/\./g, '');
+  const cut = baseCode.length >= 6 ? 3 : 2;
+  const prefix = baseCode.slice(0, baseCode.length - cut);
+  const usados = new Set(accounts.map(a => (a.code || '').replace(/\./g, '')));
+  let max = 0;
+  accounts.forEach(a => {
+    const c = (a.code || '').replace(/\./g, '');
+    if (c.length === baseCode.length && c.startsWith(prefix)) max = Math.max(max, parseInt(c.slice(prefix.length), 10) || 0);
+  });
+  let n = max + 1;
+  let code = prefix + String(n).padStart(cut, '0');
+  while (usados.has(code) && n < 10 ** cut) { n++; code = prefix + String(n).padStart(cut, '0'); }
+  if (usados.has(code)) return null;
+  return { code, base };
 }

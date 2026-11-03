@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { getNextVoucherNumber, reserveVoucherNumberBatch } from '../utils/voucherCounter';
 import BandejaMovimientosModal from './BandejaMovimientosModal';
 import { computeOpenItems, getAccountKind, type OpenAccountItem } from '../utils/openAccountItems';
-import { calzarFacturas, formatFriendlyDocumentRef, type CalceResult } from '../utils/docCalce';
+import { calzarFacturas, formatFriendlyDocumentRef, buscarCuentaRedondeo, proponerCuentaRedondeo, type CalceResult } from '../utils/docCalce';
 import { db, auth } from '../lib/firebase';
 import { collection, getDocs, getDoc, addDoc, doc, setDoc, updateDoc, query, where } from 'firebase/firestore';
 import {
@@ -1409,6 +1409,53 @@ export default function ConciliacionBancariaView({
     }
   };
 
+  // Cuenta de ajuste por redondeo: usa la existente o, previa confirmación única, crea una hermana de las cuentas de gasto bancario
+  const roundingAccountRef = useRef<ChartOfAccount | null>(null);
+  const ensureRoundingAccount = async (): Promise<ChartOfAccount | null> => {
+    if (roundingAccountRef.current) return roundingAccountRef.current;
+    const existente = buscarCuentaRedondeo(accounts);
+    if (existente) { roundingAccountRef.current = existente; return existente; }
+    const prop = proponerCuentaRedondeo(accounts);
+    if (!prop) {
+      notify.warning('No pude proponer un código para la cuenta "Ajuste por redondeo". Créala en el plan de cuentas (tipo Gasto).', 'Falta cuenta');
+      return null;
+    }
+    const ok = window.confirm(
+      `No existe una cuenta de ajuste por redondeo.\n\n¿Crear "Ajuste por redondeo" con el código ${prop.code} (tipo Gasto)?\n\nSe usará para diferencias de hasta $2 entre el banco y las facturas.`
+    );
+    if (!ok) return null;
+    try {
+      const b: any = prop.base || {};
+      const nueva: any = {
+        code: prop.code,
+        name: 'Ajuste por Redondeo',
+        type: 'Gasto',
+        isImputable: true,
+        moneda: b.moneda || 'CLP',
+        requiereAuxiliarRUT: false,
+        requiereConciliacionBancaria: false,
+        requiereDocumento: false,
+        requiereVencimiento: false,
+        requiereCentroCosto: false,
+        estado: 'Activo',
+        creationMode: 'AUTOMATICO',
+        createdAt: new Date().toISOString(),
+        ...(b.parentCode ? { parentCode: b.parentCode } : {}),
+        ...(b.blce8Columnas ? { blce8Columnas: b.blce8Columnas } : {}),
+        ...(b.codigoIFRS ? { codigoIFRS: b.codigoIFRS } : {}),
+        ...(b.rubroResultado ? { rubroResultado: b.rubroResultado } : {})
+      };
+      const ref = await addDoc(collection(companyRef, 'accounts'), sanitizeForFirestore(nueva));
+      const creada = { id: ref.id, ...nueva } as ChartOfAccount;
+      roundingAccountRef.current = creada;
+      notify.success(`Cuenta creada: ${creada.code} ${creada.name}.`, 'Plan de cuentas');
+      return creada;
+    } catch (e: any) {
+      notify.error('No se pudo crear la cuenta de ajuste: ' + (e?.message || ''));
+      return null;
+    }
+  };
+
   // Abre el asiento rápido de un movimiento con su propuesta (usado por "+ Asiento" y por la bandeja)
   const abrirAsiento = async (l: BankStatementLine) => {
     const shift = getNextOpenPeriodAndDate(l.date, fiscalYears);
@@ -1494,8 +1541,18 @@ export default function ConciliacionBancariaView({
         const closed = checkIsPeriodClosed(eff.period, fiscalYears);
         return { ...it, period: eff.period, date: eff.date, closed: closed.isClosed };
       });
-    const validos = plan.filter(p => !p.closed);
-    const omitidos = plan.length - validos.length;
+    let validos = plan.filter(p => !p.closed);
+    let omitidos = plan.length - validos.length;
+    // Diferencias de redondeo: se necesita la cuenta de ajuste; si no se obtiene, esos movimientos quedan pendientes
+    let cuentaAjuste: ChartOfAccount | null = null;
+    if (validos.some(p => p.calce && p.calce.ajuste !== 0)) {
+      cuentaAjuste = await ensureRoundingAccount();
+      if (!cuentaAjuste) {
+        const sinAjuste = validos.filter(p => p.calce && p.calce.ajuste !== 0).length;
+        validos = validos.filter(p => !(p.calce && p.calce.ajuste !== 0));
+        omitidos += sinAjuste;
+      }
+    }
     if (validos.length === 0) {
       notify.warning('Todos los movimientos caen en períodos cerrados.', 'Nada que contabilizar');
       return;
@@ -1581,6 +1638,19 @@ export default function ConciliacionBancariaView({
               ...comunes,
               gloss: glosa
             }];
+          }
+          if (calce && calce.ajuste !== 0 && cuentaAjuste) {
+            const aDebe = isCharge ? calce.ajuste > 0 : calce.ajuste < 0;
+            counterLines.push({
+              id: 'line_rounding',
+              accountId: cuentaAjuste.id,
+              accountCode: cuentaAjuste.code,
+              accountName: cuentaAjuste.name,
+              debit: aDebe ? Math.abs(calce.ajuste) : 0,
+              credit: aDebe ? 0 : Math.abs(calce.ajuste),
+              documentRef: ref,
+              gloss: `AJUSTE POR REDONDEO - ${glosa}`
+            });
           }
           const cleaned = sanitizeVoucherLines([bankLine, ...counterLines], accounts);
           const totalDebit = cleaned.reduce((s, l) => s + (Number(l.debit) || 0), 0);
@@ -4010,6 +4080,7 @@ export default function ConciliacionBancariaView({
         fiscalYears={fiscalYears}
         onPostVoucherWithLines={handleQuickPostVoucher}
         onPost={handleQuickPostVoucher}
+        onEnsureRoundingAccount={ensureRoundingAccount}
       />
 
       <AutoRutMatchModal

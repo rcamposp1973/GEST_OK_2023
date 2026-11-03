@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import HomeModulesView from './HomeModulesView';
+import BuscadorComprobantesView from './BuscadorComprobantesView';
 import { db, auth } from '../lib/firebase';
 import { collection, getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { Company, DTEConfig, ChartOfAccount, Auxiliary, ExchangeRate, FiscalPeriodYear, RCVDocument, Voucher, VoucherLine, RCVAccountingParams, MasterAccountingParameters, BankReconciliation, UserRole, CostCenterMaster, ExpenseItemMaster, NonSiiDocTypeMaster, ProjectMaster, ProductMaster, CustomAnalysisTableItem, CommercialDocument, InventoryMovement, ProductService, Employee, PayrollSlip, Warehouse } from '../types';
@@ -169,7 +171,7 @@ export default function CompanyAccountingDashboard({
   const { withProcess } = useProcess();
   type RibbonGroup = 'FINANZAS' | 'OPERACIONES' | 'TESORERIA' | 'PERSONAL' | 'CARGA (SII)' | 'IMPUESTOS' | 'INDICADORES' | 'CONFIGURACIONES' | 'FAVORITOS';
   const [activeRibbonGroup, setActiveRibbonGroup] = useState<RibbonGroup>('FINANZAS');
-  const [activeTab, setActiveTab] = useState<'accounts' | 'auxiliaries' | 'periods' | 'rcv' | 'exchange' | 'rcvParams' | 'centralizaciones' | 'f29Codes' | 'vouchers' | 'libroDiario' | 'libroMayor' | 'balance8' | 'balanceIFRS' | 'analisisAuxiliares' | 'analisisCuentas' | 'planillaConsultas' | 'analyticsHud' | 'reportesAnaliticos' | 'estadoResultados' | 'indicadoresFinancieros' | 'auditorEstadosFinancieros' | 'smartNotebooks' | 'flujoDeCaja' | 'agingDeudas' | 'nominasPago' | 'cobranza' | 'conciliacionBancaria' | 'libroBancoColaborativo' | 'cargaMasiva' | 'formulario29' | 'plantillasCarga' | 'rendicionGastos' | 'emisionDte' | 'tablasAnalisis' | 'controlFolios' | 'productsServices' | 'operativaComercial' | 'stockKardex' | 'warehouses' | 'employees' | 'liquidaciones' | 'activoFijo' | 'ddjj' | 'agenticStudy2040' | 'agenticPyme2040'>('vouchers');
+  const [activeTab, setActiveTab] = useState<'accounts' | 'auxiliaries' | 'periods' | 'rcv' | 'exchange' | 'rcvParams' | 'centralizaciones' | 'f29Codes' | 'vouchers' | 'libroDiario' | 'libroMayor' | 'balance8' | 'balanceIFRS' | 'analisisAuxiliares' | 'analisisCuentas' | 'planillaConsultas' | 'analyticsHud' | 'reportesAnaliticos' | 'estadoResultados' | 'indicadoresFinancieros' | 'auditorEstadosFinancieros' | 'smartNotebooks' | 'flujoDeCaja' | 'agingDeudas' | 'nominasPago' | 'cobranza' | 'conciliacionBancaria' | 'libroBancoColaborativo' | 'cargaMasiva' | 'formulario29' | 'plantillasCarga' | 'rendicionGastos' | 'emisionDte' | 'tablasAnalisis' | 'controlFolios' | 'productsServices' | 'operativaComercial' | 'stockKardex' | 'warehouses' | 'employees' | 'liquidaciones' | 'activoFijo' | 'ddjj' | 'agenticStudy2040' | 'agenticPyme2040' | 'home' | 'buscadorComprobantes'>('home');
   const [auxSubTab, setAuxSubTab] = useState<'deudores' | 'acreedores'>('deudores');
   const [employeeSubTab, setEmployeeSubTab] = useState<'employees' | 'contracts' | 'attendance' | 'advances' | 'severance' | 'certificates'>('employees');
   const [payrollTab, setPayrollTab] = useState<'NOMINA' | 'LIQUIDACION_INDIVIDUAL' | 'LRD_DT' | 'PREVIRED' | 'PARAMETROS' | 'CONCEPTOS' | 'RELIQUIDACIONES'>('NOMINA');
@@ -228,16 +230,16 @@ export default function CompanyAccountingDashboard({
   const [openTabs, setOpenTabs] = useState<WorkspaceTab[]>(() => {
     return [
       {
-        id: 'tab_vouchers',
-        moduleId: 'vouchers',
-        title: 'Vouchers / Asientos',
+        id: 'tab_home',
+        moduleId: 'home',
+        title: 'Inicio',
         category: 'FINANZAS',
         colorScheme: 'indigo',
         closable: false
       }
     ];
   });
-  const [activeTabId, setActiveTabId] = useState<string>('tab_vouchers');
+  const [activeTabId, setActiveTabId] = useState<string>('tab_home');
 
   const handleOpenModuleInTab = (moduleId: string) => {
     if (moduleId === 'calculator') {
@@ -7303,6 +7305,14 @@ export default function CompanyAccountingDashboard({
         </div>
       )}
 
+      {/* INICIO: panel de accesos a módulos */}
+      {activeTab === 'home' && <HomeModulesView onOpenModule={handleOpenModuleInTab} />}
+
+      {/* FINANZAS: buscador de comprobantes */}
+      {activeTab === 'buscadorComprobantes' && (
+        <BuscadorComprobantesView vouchers={vouchers} onOpenVoucher={(v) => handleOpenVoucherModal(v)} />
+      )}
+
       {/* TAB: COMPROBANTES CONTABLES */}
       {activeTab === 'vouchers' && (
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5">
@@ -9128,7 +9138,7 @@ export default function CompanyAccountingDashboard({
           auxiliaries={auxiliaries}
           costCenters={costCenters}
           onOpenVoucherDetail={handleOpenVoucherModal}
-          onClose={() => setActiveTab('vouchers')}
+          onClose={() => setActiveTab('home')}
         />
       )}
 
@@ -9328,7 +9338,7 @@ export default function CompanyAccountingDashboard({
           customAnalysisItems={customAnalysisItems}
           onVouchersUpdated={fetchData}
           onOpenVoucher={handleOpenVoucherModal}
-          onClose={() => setActiveTab('vouchers')}
+          onClose={() => setActiveTab('home')}
         />
       </div>
 
@@ -9347,7 +9357,7 @@ export default function CompanyAccountingDashboard({
           mode="CONTADOR"
           onVouchersUpdated={fetchData}
           onNavigateToConciliacion={() => setActiveTab('conciliacionBancaria')}
-          onClose={() => setActiveTab('vouchers')}
+          onClose={() => setActiveTab('home')}
         />
       )}
 

@@ -12,6 +12,7 @@ import Login from './components/Login';
 import Register from './components/Register';
 import CreateStudy from './components/CreateStudy';
 import React, { useEffect, useState } from 'react';
+import { instalarCierreConEscape } from './utils/escapeCloser';
 import { doc, collection, collectionGroup, onSnapshot, deleteDoc, getDoc, getDocs, query, where, addDoc } from 'firebase/firestore';
 import { db, auth } from './lib/firebase';
 import { signOut } from 'firebase/auth';
@@ -785,6 +786,9 @@ function AppContent() {
   // Sincronización inteligente de sesión multi-pestaña:
   // La actividad en CUALQUIER pestaña abierta mantiene viva la sesión en todas las pestañas.
   useCrossTabSessionSync(currentUser);
+
+  // ESC cierra la ventana abierta
+  useEffect(() => instalarCierreConEscape(), []);
 
   return (
     <BrowserRouter>

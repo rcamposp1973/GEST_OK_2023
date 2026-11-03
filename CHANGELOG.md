@@ -27,6 +27,11 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 - Los endpoints de IA quedan preparados en el servidor de producción (se activan al configurar la clave).
 - Se retiró el botón de purga "Diagon" del panel de Super Admin.
 
+### Navegación
+- **Pantalla de inicio de la empresa:** ahora es el panel de accesos a los módulos (con buscador), en lugar del listado de comprobantes. Los comprobantes pasan a ser un módulo más.
+- **Buscador de Comprobantes** (Finanzas): busca por N° de comprobante, N° de factura, proveedor o cliente (nombre o RUT), glosa, cuenta o monto, con filtros de tipo, estado y fechas; al hacer clic abre el comprobante.
+- **Tecla ESC** cierra la ventana abierta.
+
 ### Interfaz
 - Se retiraron 1.039 emojis, se reemplazaron los degradados por colores sólidos y se quitaron textos grandilocuentes e insignias técnicas.
 - El nombre de la empresa aparece solo en la barra superior (se mantiene en los documentos imprimibles).

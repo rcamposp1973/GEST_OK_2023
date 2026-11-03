@@ -3,7 +3,7 @@ import {
   FolderTree, CreditCard, Receipt, TrendingUp, Landmark, ShoppingCart, 
   BarChart3, Settings, Calendar, Download, FileSpreadsheet, 
   ShieldCheck, Boxes, Package, Briefcase, Calculator, Building2, 
-  Sparkles, Table as TableIcon, Warehouse as WarehouseIcon, Activity, Clock
+  Sparkles, Search, Table as TableIcon, Warehouse as WarehouseIcon, Activity, Clock
 } from 'lucide-react';
 
 export type DockPosition = 'left' | 'right' | 'bottom' | 'hidden';
@@ -59,6 +59,15 @@ export const COCKPIT_MODULE_CATALOG: CockpitModuleItem[] = [
     colorScheme: 'indigo',
     shortcut: 'Alt+M',
     description: 'Capa 2 ERP: Centralización mensual automática de Ventas, Compras, Sueldos, Activo Fijo y Tesorería'
+  },
+  {
+    id: 'buscadorComprobantes',
+    label: 'Buscador de Comprobantes',
+    shortLabel: 'Buscador',
+    category: 'FINANZAS',
+    icon: Search,
+    colorScheme: 'indigo',
+    description: 'Busca comprobantes por N° de comprobante, factura, proveedor, cliente, glosa o monto y ábrelos'
   },
   {
     id: 'vouchers',

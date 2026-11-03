@@ -9,6 +9,13 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## [Pruebas] Estados financieros IFRS: una sola clasificación
+- Nuevo motor único de clasificación para Balance IFRS y Estado de Resultados (antes cada uno tenía reglas propias y se contradecían: el código 5 era gasto en uno e ingreso en el otro).
+- Naturaleza de la cuenta: primero su Tipo; luego la convención 1 Activo · 2 Pasivo · 23 Patrimonio · 3 Ingresos · 4 Gastos.
+- Rubros con denominaciones NIC 1 / CMF (Efectivo, Deudores comerciales, Activos por impuestos corrientes, Otros pasivos financieros, Ganancias acumuladas, Costo de ventas, Costos financieros, etc.).
+- Corregido: "Gastos bancarios e intereses" de la plantilla caía como depreciación; ahora va a Costos financieros. IVA y retenciones, remuneraciones y préstamos se ordenan por nombre y estructura.
+- Nuevo panel "Revisión de clasificación" en el Balance IFRS con las cuentas que no calzan con la convención o no tienen Tipo.
+
 ## [Pruebas] Cartola: sin duplicados al cargar provisoria + definitiva
 - Al importar una cartola, un movimiento se considera ya existente si coincide fecha y monto (la glosa puede cambiar entre provisoria y definitiva), o mismo N° de documento y monto, o mismo monto y glosa con pocos días de diferencia.
 - Movimientos legítimos idénticos dentro de una misma cartola ya no se descartan.

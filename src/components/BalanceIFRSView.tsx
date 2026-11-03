@@ -16,6 +16,7 @@ import {
   TrendingUp
 } from 'lucide-react';
 import { BalanceIFRSPrintModal } from './BalanceIFRSPrintModal';
+import { getNaturaleza, getRubroESF, RUBROS_ESF, revisarClasificacion } from '../utils/ifrsClassification';
 
 interface BalanceIFRSViewProps {
   company: Company;
@@ -55,6 +56,8 @@ export default function BalanceIFRSView({
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
   const [showZeroBalances, setShowZeroBalances] = useState<boolean>(false);
+  const [showRevision, setShowRevision] = useState<boolean>(false);
+  const hallazgos = useMemo(() => revisarClasificacion(accounts), [accounts]);
   const [showAccountDetails, setShowAccountDetails] = useState<boolean>(true);
   const [showPrintModal, setShowPrintModal] = useState<boolean>(false);
   const [expandedRubros, setExpandedRubros] = useState<Record<string, boolean>>({
@@ -227,206 +230,37 @@ export default function BalanceIFRSView({
       });
     });
 
-    // 3. Estructura de Rubros Padre IFRS
-    // Activo Corriente (11xxxxx)
-    const rubroEfectivo: IFRSParentRubro = { id: '1101', code: '1101000', name: 'Efectivo y Equivalentes al Efectivo', total: 0, accounts: [] };
-    const rubroDeudores: IFRSParentRubro = { id: '1102', code: '1102000', name: 'Deudores Comerciales y Otras Cuentas por Cobrar', total: 0, accounts: [] };
-    const rubroInventarios: IFRSParentRubro = { id: '1103', code: '1103000', name: 'Inventarios / Existencias', total: 0, accounts: [] };
-    const rubroImpuestosActivos: IFRSParentRubro = { id: '1104', code: '1104000', name: 'Activos por Impuestos Corrientes (IVA CF, PPM, Remanente)', total: 0, accounts: [] };
-    const rubroOtrosActivosCorr: IFRSParentRubro = { id: '1105', code: '1105000', name: 'Otros Activos Financieros Corrientes', total: 0, accounts: [] };
-
-    // Activo No Corriente (12xxxxx)
-    const rubroPPE: IFRSParentRubro = { id: '1201', code: '1201000', name: 'Propiedades, Planta y Equipo (PPE)', total: 0, accounts: [] };
-    const rubroIntangibles: IFRSParentRubro = { id: '1202', code: '1202000', name: 'Activos Intangibles y Plusvalía', total: 0, accounts: [] };
-    const rubroInversionesNoCorr: IFRSParentRubro = { id: '1203', code: '1203000', name: 'Propiedades de Inversión y Otros Activos No Corrientes', total: 0, accounts: [] };
-
-    // Pasivo Corriente (21xxxxx)
-    const rubroProveedores: IFRSParentRubro = { id: '2101', code: '2101000', name: 'Cuentas Comerciales y Otras Cuentas por Pagar', total: 0, accounts: [] };
-    const rubroPrestamosCorto: IFRSParentRubro = { id: '2102', code: '2102000', name: 'Obligaciones con Instituciones de Crédito a Corto Plazo', total: 0, accounts: [] };
-    const rubroImpuestosPasivos: IFRSParentRubro = { id: '2103', code: '2103000', name: 'Pasivos por Impuestos Corrientes (IVA DF, Retenciones, F29)', total: 0, accounts: [] };
-    const rubroProvisionesLaborales: IFRSParentRubro = { id: '2104', code: '2104000', name: 'Provisiones y Beneficios a los Empleados (Leyes Sociales)', total: 0, accounts: [] };
-    const rubroOtrosPasivosCorr: IFRSParentRubro = { id: '2105', code: '2105000', name: 'Otros Pasivos Corrientes', total: 0, accounts: [] };
-
-    // Pasivo No Corriente (22xxxxx)
-    const rubroDeudasLargo: IFRSParentRubro = { id: '2201', code: '2201000', name: 'Obligaciones Financieras a Largo Plazo', total: 0, accounts: [] };
-    const rubroPasivosDiferidos: IFRSParentRubro = { id: '2202', code: '2202000', name: 'Pasivos por Impuestos Diferidos y Otros a Largo Plazo', total: 0, accounts: [] };
-
-    // Patrimonio (23xxxxx)
-    const rubroCapital: IFRSParentRubro = { id: '2301', code: '2301000', name: 'Capital Emitido y Pagado', total: 0, accounts: [] };
-    const rubroReservas: IFRSParentRubro = { id: '2302', code: '2302000', name: 'Reservas y Otras Ganancias Integrales', total: 0, accounts: [] };
-    const rubroResultadosAcum: IFRSParentRubro = { id: '2303', code: '2303000', name: 'Ganancias / Pérdidas Acumuladas de Ejercicios Anteriores', total: 0, accounts: [] };
+    // 3. Rubros del Estado de Situación Financiera (motor único de clasificación)
+    const rubrosMap = new Map<string, IFRSParentRubro>();
+    RUBROS_ESF.forEach(r => rubrosMap.set(r.id, { id: r.id, code: r.code, name: r.name, total: 0, accounts: [] }));
+    const R = (id: string) => rubrosMap.get(id)!;
 
     let totalIngresos = 0;
     let totalGastos = 0;
 
     accSums.forEach(({ debit, credit, account }) => {
-      const code = (account.code || '').trim();
-      const name = (account.name || '').toLowerCase();
-      const normType = (account.type || '').toLowerCase();
-      const codePrefix = code.charAt(0);
+      const nat = getNaturaleza(account);
 
-      // Criterios IFRS Chilenos:
-      // Activos = 1, Pasivos = 2 (excepto 23), Patrimonio = 23, Ingresos = 3, Gastos/Costos = 4 ó 5
-      const isPatrimonio = 
-        code.startsWith('23') || 
-        code.startsWith('2.3') || 
-        normType.includes('patrimonio') || 
-        normType.includes('capital');
+      if (nat === 'INGRESO') { totalIngresos += (credit - debit); return; }
+      if (nat === 'GASTO') { totalGastos += (debit - credit); return; }
 
-      const isActivo = 
-        codePrefix === '1' || 
-        (!['2', '3', '4', '5'].includes(codePrefix) && normType.includes('activo'));
+      // Activos: saldo deudor. Pasivos y Patrimonio: saldo acreedor
+      const balance = nat === 'ACTIVO' ? debit - credit : credit - debit;
+      if (!showZeroBalances && balance === 0) return;
 
-      const isPasivo = 
-        !isPatrimonio && 
-        (codePrefix === '2' || (!['1', '3', '4', '5'].includes(codePrefix) && normType.includes('pasivo')));
-
-      const isIngreso = 
-        codePrefix === '3' || 
-        (!['1', '2', '4', '5'].includes(codePrefix) && (normType.includes('ingreso') || normType.includes('ganancia') || normType.includes('venta')));
-
-      const isGasto = 
-        codePrefix === '4' || 
-        codePrefix === '5' || 
-        (!['1', '2', '3'].includes(codePrefix) && (normType.includes('gasto') || normType.includes('costo') || normType.includes('perdida')));
-
-      // 1. ACTIVOS
-      if (isActivo) {
-        const balance = debit - credit;
-        if (!showZeroBalances && balance === 0) return;
-
-        const lineItem: IFRSAccountLine = {
-          id: account.id,
-          code: account.code,
-          name: account.name,
-          debit,
-          credit,
-          balance
-        };
-
-        const isNoCorriente = 
-          code.startsWith('12') || code.startsWith('1.2') ||
-          name.includes('fijo') || name.includes('propiedad') || name.includes('planta') || 
-          name.includes('equipo') || name.includes('intangible') || name.includes('largo plazo') ||
-          name.includes('terreno') || name.includes('vehiculo') || name.includes('maquinaria');
-
-        if (isNoCorriente) {
-          if (name.includes('intangible') || name.includes('software') || name.includes('marca') || code.startsWith('1202') || code.startsWith('1.2.02')) {
-            rubroIntangibles.accounts.push(lineItem);
-            rubroIntangibles.total += balance;
-          } else if (name.includes('inversion') || name.includes('asociada') || code.startsWith('1203') || code.startsWith('1.2.03')) {
-            rubroInversionesNoCorr.accounts.push(lineItem);
-            rubroInversionesNoCorr.total += balance;
-          } else {
-            rubroPPE.accounts.push(lineItem);
-            rubroPPE.total += balance;
-          }
-        } else {
-          if (name.includes('caja') || name.includes('banco') || name.includes('efectivo') || name.includes('tesoreria') || code.startsWith('1101') || code.startsWith('1.1.01')) {
-            rubroEfectivo.accounts.push(lineItem);
-            rubroEfectivo.total += balance;
-          } else if (name.includes('iva') || name.includes('ppm') || name.includes('remanente') || name.includes('credito fiscal') || code.startsWith('1104') || code.startsWith('1.1.04')) {
-            rubroImpuestosActivos.accounts.push(lineItem);
-            rubroImpuestosActivos.total += balance;
-          } else if (name.includes('inventario') || name.includes('mercaderia') || name.includes('existencia') || name.includes('materia prima') || code.startsWith('1103') || code.startsWith('1.1.03')) {
-            rubroInventarios.accounts.push(lineItem);
-            rubroInventarios.total += balance;
-          } else if (name.includes('cliente') || name.includes('deudor') || name.includes('por cobrar') || name.includes('anticipo') || code.startsWith('1102') || code.startsWith('1.1.02')) {
-            rubroDeudores.accounts.push(lineItem);
-            rubroDeudores.total += balance;
-          } else {
-            rubroOtrosActivosCorr.accounts.push(lineItem);
-            rubroOtrosActivosCorr.total += balance;
-          }
-        }
-      }
-      // 2. PASIVOS
-      else if (isPasivo) {
-        const balance = credit - debit;
-        if (!showZeroBalances && balance === 0) return;
-
-        const lineItem: IFRSAccountLine = {
-          id: account.id,
-          code: account.code,
-          name: account.name,
-          debit,
-          credit,
-          balance
-        };
-
-        const isNoCorriente = 
-          code.startsWith('22') || code.startsWith('2.2') ||
-          name.includes('largo plazo') || name.includes('hipotecario') || name.includes('diferido');
-
-        if (isNoCorriente) {
-          if (name.includes('diferido') || code.startsWith('2202') || code.startsWith('2.2.02')) {
-            rubroPasivosDiferidos.accounts.push(lineItem);
-            rubroPasivosDiferidos.total += balance;
-          } else {
-            rubroDeudasLargo.accounts.push(lineItem);
-            rubroDeudasLargo.total += balance;
-          }
-        } else {
-          if (name.includes('iva') || name.includes('debito fiscal') || name.includes('retencion') || name.includes('impuesto') || name.includes('f29') || code.startsWith('2103') || code.startsWith('2.1.03')) {
-            rubroImpuestosPasivos.accounts.push(lineItem);
-            rubroImpuestosPasivos.total += balance;
-          } else if (name.includes('sueldo') || name.includes('leyes sociales') || name.includes('imposicion') || name.includes('previred') || name.includes('honorarios') || code.startsWith('2104') || code.startsWith('2.1.04')) {
-            rubroProvisionesLaborales.accounts.push(lineItem);
-            rubroProvisionesLaborales.total += balance;
-          } else if (name.includes('prestamo') || name.includes('credito') || name.includes('banco') || name.includes('linea') || code.startsWith('2102') || code.startsWith('2.1.02')) {
-            rubroPrestamosCorto.accounts.push(lineItem);
-            rubroPrestamosCorto.total += balance;
-          } else if (name.includes('proveedor') || name.includes('por pagar') || code.startsWith('2101') || code.startsWith('2.1.01')) {
-            rubroProveedores.accounts.push(lineItem);
-            rubroProveedores.total += balance;
-          } else {
-            rubroOtrosPasivosCorr.accounts.push(lineItem);
-            rubroOtrosPasivosCorr.total += balance;
-          }
-        }
-      }
-      // 3. PATRIMONIO
-      else if (isPatrimonio) {
-        const balance = credit - debit;
-        if (!showZeroBalances && balance === 0) return;
-
-        const lineItem: IFRSAccountLine = {
-          id: account.id,
-          code: account.code,
-          name: account.name,
-          debit,
-          credit,
-          balance
-        };
-
-        if (name.includes('capital') || code.startsWith('2301') || code.startsWith('2.3.01')) {
-          rubroCapital.accounts.push(lineItem);
-          rubroCapital.total += balance;
-        } else if (name.includes('reserva') || code.startsWith('2302') || code.startsWith('2.3.02')) {
-          rubroReservas.accounts.push(lineItem);
-          rubroReservas.total += balance;
-        } else {
-          rubroResultadosAcum.accounts.push(lineItem);
-          rubroResultadosAcum.total += balance;
-        }
-      }
-      // 4. INGRESOS
-      else if (isIngreso) {
-        totalIngresos += (credit - debit);
-      }
-      // 5. GASTOS / COSTOS
-      else if (isGasto) {
-        totalGastos += (debit - credit);
-      }
+      const rubro = R(getRubroESF(account));
+      rubro.accounts.push({ id: account.id, code: account.code, name: account.name, debit, credit, balance });
+      rubro.total += balance;
     });
 
-    const activosCorrientesRubros = [rubroEfectivo, rubroDeudores, rubroInventarios, rubroImpuestosActivos, rubroOtrosActivosCorr].filter(r => showZeroBalances || r.total !== 0 || r.accounts.length > 0);
-    const activosNoCorrientesRubros = [rubroPPE, rubroIntangibles, rubroInversionesNoCorr].filter(r => showZeroBalances || r.total !== 0 || r.accounts.length > 0);
+    const seccion = (s: string) => RUBROS_ESF.filter(r => r.seccion === s).map(r => R(r.id));
+    const activosCorrientesRubros = seccion('ACTIVO_CORRIENTE').filter(r => showZeroBalances || r.total !== 0 || r.accounts.length > 0);
+    const activosNoCorrientesRubros = seccion('ACTIVO_NO_CORRIENTE').filter(r => showZeroBalances || r.total !== 0 || r.accounts.length > 0);
 
-    const pasivosCorrientesRubros = [rubroProveedores, rubroPrestamosCorto, rubroImpuestosPasivos, rubroProvisionesLaborales, rubroOtrosPasivosCorr].filter(r => showZeroBalances || r.total !== 0 || r.accounts.length > 0);
-    const pasivosNoCorrientesRubros = [rubroDeudasLargo, rubroPasivosDiferidos].filter(r => showZeroBalances || r.total !== 0 || r.accounts.length > 0);
+    const pasivosCorrientesRubros = seccion('PASIVO_CORRIENTE').filter(r => showZeroBalances || r.total !== 0 || r.accounts.length > 0);
+    const pasivosNoCorrientesRubros = seccion('PASIVO_NO_CORRIENTE').filter(r => showZeroBalances || r.total !== 0 || r.accounts.length > 0);
 
-    const patrimonioRubros = [rubroCapital, rubroReservas, rubroResultadosAcum].filter(r => showZeroBalances || r.total !== 0 || r.accounts.length > 0);
+    const patrimonioRubros = seccion('PATRIMONIO').filter(r => showZeroBalances || r.total !== 0 || r.accounts.length > 0);
 
     const totalActivosCorrientes = activosCorrientesRubros.reduce((s, r) => s + r.total, 0);
     const totalActivosNoCorrientes = activosNoCorrientesRubros.reduce((s, r) => s + r.total, 0);
@@ -705,6 +539,50 @@ export default function BalanceIFRSView({
           )}
         </div>
       </div>
+
+      {/* Revisión de clasificación de cuentas */}
+      {hallazgos.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl text-xs">
+          <button
+            type="button"
+            onClick={() => setShowRevision(v => !v)}
+            className="w-full flex items-center justify-between px-3.5 py-2.5 font-bold text-amber-900 cursor-pointer"
+          >
+            <span className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4" />
+              Revisión de clasificación: {hallazgos.length} {hallazgos.length === 1 ? 'cuenta' : 'cuentas'} con criterio a confirmar
+            </span>
+            <span className="text-[11px] font-semibold">{showRevision ? 'Ocultar' : 'Ver detalle'}</span>
+          </button>
+          {showRevision && (
+            <div className="px-3.5 pb-3 overflow-x-auto">
+              <p className="text-[11px] text-amber-800 mb-2">
+                Convención: 1 Activo · 2 Pasivo · 23 Patrimonio · 3 Ingresos · 4 Gastos. El informe respeta el <strong>Tipo</strong> de cada cuenta; estas cuentas no calzan exactamente con la convención o no tienen Tipo.
+              </p>
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="text-[10px] uppercase text-amber-900 border-b border-amber-200">
+                    <th className="py-1 pr-3">Código</th>
+                    <th className="py-1 pr-3">Cuenta</th>
+                    <th className="py-1 pr-3">Se clasificó como</th>
+                    <th className="py-1">Detalle</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {hallazgos.slice(0, 200).map(h => (
+                    <tr key={h.account.id || h.account.code} className="border-b border-amber-100 align-top">
+                      <td className="py-1 pr-3 font-mono">{h.account.code}</td>
+                      <td className="py-1 pr-3">{h.account.name}</td>
+                      <td className="py-1 pr-3 font-semibold">{h.naturaleza.charAt(0) + h.naturaleza.slice(1).toLowerCase()}</td>
+                      <td className="py-1 text-amber-900">{h.detalle}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* KPI Cards de Resumen */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

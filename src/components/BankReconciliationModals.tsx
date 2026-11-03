@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import type { MovementProposal } from '../utils/bankMovementClassifier';
 import { nameMatchesGloss, findDocSubset } from '../utils/bankMovementClassifier';
+import { computeOpenItems, type OpenAccountItem } from '../utils/openAccountItems';
+import { calzarFacturas } from '../utils/docCalce';
 import { extractRutFromGloss, areRutsEqual as areRutsEqualRut } from '../utils/rutMatcher';
 import {
   BankStatementLine,
@@ -491,23 +493,7 @@ function ManualMatchModalContent({
   );
 }
 
-export interface OpenAccountItem {
-  id: string;
-  docType: string;
-  docNumber: string;
-  auxiliaryRut: string;
-  auxiliaryName: string;
-  issueDate: string;
-  dueDate?: string;
-  costCenter?: string;
-  expenseItem?: string;
-  project?: string;
-  product?: string;
-  originalAmount: number;
-  paidAmount: number;
-  openBalance: number;
-  source: 'RCV' | 'VOUCHER';
-}
+export type { OpenAccountItem } from '../utils/openAccountItems';
 
 export interface MultiAccountLineItem {
   id: string;
@@ -1022,231 +1008,10 @@ function QuickVoucherModalContent({
 
   // Calculate open documents composing the selected account ("Lo que compone la cuenta")
   // UNIFIED ENGINE: Merge RCV and Accounting Vouchers with robust Folio and RUT normalization to completely prevent duplicates
-  const openItems = useMemo<OpenAccountItem[]>(() => {
-    if (!selectedAccount) return [];
-
-    const items: OpenAccountItem[] = [];
-    const accCode = selectedAccount.code;
-    const accId = selectedAccount.id;
-
-    // Helper: Normalize Folio to pure numeric string or standard code (e.g. "#201501", "DTE 34 #201501", "00201501" -> "201501")
-    const normalizeFolio = (val: any): string => {
-      if (val === undefined || val === null) return '';
-      const s = String(val).trim();
-      if (!s) return '';
-      if (s.includes('#')) {
-        const after = s.split('#').pop()?.trim() || '';
-        const d = after.replace(/\D/g, '');
-        if (d) return String(parseInt(d, 10));
-      }
-      const tokens = s.split(/[\s\-_\/]+/);
-      for (let i = tokens.length - 1; i >= 0; i--) {
-        const d = tokens[i].replace(/\D/g, '');
-        if (d.length > 0) return String(parseInt(d, 10));
-      }
-      const allD = s.replace(/\D/g, '');
-      if (allD) return String(parseInt(allD, 10));
-      return s.toUpperCase();
-    };
-
-    // Helper: Normalize RUT (removes dots, hyphens, spaces: "99.012.000-5" -> "990120005")
-    const normalizeRut = (rut: any): string => {
-      if (!rut) return '';
-      return String(rut).replace(/[^0-9kK]/g, '').toUpperCase().trim();
-    };
-
-    // Helper: Normalize Document Type ("DTE 34" -> "34", "33" -> "33", "70" -> "BHE")
-    const normalizeDocType = (type: any): string => {
-      if (!type) return '';
-      const s = String(type).trim().toUpperCase();
-      const d = s.replace(/\D/g, '');
-      if (d) return d;
-      if (s.includes('HONORAR') || s.includes('BHE') || s.includes('BHR')) return 'BHE';
-      return s;
-    };
-
-    // 1. Gather & aggregate all lines from Accounting Vouchers on this account
-    const lineBalancesMap = new Map<string, {
-      rawDocType: string;
-      rawDocNumber: string;
-      rawRut: string;
-      rawName: string;
-      issueDate: string;
-      dueDate?: string;
-      costCenter?: string;
-      expenseItem?: string;
-      project?: string;
-      product?: string;
-      debitSum: number;
-      creditSum: number;
-      normRut: string;
-      normFolio: string;
-    }>();
-
-    vouchers.forEach(v => {
-      if (v.status === 'Anulado') return;
-      v.lines?.forEach(l => {
-        if (l.accountId === accId || l.accountCode === accCode) {
-          const normRut = normalizeRut(l.auxiliaryRut);
-          const normFolio = normalizeFolio(l.documentRef);
-          const rawDocRef = (l.documentRef || 'S/N').trim();
-          
-          // Primary key by normalized RUT and normalized Folio
-          const key = normFolio ? `${normRut}__${normFolio}` : `${normRut}__${rawDocRef}`;
-          
-          const current = lineBalancesMap.get(key) || {
-            rawDocType: l.documentType || (isHonorarios ? 'BHE' : 'DTE 33'),
-            rawDocNumber: rawDocRef,
-            rawRut: l.auxiliaryRut || '',
-            rawName: l.auxiliaryName || '',
-            issueDate: v.date,
-            dueDate: l.dueDate,
-            costCenter: l.costCenter,
-            expenseItem: l.expenseItem,
-            project: l.project,
-            product: l.product,
-            debitSum: 0,
-            creditSum: 0,
-            normRut,
-            normFolio
-          };
-
-          current.debitSum += Number(l.debit) || 0;
-          current.creditSum += Number(l.credit) || 0;
-          lineBalancesMap.set(key, current);
-        }
-      });
-    });
-
-    const matchedVoucherKeys = new Set<string>();
-
-    // 2. Process RCV Documents (SII register: Compras, Honorarios, Ventas)
-    if (rcvDocuments.length > 0) {
-      let targetDocs: RCVDocument[] = [];
-      if (isHonorarios) {
-        targetDocs = rcvDocuments.filter(d => d.tipoRegistro === 'Honorarios' || d.tipoDoc === 'BHE' || d.tipoDoc === '70');
-      } else if (isProveedores) {
-        targetDocs = rcvDocuments.filter(d => d.tipoRegistro === 'Compra');
-      } else if (isClientes) {
-        targetDocs = rcvDocuments.filter(d => d.tipoRegistro === 'Venta');
-      }
-
-      for (const doc of targetDocs) {
-          if (doc.estadoPago === 'Pagada' || doc.estadoCobranza === 'Pagada') continue;
-        const isClientDoc = isClientes;
-        const rawRut = isClientDoc ? doc.rutReceptor : doc.rutEmisor;
-        const rawName = isClientDoc ? doc.razonSocialReceptor : doc.razonSocialEmisor;
-        const normRut = normalizeRut(rawRut);
-        const normFolio = normalizeFolio(doc.folio);
-        const rcvKey = `${normRut}__${normFolio}`;
-
-        let docTotal = 0;
-        if (isHonorarios) {
-          const bruto = Number(doc.montoBruto || doc.montoTotal || doc.montoNeto) || 0;
-          const retencion = Number(doc.montoRetencion !== undefined ? doc.montoRetencion : (doc.montoIva || 0)) || 0;
-          const liquido = Number(doc.montoLiquido !== undefined && doc.montoLiquido > 0 ? doc.montoLiquido : (bruto - retencion)) || 0;
-          docTotal = liquido > 0 ? liquido : bruto;
-        } else {
-          docTotal = Number(doc.montoTotal) || 0;
-        }
-        if (docTotal <= 0) continue;
-
-        // CASE A: The document has ALREADY been centralized / recorded in accounting vouchers
-        const vEntry = lineBalancesMap.get(rcvKey);
-        if (vEntry) {
-          matchedVoucherKeys.add(rcvKey);
-          const netBalance = isAP ? (vEntry.creditSum - vEntry.debitSum) : (vEntry.debitSum - vEntry.creditSum);
-          
-          // Only show if there is an open balance remaining in the accounting ledger
-          if (netBalance > 0) {
-            items.push({
-              id: `unified_${rcvKey}`,
-              docType: doc.tipoDoc ? String(doc.tipoDoc) : (vEntry.rawDocType || (isHonorarios ? 'BHE' : '33')),
-              docNumber: doc.folio ? String(doc.folio) : vEntry.rawDocNumber,
-              auxiliaryRut: rawRut || vEntry.rawRut,
-              auxiliaryName: rawName || vEntry.rawName,
-              issueDate: doc.fechaEmision || vEntry.issueDate,
-              dueDate: vEntry.dueDate || doc.fechaVencimiento || undefined,
-              costCenter: vEntry.costCenter,
-              expenseItem: vEntry.expenseItem,
-              project: vEntry.project,
-              product: vEntry.product,
-              originalAmount: docTotal > 0 ? docTotal : (isAP ? vEntry.creditSum : vEntry.debitSum),
-              paidAmount: isAP ? vEntry.debitSum : vEntry.creditSum,
-              openBalance: netBalance,
-              source: 'VOUCHER'
-            });
-          }
-          continue;
-        }
-
-        // CASE B: The document is in RCV, but has NOT yet been centralized into a voucher
-        let paid = 0;
-        vouchers.forEach(v => {
-          if (v.status === 'Anulado') return;
-          v.lines?.forEach(l => {
-            if (l.accountId === accId || l.accountCode === accCode) {
-              const isPayment = isAP ? ((Number(l.debit) || 0) > 0) : ((Number(l.credit) || 0) > 0);
-              if (isPayment) {
-                const lineRutNorm = normalizeRut(l.auxiliaryRut);
-                const lineFolioNorm = normalizeFolio(l.documentRef);
-                if (lineRutNorm === normRut && (!normFolio || lineFolioNorm === normFolio)) {
-                  paid += isAP ? (Number(l.debit) || 0) : (Number(l.credit) || 0);
-                }
-              }
-            }
-          });
-        });
-
-        const pending = Math.max(0, docTotal - paid);
-        if (pending > 0) {
-          console.log('DEBUG: Adding pending RCV item:', { doc, pending, docTotal, paid });
-          items.push({
-            id: `rcv_${doc.id || doc.folio}_${normRut}`,
-            docType: doc.tipoDoc ? String(doc.tipoDoc) : (isHonorarios ? 'BHE' : '33'),
-            docNumber: String(doc.folio || ''),
-            auxiliaryRut: rawRut || '',
-            auxiliaryName: rawName || '',
-            issueDate: doc.fechaEmision,
-            dueDate: doc.fechaVencimiento || undefined,
-            originalAmount: docTotal,
-            paidAmount: paid,
-            openBalance: pending,
-            source: 'RCV'
-          });
-        }
-      }
-    }
-
-    // 3. Gather remaining Accounting Vouchers that were not matched to any RCV document
-    // (e.g. manual entries, foreign supplier invoices, prior period balances)
-    lineBalancesMap.forEach((data, key) => {
-      if (matchedVoucherKeys.has(key)) return; // Already unified with RCV record
-
-      const netBalance = isAP ? (data.creditSum - data.debitSum) : (data.debitSum - data.creditSum);
-      if (netBalance > 0) {
-        items.push({
-          id: `voucher_${key}`,
-          docType: data.rawDocType,
-          docNumber: data.rawDocNumber,
-          auxiliaryRut: data.rawRut,
-          auxiliaryName: data.rawName,
-          issueDate: data.issueDate,
-          dueDate: data.dueDate,
-          costCenter: data.costCenter,
-          expenseItem: data.expenseItem,
-          project: data.project,
-          product: data.product,
-          originalAmount: isAP ? data.creditSum : data.debitSum,
-          paidAmount: isAP ? data.debitSum : data.creditSum,
-          openBalance: netBalance,
-          source: 'VOUCHER'
-        });
-      }
-    });
-
-    return items;
-  }, [selectedAccount, isAP, isHonorarios, isProveedores, isClientes, rcvDocuments, vouchers]);
+  const openItems = useMemo<OpenAccountItem[]>(
+    () => computeOpenItems(selectedAccount, { isAP, isHonorarios, isProveedores, isClientes }, rcvDocuments, vouchers),
+    [selectedAccount, isAP, isHonorarios, isProveedores, isClientes, rcvDocuments, vouchers]
+  );
 
   // Filtered open items based on docSearch or selected auxiliary
   const filteredOpenItems = useMemo(() => {
@@ -1691,102 +1456,27 @@ function QuickVoucherModalContent({
     autoMatchKeyRef.current = key;
     if (Object.keys(selectedDocIds).length > 0) return; // no pisar lo que el usuario ya eligió
 
-    const monto = Math.round(bankAmount);
-    const glosa = quickVoucherLine.description || '';
-    const fmt = (n: number) => '$' + Math.round(n).toLocaleString('es-CL');
-    // El RUT que el banco pone en la glosa es la señal más confiable; el nombre es el respaldo.
-    const rutGlosa = extractRutFromGloss(glosa);
-    const rutValido = rutGlosa && rutGlosa.isValidModulo11 ? rutGlosa : null;
-    const delProveedor = (i: { auxiliaryRut: string; auxiliaryName: string }) =>
-      rutValido ? areRutsEqualRut(i.auxiliaryRut, rutValido.rutFormatted) : nameMatchesGloss(i.auxiliaryName, glosa);
-    const origen = rutValido ? `RUT ${rutValido.rutFormatted} de la glosa` : 'nombre de la glosa';
-    const TOLERANCIA = 2; // pesos de diferencia de redondeo entre banco y factura
-    const aplicar = (items: typeof openItems, texto: string, nivel: 'VERDE' | 'AMARILLO') => {
-      const sel: { [id: string]: number } = {};
-      items.forEach(i => { sel[i.id] = Math.round(i.openBalance); });
-      // Diferencia de redondeo (hasta $2): el banco manda el monto real y el asiento debe cuadrar con él
-      const suma = Object.values(sel).reduce((s, v) => s + v, 0);
-      const dif = monto - suma;
-      if (dif !== 0 && Math.abs(dif) <= TOLERANCIA) {
-        const ultimo = items[items.length - 1];
-        sel[ultimo.id] = Math.max(0, sel[ultimo.id] + dif);
-        texto += ` Diferencia de ${fmt(Math.abs(dif))} por redondeo: se aplicó el monto exacto del banco.`;
-      }
-      setSelectedDocIds(sel);
-      const first = items[0];
-      if (first && first.auxiliaryRut) {
-        setSelectedAuxiliaryRut(first.auxiliaryRut);
-        setSelectedAuxiliaryName(first.auxiliaryName);
-        setDocumentRef(formatFriendlyDocumentRef(first.docType, first.docNumber));
-        // Vencimiento: el del documento; si no lo trae, la fecha de emisión
-        const venc = first.dueDate || first.issueDate;
-        if (venc) setDueDate(venc);
-        if (first.costCenter) setCostCenter(first.costCenter);
-        if (first.expenseItem) setExpenseItem(first.expenseItem);
-        if (first.project) setProject(first.project);
-        if (first.product) setProduct(first.product);
-      }
-      setAutoMatchNote({ level: nivel, text: texto });
-    };
-
-    // 1) Una sola factura con saldo exacto
-    const exactos = openItems.filter(i => Math.abs(Math.round(i.openBalance) - monto) <= TOLERANCIA);
-    if (exactos.length === 1) {
-      const d = exactos[0];
-      aplicar([d], `Calce exacto: documento ${d.docNumber} de ${d.auxiliaryName || d.auxiliaryRut} por ${fmt(d.openBalance)}.` +
-        (delProveedor(d) ? ` Coincide el ${origen}.` : ''),
-        delProveedor(d) ? 'VERDE' : 'AMARILLO');
+    const resultado = calzarFacturas(openItems, quickVoucherLine.description || '', bankAmount);
+    if (!resultado) return;
+    if (resultado.items.length === 0) {
+      setAutoMatchNote({ level: resultado.level, text: resultado.text });
       return;
     }
-    if (exactos.length > 1) {
-      const conNombre = exactos.filter(d => delProveedor(d));
-      if (conNombre.length === 1) {
-        const d = conNombre[0];
-        aplicar([d], `Calce exacto por monto y ${rutValido ? 'RUT' : 'nombre'}: documento ${d.docNumber} de ${d.auxiliaryName} por ${fmt(d.openBalance)}.`, 'VERDE');
-      } else {
-        setAutoMatchNote({ level: 'AMARILLO', text: `Hay ${exactos.length} documentos pendientes por ${fmt(monto)}. Elige el correcto.` });
-      }
-      return;
+    setSelectedDocIds(resultado.amounts);
+    const first = resultado.items[0];
+    if (first && first.auxiliaryRut) {
+      setSelectedAuxiliaryRut(first.auxiliaryRut);
+      setSelectedAuxiliaryName(first.auxiliaryName);
+      setDocumentRef(formatFriendlyDocumentRef(first.docType, first.docNumber));
+      // Vencimiento: el del documento; si no lo trae, la fecha de emisión
+      const venc = first.dueDate || first.issueDate;
+      if (venc) setDueDate(venc);
+      if (first.costCenter) setCostCenter(first.costCenter);
+      if (first.expenseItem) setExpenseItem(first.expenseItem);
+      if (first.project) setProject(first.project);
+      if (first.product) setProduct(first.product);
     }
-
-    // 2) Suma exacta de varios documentos del proveedor/cliente cuyo nombre aparece en la glosa
-    const candidatos = openItems.filter(i => delProveedor(i));
-    const ruts = Array.from(new Set(candidatos.map(i => (i.auxiliaryRut || '').toUpperCase())));
-    for (const rut of ruts) {
-      const grupo = candidatos.filter(i => (i.auxiliaryRut || '').toUpperCase() === rut);
-      const pool = grupo.map(i => ({ id: i.id, amount: Math.round(i.openBalance) }));
-      let ids: string[] | null = null;
-      for (const delta of [0, 1, -1, 2, -2]) {
-        ids = findDocSubset(pool, monto + delta);
-        if (ids && ids.length > 0) break;
-      }
-      if (ids && ids.length > 0) {
-        const elegidos = grupo.filter(i => ids.includes(i.id));
-        aplicar(elegidos, `Calce exacto con ${elegidos.length} documentos de ${elegidos[0].auxiliaryName || rut} que suman ${fmt(monto)}. Coincide el ${origen}.`, 'VERDE');
-        return;
-      }
-    }
-    if (candidatos.length > 0) {
-      // Sin suma exacta: proponer las más antiguas (FIFO) sin pasarse del monto, para que el usuario ajuste
-      const ordenados = [...candidatos]
-        .filter(i => i.openBalance > 0)
-        .sort((a, b) => String(a.issueDate || '').localeCompare(String(b.issueDate || '')));
-      const elegidos: typeof candidatos = [];
-      let acum = 0;
-      for (const d of ordenados) {
-        const s = Math.round(d.openBalance);
-        if (acum + s <= monto) { elegidos.push(d); acum += s; }
-      }
-      if (elegidos.length > 0) {
-        aplicar(elegidos,
-          `No hay una combinación que sume exacto ${fmt(monto)}. Marqué las ${elegidos.length} facturas más antiguas de ${elegidos[0].auxiliaryName || 'esa contraparte'} (${fmt(acum)}); quedan ${fmt(monto - acum)} sin asignar. Ajusta si hubo descuento, retención o pago parcial.`,
-          'AMARILLO');
-      } else {
-        setAutoMatchNote({ level: 'AMARILLO', text: `Encontré documentos de ${candidatos[0].auxiliaryName || 'esa contraparte'}, pero ninguno cabe en ${fmt(monto)}. Revisa descuentos, retenciones o pagos parciales.` });
-      }
-    } else if (rutValido) {
-      setAutoMatchNote({ level: 'AMARILLO', text: `La glosa trae el RUT ${rutValido.rutFormatted}, pero no tiene documentos pendientes en esta cuenta. Puede ser un anticipo, otra cuenta (honorarios, préstamos) o una factura aún no contabilizada.` });
-    }
+    setAutoMatchNote({ level: resultado.level, text: resultado.text });
   }, [quickVoucherLine, selectedAccount, openItems, voucherMode]);
 
   // Si la propuesta viene de una regla guardada, rellena auxiliar y análisis que la regla ya conoce

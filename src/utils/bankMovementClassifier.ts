@@ -189,37 +189,47 @@ export function nameMatchesGloss(auxName: string, glosa: string): boolean {
 export function findDocSubset(
   items: { id: string; amount: number }[],
   target: number,
-  maxItems = 32
+  maxItems = 32,
+  tol = 0
 ): string[] | null {
-  const pool = items.filter(i => i.amount > 0 && i.amount <= target).sort((a, b) => b.amount - a.amount).slice(0, maxItems);
-  if (pool.length === 0 || target <= 0) return null;
+  const t0 = Math.round(target);
+  const pool = items.filter(i => i.amount > 0 && i.amount <= t0 + tol).sort((a, b) => b.amount - a.amount).slice(0, maxItems);
+  if (pool.length === 0 || t0 <= 0) return null;
   // Encuentro en el medio: mitades de hasta 16 documentos (65.536 sumas cada una)
   const mid = Math.ceil(pool.length / 2);
   const A = pool.slice(0, mid);
   const B = pool.slice(mid);
-  const sums = (arr: typeof pool): Map<number, number> => {
-    const m = new Map<number, number>();
-    const total = 1 << arr.length;
-    for (let mask = 0; mask < total; mask++) {
-      let s = 0;
-      for (let k = 0; k < arr.length; k++) if (mask & (1 << k)) s += arr[k].amount;
-      if (s <= target && !m.has(s)) m.set(s, mask);
+  const gen = (arr: typeof pool): { sums: Float64Array; n: number } => {
+    const n = 1 << arr.length;
+    const sums = new Float64Array(n);
+    for (let k = 0; k < arr.length; k++) {
+      const bit = 1 << k;
+      for (let m = 0; m < bit; m++) sums[bit + m] = sums[m] + arr[k].amount;
     }
-    return m;
+    return { sums, n };
   };
-  const target0 = Math.round(target);
-  const mb = sums(B);
-  const ma = sums(A);
-  const best: { ids: string[] | null } = { ids: null };
-  ma.forEach((maskA, sA) => {
-    const maskB = mb.get(target0 - sA);
-    if (maskB === undefined) return;
-    const ids: string[] = [];
-    A.forEach((it, k) => { if (maskA & (1 << k)) ids.push(it.id); });
-    B.forEach((it, k) => { if (maskB & (1 << k)) ids.push(it.id); });
-    if (ids.length > 0 && (!best.ids || ids.length < best.ids.length)) best.ids = ids;
-  });
-  return best.ids;
+  const ga = gen(A);
+  const gb = gen(B);
+  const mb = new Map<number, number>();
+  for (let m = 0; m < gb.n; m++) if (!mb.has(gb.sums[m])) mb.set(gb.sums[m], m);
+  let bestMask: [number, number] | null = null;
+  let bestCount = Infinity;
+  const bits = (x: number) => { let c = 0; while (x) { c += x & 1; x >>>= 1; } return c; };
+  for (let ma = 0; ma < ga.n; ma++) {
+    const sA = ga.sums[ma];
+    if (sA > t0 + tol) continue;
+    for (let d = -tol; d <= tol; d++) {
+      const mbm = mb.get(t0 + d - sA);
+      if (mbm === undefined) continue;
+      const cnt = bits(ma) + bits(mbm);
+      if (cnt > 0 && cnt < bestCount) { bestCount = cnt; bestMask = [ma, mbm]; }
+    }
+  }
+  if (!bestMask) return null;
+  const ids: string[] = [];
+  A.forEach((it, k) => { if (bestMask![0] & (1 << k)) ids.push(it.id); });
+  B.forEach((it, k) => { if (bestMask![1] & (1 << k)) ids.push(it.id); });
+  return ids;
 }
 
 export interface ClassifierContext {

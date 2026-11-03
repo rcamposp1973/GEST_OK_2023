@@ -1,10 +1,15 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import type { BankStatementLine, ChartOfAccount } from '../types';
 import type { MovementProposal, ProposalLevel } from '../utils/bankMovementClassifier';
+import type { CalceResult } from '../utils/docCalce';
 
 export interface BandejaRow {
   line: BankStatementLine;
   proposal: MovementProposal | null;
+  /** calce con facturas pendientes (pagos a proveedores / cobros a clientes) */
+  calce?: CalceResult | null;
+  /** nivel final: un calce por RUT con factura exacta sube la propuesta a Seguro */
+  nivel: ProposalLevel;
   /** true si se puede contabilizar sin más datos (cuenta única, sin análisis pendientes) */
   aprobable: boolean;
   /** por qué no es aprobable en lote (se muestra al usuario) */
@@ -17,7 +22,9 @@ interface Props {
   lines: BankStatementLine[];
   accounts: ChartOfAccount[];
   classify: (line: BankStatementLine) => MovementProposal | null;
-  onApprove: (items: { line: BankStatementLine; proposal: MovementProposal }[]) => Promise<void>;
+  /** calza el movimiento con facturas abiertas; `usados` son facturas ya asignadas a movimientos anteriores de esta bandeja */
+  calzar?: (line: BankStatementLine, proposal: MovementProposal, usados: Set<string>) => CalceResult | null;
+  onApprove: (items: { line: BankStatementLine; proposal: MovementProposal; calce?: CalceResult | null }[]) => Promise<void>;
   onOpenLine: (line: BankStatementLine) => void;
 }
 
@@ -38,17 +45,19 @@ const LABEL: Record<ProposalLevel, string> = {
 function evaluar(
   line: BankStatementLine,
   proposal: MovementProposal | null,
-  accounts: ChartOfAccount[]
+  accounts: ChartOfAccount[],
+  calce: CalceResult | null
 ): { aprobable: boolean; motivo: string } {
   if (!proposal || !proposal.accountId) return { aprobable: false, motivo: 'No hay cuenta propuesta' };
-  if (proposal.level !== 'VERDE') return { aprobable: false, motivo: 'Confianza media: conviene revisarlo' };
   if (proposal.requiresSplit) return { aprobable: false, motivo: 'Se reparte entre varias cuentas' };
   if (proposal.isInternalTransfer) return { aprobable: false, motivo: 'Traspaso entre cuentas propias' };
   const acc = accounts.find(a => a.id === proposal.accountId);
   if (!acc) return { aprobable: false, motivo: 'La cuenta no existe en el plan' };
-  if (acc.requiereDocumento) return { aprobable: false, motivo: 'La cuenta exige documento (factura)' };
-  if (acc.requiereVencimiento) return { aprobable: false, motivo: 'La cuenta exige vencimiento' };
-  if (acc.requiereAuxiliarRUT && !proposal.auxiliaryRut) return { aprobable: false, motivo: 'La cuenta exige RUT y no se conoce' };
+  const conCalce = !!calce && calce.level === 'VERDE' && calce.porRut && calce.items.length > 0;
+  if (!conCalce && proposal.level !== 'VERDE') return { aprobable: false, motivo: calce?.text || 'Confianza media: conviene revisarlo' };
+  if (acc.requiereDocumento && !conCalce) return { aprobable: false, motivo: calce?.text || 'La cuenta exige documento (factura)' };
+  if (acc.requiereVencimiento && !conCalce) return { aprobable: false, motivo: 'La cuenta exige vencimiento' };
+  if (acc.requiereAuxiliarRUT && !proposal.auxiliaryRut && !conCalce) return { aprobable: false, motivo: 'La cuenta exige RUT y no se conoce' };
   if (acc.requiereCentroCosto && !proposal.costCenter) return { aprobable: false, motivo: 'La cuenta exige centro de costos' };
   if (acc.requiereItemGasto && !proposal.expenseItem) return { aprobable: false, motivo: 'La cuenta exige ítem de gasto' };
   if (acc.requiereProyecto && !proposal.project) return { aprobable: false, motivo: 'La cuenta exige proyecto' };
@@ -61,20 +70,29 @@ function evaluar(
   return { aprobable: true, motivo: '' };
 }
 
-export default function BandejaMovimientosModal({ isOpen, onClose, lines, accounts, classify, onApprove, onOpenLine }: Props) {
+export default function BandejaMovimientosModal({ isOpen, onClose, lines, accounts, classify, calzar, onApprove, onOpenLine }: Props) {
   const [filtro, setFiltro] = useState<'TODOS' | ProposalLevel>('TODOS');
   const [seleccion, setSeleccion] = useState<Set<string>>(new Set());
   const [procesando, setProcesando] = useState(false);
 
   const rows = useMemo<BandejaRow[]>(() => {
     if (!isOpen) return [];
+    const usados = new Set<string>(); // facturas ya asignadas a un movimiento anterior de esta bandeja
     return lines.map(line => {
       let proposal: MovementProposal | null = null;
       try { proposal = classify(line); } catch { proposal = null; }
-      const ev = evaluar(line, proposal, accounts);
-      return { line, proposal, aprobable: ev.aprobable, motivo: ev.motivo };
+      let calce: CalceResult | null = null;
+      if (proposal && proposal.accountId && calzar && !proposal.requiresSplit && !proposal.isInternalTransfer) {
+        try { calce = calzar(line, proposal, usados); } catch { calce = null; }
+      }
+      const ev = evaluar(line, proposal, accounts, calce);
+      if (ev.aprobable && calce && calce.items.length > 0) calce.items.forEach(i => usados.add(i.id));
+      const nivel: ProposalLevel = ev.aprobable
+        ? 'VERDE'
+        : (proposal ? (proposal.level === 'VERDE' ? 'AMARILLO' : proposal.level) : 'ROJO');
+      return { line, proposal, calce, nivel, aprobable: ev.aprobable, motivo: ev.motivo };
     });
-  }, [isOpen, lines, accounts, classify]);
+  }, [isOpen, lines, accounts, classify, calzar]);
 
   // Al abrir (o al cambiar los pendientes) quedan marcados los aprobables
   useEffect(() => {
@@ -85,15 +103,14 @@ export default function BandejaMovimientosModal({ isOpen, onClose, lines, accoun
   const conteo = useMemo(() => {
     const c = { VERDE: 0, AMARILLO: 0, ROJO: 0, aprobables: 0 };
     rows.forEach(r => {
-      const lvl: ProposalLevel = r.proposal ? r.proposal.level : 'ROJO';
-      c[lvl]++;
+      c[r.nivel]++;
       if (r.aprobable) c.aprobables++;
     });
     return c;
   }, [rows]);
 
   const visibles = useMemo(
-    () => rows.filter(r => filtro === 'TODOS' || (r.proposal ? r.proposal.level : 'ROJO') === filtro),
+    () => rows.filter(r => filtro === 'TODOS' || r.nivel === filtro),
     [rows, filtro]
   );
 
@@ -113,7 +130,7 @@ export default function BandejaMovimientosModal({ isOpen, onClose, lines, accoun
     if (seleccionados.length === 0 || procesando) return;
     setProcesando(true);
     try {
-      await onApprove(seleccionados.map(r => ({ line: r.line, proposal: r.proposal as MovementProposal })));
+      await onApprove(seleccionados.map(r => ({ line: r.line, proposal: r.proposal as MovementProposal, calce: r.calce })));
     } finally {
       setProcesando(false);
     }
@@ -165,7 +182,7 @@ export default function BandejaMovimientosModal({ isOpen, onClose, lines, accoun
             </thead>
             <tbody>
               {visibles.map(r => {
-                const lvl: ProposalLevel = r.proposal ? r.proposal.level : 'ROJO';
+                const lvl: ProposalLevel = r.nivel;
                 const esCargo = (r.line.charge || 0) > 0;
                 const monto = esCargo ? r.line.charge : r.line.deposit;
                 return (
@@ -195,7 +212,7 @@ export default function BandejaMovimientosModal({ isOpen, onClose, lines, accoun
                             <div className="font-semibold text-slate-500">Sin cuenta propuesta</div>
                           )}
                           <div className="text-slate-500">
-                            {r.aprobable ? (r.proposal?.reason || '') : (r.motivo || r.proposal?.reason || '')}
+                            {r.aprobable ? (r.calce && r.calce.items.length > 0 ? r.calce.text : (r.proposal?.reason || '')) : (r.motivo || r.proposal?.reason || '')}
                           </div>
                         </div>
                       </div>

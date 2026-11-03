@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { getNextVoucherNumber, reserveVoucherNumberBatch } from '../utils/voucherCounter';
 import BandejaMovimientosModal from './BandejaMovimientosModal';
+import { computeOpenItems, getAccountKind, type OpenAccountItem } from '../utils/openAccountItems';
+import { calzarFacturas, formatFriendlyDocumentRef, type CalceResult } from '../utils/docCalce';
 import { db, auth } from '../lib/firebase';
 import { collection, getDocs, getDoc, addDoc, doc, setDoc, updateDoc, query, where } from 'firebase/firestore';
 import {
@@ -1458,12 +1460,29 @@ export default function ConciliacionBancariaView({
     [accounts, vouchers, selectedBankAccount, showBandeja]
   );
   // Misma fuente que la tabla de la cartola: todos los meses, solo los pendientes
+  // Calce con facturas pendientes para la bandeja (los documentos abiertos se calculan una vez por cuenta)
+  const openItemsCache = useMemo(() => new Map<string, OpenAccountItem[]>(), [vouchers, rcvDocuments]);
+  const calzarParaBandeja = useCallback(
+    (l: BankStatementLine, proposal: MovementProposal, usados: Set<string>): CalceResult | null => {
+      const acc = accounts.find(a => a.id === proposal.accountId);
+      if (!acc || !acc.requiereDocumento) return null;
+      let items = openItemsCache.get(acc.id);
+      if (!items) {
+        items = computeOpenItems(acc, getAccountKind(acc, (l.charge || 0) > 0), rcvDocuments, vouchers);
+        openItemsCache.set(acc.id, items);
+      }
+      const disponibles = items.filter(i => !usados.has(i.id));
+      const monto = (l.charge || 0) > 0 ? l.charge : l.deposit;
+      return calzarFacturas(disponibles, l.description || '', monto);
+    },
+    [accounts, vouchers, rcvDocuments, openItemsCache]
+  );
   const pendientesBandeja = useMemo(() => {
     const fuente: BankStatementLine[] = unifiedHistoricalCartola.length > 0 ? unifiedHistoricalCartola : statementLines;
     return fuente.filter(l => l.matchedStatus === 'Pendiente');
   }, [unifiedHistoricalCartola, statementLines]);
 
-  const handleBatchApprove = async (items: { line: BankStatementLine; proposal: MovementProposal }[]) => {
+  const handleBatchApprove = async (items: { line: BankStatementLine; proposal: MovementProposal; calce?: CalceResult | null }[]) => {
     if (!selectedBankAccount) {
       notify.error('Seleccione una cuenta bancaria.');
       return;
@@ -1509,23 +1528,61 @@ export default function ConciliacionBancariaView({
             bankDocRef: ref,
             gloss: glosa
           };
-          const counterLine: VoucherLine = {
-            id: 'line_counter_1',
-            accountId: acc.id,
-            accountCode: acc.code,
-            accountName: acc.name,
-            debit: isCharge ? amount : 0,
-            credit: isCharge ? 0 : amount,
-            auxiliaryRut: acc.requiereAuxiliarRUT && p.proposal.auxiliaryRut ? p.proposal.auxiliaryRut.toUpperCase() : undefined,
-            auxiliaryName: acc.requiereAuxiliarRUT && p.proposal.auxiliaryName ? p.proposal.auxiliaryName.toUpperCase() : undefined,
-            documentRef: ref,
+          const comunes = {
             costCenter: p.proposal.costCenter ? p.proposal.costCenter.toUpperCase() : undefined,
             expenseItem: p.proposal.expenseItem ? p.proposal.expenseItem.toUpperCase() : undefined,
             project: p.proposal.project || undefined,
-            product: p.proposal.product || undefined,
-            gloss: glosa
+            product: p.proposal.product || undefined
           };
-          const cleaned = sanitizeVoucherLines([bankLine, counterLine], accounts);
+          let counterLines: VoucherLine[];
+          let vGloss = glosa;
+          const calce = p.calce && p.calce.items.length > 0 ? p.calce : null;
+          if (calce) {
+            // Pago de facturas: una línea por documento, con RUT, folio y vencimiento del documento
+            counterLines = calce.items
+              .map((it, idx): VoucherLine => {
+                const amt = calce.amounts[it.id] || 0;
+                let docType = it.docType || '33';
+                if (docType === 'Factura' || docType === 'FAC') docType = '33';
+                else if (docType === 'Factura Exenta') docType = '34';
+                else if (docType === 'Nota de Crédito' || docType === 'NC') docType = '61';
+                return {
+                  id: `line_counter_${idx + 1}`,
+                  accountId: acc.id,
+                  accountCode: acc.code,
+                  accountName: acc.name,
+                  debit: isCharge ? amt : 0,
+                  credit: isCharge ? 0 : amt,
+                  auxiliaryRut: it.auxiliaryRut ? it.auxiliaryRut.toUpperCase() : undefined,
+                  auxiliaryName: it.auxiliaryName ? it.auxiliaryName.toUpperCase() : undefined,
+                  documentType: docType,
+                  documentRef: formatFriendlyDocumentRef(it.docType, it.docNumber).toUpperCase(),
+                  dueDate: it.dueDate || it.issueDate || undefined,
+                  costCenter: it.costCenter ? it.costCenter.toUpperCase() : comunes.costCenter,
+                  expenseItem: it.expenseItem ? it.expenseItem.toUpperCase() : comunes.expenseItem,
+                  project: it.project || comunes.project,
+                  product: it.product || comunes.product,
+                  gloss: `PAGO FACTURA N° ${it.docNumber} - ${glosa}`.toUpperCase()
+                };
+              })
+              .filter(l => (l.debit || 0) > 0 || (l.credit || 0) > 0);
+            vGloss = `PAGO FACTURA N° ${calce.items[0].docNumber} - ${glosa}`.toUpperCase();
+          } else {
+            counterLines = [{
+              id: 'line_counter_1',
+              accountId: acc.id,
+              accountCode: acc.code,
+              accountName: acc.name,
+              debit: isCharge ? amount : 0,
+              credit: isCharge ? 0 : amount,
+              auxiliaryRut: acc.requiereAuxiliarRUT && p.proposal.auxiliaryRut ? p.proposal.auxiliaryRut.toUpperCase() : undefined,
+              auxiliaryName: acc.requiereAuxiliarRUT && p.proposal.auxiliaryName ? p.proposal.auxiliaryName.toUpperCase() : undefined,
+              documentRef: ref,
+              ...comunes,
+              gloss: glosa
+            }];
+          }
+          const cleaned = sanitizeVoucherLines([bankLine, ...counterLines], accounts);
           const totalDebit = cleaned.reduce((s, l) => s + (Number(l.debit) || 0), 0);
           const totalCredit = cleaned.reduce((s, l) => s + (Number(l.credit) || 0), 0);
           if (Math.round(totalDebit) !== Math.round(totalCredit)) { errores++; continue; }
@@ -1534,7 +1591,7 @@ export default function ConciliacionBancariaView({
             date: p.date,
             period: p.period,
             type: isCharge ? 'Egreso' : 'Ingreso',
-            gloss: glosa,
+            gloss: vGloss,
             lines: cleaned,
             totalDebit,
             totalCredit,
@@ -1542,6 +1599,26 @@ export default function ConciliacionBancariaView({
             createdAt: new Date().toISOString()
           }));
           resultado.set(p.line.id, { voucherId: docRef.id, number: num, period: p.period });
+          // Marcar como pagadas las facturas del RCV que se cancelaron
+          if (calce) {
+            for (const it of calce.items) {
+              const rcv = rcvDocuments.find(d =>
+                d.id === it.id ||
+                `rcv_${d.id || d.folio}_${(d.rutEmisor || d.rutReceptor || '').replace(/[^0-9kK]/g, '').toUpperCase()}` === it.id ||
+                `unified_${(d.rutEmisor || d.rutReceptor || '').replace(/[^0-9kK]/g, '').toUpperCase()}__${String(d.folio || '').replace(/\D/g, '')}` === it.id
+              );
+              if (rcv) {
+                try {
+                  await updateDoc(doc(companyRef, 'rcvDocuments', rcv.id), {
+                    estadoPago: 'Pagada', estadoCobranza: 'Pagada', saldoPendiente: 0,
+                    voucherId: docRef.id, updatedAt: new Date().toISOString()
+                  });
+                } catch (rcvErr) {
+                  console.warn('No se pudo actualizar estado de pago en RCV:', rcvErr);
+                }
+              }
+            }
+          }
         } catch (e) {
           console.error('Error en comprobante de lote:', e);
           errores++;
@@ -4018,6 +4095,7 @@ export default function ConciliacionBancariaView({
         lines={pendientesBandeja}
         accounts={accounts}
         classify={clasificarParaBandeja}
+        calzar={calzarParaBandeja}
         onApprove={handleBatchApprove}
         onOpenLine={(l) => { setShowBandeja(false); abrirAsiento(l); }}
       />

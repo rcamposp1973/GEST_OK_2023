@@ -70,6 +70,30 @@ function evaluar(
   return { aprobable: true, motivo: '' };
 }
 
+/** Clasifica y evalúa una lista de movimientos; las facturas ya asignadas a un movimiento aprobable no se reutilizan. */
+export function evaluarMovimientos(
+  lines: BankStatementLine[],
+  accounts: ChartOfAccount[],
+  classify: (line: BankStatementLine) => MovementProposal | null,
+  calzar?: (line: BankStatementLine, proposal: MovementProposal, usados: Set<string>) => CalceResult | null
+): BandejaRow[] {
+  const usados = new Set<string>();
+  return lines.map(line => {
+    let proposal: MovementProposal | null = null;
+    try { proposal = classify(line); } catch { proposal = null; }
+    let calce: CalceResult | null = null;
+    if (proposal && proposal.accountId && calzar && !proposal.requiresSplit && !proposal.isInternalTransfer) {
+      try { calce = calzar(line, proposal, usados); } catch { calce = null; }
+    }
+    const ev = evaluar(line, proposal, accounts, calce);
+    if (ev.aprobable && calce && calce.items.length > 0) calce.items.forEach(i => usados.add(i.id));
+    const nivel: ProposalLevel = ev.aprobable
+      ? 'VERDE'
+      : (proposal ? (proposal.level === 'VERDE' ? 'AMARILLO' : proposal.level) : 'ROJO');
+    return { line, proposal, calce, nivel, aprobable: ev.aprobable, motivo: ev.motivo };
+  });
+}
+
 export default function BandejaMovimientosModal({ isOpen, onClose, lines, accounts, classify, calzar, onApprove, onOpenLine }: Props) {
   const [filtro, setFiltro] = useState<'TODOS' | ProposalLevel>('TODOS');
   const [seleccion, setSeleccion] = useState<Set<string>>(new Set());
@@ -82,21 +106,7 @@ export default function BandejaMovimientosModal({ isOpen, onClose, lines, accoun
 
   const rows = useMemo<BandejaRow[]>(() => {
     if (!isOpen) return [];
-    const usados = new Set<string>(); // facturas ya asignadas a un movimiento anterior de esta bandeja
-    return lines.map(line => {
-      let proposal: MovementProposal | null = null;
-      try { proposal = classify(line); } catch { proposal = null; }
-      let calce: CalceResult | null = null;
-      if (proposal && proposal.accountId && calzar && !proposal.requiresSplit && !proposal.isInternalTransfer) {
-        try { calce = calzar(line, proposal, usados); } catch { calce = null; }
-      }
-      const ev = evaluar(line, proposal, accounts, calce);
-      if (ev.aprobable && calce && calce.items.length > 0) calce.items.forEach(i => usados.add(i.id));
-      const nivel: ProposalLevel = ev.aprobable
-        ? 'VERDE'
-        : (proposal ? (proposal.level === 'VERDE' ? 'AMARILLO' : proposal.level) : 'ROJO');
-      return { line, proposal, calce, nivel, aprobable: ev.aprobable, motivo: ev.motivo };
-    });
+    return evaluarMovimientos(lines, accounts, classify, calzar);
   }, [isOpen, lines, accounts, classify, calzar]);
 
   // Al abrir (o al cambiar los pendientes) quedan marcados los aprobables

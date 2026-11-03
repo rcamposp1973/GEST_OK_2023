@@ -232,6 +232,8 @@ export interface Company {
   initialRemanenteUTM?: number; // Remanente inicial de apertura en UTM
   initialRemanentePesos?: number; // Remanente inicial de apertura en Pesos
   f29CodeSettings?: { [key: string]: boolean };
+  /** Opciones de conciliación bancaria de la empresa */
+  bankReconConfig?: { tolerancia?: number; autoAprobar?: boolean };
   f29AccountParams?: F29AccountingParams;
   customF29Codes?: CustomF29Code[];
   dteModuleEnabled?: boolean;
@@ -766,6 +768,11 @@ export interface BankReconciliation {
   difference: number;
   status: 'Cuadrado' | 'Descuadrado';
   notes?: string;
+  /** Cartola cerrada: no admite cambios hasta que se reabra */
+  cerrada?: boolean;
+  cerradaEn?: string;
+  cerradaPor?: string;
+  historialCierre?: { accion: 'CERRAR' | 'REABRIR'; fecha: string; usuario: string; motivo?: string }[];
   lines: BankStatementLine[];
   updatedAt: string;
 }

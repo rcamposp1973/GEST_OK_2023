@@ -543,6 +543,8 @@ export interface QuickVoucherModalProps {
   onPost?: () => void;
   /** devuelve la cuenta de ajuste por redondeo (la crea si no existe, previa confirmación) */
   onEnsureRoundingAccount?: () => Promise<ChartOfAccount | null>;
+  /** pesos de diferencia que se llevan a Ajuste por redondeo (configurable por empresa) */
+  toleranciaRedondeo?: number;
 }
 
 export function QuickVoucherModal(props: QuickVoucherModalProps) {
@@ -574,7 +576,8 @@ function QuickVoucherModalContent({
   fiscalYears = [],
   onPostVoucherWithLines,
   onPost,
-  onEnsureRoundingAccount
+  onEnsureRoundingAccount,
+  toleranciaRedondeo = 2
 }: QuickVoucherModalProps & { quickVoucherLine: BankStatementLine }) {
   const isCharge = quickVoucherLine.charge > 0;
   const bankAmount = isCharge ? quickVoucherLine.charge : quickVoucherLine.deposit;
@@ -1426,7 +1429,7 @@ function QuickVoucherModalContent({
         .filter(l => l.id.startsWith('line_counter_'))
         .reduce((sum, l) => sum + (Number(l.debit) || 0) + (Number(l.credit) || 0), 0);
       const dif = Math.round(bankAmount) - Math.round(totalDocs);
-      if (dif !== 0 && Math.abs(dif) <= 2) {
+      if (dif !== 0 && Math.abs(dif) <= toleranciaRedondeo) {
         const aj = onEnsureRoundingAccount ? await onEnsureRoundingAccount() : (buscarCuentaRedondeo(accounts) as ChartOfAccount | undefined) || null;
         if (!aj) {
           setValidationError(`Hay una diferencia de $${Math.abs(dif)} por redondeo y no existe la cuenta "Ajuste por redondeo". Créala en el plan de cuentas o ajusta los montos a mano.`);
@@ -1484,7 +1487,7 @@ function QuickVoucherModalContent({
     autoMatchKeyRef.current = key;
     if (Object.keys(selectedDocIds).length > 0) return; // no pisar lo que el usuario ya eligió
 
-    const resultado = calzarFacturas(openItems, quickVoucherLine.description || '', bankAmount);
+    const resultado = calzarFacturas(openItems, quickVoucherLine.description || '', bankAmount, toleranciaRedondeo);
     if (!resultado) return;
     if (resultado.items.length === 0) {
       setAutoMatchNote({ level: resultado.level, text: resultado.text });
@@ -2266,7 +2269,7 @@ function QuickVoucherModalContent({
                     <div>
                       {totalAllocatedAmount === bankAmount ? (
                         <span className="text-emerald-300 font-sans font-black">✓ Calce Perfecto</span>
-                      ) : Object.keys(selectedDocIds).length > 0 && Math.abs(bankAmount - totalAllocatedAmount) <= 2 ? (
+                      ) : Object.keys(selectedDocIds).length > 0 && Math.abs(bankAmount - totalAllocatedAmount) <= toleranciaRedondeo ? (
                         <span className="text-emerald-300 font-sans font-bold">
                           Ajuste por redondeo: ${Math.abs(bankAmount - totalAllocatedAmount).toLocaleString('es-CL')}
                         </span>

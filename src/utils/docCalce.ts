@@ -49,7 +49,8 @@ export function formatFriendlyDocumentRef(docType?: string, docNumber?: string):
 export function calzarFacturas(
   openItems: OpenAccountItem[],
   glosa: string,
-  montoBanco: number
+  montoBanco: number,
+  tolerancia: number = TOLERANCIA_REDONDEO
 ): CalceResult | null {
   const monto = Math.round(montoBanco);
   const rutGlosa = extractRutFromGloss(glosa || '');
@@ -65,7 +66,7 @@ export function calzarFacturas(
     const suma = Object.values(amounts).reduce((s, v) => s + v, 0);
     const dif = monto - suma;
     let ajuste = 0;
-    if (dif !== 0 && Math.abs(dif) <= TOLERANCIA_REDONDEO) {
+    if (dif !== 0 && Math.abs(dif) <= tolerancia) {
       ajuste = dif;
       texto += ` Diferencia de ${fmt(Math.abs(dif))} por redondeo: irá a la cuenta Ajuste por redondeo.`;
     }
@@ -74,7 +75,7 @@ export function calzarFacturas(
   const aviso = (texto: string): CalceResult => ({ items: [], amounts: {}, level: 'AMARILLO', text: texto, porRut, ajuste: 0 });
 
   // 1) Una sola factura con el saldo exacto
-  const exactos = openItems.filter(i => Math.abs(Math.round(i.openBalance) - monto) <= TOLERANCIA_REDONDEO);
+  const exactos = openItems.filter(i => Math.abs(Math.round(i.openBalance) - monto) <= tolerancia);
   if (exactos.length === 1) {
     const d = exactos[0];
     const ok = delProveedor(d);
@@ -97,7 +98,7 @@ export function calzarFacturas(
   for (const rut of ruts) {
     const grupo = candidatos.filter(i => (i.auxiliaryRut || '').toUpperCase() === rut);
     const pool = grupo.map(i => ({ id: i.id, amount: Math.round(i.openBalance) }));
-    const ids = findDocSubset(pool, monto, 32, TOLERANCIA_REDONDEO);
+    const ids = findDocSubset(pool, monto, 32, tolerancia);
     if (ids && ids.length > 0) {
       const sel = ids;
       const elegidos = grupo.filter(i => sel.includes(i.id));

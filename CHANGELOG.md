@@ -19,6 +19,8 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 - **Calce con facturas pendientes:** por monto exacto o suma exacta de varias facturas del mismo proveedor o cliente. Usa el RUT que el Santander escribe en la glosa (validado con módulo 11) y el nombre como respaldo.
 - **Clasificación por RUT:** para trabajadores y otras personas con saldos (remuneraciones por pagar, anticipos, préstamos, fondos por rendir), propone la cuenta según sus saldos pendientes y movimientos anteriores, y cierra el saldo del mismo folio.
 - **Ajuste por redondeo:** diferencias de hasta $2 entre el banco y las facturas van a una cuenta de ajuste (se crea con confirmación si no existe).
+- **Opciones de conciliación por empresa:** diferencia de redondeo configurable (0 a $50; antes fija en $2) y aprobación automática de los movimientos seguros al importar la cartola, con registro de auditoría de cada lote.
+- **Cierre de cartola:** una cartola cuadrada se puede cerrar para que nadie la cambie por error; para reabrirla hay que indicar un motivo, que queda registrado.
 - **Vencimiento** tomado desde el documento; botón **Desmarcar todo** en facturas pendientes.
 - **Importador de cartola:** ignora filas que no son movimientos (por ejemplo, el "saldo final") y se corrigió el error al abrir la importación inteligente.
 

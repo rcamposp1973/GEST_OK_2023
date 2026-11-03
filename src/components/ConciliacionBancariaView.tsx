@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { getNextVoucherNumber, reserveVoucherNumberBatch } from '../utils/voucherCounter';
-import BandejaMovimientosModal from './BandejaMovimientosModal';
+import BandejaMovimientosModal, { evaluarMovimientos } from './BandejaMovimientosModal';
+import ConciliacionOpcionesModal, { ConciliacionConfig, CONFIG_CONCILIACION_POR_DEFECTO } from './ConciliacionOpcionesModal';
 import { computeOpenItems, getAccountKind, type OpenAccountItem } from '../utils/openAccountItems';
 import { calzarFacturas, formatFriendlyDocumentRef, buscarCuentaRedondeo, proponerCuentaRedondeo, type CalceResult } from '../utils/docCalce';
 import { db, auth } from '../lib/firebase';
@@ -144,6 +145,12 @@ export default function ConciliacionBancariaView({
     }
   }, [fiscalYears]);
   const [statementLines, setStatementLines] = useState<BankStatementLine[]>([]);
+  const [config, setConfig] = useState<ConciliacionConfig>(() => ({
+    tolerancia: typeof company.bankReconConfig?.tolerancia === 'number' ? company.bankReconConfig.tolerancia : CONFIG_CONCILIACION_POR_DEFECTO.tolerancia,
+    autoAprobar: !!company.bankReconConfig?.autoAprobar
+  }));
+  const [showOpciones, setShowOpciones] = useState<boolean>(false);
+  const [autoAprobarPendiente, setAutoAprobarPendiente] = useState<boolean>(false);
   const [bankInitialBalanceInput, setBankInitialBalanceInput] = useState<number>(0);
   const [bankFinalBalanceInput, setBankFinalBalanceInput] = useState<number>(0);
   const [notes, setNotes] = useState<string>('');
@@ -661,6 +668,23 @@ export default function ConciliacionBancariaView({
     ) => {
       if (!selectedBankAccount) return;
 
+      // Cartola cerrada: no admite cambios (ni de este mes ni que alteren el saldo inicial de un mes cerrado)
+      const prevRec = savedReconciliations.find(r => isMatchingBankReconciliation(r, selectedBankAccount, selectedBankAccountId) && r.period === period);
+      if (prevRec?.cerrada) {
+        notify.warning(`La cartola de ${period} está cerrada. Ábrela de nuevo si necesitas cambiarla.`, 'Cartola cerrada');
+        fetchReconciliations();
+        return;
+      }
+      const nextPeriodCheck = getNextPeriod(period);
+      const nextCerrada = savedReconciliations.find(
+        r => isMatchingBankReconciliation(r, selectedBankAccount, selectedBankAccountId) && r.period === nextPeriodCheck && r.cerrada
+      );
+      if (nextCerrada && nextCerrada.bankInitialBalance !== finalBal) {
+        notify.warning(`Este cambio movería el saldo inicial de ${nextPeriodCheck}, que está cerrada. Reabre esa cartola primero.`, 'Cartola cerrada');
+        fetchReconciliations();
+        return;
+      }
+
       setAutoSaveStatus('SAVING');
       try {
         const recId = `${selectedBankAccount.code}_${period}`.replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -714,6 +738,7 @@ export default function ConciliacionBancariaView({
           status: summary.isBalanced ? 'Cuadrado' : 'Descuadrado',
           notes: customNotes !== undefined ? customNotes : notes,
           lines,
+          ...(prevRec?.historialCierre ? { historialCierre: prevRec.historialCierre } : {}),
           updatedAt: new Date().toISOString()
         };
 
@@ -1053,6 +1078,7 @@ export default function ConciliacionBancariaView({
       (totalDuplicatesCount > 0 ? `• ${totalDuplicatesCount} duplicados omitidos.\n` : '') +
       `• Movimientos ordenados cronológicamente.${summaryDetail}\n• Saldo Final: $${progressiveBalance.toLocaleString('es-CL')}.`
     );
+    if (config.autoAprobar && totalAddedCount > 0) setAutoAprobarPendiente(true);
   };
 
   // 3. Auto-Match Algorithm (Current Period + Cross-Period Regularizations) with Duplicate Voucher Prevention + Immediate Auto-Save
@@ -1457,7 +1483,109 @@ export default function ConciliacionBancariaView({
   };
 
   // Abre el asiento rápido de un movimiento con su propuesta (usado por "+ Asiento" y por la bandeja)
+  // --- Opciones de la empresa y cierre de cartola ---
+  const recDelPeriodo = (period: string) =>
+    savedReconciliations.find(r => isMatchingBankReconciliation(r, selectedBankAccount, selectedBankAccountId) && r.period === period);
+  const periodosCerrados = useMemo(
+    () => new Set(
+      savedReconciliations
+        .filter(r => r.cerrada && isMatchingBankReconciliation(r, selectedBankAccount, selectedBankAccountId))
+        .map(r => r.period)
+    ),
+    [savedReconciliations, selectedBankAccount, selectedBankAccountId]
+  );
+  const cartolaCerrada = periodosCerrados.has(selectedPeriod);
+
+  const guardarConfig = async (c: ConciliacionConfig) => {
+    try {
+      await updateDoc(companyRef, { bankReconConfig: { tolerancia: c.tolerancia, autoAprobar: c.autoAprobar } });
+      setConfig(c);
+      logAuditEvent({
+        userId: auth.currentUser?.uid || 'anonymous',
+        userEmail: auth.currentUser?.email || 'sistema',
+        action: 'MODIFICAR',
+        module: 'CONCILIACION',
+        studyId,
+        companyId: company.id,
+        companyName: company.name,
+        details: `Opciones de conciliación: redondeo hasta $${c.tolerancia}; aprobación automática de movimientos seguros ${c.autoAprobar ? 'activada' : 'desactivada'}.`,
+        metadata: { action: 'CONFIG_CONCILIACION', ...c }
+      });
+      notify.success('Opciones de conciliación guardadas.');
+    } catch (e: any) {
+      notify.error('No se pudieron guardar las opciones: ' + (e?.message || ''));
+      throw e;
+    }
+  };
+
+  const registrarCierre = async (accion: 'CERRAR' | 'REABRIR', motivo?: string) => {
+    const rec = recDelPeriodo(selectedPeriod);
+    if (!rec || !selectedBankAccount) return;
+    const ahora = new Date().toISOString();
+    const usuario = auth.currentUser?.email || 'sistema';
+    const historial = [...(rec.historialCierre || []), { accion, fecha: ahora, usuario, ...(motivo ? { motivo } : {}) }];
+    const cambios = accion === 'CERRAR'
+      ? { cerrada: true, cerradaEn: ahora, cerradaPor: usuario, historialCierre: historial }
+      : { cerrada: false, cerradaEn: '', cerradaPor: '', historialCierre: historial };
+    await updateDoc(doc(companyRef, 'bankReconciliations', rec.id), cambios);
+    setSavedReconciliations(prev => prev.map(r => r.id === rec.id ? { ...r, ...cambios } : r));
+    logAuditEvent({
+      userId: auth.currentUser?.uid || 'anonymous',
+      userEmail: usuario,
+      action: 'MODIFICAR',
+      module: 'CONCILIACION',
+      studyId,
+      companyId: company.id,
+      companyName: company.name,
+      details: `${accion === 'CERRAR' ? 'Cierre' : 'Reapertura'} de la cartola ${selectedBankAccount.name} (${selectedPeriod})${motivo ? ` - Motivo: ${motivo}` : ''}.`,
+      metadata: { action: accion === 'CERRAR' ? 'CERRAR_CARTOLA' : 'REABRIR_CARTOLA', period: selectedPeriod, motivo: motivo || '' }
+    });
+  };
+
+  const handleCerrarCartola = async () => {
+    const rec = recDelPeriodo(selectedPeriod);
+    if (!rec || (rec.lines || []).length === 0) {
+      notify.warning('No hay una cartola guardada para este período.', 'Nada que cerrar');
+      return;
+    }
+    if (rec.status !== 'Cuadrado') {
+      notify.warning('Para cerrar la cartola debe estar cuadrada (descuadre $0). Revisa los movimientos pendientes.', 'Cartola descuadrada');
+      return;
+    }
+    const pendientes = (rec.lines || []).filter(l => l.matchedStatus === 'Pendiente').length;
+    const ok = window.confirm(
+      `¿Cerrar la cartola de ${selectedPeriod}?\n\n` +
+      (pendientes > 0 ? `Quedan ${pendientes} movimientos pendientes que no podrás tocar mientras esté cerrada.\n\n` : '') +
+      'Mientras esté cerrada no se podrá importar, conciliar ni eliminar movimientos de este mes. Podrás reabrirla indicando un motivo.'
+    );
+    if (!ok) return;
+    try {
+      await registrarCierre('CERRAR');
+      notify.success(`Cartola de ${selectedPeriod} cerrada.`);
+    } catch (e: any) {
+      notify.error('No se pudo cerrar la cartola: ' + (e?.message || ''));
+    }
+  };
+
+  const handleReabrirCartola = async () => {
+    const motivo = (window.prompt(`Reabrir la cartola de ${selectedPeriod}.\n\nEscribe el motivo (queda registrado):`) || '').trim();
+    if (!motivo) {
+      notify.info('La cartola sigue cerrada: falta indicar el motivo.');
+      return;
+    }
+    try {
+      await registrarCierre('REABRIR', motivo);
+      notify.success(`Cartola de ${selectedPeriod} reabierta.`);
+    } catch (e: any) {
+      notify.error('No se pudo reabrir la cartola: ' + (e?.message || ''));
+    }
+  };
+
   const abrirAsiento = async (l: BankStatementLine) => {
+    if (periodosCerrados.has((l.date || '').slice(0, 7))) {
+      notify.warning(`La cartola de ${(l.date || '').slice(0, 7)} está cerrada. Ábrela de nuevo para contabilizar este movimiento.`, 'Cartola cerrada');
+      return;
+    }
     const shift = getNextOpenPeriodAndDate(l.date, fiscalYears);
     setQuickVoucherLine(l);
     setQuickGloss(l.description);
@@ -1520,16 +1648,16 @@ export default function ConciliacionBancariaView({
       }
       const disponibles = items.filter(i => !usados.has(i.id));
       const monto = (l.charge || 0) > 0 ? l.charge : l.deposit;
-      return calzarFacturas(disponibles, l.description || '', monto);
+      return calzarFacturas(disponibles, l.description || '', monto, config.tolerancia);
     },
-    [accounts, vouchers, rcvDocuments, openItemsCache]
+    [accounts, vouchers, rcvDocuments, openItemsCache, config.tolerancia]
   );
   const pendientesBandeja = useMemo(() => {
     const fuente: BankStatementLine[] = unifiedHistoricalCartola.length > 0 ? unifiedHistoricalCartola : statementLines;
-    return fuente.filter(l => l.matchedStatus === 'Pendiente');
-  }, [unifiedHistoricalCartola, statementLines]);
+    return fuente.filter(l => l.matchedStatus === 'Pendiente' && !periodosCerrados.has((l.date || '').slice(0, 7)));
+  }, [unifiedHistoricalCartola, statementLines, periodosCerrados]);
 
-  const handleBatchApprove = async (items: { line: BankStatementLine; proposal: MovementProposal; calce?: CalceResult | null }[]) => {
+  const handleBatchApprove = async (items: { line: BankStatementLine; proposal: MovementProposal; calce?: CalceResult | null }[], opts?: { automatico?: boolean }) => {
     if (!selectedBankAccount) {
       notify.error('Seleccione una cuenta bancaria.');
       return;
@@ -1741,12 +1869,47 @@ export default function ConciliacionBancariaView({
       const partes = [`${resultado.size} contabilizados y conciliados`];
       if (omitidos > 0) partes.push(`${omitidos} omitidos por período cerrado`);
       if (errores > 0) partes.push(`${errores} con error (quedan pendientes)`);
-      notify.success(partes.join('; ') + '.', 'Aprobación en lote', 6000);
+      notify.success(partes.join('; ') + '.', opts?.automatico ? 'Aprobación automática' : 'Aprobación en lote', 6000);
+      if (resultado.size > 0) {
+        const numeros = Array.from(resultado.values()).map(r => r.number).sort((a, b) => a - b);
+        logAuditEvent({
+          userId: auth.currentUser?.uid || 'anonymous',
+          userEmail: auth.currentUser?.email || 'sistema',
+          action: 'CONTABILIZAR',
+          module: 'CONCILIACION',
+          studyId,
+          companyId: company.id,
+          companyName: company.name,
+          details: `${opts?.automatico ? 'Aprobación automática al importar' : 'Aprobación en lote desde la bandeja'}: ${resultado.size} movimientos de ${selectedBankAccount.name} contabilizados (comprobantes ${numeros[0]} al ${numeros[numeros.length - 1]}).`,
+          metadata: { action: opts?.automatico ? 'AUTO_APPROVE_IMPORT' : 'BATCH_APPROVE', cantidad: resultado.size, omitidos, errores, comprobantes: numeros.slice(0, 200) }
+        });
+      }
     } catch (err: any) {
       console.error('Error en aprobación en lote:', err);
       notify.error('No se pudo completar la aprobación en lote: ' + (err?.message || ''));
     }
   };
+
+  // Aprobación automática de los movimientos seguros, justo después de importar (opción de la empresa)
+  useEffect(() => {
+    if (!autoAprobarPendiente) return;
+    setAutoAprobarPendiente(false);
+    (async () => {
+      try {
+        if (!juniorRulesCacheRef.current) {
+          juniorRulesCacheRef.current = await loadJuniorGlossRules(studyId, company.id);
+        }
+      } catch (e) {
+        console.warn('No se pudieron cargar las reglas aprendidas:', e);
+      }
+      const seguros = evaluarMovimientos(pendientesBandeja, accounts, clasificarParaBandeja, calzarParaBandeja).filter(r => r.aprobable && r.proposal);
+      if (seguros.length === 0) {
+        notify.info('No hay movimientos seguros para aprobar solos. Revisa la bandeja de pendientes.', 'Aprobación automática');
+        return;
+      }
+      await handleBatchApprove(seguros.map(r => ({ line: r.line, proposal: r.proposal!, calce: r.calce })), { automatico: true });
+    })();
+  }, [autoAprobarPendiente]);
 
   // 6. Quick Post Unaccounted Bank Fee or Income + Auto-Match + Immediate Auto-Save
   const handleQuickPostVoucher = async (customData?: {
@@ -2414,6 +2577,40 @@ export default function ConciliacionBancariaView({
               </>
             )}
           </div>
+
+          <button
+            type="button"
+            onClick={() => setShowOpciones(true)}
+            className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg border border-slate-300 flex items-center gap-1.5 cursor-pointer"
+            title="Redondeo y aprobación automática de movimientos seguros"
+          >
+            <span>Opciones</span>
+          </button>
+
+          {cartolaCerrada && (
+            <span className="px-2.5 py-1 bg-amber-100 text-amber-900 text-[11px] font-bold rounded-md border border-amber-300">
+              Cartola cerrada
+            </span>
+          )}
+          {cartolaCerrada ? (
+            <button
+              type="button"
+              onClick={handleReabrirCartola}
+              className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold rounded-lg border border-amber-300 flex items-center gap-1.5 cursor-pointer"
+              title="Reabrir la cartola de este mes (queda registrado el motivo)"
+            >
+              <span>Reabrir cartola</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleCerrarCartola}
+              className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg border border-slate-300 flex items-center gap-1.5 cursor-pointer"
+              title="Cierra la cartola del mes para que nadie la cambie por error"
+            >
+              <span>Cerrar cartola</span>
+            </button>
+          )}
 
           <button
             onClick={async () => {
@@ -4067,6 +4264,7 @@ export default function ConciliacionBancariaView({
         onPostVoucherWithLines={handleQuickPostVoucher}
         onPost={handleQuickPostVoucher}
         onEnsureRoundingAccount={ensureRoundingAccount}
+        toleranciaRedondeo={config.tolerancia}
       />
 
       <AutoRutMatchModal
@@ -4144,6 +4342,13 @@ export default function ConciliacionBancariaView({
             onVouchersUpdated();
           }
         }}
+      />
+
+      <ConciliacionOpcionesModal
+        isOpen={showOpciones}
+        onClose={() => setShowOpciones(false)}
+        config={config}
+        onSave={guardarConfig}
       />
 
       <BandejaMovimientosModal

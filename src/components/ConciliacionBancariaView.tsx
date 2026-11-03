@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { getNextVoucherNumber } from '../utils/voucherCounter';
+import { getNextVoucherNumber, reserveVoucherNumberBatch } from '../utils/voucherCounter';
+import BandejaMovimientosModal from './BandejaMovimientosModal';
 import { db, auth } from '../lib/firebase';
 import { collection, getDocs, getDoc, addDoc, doc, setDoc, updateDoc, query, where } from 'firebase/firestore';
 import {
@@ -1406,6 +1407,168 @@ export default function ConciliacionBancariaView({
     }
   };
 
+  // Abre el asiento rápido de un movimiento con su propuesta (usado por "+ Asiento" y por la bandeja)
+  const abrirAsiento = async (l: BankStatementLine) => {
+    const shift = getNextOpenPeriodAndDate(l.date, fiscalYears);
+    setQuickVoucherLine(l);
+    setQuickGloss(l.description);
+    setQuickVoucherPeriod(shift.period);
+    // Limpia la cuenta anterior para no arrastrar una propuesta equivocada
+    setQuickExpenseAccountId('');
+    setQuickProposal(null);
+    try {
+      if (!juniorRulesCacheRef.current) {
+        juniorRulesCacheRef.current = await loadJuniorGlossRules(studyId, company.id);
+      }
+      const proposal: MovementProposal | null = classifyMovement(l, {
+        accounts,
+        vouchers,
+        rules: juniorRulesCacheRef.current || [],
+        bankAccountId: selectedBankAccount?.id || ''
+      });
+      setQuickProposal(proposal);
+      if (proposal && proposal.accountId) {
+        setQuickExpenseAccountId(proposal.accountId);
+      }
+    } catch (e) {
+      console.warn('No se pudo calcular la propuesta de cuenta:', e);
+    }
+  };
+
+  // Bandeja: clasifica todos los pendientes y permite aprobar en lote los que son seguros
+  const [showBandeja, setShowBandeja] = useState<boolean>(false);
+  const abrirBandeja = async () => {
+    try {
+      if (!juniorRulesCacheRef.current) {
+        juniorRulesCacheRef.current = await loadJuniorGlossRules(studyId, company.id);
+      }
+    } catch (e) {
+      console.warn('No se pudieron cargar las reglas aprendidas:', e);
+    }
+    setShowBandeja(true);
+  };
+  const clasificarParaBandeja = useCallback(
+    (l: BankStatementLine): MovementProposal | null =>
+      classifyMovement(l, {
+        accounts,
+        vouchers,
+        rules: juniorRulesCacheRef.current || [],
+        bankAccountId: selectedBankAccount?.id || ''
+      }),
+    [accounts, vouchers, selectedBankAccount, showBandeja]
+  );
+  const pendientesBandeja = useMemo(
+    () => statementLines.filter(l => l.matchedStatus === 'Pendiente'),
+    [statementLines]
+  );
+
+  const handleBatchApprove = async (items: { line: BankStatementLine; proposal: MovementProposal }[]) => {
+    if (!selectedBankAccount) {
+      notify.error('Seleccione una cuenta bancaria.');
+      return;
+    }
+    // 1) Período de cada movimiento (si está cerrado se traslada al siguiente abierto)
+    const plan = items
+      .map(it => {
+        const eff = getNextOpenPeriodAndDate(it.line.date, fiscalYears);
+        const closed = checkIsPeriodClosed(eff.period, fiscalYears);
+        return { ...it, period: eff.period, date: eff.date, closed: closed.isClosed };
+      });
+    const validos = plan.filter(p => !p.closed);
+    const omitidos = plan.length - validos.length;
+    if (validos.length === 0) {
+      notify.warning('Todos los movimientos caen en períodos cerrados.', 'Nada que contabilizar');
+      return;
+    }
+    try {
+      // 2) Números correlativos de una sola vez (atómico)
+      const maxExistente = vouchers.length > 0 ? Math.max(...vouchers.map(v => v.voucherNumber || 0)) : 0;
+      const { startNumber } = await reserveVoucherNumberBatch(studyId, company.id, 0, validos.length, maxExistente);
+
+      const resultado = new Map<string, { voucherId: string; number: number; period: string }>();
+      let n = startNumber;
+      let errores = 0;
+      for (const p of validos) {
+        const num = n++;
+        try {
+          const isCharge = (p.line.charge || 0) > 0;
+          const amount = isCharge ? p.line.charge : p.line.deposit;
+          const acc = accounts.find(a => a.id === p.proposal.accountId);
+          if (!acc) { errores++; continue; }
+          const glosa = p.line.description.toUpperCase();
+          const ref = (p.line.documentNumber || 'BANCO').toUpperCase();
+          const bankLine: VoucherLine = {
+            id: 'line_bank',
+            accountId: selectedBankAccount.id,
+            accountCode: selectedBankAccount.code,
+            accountName: selectedBankAccount.name,
+            debit: isCharge ? 0 : amount,
+            credit: isCharge ? amount : 0,
+            documentRef: ref,
+            bankDocRef: ref,
+            gloss: glosa
+          };
+          const counterLine: VoucherLine = {
+            id: 'line_counter_1',
+            accountId: acc.id,
+            accountCode: acc.code,
+            accountName: acc.name,
+            debit: isCharge ? amount : 0,
+            credit: isCharge ? 0 : amount,
+            auxiliaryRut: acc.requiereAuxiliarRUT && p.proposal.auxiliaryRut ? p.proposal.auxiliaryRut.toUpperCase() : undefined,
+            auxiliaryName: acc.requiereAuxiliarRUT && p.proposal.auxiliaryName ? p.proposal.auxiliaryName.toUpperCase() : undefined,
+            documentRef: ref,
+            costCenter: p.proposal.costCenter ? p.proposal.costCenter.toUpperCase() : undefined,
+            expenseItem: p.proposal.expenseItem ? p.proposal.expenseItem.toUpperCase() : undefined,
+            project: p.proposal.project || undefined,
+            product: p.proposal.product || undefined,
+            gloss: glosa
+          };
+          const cleaned = sanitizeVoucherLines([bankLine, counterLine], accounts);
+          const totalDebit = cleaned.reduce((s, l) => s + (Number(l.debit) || 0), 0);
+          const totalCredit = cleaned.reduce((s, l) => s + (Number(l.credit) || 0), 0);
+          if (Math.round(totalDebit) !== Math.round(totalCredit)) { errores++; continue; }
+          const docRef = await addDoc(collection(companyRef, 'vouchers'), sanitizeForFirestore({
+            voucherNumber: num,
+            date: p.date,
+            period: p.period,
+            type: isCharge ? 'Egreso' : 'Ingreso',
+            gloss: glosa,
+            lines: cleaned,
+            totalDebit,
+            totalCredit,
+            status: 'Valido',
+            createdAt: new Date().toISOString()
+          }));
+          resultado.set(p.line.id, { voucherId: docRef.id, number: num, period: p.period });
+        } catch (e) {
+          console.error('Error en comprobante de lote:', e);
+          errores++;
+        }
+      }
+
+      // 3) Marcar conciliados y guardar una sola vez
+      if (resultado.size > 0) {
+        const updated = statementLines.map(l => {
+          const r = resultado.get(l.id);
+          return r
+            ? { ...l, matchedStatus: 'Conciliado' as const, matchedVoucherId: r.voucherId, matchedVoucherNumber: r.number, matchedVoucherPeriod: r.period }
+            : l;
+        });
+        setStatementLines(updated);
+        await persistReconciliation(selectedPeriod, updated, bankInitialBalanceInput, bankFinalBalanceInput);
+        if (onVouchersUpdated) onVouchersUpdated();
+      }
+      const partes = [`${resultado.size} contabilizados y conciliados`];
+      if (omitidos > 0) partes.push(`${omitidos} omitidos por período cerrado`);
+      if (errores > 0) partes.push(`${errores} con error (quedan pendientes)`);
+      notify.success(partes.join('; ') + '.', 'Aprobación en lote', 6000);
+    } catch (err: any) {
+      console.error('Error en aprobación en lote:', err);
+      notify.error('No se pudo completar la aprobación en lote: ' + (err?.message || ''));
+    }
+  };
+
   // 6. Quick Post Unaccounted Bank Fee or Income + Auto-Match + Immediate Auto-Save
   const handleQuickPostVoucher = async (customData?: {
     period: string;
@@ -2093,6 +2256,16 @@ export default function ConciliacionBancariaView({
           </button>
 
           {/* Agente 1: Conciliador Autónomo con IA (Gemini 3.8 Flash) */}
+          <button
+            type="button"
+            onClick={abrirBandeja}
+            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-2xs flex items-center gap-1.5 cursor-pointer transition-all"
+            title="Revisa todos los movimientos pendientes y aprueba en lote los que el sistema tiene claros"
+          >
+            <span>Bandeja de pendientes</span>
+            <span className="bg-white/20 text-white text-[10px] px-1.5 rounded font-mono">{pendientesBandeja.length}</span>
+          </button>
+
           <button
             type="button"
             onClick={() => setShowAgent1Modal(true)}
@@ -2987,32 +3160,7 @@ export default function ConciliacionBancariaView({
                                   Match
                                 </button>
                                 <button
-                                  onClick={async () => {
-                                    const shift = getNextOpenPeriodAndDate(l.date, fiscalYears);
-                                    setQuickVoucherLine(l);
-                                    setQuickGloss(l.description);
-                                    setQuickVoucherPeriod(shift.period);
-                                    // Limpia la cuenta anterior para no arrastrar una propuesta equivocada
-                                    setQuickExpenseAccountId('');
-                                    setQuickProposal(null);
-                                    try {
-                                      if (!juniorRulesCacheRef.current) {
-                                        juniorRulesCacheRef.current = await loadJuniorGlossRules(studyId, company.id);
-                                      }
-                                      const proposal: MovementProposal | null = classifyMovement(l, {
-                                        accounts,
-                                        vouchers,
-                                        rules: juniorRulesCacheRef.current || [],
-                                        bankAccountId: selectedBankAccount?.id || ''
-                                      });
-                                      setQuickProposal(proposal);
-                                      if (proposal && proposal.accountId) {
-                                        setQuickExpenseAccountId(proposal.accountId);
-                                      }
-                                    } catch (e) {
-                                      console.warn('No se pudo calcular la propuesta de cuenta:', e);
-                                    }
-                                  }}
+                                  onClick={() => abrirAsiento(l)}
                                   className="px-1.5 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold rounded text-[10px]"
                                   title="Crear asiento contable rápido"
                                 >
@@ -3850,6 +3998,16 @@ export default function ConciliacionBancariaView({
             onVouchersUpdated();
           }
         }}
+      />
+
+      <BandejaMovimientosModal
+        isOpen={showBandeja}
+        onClose={() => setShowBandeja(false)}
+        lines={pendientesBandeja}
+        accounts={accounts}
+        classify={clasificarParaBandeja}
+        onApprove={handleBatchApprove}
+        onOpenLine={(l) => { setShowBandeja(false); abrirAsiento(l); }}
       />
 
       <Agent1ConciliadorModal

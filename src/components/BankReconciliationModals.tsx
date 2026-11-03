@@ -2383,13 +2383,28 @@ function QuickVoucherModalContent({
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={handleAutoAllocateBankAmount}
-                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors shadow-2xs flex items-center gap-1 self-start sm:self-auto"
-                >
-                  <span>⚡</span> Pagar/Cobrar Saldo Banco (${bankAmount.toLocaleString('es-CL')})
-                </button>
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  {Object.keys(selectedDocIds).length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedDocIds({});
+                        setDocumentRef('');
+                        setDueDate('');
+                      }}
+                      className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold transition-colors"
+                    >
+                      Desmarcar todo
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleAutoAllocateBankAmount}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors shadow-2xs flex items-center gap-1"
+                  >
+                    <span>⚡</span> Pagar/Cobrar Saldo Banco (${bankAmount.toLocaleString('es-CL')})
+                  </button>
+                </div>
               </div>
 
               {/* Table Search & Filter Bar */}

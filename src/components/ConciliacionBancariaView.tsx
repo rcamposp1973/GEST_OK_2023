@@ -1726,18 +1726,23 @@ export default function ConciliacionBancariaView({
             // Pago de facturas: una línea por documento, con RUT, folio y vencimiento del documento
             counterLines = calce.items
               .map((it, idx): VoucherLine => {
-                const amt = calce.amounts[it.id] || 0;
+                const amtFirmado = calce.amounts[it.id] || 0;
+                const esNota = amtFirmado < 0 || !!it.esNotaCredito;
+                const amt = Math.abs(amtFirmado);
+                // La nota de crédito va al lado contrario de las facturas
+                const ladoDebe = esNota ? !isCharge : isCharge;
                 let docType = it.docType || '33';
                 if (docType === 'Factura' || docType === 'FAC') docType = '33';
                 else if (docType === 'Factura Exenta') docType = '34';
                 else if (docType === 'Nota de Crédito' || docType === 'NC') docType = '61';
+                if (esNota) docType = '61';
                 return {
                   id: `line_counter_${idx + 1}`,
                   accountId: acc.id,
                   accountCode: acc.code,
                   accountName: acc.name,
-                  debit: isCharge ? amt : 0,
-                  credit: isCharge ? 0 : amt,
+                  debit: ladoDebe ? amt : 0,
+                  credit: ladoDebe ? 0 : amt,
                   auxiliaryRut: it.auxiliaryRut ? it.auxiliaryRut.toUpperCase() : undefined,
                   auxiliaryName: it.auxiliaryName ? it.auxiliaryName.toUpperCase() : undefined,
                   documentType: docType,
@@ -1747,11 +1752,12 @@ export default function ConciliacionBancariaView({
                   expenseItem: it.expenseItem ? it.expenseItem.toUpperCase() : comunes.expenseItem,
                   project: it.project || comunes.project,
                   product: it.product || comunes.product,
-                  gloss: `PAGO FACTURA N° ${it.docNumber} - ${glosa}`.toUpperCase()
+                  gloss: (esNota ? `APLICA NOTA DE CRÉDITO N° ${it.docNumber} - ${glosa}` : `PAGO FACTURA N° ${it.docNumber} - ${glosa}`).toUpperCase()
                 };
               })
               .filter(l => (l.debit || 0) > 0 || (l.credit || 0) > 0);
-            vGloss = `PAGO FACTURA N° ${calce.items[0].docNumber} - ${glosa}`.toUpperCase();
+            const primeraFactura = calce.items.find(i => !i.esNotaCredito && (calce.amounts[i.id] || 0) > 0) || calce.items[0];
+            vGloss = `PAGO FACTURA N° ${primeraFactura.docNumber} - ${glosa}`.toUpperCase();
           } else if (p.proposal.rutItems && p.proposal.rutItems.length > 0 && p.proposal.source === 'RUT') {
             // Saldo por folio de la persona (remuneraciones, anticipos, préstamos): mismo folio que el original para cerrarlo
             counterLines = p.proposal.rutItems.map((it, idx): VoucherLine => {

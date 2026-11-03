@@ -1037,9 +1037,13 @@ function QuickVoucherModalContent({
   }, [openItems, selectedAuxiliaryRut, docSearch]);
 
   // Total allocated amount from checked open documents
+  // Total aplicado: facturas menos notas de crédito (las notas rebajan lo que se paga o cobra)
   const totalAllocatedAmount = useMemo(() => {
-    return Object.values(selectedDocIds).reduce((s, val) => s + (val || 0), 0);
-  }, [selectedDocIds]);
+    return Object.entries(selectedDocIds).reduce((s, [id, val]) => {
+      const it = openItems.find(i => i.id === id);
+      return s + (it?.esNotaCredito ? -(val || 0) : (val || 0));
+    }, 0);
+  }, [selectedDocIds, openItems]);
 
   // Helper to format friendly document reference with clear document type
   const formatFriendlyDocumentRef = (docType?: string, docNumber?: string): string => {
@@ -1071,9 +1075,14 @@ function QuickVoucherModalContent({
         delete copy[item.id];
       } else {
         // Calculate recommended amount to allocate
-        const alreadyAllocated = Object.values(copy).reduce((s, v) => s + v, 0);
+        const alreadyAllocated = Object.entries(copy).reduce((s, [id, v]) => {
+          const it = openItems.find(i => i.id === id);
+          return s + (it?.esNotaCredito ? -v : v);
+        }, 0);
         const remainingBank = Math.max(0, bankAmount - alreadyAllocated);
-        const alloc = remainingBank > 0 ? Math.min(item.openBalance, remainingBank) : item.openBalance;
+        const alloc = item.esNotaCredito
+          ? Math.abs(item.openBalance)
+          : (remainingBank > 0 ? Math.min(item.openBalance, remainingBank) : item.openBalance);
         copy[item.id] = alloc;
 
         // Auto-complete all analysis fields to eliminate manual typing
@@ -1104,7 +1113,12 @@ function QuickVoucherModalContent({
     const newSelected: { [docId: string]: number } = {};
 
     const itemsToProcess = filteredOpenItems.length > 0 ? filteredOpenItems : openItems;
-    for (const item of itemsToProcess) {
+    // Las notas de crédito visibles se aplican completas: rebajan lo que falta por asignar a facturas
+    for (const nc of itemsToProcess.filter(i => i.esNotaCredito)) {
+      newSelected[nc.id] = Math.abs(nc.openBalance);
+      remaining += Math.abs(nc.openBalance);
+    }
+    for (const item of itemsToProcess.filter(i => !i.esNotaCredito)) {
       if (remaining <= 0) break;
       const alloc = Math.min(item.openBalance, remaining);
       newSelected[item.id] = alloc;
@@ -1368,16 +1382,19 @@ function QuickVoucherModalContent({
         if (explicitDocType === 'Factura' || explicitDocType === 'FAC') explicitDocType = '33';
         else if (explicitDocType === 'Factura Exenta') explicitDocType = '34';
         else if (explicitDocType === 'Nota de Crédito' || explicitDocType === 'NC') explicitDocType = '61';
+        if (docItem?.esNotaCredito) explicitDocType = '61';
 
         const docTypeLabel = docItem?.docType === 'BHE' || isHonorarios ? 'Boleta de Honorarios' : 'Factura';
 
+        // La nota de crédito va al lado contrario de las facturas: rebaja lo que se paga o cobra
+        const ladoDebe = docItem?.esNotaCredito ? !isCharge : isCharge;
         lines.push({
           id: `line_counter_${index + 1}`,
           accountId: selectedAccount.id,
           accountCode: selectedAccount.code,
           accountName: selectedAccount.name,
-          debit: isCharge ? amt : 0,
-          credit: isCharge ? 0 : amt,
+          debit: ladoDebe ? amt : 0,
+          credit: ladoDebe ? 0 : amt,
           auxiliaryRut: auxRutValue ? auxRutValue.toUpperCase() : undefined,
           auxiliaryName: auxNameValue ? auxNameValue.toUpperCase() : undefined,
           documentType: explicitDocType,
@@ -1388,7 +1405,9 @@ function QuickVoucherModalContent({
           project: project ? project.toUpperCase() : undefined,
           product: product ? product.toUpperCase() : undefined,
           customAnalyses: Object.keys(customAnalyses).length > 0 ? customAnalyses : undefined,
-          gloss: `PAGO ${docTypeLabel.toUpperCase()} N° ${docItem?.docNumber || rawDocNum} - ${defaultGloss}`.toUpperCase()
+          gloss: (docItem?.esNotaCredito
+            ? `APLICA NOTA DE CRÉDITO N° ${docItem?.docNumber || rawDocNum} - ${defaultGloss}`
+            : `PAGO ${docTypeLabel.toUpperCase()} N° ${docItem?.docNumber || rawDocNum} - ${defaultGloss}`).toUpperCase()
         });
       });
     } else {
@@ -1425,9 +1444,10 @@ function QuickVoucherModalContent({
 
     // Diferencia de redondeo (hasta $2) entre el banco y las facturas: va a la cuenta de ajuste por redondeo
     if (selectedDocsList.length > 0) {
+      // Facturas menos notas de crédito: lo que va por el lado normal suma y lo del lado contrario resta
       const totalDocs = lines
         .filter(l => l.id.startsWith('line_counter_'))
-        .reduce((sum, l) => sum + (Number(l.debit) || 0) + (Number(l.credit) || 0), 0);
+        .reduce((sum, l) => sum + (isCharge ? (Number(l.debit) || 0) - (Number(l.credit) || 0) : (Number(l.credit) || 0) - (Number(l.debit) || 0)), 0);
       const dif = Math.round(bankAmount) - Math.round(totalDocs);
       if (dif !== 0 && Math.abs(dif) <= toleranciaRedondeo) {
         const aj = onEnsureRoundingAccount ? await onEnsureRoundingAccount() : (buscarCuentaRedondeo(accounts) as ChartOfAccount | undefined) || null;
@@ -1456,7 +1476,9 @@ function QuickVoucherModalContent({
       return;
     }
 
-    const firstSelectedDoc = selectedDocsList.length > 0 ? openItems.find(i => i.id === selectedDocsList[0]) : null;
+    const firstSelectedDoc = selectedDocsList.length > 0
+      ? (openItems.find(i => i.id === selectedDocsList.find(id => !openItems.find(x => x.id === id)?.esNotaCredito)) || openItems.find(i => i.id === selectedDocsList[0]))
+      : null;
     const paymentGloss = firstSelectedDoc 
       ? `PAGO ${firstSelectedDoc.docType === 'BHE' ? 'BHE' : 'FACTURA'} N° ${firstSelectedDoc.docNumber} - ${defaultGloss}`
       : defaultGloss;
@@ -1493,7 +1515,8 @@ function QuickVoucherModalContent({
       setAutoMatchNote({ level: resultado.level, text: resultado.text });
       return;
     }
-    setSelectedDocIds(resultado.amounts);
+    // las notas de crédito vienen con monto negativo: se guardan como monto positivo y se marcan por su tipo
+    setSelectedDocIds(Object.fromEntries(Object.entries(resultado.amounts).map(([id, v]) => [id, Math.abs(v)])));
     const first = resultado.items[0];
     if (first && first.auxiliaryRut) {
       setSelectedAuxiliaryRut(first.auxiliaryRut);
@@ -2222,15 +2245,17 @@ function QuickVoucherModalContent({
                               <span className="font-bold">{item.auxiliaryRut}</span> {item.auxiliaryName}
                             </td>
                             <td className="p-2 text-slate-600">{item.issueDate}</td>
-                            <td className="p-2 text-right font-bold text-slate-900">
-                              ${item.openBalance.toLocaleString('es-CL')}
+                            <td className={`p-2 text-right font-bold ${item.esNotaCredito ? 'text-rose-700' : 'text-slate-900'}`}>
+                              {item.esNotaCredito
+                                ? <>-${Math.abs(item.openBalance).toLocaleString('es-CL')} <span className="ml-1 text-[9px] font-sans font-semibold px-1.5 py-0.5 rounded bg-rose-100 text-rose-800">Nota de crédito</span></>
+                                : <>${item.openBalance.toLocaleString('es-CL')}</>}
                             </td>
                             <td className="p-2 text-right">
                               {isSelected ? (
                                 <input
                                   type="number"
                                   min="0"
-                                  max={item.openBalance}
+                                  max={Math.abs(item.openBalance)}
                                   value={currentAmt || ''}
                                   onChange={(e) => {
                                     const val = Math.max(0, parseFloat(e.target.value) || 0);

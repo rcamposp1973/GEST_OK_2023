@@ -7,7 +7,7 @@ export const TOLERANCIA_REDONDEO = 2; // pesos de diferencia entre banco y factu
 export interface CalceResult {
   /** documentos elegidos (vacío si solo hay un aviso) */
   items: OpenAccountItem[];
-  /** monto a aplicar por documento (suma = monto del banco cuando hay calce) */
+  /** monto a aplicar por documento (suma = monto del banco cuando hay calce); negativo para notas de crédito */
   amounts: { [id: string]: number };
   level: 'VERDE' | 'AMARILLO';
   text: string;
@@ -103,6 +103,23 @@ export function calzarFacturas(
       const sel = ids;
       const elegidos = grupo.filter(i => sel.includes(i.id));
       return armar(elegidos, `Calce exacto con ${elegidos.length} documentos de ${elegidos[0].auxiliaryName || rut} que suman ${fmt(monto)}. Coincide el ${origen}.`, 'VERDE');
+    }
+  }
+
+  // 2b) Con notas de crédito de la misma contraparte: facturas - notas de crédito = monto del banco
+  for (const rut of ruts) {
+    const grupo = candidatos.filter(i => (i.auxiliaryRut || '').toUpperCase() === rut);
+    const ncs = grupo.filter(i => i.esNotaCredito && i.openBalance < 0);
+    if (ncs.length === 0) continue;
+    const sumaNC = ncs.reduce((sum, i) => sum + Math.abs(Math.round(i.openBalance)), 0);
+    const pool = grupo.filter(i => !i.esNotaCredito && i.openBalance > 0).map(i => ({ id: i.id, amount: Math.round(i.openBalance) }));
+    const ids = findDocSubset(pool, monto + sumaNC, 32, tolerancia);
+    if (ids && ids.length > 0) {
+      const facturas = grupo.filter(i => ids.includes(i.id));
+      const elegidos = [...facturas, ...ncs];
+      return armar(elegidos,
+        `Calce exacto con ${facturas.length} documento(s) menos ${ncs.length} nota(s) de crédito de ${elegidos[0].auxiliaryName || rut}: ${fmt(monto + sumaNC)} - ${fmt(sumaNC)} = ${fmt(monto)}. Coincide el ${origen}.`,
+        'VERDE');
     }
   }
 

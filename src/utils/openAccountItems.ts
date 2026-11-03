@@ -14,8 +14,11 @@ export interface OpenAccountItem {
   product?: string;
   originalAmount: number;
   paidAmount: number;
+  /** Saldo abierto. Negativo para notas de crédito (rebajan lo que se debe pagar o cobrar). */
   openBalance: number;
   source: 'RCV' | 'VOUCHER';
+  /** true para notas de crédito: su saldo es negativo y al aplicarla va al lado contrario */
+  esNotaCredito?: boolean;
 }
 
 export interface AccountKind { isAP: boolean; isHonorarios: boolean; isProveedores: boolean; isClientes: boolean; }
@@ -123,6 +126,13 @@ export function computeOpenItems(
       });
     });
 
+    // Nota de crédito (tipo 61): código, o texto del documento
+    const esNC = (type: any, ref?: any): boolean => {
+      if (normalizeDocType(type) === '61') return true;
+      const t = `${type || ''} ${ref || ''}`.toUpperCase();
+      return /NOTA\s*(DE)?\s*CR[EÉ]DITO|\bNC\b/.test(t);
+    };
+
     const matchedVoucherKeys = new Set<string>();
 
     // 2. Process RCV Documents (SII register: Compras, Honorarios, Ventas)
@@ -154,6 +164,8 @@ export function computeOpenItems(
         } else {
           docTotal = Number(doc.montoTotal) || 0;
         }
+        const docEsNC = esNC(doc.tipoDoc, doc.nombreTipoDoc);
+        if (docEsNC) docTotal = Math.abs(docTotal);
         if (docTotal <= 0) continue;
 
         // CASE A: The document has ALREADY been centralized / recorded in accounting vouchers
@@ -163,7 +175,8 @@ export function computeOpenItems(
           const netBalance = isAP ? (vEntry.creditSum - vEntry.debitSum) : (vEntry.debitSum - vEntry.creditSum);
           
           // Only show if there is an open balance remaining in the accounting ledger
-          if (netBalance > 0) {
+          // (una nota de crédito centralizada queda con saldo negativo y también se muestra)
+          if (netBalance > 0 || (docEsNC && netBalance < 0)) {
             items.push({
               id: `unified_${rcvKey}`,
               docType: doc.tipoDoc ? String(doc.tipoDoc) : (vEntry.rawDocType || (isHonorarios ? 'BHE' : '33')),
@@ -179,7 +192,8 @@ export function computeOpenItems(
               originalAmount: docTotal > 0 ? docTotal : (isAP ? vEntry.creditSum : vEntry.debitSum),
               paidAmount: isAP ? vEntry.debitSum : vEntry.creditSum,
               openBalance: netBalance,
-              source: 'VOUCHER'
+              source: 'VOUCHER',
+              ...(docEsNC ? { esNotaCredito: true } : {})
             });
           }
           continue;
@@ -191,12 +205,15 @@ export function computeOpenItems(
           if (v.status === 'Anulado') return;
           v.lines?.forEach(l => {
             if (l.accountId === accId || l.accountCode === accCode) {
-              const isPayment = isAP ? ((Number(l.debit) || 0) > 0) : ((Number(l.credit) || 0) > 0);
-              if (isPayment) {
+              // Facturas: se pagan por el lado contrario al de su origen. Notas de crédito: se aplican por el lado de la factura.
+              const debit = Number(l.debit) || 0;
+              const credit = Number(l.credit) || 0;
+              const monto = docEsNC ? (isAP ? credit : debit) : (isAP ? debit : credit);
+              if (monto > 0) {
                 const lineRutNorm = normalizeRut(l.auxiliaryRut);
                 const lineFolioNorm = normalizeFolio(l.documentRef);
                 if (lineRutNorm === normRut && (!normFolio || lineFolioNorm === normFolio)) {
-                  paid += isAP ? (Number(l.debit) || 0) : (Number(l.credit) || 0);
+                  paid += monto;
                 }
               }
             }
@@ -216,8 +233,9 @@ export function computeOpenItems(
             dueDate: doc.fechaVencimiento || undefined,
             originalAmount: docTotal,
             paidAmount: paid,
-            openBalance: pending,
-            source: 'RCV'
+            openBalance: docEsNC ? -pending : pending,
+            source: 'RCV',
+            ...(docEsNC ? { esNotaCredito: true } : {})
           });
         }
       }
@@ -229,7 +247,8 @@ export function computeOpenItems(
       if (matchedVoucherKeys.has(key)) return; // Already unified with RCV record
 
       const netBalance = isAP ? (data.creditSum - data.debitSum) : (data.debitSum - data.creditSum);
-      if (netBalance > 0) {
+      const voucherEsNC = esNC(data.rawDocType, data.rawDocNumber);
+      if (netBalance > 0 || (voucherEsNC && netBalance < 0)) {
         items.push({
           id: `voucher_${key}`,
           docType: data.rawDocType,
@@ -245,7 +264,8 @@ export function computeOpenItems(
           originalAmount: isAP ? data.creditSum : data.debitSum,
           paidAmount: isAP ? data.debitSum : data.creditSum,
           openBalance: netBalance,
-          source: 'VOUCHER'
+          source: 'VOUCHER',
+          ...(voucherEsNC && netBalance < 0 ? { esNotaCredito: true } : {})
         });
       }
     });

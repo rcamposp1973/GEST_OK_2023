@@ -21,6 +21,7 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 - **Ajuste por redondeo:** diferencias de hasta $2 entre el banco y las facturas van a una cuenta de ajuste (se crea con confirmación si no existe).
 - **Opciones de conciliación por empresa:** diferencia de redondeo configurable (0 a $50; antes fija en $2) y aprobación automática de los movimientos seguros al importar la cartola, con registro de auditoría de cada lote.
 - **Cierre de cartola:** una cartola cuadrada se puede cerrar para que nadie la cambie por error; para reabrirla hay que indicar un motivo, que queda registrado.
+- **Notas de crédito** al aplicar un pago: aparecen con saldo negativo, rebajan lo que se paga o cobra y quedan en el comprobante del lado contrario de las facturas. El calce automático las incluye (facturas menos notas de crédito = monto del banco).
 - **Vencimiento** tomado desde el documento; botón **Desmarcar todo** en facturas pendientes.
 - **Importador de cartola:** ignora filas que no son movimientos (por ejemplo, el "saldo final") y se corrigió el error al abrir la importación inteligente.
 

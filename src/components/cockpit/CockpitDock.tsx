@@ -166,7 +166,7 @@ export const CockpitDock: React.FC<CockpitDockProps> = ({
         <button
           onClick={onOpenNewTabModal}
           className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 flex items-center justify-center transition-all cursor-pointer shadow-2xs group"
-          title="Abrir Catálogo de Herramientas y Módulos"
+          title="Ir a Inicio"
         >
           <LayoutGrid className="w-4 h-4 group-hover:scale-110 transition-transform text-slate-700" />
         </button>
@@ -204,7 +204,7 @@ export const CockpitDock: React.FC<CockpitDockProps> = ({
         <button
           onClick={onOpenNewTabModal}
           className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 flex items-center justify-center transition-all cursor-pointer shadow-2xs group"
-          title="Abrir Catálogo de Módulos (+)"
+          title="Ir a Inicio"
         >
           <LayoutGrid className="w-4 h-4 group-hover:scale-110 transition-transform text-slate-700" />
         </button>

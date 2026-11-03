@@ -5605,7 +5605,7 @@ export default function CompanyAccountingDashboard({
             activeModuleId={activeTab}
             openModuleIds={openTabs.map(t => t.moduleId)}
             onOpenModule={handleOpenModuleInTab}
-            onOpenNewTabModal={() => setShowNewTabModal(true)}
+            onOpenNewTabModal={() => handleOpenModuleInTab('home')}
             onOpenQuickAccessConfig={() => setShowQuickAccessConfig(true)}
             pinnedModuleIds={pinnedQuickAccessIds}
           />
@@ -9874,7 +9874,7 @@ export default function CompanyAccountingDashboard({
             activeModuleId={activeTab}
             openModuleIds={openTabs.map(t => t.moduleId)}
             onOpenModule={handleOpenModuleInTab}
-            onOpenNewTabModal={() => setShowNewTabModal(true)}
+            onOpenNewTabModal={() => handleOpenModuleInTab('home')}
             onOpenQuickAccessConfig={() => setShowQuickAccessConfig(true)}
             pinnedModuleIds={pinnedQuickAccessIds}
           />
@@ -9889,7 +9889,7 @@ export default function CompanyAccountingDashboard({
           activeModuleId={activeTab}
           openModuleIds={openTabs.map(t => t.moduleId)}
           onOpenModule={handleOpenModuleInTab}
-          onOpenNewTabModal={() => setShowNewTabModal(true)}
+          onOpenNewTabModal={() => handleOpenModuleInTab('home')}
           onOpenQuickAccessConfig={() => setShowQuickAccessConfig(true)}
           pinnedModuleIds={pinnedQuickAccessIds}
         />

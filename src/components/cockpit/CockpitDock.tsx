@@ -130,28 +130,28 @@ export const CockpitDock: React.FC<CockpitDockProps> = ({
         onClick={() => { onChangePosition('left'); setShowPositionMenu(false); }}
         className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer ${position === 'left' ? 'text-slate-900 font-bold bg-slate-100' : ''}`}
       >
-        <span className="flex items-center gap-2">⬅️ Lateral Izquierdo</span>
+        <span className="flex items-center gap-2"> Lateral Izquierdo</span>
         {position === 'left' && <span className="text-[10px] text-slate-600 font-bold">Activo</span>}
       </button>
       <button
         onClick={() => { onChangePosition('right'); setShowPositionMenu(false); }}
         className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer ${position === 'right' ? 'text-slate-900 font-bold bg-slate-100' : ''}`}
       >
-        <span className="flex items-center gap-2">➡️ Lateral Derecho</span>
+        <span className="flex items-center gap-2"> Lateral Derecho</span>
         {position === 'right' && <span className="text-[10px] text-slate-600 font-bold">Activo</span>}
       </button>
       <button
         onClick={() => { onChangePosition('bottom'); setShowPositionMenu(false); }}
         className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer ${position === 'bottom' ? 'text-slate-900 font-bold bg-slate-100' : ''}`}
       >
-        <span className="flex items-center gap-2">⬇️ Flotante al Pie</span>
+        <span className="flex items-center gap-2"> Flotante al Pie</span>
         {position === 'bottom' && <span className="text-[10px] text-slate-600 font-bold">Activo</span>}
       </button>
       <button
         onClick={() => { onChangePosition('hidden'); setShowPositionMenu(false); }}
         className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-rose-50 text-rose-600 transition-colors cursor-pointer border-t border-slate-100 mt-1"
       >
-        <span className="flex items-center gap-2">👁️ Ocultar Dock</span>
+        <span className="flex items-center gap-2"> Ocultar Dock</span>
         <span className="text-[9px] font-mono text-slate-400">Ctrl+D</span>
       </button>
     </div>

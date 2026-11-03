@@ -442,7 +442,7 @@ export default function PlantillasYCargaMasivaView({
         errors
       });
 
-      alert(`✅ Plan de Cuentas importado con éxito: ${successCount} cuentas registradas/actualizadas con exigibilidad de análisis.`);
+      alert(`Plan de Cuentas importado con éxito: ${successCount} cuentas registradas/actualizadas con exigibilidad de análisis.`);
     } catch (err: any) {
       console.error('Error importing chart of accounts:', err);
       alert('Error en la importación: ' + err.message);
@@ -608,7 +608,7 @@ export default function PlantillasYCargaMasivaView({
         errors
       });
 
-      alert(`✅ Maestro de Auxiliares importado con éxito: ${successCount} clientes/proveedores registrados.`);
+      alert(`Maestro de Auxiliares importado con éxito: ${successCount} clientes/proveedores registrados.`);
     } catch (err: any) {
       console.error('Error importing auxiliaries:', err);
       alert('Error en la importación de auxiliares: ' + err.message);
@@ -623,7 +623,6 @@ export default function PlantillasYCargaMasivaView({
       <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-2xl">📥</span>
             <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase">
               Centro de Cargas Masivas y Plantillas de Importación
             </h3>
@@ -644,7 +643,7 @@ export default function PlantillasYCargaMasivaView({
               : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
-          <span>📁 Descarga de Plantillas Oficiales</span>
+          <span> Descarga de Plantillas Oficiales</span>
         </button>
 
         <button
@@ -655,7 +654,7 @@ export default function PlantillasYCargaMasivaView({
               : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
-          <span>📑 Importar Plan de Cuentas</span>
+          <span> Importar Plan de Cuentas</span>
           <span className="bg-slate-100 text-slate-700 px-1.5 py-0.2 rounded-full text-[10px]">{accounts.length} actuales</span>
         </button>
 
@@ -667,7 +666,7 @@ export default function PlantillasYCargaMasivaView({
               : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
-          <span>👥 Importar Clientes y Proveedores (Auxiliares)</span>
+          <span> Importar Clientes y Proveedores (Auxiliares)</span>
           <span className="bg-slate-100 text-slate-700 px-1.5 py-0.2 rounded-full text-[10px]">{auxiliaries.length} actuales</span>
         </button>
       </div>
@@ -689,7 +688,6 @@ export default function PlantillasYCargaMasivaView({
             <div className="p-5 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 flex flex-col justify-between space-y-4 transition-all">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-xl">📑</span>
                   <h5 className="font-bold text-sm text-slate-900">Plantilla: Plan de Cuentas</h5>
                 </div>
                 <p className="text-xs text-slate-600">
@@ -706,7 +704,6 @@ export default function PlantillasYCargaMasivaView({
                   onClick={downloadPlanCuentasTemplate}
                   className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center justify-center gap-2"
                 >
-                  <span>📥</span>
                   <span>Descargar Plantilla Plan de Cuentas</span>
                 </button>
                 <button
@@ -722,7 +719,6 @@ export default function PlantillasYCargaMasivaView({
             <div className="p-5 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 flex flex-col justify-between space-y-4 transition-all">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-xl">👥</span>
                   <h5 className="font-bold text-sm text-slate-900">Plantilla: Clientes y Proveedores</h5>
                 </div>
                 <p className="text-xs text-slate-600">
@@ -739,7 +735,6 @@ export default function PlantillasYCargaMasivaView({
                   onClick={downloadAuxiliaresTemplate}
                   className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center justify-center gap-2"
                 >
-                  <span>📥</span>
                   <span>Descargar Plantilla Auxiliares</span>
                 </button>
                 <button
@@ -755,7 +750,6 @@ export default function PlantillasYCargaMasivaView({
             <div className="p-5 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 flex flex-col justify-between space-y-4 transition-all">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-xl">⚡</span>
                   <h5 className="font-bold text-sm text-slate-900">Plantilla: Comprobantes Contables</h5>
                 </div>
                 <p className="text-xs text-slate-600">
@@ -773,7 +767,6 @@ export default function PlantillasYCargaMasivaView({
                   onClick={downloadComprobantesExcelTemplate}
                   className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <span>📊</span>
                   <span>Descargar Plantilla Excel (.xlsx)</span>
                 </button>
                 <button
@@ -781,11 +774,10 @@ export default function PlantillasYCargaMasivaView({
                   onClick={downloadComprobantesTemplate}
                   className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <span>📥</span>
                   <span>Descargar Plantilla CSV (.csv)</span>
                 </button>
                 <div className="text-center">
-                  <span className="text-[10px] text-slate-500">Disponible en sub-menú: ⚡ Carga Masiva Comprobantes</span>
+                  <span className="text-[10px] text-slate-500">Disponible en sub-menú:  Carga Masiva Comprobantes</span>
                 </div>
               </div>
             </div>
@@ -809,7 +801,6 @@ export default function PlantillasYCargaMasivaView({
               onClick={downloadPlanCuentasTemplate}
               className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg border border-slate-300 transition-colors flex items-center gap-1.5"
             >
-              <span>📥</span>
               <span>Descargar Plantilla CSV</span>
             </button>
           </div>
@@ -845,7 +836,6 @@ export default function PlantillasYCargaMasivaView({
               onClick={handleImportPlanCuentas}
               className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-black rounded-lg shadow-xs transition-colors flex items-center gap-2"
             >
-              <span>⚡</span>
               <span>{isProcessing ? 'Procesando e Importando...' : 'Importar y Guardar Cuentas'}</span>
             </button>
           </div>
@@ -856,7 +846,7 @@ export default function PlantillasYCargaMasivaView({
               importResults.errorCount === 0 ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-amber-50 border-amber-200 text-amber-900'
             }`}>
               <div className="font-bold flex items-center gap-2">
-                <span>{importResults.errorCount === 0 ? '✅' : '⚠️'}</span>
+                <span>{importResults.errorCount === 0 ? '' : ''}</span>
                 <span>
                   Resumen: {importResults.successCount} cuentas importadas correctamente. {importResults.errorCount > 0 && `(${importResults.errorCount} errores encontrados)`}
                 </span>
@@ -888,16 +878,15 @@ export default function PlantillasYCargaMasivaView({
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowUpgradeModal(true)}
-                className="px-3.5 py-1.5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white text-xs font-black rounded-lg shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
+                className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-lg shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
               >
                 <Sparkles className="w-3.5 h-3.5 text-indigo-200" />
-                <span>⚡ Asistente de Upgrade Excel</span>
+                <span> Asistente de Upgrade Excel</span>
               </button>
               <button
                 onClick={downloadAuxiliaresTemplate}
                 className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg border border-slate-300 transition-colors flex items-center gap-1.5"
               >
-                <span>📥</span>
                 <span>Descargar Plantilla Auxiliares</span>
               </button>
             </div>
@@ -934,7 +923,6 @@ export default function PlantillasYCargaMasivaView({
               onClick={handleImportAuxiliares}
               className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-black rounded-lg shadow-xs transition-colors flex items-center gap-2"
             >
-              <span>⚡</span>
               <span>{isProcessing ? 'Procesando e Importando...' : 'Importar y Guardar Auxiliares'}</span>
             </button>
           </div>
@@ -945,7 +933,7 @@ export default function PlantillasYCargaMasivaView({
               importResults.errorCount === 0 ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-amber-50 border-amber-200 text-amber-900'
             }`}>
               <div className="font-bold flex items-center gap-2">
-                <span>{importResults.errorCount === 0 ? '✅' : '⚠️'}</span>
+                <span>{importResults.errorCount === 0 ? '' : ''}</span>
                 <span>
                   Resumen: {importResults.successCount} auxiliares registrados/actualizados. {importResults.errorCount > 0 && `(${importResults.errorCount} errores encontrados)`}
                 </span>

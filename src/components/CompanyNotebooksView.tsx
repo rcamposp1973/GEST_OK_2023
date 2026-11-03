@@ -291,7 +291,7 @@ export default function CompanyNotebooksView({
       await setDoc(subRef, { createdAt: trialData.createdAt || Timestamp.now(), isSubscribed: true }, { merge: true });
       setTrialData(prev => ({ ...prev, isSubscribed: true }));
       setShowUpgradeModal(false);
-      alert('¡Suscripción al Módulo de Cuadernos Inteligentes activada con éxito!');
+      alert('¡Suscripción al Módulo de Cuadernos activada con éxito!');
     } catch (e) {
       console.error("Error activating subscription:", e);
     }
@@ -301,7 +301,7 @@ export default function CompanyNotebooksView({
     return (
       <div className="p-12 text-center text-slate-500">
         <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-3 text-indigo-600" />
-        <p className="text-sm font-medium">Cargando Cuadernos Inteligentes de {company.name}...</p>
+        <p className="text-sm font-medium">Cargando Cuadernos de {company.name}...</p>
       </div>
     );
   }
@@ -309,7 +309,7 @@ export default function CompanyNotebooksView({
   return (
     <div className="space-y-4 max-w-7xl mx-auto pb-12">
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 rounded-xl shadow-lg border border-indigo-900/40 flex flex-wrap items-center justify-between gap-4">
+      <div className="bg-slate-900 text-white p-6 rounded-xl shadow-lg border border-indigo-900/40 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           {onBack && (
             <button
@@ -325,7 +325,7 @@ export default function CompanyNotebooksView({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold tracking-tight">Cuadernos Contables Inteligentes</h1>
+              <h1 className="text-xl font-bold tracking-tight">Cuadernos Contables</h1>
               <span className="bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2.5 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1">
                 <Sparkles className="w-3 h-3 text-indigo-400" /> IA Activa
               </span>
@@ -352,7 +352,7 @@ export default function CompanyNotebooksView({
           {!trialData.isSubscribed && (
             <button
               onClick={() => setShowUpgradeModal(true)}
-              className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white text-xs font-bold rounded-lg shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+              className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg shadow-md transition-all cursor-pointer flex items-center gap-1.5"
             >
               <Sparkles className="w-3.5 h-3.5" /> Contratar Add-on
             </button>
@@ -538,7 +538,7 @@ export default function CompanyNotebooksView({
                   </div>
 
                   {/* AI Copilot Query Box inside Notebook */}
-                  <div className="p-4 bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 rounded-xl space-y-3">
+                  <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-xl space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className="p-2 bg-indigo-600 text-white rounded-lg shadow-xs">
@@ -674,7 +674,7 @@ export default function CompanyNotebooksView({
               <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
                 <Sparkles className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-slate-950">Activar Módulo Add-on: Cuadernos Inteligentes</h3>
+              <h3 className="text-lg font-bold text-slate-950">Activar Módulo Add-on: Cuadernos</h3>
               <p className="text-xs text-slate-600 max-w-sm mx-auto">
                 Disfruta de cuadernos contables ilimitados por empresa, notas estructuradas, checklists y asistente IA con Gemini en tiempo real.
               </p>
@@ -704,7 +704,7 @@ export default function CompanyNotebooksView({
               </button>
               <button
                 onClick={handleActivateSubscription}
-                className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white text-xs font-bold rounded-lg shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-md transition-all cursor-pointer flex items-center gap-1.5"
               >
                 <Sparkles className="w-4 h-4" /> Activar Suscripción Ahora
               </button>

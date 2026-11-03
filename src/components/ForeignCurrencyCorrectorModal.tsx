@@ -376,7 +376,7 @@ export default function ForeignCurrencyCorrectorModal({
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col border border-slate-200 overflow-hidden">
         
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-emerald-600 to-teal-700 text-white flex items-center justify-between shadow-sm">
+        <div className="px-6 py-4 border-b border-slate-200 bg-emerald-600 text-white flex items-center justify-between shadow-sm">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-white/10 rounded-xl backdrop-blur-sm border border-white/20">
               <DollarSign className="w-6 h-6 text-white" />

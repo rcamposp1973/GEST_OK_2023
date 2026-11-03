@@ -129,7 +129,7 @@ export default function BankCartolaSmartImportModal({
     if (!parsedPreview) return;
 
     if (parsedPreview.newLines.length === 0 && parsedPreview.duplicateCount > 0) {
-      alert(`⚠️ Todos los movimientos detectados (${parsedPreview.duplicateCount}) ya se encuentran registrados en la cartola. No se agregaron duplicados.`);
+      alert(`Todos los movimientos detectados (${parsedPreview.duplicateCount}) ya se encuentran registrados en la cartola. No se agregaron duplicados.`);
       onClose();
       return;
     }
@@ -168,7 +168,7 @@ export default function BankCartolaSmartImportModal({
             <div>
               <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
                 <FileSpreadsheet className="w-5 h-5 text-indigo-600" />
-                <span>Lectura Inteligente y Fusión de Cartolas Bancarias</span>
+                <span>Importar cartola bancaria</span>
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
                 Cuenta: <span className="font-bold text-slate-800">{selectedBankAccount?.name} ({selectedBankAccount?.code})</span> | Período: <span className="font-bold text-indigo-700">{selectedPeriod}</span>
@@ -189,10 +189,10 @@ export default function BankCartolaSmartImportModal({
             <Sparkles className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
             <div>
               <div className="font-bold text-indigo-900 flex items-center gap-2">
-                <span>Carga Acumulativa Inteligente Activa (Múltiples Cartolas en el Mismo Mes)</span>
+                <span>Carga acumulativa: puedes cargar varias cartolas del mismo mes</span>
                 {conciliatedCount > 0 && (
                   <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded">
-                    🛡️ {conciliatedCount} conciliados protegidos
+                     {conciliatedCount} conciliados protegidos
                   </span>
                 )}
               </div>
@@ -207,7 +207,7 @@ export default function BankCartolaSmartImportModal({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs">
           <div>
             <label className="block font-bold text-slate-700 mb-1">
-              🏦 Banco Emisor de la Cartola:
+               Banco Emisor de la Cartola:
             </label>
             <select
               value={bankTemplateId}
@@ -225,7 +225,7 @@ export default function BankCartolaSmartImportModal({
 
           <div>
             <label className="block font-bold text-slate-700 mb-1">
-              💰 Saldo Apertura / Inicial del Mes ($):
+               Saldo Apertura / Inicial del Mes ($):
             </label>
             <input
               type="number"

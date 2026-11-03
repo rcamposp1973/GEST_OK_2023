@@ -85,7 +85,7 @@ export default function PublicLandingAiAssistant() {
     {
       id: 'm1',
       sender: 'ai',
-      text: '¡Hola! 👋 Soy el asistente virtual de Pulso Contable / Gest_OK. ¿En qué puedo ayudarte a conocer hoy sobre nuestro sistema contable y tributario?',
+      text: '¡Hola!  Soy el asistente virtual de Pulso Contable / Gest_OK. ¿En qué puedo ayudarte a conocer hoy sobre nuestro sistema contable y tributario?',
       time: 'Ahora',
       options: [
         '¿Qué funcionalidades incluye el sistema?',
@@ -276,7 +276,7 @@ export default function PublicLandingAiAssistant() {
           {
             id: `lead-ack-${Date.now()}`,
             sender: 'ai',
-            text: `¡Muchas gracias ${leadFormData.name}! ✨ Tus datos fueron recibidos con éxito. Nuestro equipo te contactará muy pronto para coordinar una demostración personalizada.`,
+            text: `¡Muchas gracias ${leadFormData.name}!  Tus datos fueron recibidos con éxito. Nuestro equipo te contactará muy pronto para coordinar una demostración personalizada.`,
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             options: ['¿Qué módulos incluye el sistema?', '¿Cómo sincroniza con el SII?']
           }
@@ -348,7 +348,7 @@ export default function PublicLandingAiAssistant() {
 
               <button
                 onClick={() => setIsOpen(true)}
-                className="group relative flex items-center gap-3 bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-800 text-white px-4 py-3 rounded-full shadow-xl shadow-indigo-900/30 hover:shadow-indigo-600/40 hover:scale-105 transition-all duration-300 border border-indigo-400/40 cursor-pointer"
+                className="group relative flex items-center gap-3 bg-indigo-600 text-white px-4 py-3 rounded-full shadow-xl shadow-indigo-900/30 hover:shadow-indigo-600/40 hover:scale-105 transition-all duration-300 border border-indigo-400/40 cursor-pointer"
                 aria-label="Abrir Asistente Virtual Gest_OK"
               >
                 <div className="relative flex items-center justify-center">
@@ -397,7 +397,7 @@ export default function PublicLandingAiAssistant() {
             <div className="w-[360px] sm:w-[400px] h-[540px] max-h-[85vh] bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-200 font-sans z-50">
               
               {/* Header del Chat */}
-              <div className="bg-gradient-to-r from-indigo-900 via-slate-900 to-slate-900 p-3.5 border-b border-slate-800 flex items-center justify-between">
+              <div className="bg-indigo-900 p-3.5 border-b border-slate-800 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <div className="relative">
                     <AnimatedOkLogo size="md" />

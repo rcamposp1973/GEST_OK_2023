@@ -45,14 +45,14 @@ export const SYSTEM_MODULES_CATALOG: SystemModuleMetadata[] = [
     label: 'Contabilidad Base & Libros Oficiales',
     category: 'CONTABILIDAD',
     description: 'Vouchers contables, Libro Diario, Libro Mayor, Auxiliares de Cuentas Corrientes y Balance 8 Columnas Tributario.',
-    icon: '📚'
+    icon: ''
   },
   {
     key: 'ifrsAuditoria',
     label: 'Balance IFRS & Auditor de EEFF',
     category: 'CONTABILIDAD',
     description: 'Balance Clasificado IFRS, Estado de Resultados por Función/Naturaleza y Auditoría de Estados Financieros con dictamen.',
-    icon: '⚖️',
+    icon: '',
     isAddonForBasic: true
   },
   // 2. Tributario
@@ -61,14 +61,14 @@ export const SYSTEM_MODULES_CATALOG: SystemModuleMetadata[] = [
     label: 'Registro de Compras y Ventas (RCV SII)',
     category: 'TRIBUTARIO',
     description: 'Sincronización e importación automática RCV (Compras, Ventas, Honorarios BHR), centralización contable en 1 click.',
-    icon: '⚡'
+    icon: ''
   },
   {
     key: 'formulario29',
     label: 'Formulario 29 Mensual (F29 Oficial)',
     category: 'TRIBUTARIO',
     description: 'Propuesta automática F29 con Códigos SII oficiales (538, 537, 504, 151, 62), PPM dinámico y exportación.',
-    icon: '📋'
+    icon: ''
   },
   // 3. Bancos y Tesorería
   {
@@ -76,14 +76,14 @@ export const SYSTEM_MODULES_CATALOG: SystemModuleMetadata[] = [
     label: 'Importación Masiva de Cartolas Bancarias',
     category: 'BANCOS_TESORERIA',
     description: 'Carga de extractos bancarios en Excel/CSV (Banco de Chile, Santander, BCI, BancoEstado, Scotiabank, Itaú, etc.).',
-    icon: '🏦'
+    icon: ''
   },
   {
     key: 'conciliacionBancaria',
     label: 'Conciliación Bancaria Inteligente',
     category: 'BANCOS_TESORERIA',
     description: 'Cruce automático de movimientos bancarios contra comprobantes contables por monto, fecha y número de documento.',
-    icon: '🔍',
+    icon: '',
     isAddonForBasic: true
   },
   {
@@ -91,7 +91,7 @@ export const SYSTEM_MODULES_CATALOG: SystemModuleMetadata[] = [
     label: 'Tesorería, Nóminas de Pago & Cobranza',
     category: 'BANCOS_TESORERIA',
     description: 'Generación de nóminas bancarias para proveedores, seguimiento de cuentas por cobrar y gestión de cobranza.',
-    icon: '💳',
+    icon: '',
     isAddonForBasic: true
   },
   // 4. Reportes & KPIs
@@ -100,7 +100,7 @@ export const SYSTEM_MODULES_CATALOG: SystemModuleMetadata[] = [
     label: 'Indicadores Financieros (KPIs) & Flujo de Caja',
     category: 'AVANZADO',
     description: 'Tablero ejecutivo con ratios de liquidez, solvencia, rentabilidad, EBITDA y proyección de flujo de caja.',
-    icon: '📊',
+    icon: '',
     isAddonForBasic: true
   },
   // 5. Comercial & Inventario
@@ -109,7 +109,7 @@ export const SYSTEM_MODULES_CATALOG: SystemModuleMetadata[] = [
     label: 'Módulo Comercial, Emisión DTE & Kardex',
     category: 'GESTION_COMERCIAL',
     description: 'Facturación Electrónica DTE, catálogo de productos/servicios, cotizaciones, órdenes de compra e inventario Kardex PMP.',
-    icon: '📦',
+    icon: '',
     isAddonForBasic: true
   },
   // 6. Personal & Remuneraciones
@@ -118,7 +118,7 @@ export const SYSTEM_MODULES_CATALOG: SystemModuleMetadata[] = [
     label: 'Personal, Liquidaciones & Previred',
     category: 'RECURSOS_HUMANOS',
     description: 'Fichas de empleados, contratos, cálculo de liquidaciones de sueldo con topes legales, archivo Previred (105 campos) y LRD DT.',
-    icon: '👥',
+    icon: '',
     isAddonForBasic: true
   },
   // 7. Visor para Clientes
@@ -127,7 +127,7 @@ export const SYSTEM_MODULES_CATALOG: SystemModuleMetadata[] = [
     label: 'Visor / Portal de Clientes',
     category: 'AVANZADO',
     description: 'Acceso seguro para que los clientes del estudio o empresa consulten sus balances, F29 y reportes en tiempo real.',
-    icon: '🌐',
+    icon: '',
     isAddonForBasic: true
   },
   // 8. Copiloto IA
@@ -136,7 +136,7 @@ export const SYSTEM_MODULES_CATALOG: SystemModuleMetadata[] = [
     label: 'Copiloto de Auditoría IA & Cuadernos',
     category: 'AVANZADO',
     description: 'Asistente de inteligencia artificial para detección preventiva de inconsistencias tributarias y cuadernos de análisis.',
-    icon: '✨',
+    icon: '',
     isAddonForBasic: true
   }
 ];
@@ -299,15 +299,15 @@ export const OFFICIAL_SUBSCRIPTION_PLANS: Record<StudyPlanCode, SubscriptionPlan
     priceText: 'UF 0,7 + IVA',
     period: '/ mes + IVA',
     popular: false,
-    badge: 'Agéntico 2040 ⚡ / 1 Empresa',
+    badge: 'Agéntico 2040  / 1 Empresa',
     subtitle: '1 empresa con Auditor Autónomo de Cuadraturas 2040.',
     description: 'Ideal para contadores individuales que desean auditar en tiempo real con agentes autónomos.',
     maxCompanies: 1,
     maxUsers: 1,
     features: [
       '1 Empresa / RUT Comercial',
-      '🤖 Agente Auditor Autónomo 2040 en tiempo real',
-      '⚡ Copiloto Tributario F29 con alertas preventivas SII',
+      'Agente Auditor Autónomo 2040 en tiempo real',
+      'Copiloto Tributario F29 con alertas preventivas SII',
       'Contabilidad Base y Libros Oficiales',
       'Sincronización RCV Automática con SII'
     ],
@@ -335,7 +335,7 @@ export const OFFICIAL_SUBSCRIPTION_PLANS: Record<StudyPlanCode, SubscriptionPlan
     priceText: 'UF 1,6 + IVA',
     period: '/ mes + IVA',
     popular: false,
-    badge: 'Agéntico 2040 ⚡ / 10 Empresas',
+    badge: 'Agéntico 2040  / 10 Empresas',
     subtitle: 'Plan para 2 usuarios y 10 empresas con Agentes Autónomos.',
     description: 'Estudios contables que automatizan conciliaciones, detección de descuadraturas y reportes ejecutivos.',
     maxCompanies: 10,
@@ -343,8 +343,8 @@ export const OFFICIAL_SUBSCRIPTION_PLANS: Record<StudyPlanCode, SubscriptionPlan
     features: [
       '10 Empresas / Clientes',
       '2 Usuarios: 1 Administrador + 1 Analista',
-      '🤖 Agente Auditor Autónomo 2040 continuo',
-      '⚡ Copiloto Tributario F29 y Cruce RCV',
+      'Agente Auditor Autónomo 2040 continuo',
+      'Copiloto Tributario F29 y Cruce RCV',
       'Conciliación Bancaria Agéntica Inteligente',
       'Balance 8 Columnas e IFRS Auditado'
     ],
@@ -372,7 +372,7 @@ export const OFFICIAL_SUBSCRIPTION_PLANS: Record<StudyPlanCode, SubscriptionPlan
     priceText: 'UF 3,2 + IVA',
     period: '/ mes + IVA',
     popular: true,
-    badge: 'Agéntico 2040 ⚡ / 100 Empresas',
+    badge: 'Agéntico 2040  / 100 Empresas',
     subtitle: 'El estándar del 2040 para 4 usuarios y 100 empresas.',
     description: 'Máximo rendimiento para firmas contables con auditoría autónoma 24/7 y generación automática de dictámenes.',
     maxCompanies: 100,
@@ -380,8 +380,8 @@ export const OFFICIAL_SUBSCRIPTION_PLANS: Record<StudyPlanCode, SubscriptionPlan
     features: [
       '100 Empresas / Clientes',
       '4 Usuarios: 1 Administrador + 3 Analistas',
-      '🤖 Centro de Mando Agéntico 2040 Completo',
-      '⚡ Copiloto SII 24/7 y Auditor Preventivo F29',
+      'Centro de Mando Agéntico 2040 Completo',
+      'Copiloto SII 24/7 y Auditor Preventivo F29',
       'Conciliación Bancaria Automática con IA',
       'Balance 8 Columnas e IFRS con Dictamen',
       'Visor para Clientes con Asistente Virtual'
@@ -410,16 +410,16 @@ export const OFFICIAL_SUBSCRIPTION_PLANS: Record<StudyPlanCode, SubscriptionPlan
     priceText: 'Desde UF 5,3 + IVA',
     period: '/ mes + IVA',
     popular: false,
-    badge: 'Pyme Agéntica 2040 ⚡',
+    badge: 'Pyme Agéntica 2040 ',
     subtitle: 'CFO Virtual Autónomo, Cobranza Inteligente y Cazador de Fugas.',
     description: 'Para empresas y pymes que desean automatizar cobranzas WhatsApp, detectar fugas de dinero y proyectar flujo de caja.',
     maxCompanies: 50,
     maxUsers: 10,
     features: [
-      '🤖 Agente de Cobranza Inteligente WhatsApp',
-      '🛡️ Cazador de Fugas de Dinero y Gastos Fantasma',
-      '💬 Asistente Financiero Ejecutivo CFO 2040 en vivo',
-      '📈 Proyección de Flujo de Caja Predictivo a 30/60/90 días',
+      'Agente de Cobranza Inteligente WhatsApp',
+      'Cazador de Fugas de Dinero y Gastos Fantasma',
+      'Asistente Financiero Ejecutivo CFO 2040 en vivo',
+      'Proyección de Flujo de Caja Predictivo a 30/60/90 días',
       'Facturación DTE, Inventario Kardex y Tesorería',
       'Soporte prioritario y configuración personalizada'
     ],

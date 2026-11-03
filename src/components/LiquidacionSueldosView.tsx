@@ -273,10 +273,10 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
       if (latest) {
         if (latest.uf > 0) setLiveUfOverride(latest.uf);
         if (latest.utm > 0) setLiveUtmOverride(latest.utm);
-        setSyncNotice(`✅ Indicadores sincronizados con éxito desde fuentes oficiales: UF $${latest.uf.toLocaleString('es-CL')} | UTM $${latest.utm.toLocaleString('es-CL')} (al ${latest.date})`);
+        setSyncNotice(`Indicadores sincronizados con éxito desde fuentes oficiales: UF $${latest.uf.toLocaleString('es-CL')} | UTM $${latest.utm.toLocaleString('es-CL')} (al ${latest.date})`);
       }
     } catch (err: any) {
-      setSyncNotice('⚠️ No se pudo conectar al servicio en vivo. Se mantienen los parámetros matemáticos oficiales certificados.');
+      setSyncNotice('No se pudo conectar al servicio en vivo. Se mantienen los parámetros matemáticos oficiales certificados.');
     } finally {
       setIsSyncingIndicators(false);
       setTimeout(() => setSyncNotice(''), 7000);
@@ -455,7 +455,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
         localStorage.setItem(`gestok_previred_params_${companyId}_${periodStr}`, JSON.stringify(toSave));
       } catch {}
 
-      setSyncNotice(`✅ Indicadores para el período [${periodStr}] guardados y aplicados exitosamente.`);
+      setSyncNotice(`Indicadores para el período [${periodStr}] guardados y aplicados exitosamente.`);
       setIsEditingPeriodIndicators(false);
       setTimeout(() => setSyncNotice(''), 7000);
     } catch (err: any) {
@@ -540,7 +540,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
   const handleSaveAllSlips = async () => {
     try {
       await onSavePayrollSlips(slipsForPeriod);
-      alert(`✅ Se han guardado exitosamente las ${slipsForPeriod.length} liquidaciones de sueldo para el período ${periodStr}.`);
+      alert(`Se han guardado exitosamente las ${slipsForPeriod.length} liquidaciones de sueldo para el período ${periodStr}.`);
     } catch (err) {
       console.error('Error al guardar liquidaciones:', err);
       alert('Error al guardar liquidaciones.');
@@ -554,7 +554,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
     if (confirm(confirmMsg)) {
       try {
         await onResetPayrollSlips(periodStr);
-        alert(`✅ Se han eliminado las liquidaciones guardadas del período ${periodStr}.`);
+        alert(`Se han eliminado las liquidaciones guardadas del período ${periodStr}.`);
       } catch (err: any) {
         alert('Error al resetear el período: ' + (err.message || 'Error en el servidor'));
       }
@@ -564,11 +564,11 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
   // Resetear todo el historial de remuneraciones de la empresa
   const handleResetAllPeriods = async () => {
     if (!onResetPayrollSlips) return;
-    const confirmMsg = `⚠️ ATENCIÓN: ¿Está seguro de ELIMINAR TODO EL HISTORIAL DE REMUNERACIONES de la empresa ${companyName}?\n\nEsta acción eliminará de la base de datos todas las liquidaciones de todos los períodos.`;
+    const confirmMsg = `ATENCIÓN: ¿Está seguro de ELIMINAR TODO EL HISTORIAL DE REMUNERACIONES de la empresa ${companyName}?\n\nEsta acción eliminará de la base de datos todas las liquidaciones de todos los períodos.`;
     if (confirm(confirmMsg)) {
       try {
         await onResetPayrollSlips();
-        alert('✅ Se ha limpiado exitosamente todo el historial de remuneraciones.');
+        alert('Se ha limpiado exitosamente todo el historial de remuneraciones.');
       } catch (err: any) {
         alert('Error al limpiar el historial: ' + (err.message || 'Error en el servidor'));
       }
@@ -863,7 +863,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
       setCreatedVoucherId(newVoucherId);
       await onSavePayrollSlips(slipsForPeriod.map(s => ({ ...s, estado: 'CENTRALIZADA', voucherId: newVoucherId })));
 
-      alert(`🎉 Comprobante Contable de Remuneraciones Generado con Éxito!\n\n` +
+      alert(`Comprobante Contable de Remuneraciones Generado con Éxito!\n\n` +
         `• Folio: ${voucherPayload.voucherNumber}\n` +
         `• Tipo: Traspaso\n` +
         `• Total Debe: $${lines.reduce((sum, l) => sum + (l.debit || 0), 0).toLocaleString('es-CL')}\n` +
@@ -1169,7 +1169,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
       />
 
       {/* Banner de Parámetros Previsionales del Período */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-xl p-4 shadow-sm border border-slate-800">
+      <div className="bg-slate-900 text-white rounded-xl p-4 shadow-sm border border-slate-800">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
           <div className="flex items-center gap-2">
             <Shield className="w-4 h-4 text-amber-400" />
@@ -1354,7 +1354,6 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
       {isFuturePeriodBlocked ? (
         <div className="bg-slate-900 border-2 border-amber-500 rounded-3xl p-8 max-w-2xl mx-auto my-10 text-center text-white shadow-2xl space-y-6">
           <div className="w-16 h-16 bg-amber-500/20 text-amber-400 rounded-2xl flex items-center justify-center mx-auto border border-amber-500/40 text-3xl shadow-inner">
-            🔒
           </div>
           <div className="space-y-2">
             <span className="px-3 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-bold rounded-full uppercase tracking-wider inline-block">
@@ -2206,7 +2205,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
             </div>
 
             {/* Resumen Final: Alcance Líquido y Líquido a Pagar */}
-            <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-5 rounded-xl mb-6 flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div className="bg-slate-900 text-white p-5 rounded-xl mb-6 flex flex-col sm:flex-row justify-between items-center gap-3">
               <div>
                 <span className="text-[11px] font-bold uppercase tracking-widest text-emerald-400 block">
                   Total Líquido a Pagar (Monto Recibido Conforme)
@@ -2414,7 +2413,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
                   title="Cargar o modificar los indicadores de este período específico (Sueldo mínimo, UF, UTM, SIS, Mutual, AFPs)"
                 >
                   <SlidersHorizontal className="w-3.5 h-3.5" />
-                  <span>✏️ Cargar / Modificar Indicadores de {periodStr}</span>
+                  <span> Cargar / Modificar Indicadores de {periodStr}</span>
                 </button>
 
                 <button
@@ -2689,7 +2688,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
           </div>
 
           {/* Base de Conocimiento Cuaderno Previred & SII + Mantenimiento de Remuneraciones */}
-          <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl p-6 shadow-md border border-slate-800 space-y-4">
+          <div className="bg-slate-900 text-white rounded-2xl p-6 shadow-md border border-slate-800 space-y-4">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">

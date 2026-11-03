@@ -150,7 +150,7 @@ export const OperativaComercialView: React.FC<OperativaComercialViewProps> = ({
     // Validar stock si es venta y producto físico y no permite negativo
     if (opType === 'VENTA' && prod.type === 'PRODUCT' && !prod.allowNegativeStock) {
       if (prod.currentStock < tempQty) {
-        alert(`❌ Stock insuficiente: El producto ${prod.name} tiene solo ${prod.currentStock} ${prod.unitOfMeasure} en bodega y no permite stock negativo.`);
+        alert(`Stock insuficiente: El producto ${prod.name} tiene solo ${prod.currentStock} ${prod.unitOfMeasure} en bodega y no permite stock negativo.`);
         return;
       }
     }
@@ -478,7 +478,7 @@ export const OperativaComercialView: React.FC<OperativaComercialViewProps> = ({
     // Guardar en el estado global
     onSaveDocument(newDoc, generatedMovements, generatedVouchers);
     setIsModalOpen(false);
-    alert(`✅ Operación Comercial #${folio} Registrada con Éxito!\n\n• Documento: ${docType}\n• Total: $${formTotals.totalAmount.toLocaleString('es-CL')}\n• Kardex Actualizado: ${generatedMovements.length} movimientos.\n• Asientos Contables Generados: ${generatedVouchers.length} vouchers en Libro Diario.`);
+    alert(`Operación Comercial #${folio} Registrada con Éxito!\n\n• Documento: ${docType}\n• Total: $${formTotals.totalAmount.toLocaleString('es-CL')}\n• Kardex Actualizado: ${generatedMovements.length} movimientos.\n• Asientos Contables Generados: ${generatedVouchers.length} vouchers en Libro Diario.`);
   };
 
   const formatCLP = (val: number) => {
@@ -820,7 +820,7 @@ export const OperativaComercialView: React.FC<OperativaComercialViewProps> = ({
                       <option value="">-- Seleccionar del Catálogo --</option>
                       {products.map(p => (
                         <option key={p.id} value={p.id}>
-                          [{p.type === 'PRODUCT' ? '📦 PROD' : '🛠️ SERV'}] {p.code} - {p.name} {p.type === 'PRODUCT' ? `(Stock: ${p.currentStock} ${p.unitOfMeasure})` : ''}
+                          [{p.type === 'PRODUCT' ? 'PROD' : 'SERV'}] {p.code} - {p.name} {p.type === 'PRODUCT' ? `(Stock: ${p.currentStock} ${p.unitOfMeasure})` : ''}
                         </option>
                       ))}
                     </select>

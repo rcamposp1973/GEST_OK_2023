@@ -699,7 +699,7 @@ export default function BalanceIFRSView({
           isBalanced ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'bg-rose-50 border-rose-300 text-rose-800'
         }`}>
           <Scale className="w-4 h-4" />
-          <span>{isBalanced ? '✅ Ecuación IFRS Cuadrada: Activo = Pasivo + Patrimonio' : '⚠️ Descuadre Patrimonial'}</span>
+          <span>{isBalanced ? 'Ecuación IFRS Cuadrada: Activo = Pasivo + Patrimonio' : 'Descuadre Patrimonial'}</span>
           {!isBalanced && (
             <span className="font-mono ml-1 bg-rose-200 px-1.5 py-0.5 rounded text-[11px]">Diff: ${diferenciaCuadratura.toLocaleString('es-CL')}</span>
           )}

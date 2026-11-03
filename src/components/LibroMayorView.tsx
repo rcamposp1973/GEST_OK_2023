@@ -378,7 +378,7 @@ export default function LibroMayorView({
       });
 
       alert(
-        `✅ Libro Mayor Oficial Emitido con Éxito\n\n` +
+        `Libro Mayor Oficial Emitido con Éxito\n\n` +
         `• Folios SII Utilizados: N° ${result.startFolio} al N° ${result.endFolio} (${result.pagesCount} página${result.pagesCount > 1 ? 's' : ''})\n` +
         `• Resolución SII: N° ${result.resolutionNumber} del ${result.resolutionDate}\n` +
         `• Formato: Crystal Reports Oficial con Van / Vienen y Timbraje Autorizado.\n` +
@@ -532,7 +532,7 @@ export default function LibroMayorView({
             onChange={(e) => setSelectedAccountId(e.target.value)}
             className="bg-white border border-slate-300 rounded-md px-3 py-1.5 text-xs font-medium text-slate-800 max-w-md focus:ring-2 focus:ring-indigo-500 focus:outline-none"
           >
-            <option value="ALL">🌟 Ver Todas las Cuentas con Movimiento ({accountsWithMovements.length})</option>
+            <option value="ALL"> Ver Todas las Cuentas con Movimiento ({accountsWithMovements.length})</option>
             {accountsWithMovements.map(l => (
               <option key={l.account.id} value={l.account.id}>
                 {l.account.code} - {l.account.name} ({l.movements.length} movs | Saldo: ${l.finalBalance.toLocaleString('es-CL')} {l.balanceType})
@@ -568,7 +568,7 @@ export default function LibroMayorView({
         <div className={`p-3 rounded-lg border shadow-2xs ${globalSummary.difference === 0 ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-rose-50 border-rose-200 text-rose-900'}`}>
           <span className="text-[11px] font-bold uppercase tracking-wider">Cuadratura General Mayor</span>
           <p className="text-lg font-black mt-0.5">
-            {globalSummary.difference === 0 ? '✓ Cuadrado ($0)' : `⚠️ Descuadre: $${globalSummary.difference.toLocaleString('es-CL')}`}
+            {globalSummary.difference === 0 ? '✓ Cuadrado ($0)' : `Descuadre: $${globalSummary.difference.toLocaleString('es-CL')}`}
           </p>
         </div>
       </div>
@@ -576,7 +576,6 @@ export default function LibroMayorView({
       {/* Account Ledgers View */}
       {displayedLedgers.length === 0 ? (
         <div className="bg-white p-12 text-center rounded-xl border border-slate-200 space-y-3">
-          <span className="text-4xl">📚</span>
           <p className="text-slate-600 font-medium">No se encontraron cuentas o movimientos para los filtros seleccionados.</p>
         </div>
       ) : (
@@ -590,7 +589,7 @@ export default function LibroMayorView({
                 className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden"
               >
                 {/* Account Card Header */}
-                <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+                <div className="bg-slate-900 text-white px-4 py-3 flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-3 flex-wrap">
                     <span className="font-mono font-black text-amber-400 text-sm bg-slate-800/80 px-2.5 py-1 rounded border border-slate-700">
                       {ledger.account.code}

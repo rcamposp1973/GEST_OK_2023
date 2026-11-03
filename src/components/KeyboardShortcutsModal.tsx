@@ -123,7 +123,7 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
     },
     {
       keys: ['Alt', '6'],
-      description: 'Ir a Conciliación Bancaria Inteligente',
+      description: 'Ir a Conciliación Bancaria',
       category: 'NAVEGACION',
       actionKey: 'NAV_CONCILIACION'
     },
@@ -230,10 +230,10 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
 
   const categories = [
     { id: 'TODAS', label: 'Todos los Atajos' },
-    { id: 'ACCIONES', label: '⚡ Acciones Rápidas' },
-    { id: 'NAVEGACION', label: '🚀 Módulos (Alt+1..0)' },
-    { id: 'PESTAÑAS', label: '📑 Pestañas Cockpit' },
-    { id: 'SISTEMA', label: '⚙️ Sistema & Vistas' }
+    { id: 'ACCIONES', label: 'Acciones Rápidas' },
+    { id: 'NAVEGACION', label: 'Módulos (Alt+1..0)' },
+    { id: 'PESTAÑAS', label: 'Pestañas Cockpit' },
+    { id: 'SISTEMA', label: 'Sistema & Vistas' }
   ];
 
   return (
@@ -241,7 +241,7 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
       <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-3xl max-h-[88vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         
         {/* Header */}
-        <div className="p-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex justify-between items-center border-b border-indigo-900/50">
+        <div className="p-4 bg-slate-900 text-white flex justify-between items-center border-b border-indigo-900/50">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-xl shadow-inner">
               ⌨️
@@ -346,7 +346,7 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
 
         {/* Footer */}
         <div className="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-600">
-          <span>💡 Presiona <kbd className="font-mono font-bold bg-white px-1.5 py-0.5 rounded border border-slate-300">F1</kbd> o <kbd className="font-mono font-bold bg-white px-1.5 py-0.5 rounded border border-slate-300">Shift + ?</kbd> en cualquier momento para ver esta guía.</span>
+          <span> Presiona <kbd className="font-mono font-bold bg-white px-1.5 py-0.5 rounded border border-slate-300">F1</kbd> o <kbd className="font-mono font-bold bg-white px-1.5 py-0.5 rounded border border-slate-300">Shift + ?</kbd> en cualquier momento para ver esta guía.</span>
           <button
             onClick={onClose}
             className="px-4 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-bold text-xs transition-colors"

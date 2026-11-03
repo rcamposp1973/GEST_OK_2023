@@ -173,19 +173,19 @@ export default function AgenticStudyHub2040({
       let ans = '';
 
       if (q.includes('iva') || q.includes('f29') || q.includes('impuesto')) {
-        ans = `📊 **Diagnóstico Tributario Agéntico 2040**:
+        ans = ` **Diagnóstico Tributario Agéntico 2040**:
 - Ventas Netas del período analizado: **$${f29Stats.ventasNeto.toLocaleString('es-CL')}** (Débito Fiscal: $${f29Stats.debitoTotal.toLocaleString('es-CL')}).
 - Compras Netas: **$${f29Stats.comprasNeto.toLocaleString('es-CL')}** (Crédito Fiscal: $${f29Stats.creditoTotal.toLocaleString('es-CL')}).
 ${f29Stats.impuestoIvaEstimado > 0 
-  ? `🔴 **IVA Determinado a Pagar**: **$${f29Stats.impuestoIvaEstimado.toLocaleString('es-CL')}** (más PPM de $${f29Stats.ppmSugerido.toLocaleString('es-CL')}).` 
-  : `🟢 **Remanente de Crédito Fiscal F29**: **$${f29Stats.remanenteEstimado.toLocaleString('es-CL')}** para imputar al mes siguiente.`}`;
+  ? ` **IVA Determinado a Pagar**: **$${f29Stats.impuestoIvaEstimado.toLocaleString('es-CL')}** (más PPM de $${f29Stats.ppmSugerido.toLocaleString('es-CL')}).` 
+  : ` **Remanente de Crédito Fiscal F29**: **$${f29Stats.remanenteEstimado.toLocaleString('es-CL')}** para imputar al mes siguiente.`}`;
       } else if (q.includes('descuadre') || q.includes('balance') || q.includes('error')) {
-        ans = `⚖️ **Auditoría de Balances 2040**:
+        ans = ` **Auditoría de Balances 2040**:
 - Total comprobantes registrados: **${vouchers.length}**.
 - Hallazgos detectados: **${auditAnalysis.length} observación(es)**.
-- Estado general: ${auditAnalysis.some(a => a.level === 'CRITICO') ? '🔴 Requiere corrección inmediata antes del cierre' : '🟢 Estructura contable consistente y balanceada'}.`;
+- Estado general: ${auditAnalysis.some(a => a.level === 'CRITICO') ? 'Requiere corrección inmediata antes del cierre' : 'Estructura contable consistente y balanceada'}.`;
       } else {
-        ans = `🤖 **Respuesta Agéntica Pulso Contable 2040**:
+        ans = ` **Respuesta Agéntica Pulso Contable 2040**:
 La empresa **${company.name}** (RUT: ${company.rut}) cuenta con **${vouchers.length} comprobantes** y **${rcvDocuments.length} documentos RCV**.
 - Régimen Tributario: **${company.regimenTributario || 'Pro Pyme General (14 D3)'}**.
 - Tasa PPM configurada: **${company.tasaPpm || 0.25}%**.
@@ -209,7 +209,7 @@ La empresa **${company.name}** (RUT: ${company.rut}) cuenta con **${vouchers.len
   return (
     <div className="space-y-6">
       {/* BANNER PRINCIPAL 2040 */}
-      <div className="bg-gradient-to-r from-slate-950 via-violet-950 to-indigo-950 text-white p-6 rounded-3xl border border-violet-800/40 shadow-xl relative overflow-hidden">
+      <div className="bg-slate-950 text-white p-6 rounded-3xl border border-violet-800/40 shadow-xl relative overflow-hidden">
         <div className="absolute right-0 top-0 translate-x-10 -translate-y-10 w-96 h-96 bg-violet-600/10 rounded-full blur-3xl pointer-events-none"></div>
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="space-y-1.5">
@@ -219,7 +219,7 @@ La empresa **${company.name}** (RUT: ${company.rut}) cuenta con **${vouchers.len
                 VERSIÓN C1 · ESTUDIO CONTABLE AGÉNTICO 2040
               </span>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-                Auditoría Autónoma Activa 🟢
+                Auditoría Autónoma Activa 
               </span>
             </div>
             <h2 className="text-xl md:text-2xl font-black tracking-tight text-white flex items-center gap-2">
@@ -237,7 +237,7 @@ La empresa **${company.name}** (RUT: ${company.rut}) cuenta con **${vouchers.len
               className="px-4 py-2.5 bg-violet-600 hover:bg-violet-500 active:bg-violet-700 text-white rounded-xl text-xs font-bold shadow-lg shadow-violet-600/30 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
             >
               <RefreshCw className={`w-4 h-4 ${isScanning ? 'animate-spin' : ''}`} />
-              <span>{isScanning ? 'Auditando Base Contable...' : '⚡ Forzar Escaneo Agéntico'}</span>
+              <span>{isScanning ? 'Auditando Base Contable...' : 'Forzar Escaneo Agéntico'}</span>
             </button>
           </div>
         </div>
@@ -493,7 +493,7 @@ La empresa **${company.name}** (RUT: ${company.rut}) cuenta con **${vouchers.len
       )}
 
       {/* CHAT INTERACTIVO CON EL COPILOTO AGÉNTICO */}
-      <div className="bg-gradient-to-r from-slate-900 to-violet-950 text-white p-5 rounded-2xl border border-violet-800/40 shadow-md space-y-3">
+      <div className="bg-slate-900 text-white p-5 rounded-2xl border border-violet-800/40 shadow-md space-y-3">
         <div className="flex items-center gap-2">
           <Bot className="w-5 h-5 text-violet-400" />
           <h3 className="text-xs font-bold text-violet-100">Consultar al Asistente Agéntico del Estudio</h3>

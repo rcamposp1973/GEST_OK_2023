@@ -143,7 +143,7 @@ export const BalancePrintModal: React.FC<BalancePrintModalProps> = ({
                 <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                   isFullyBalanced ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
                 }`}>
-                  {isFullyBalanced ? '✓ Cuadrado' : '⚠️ Descuadrado'}
+                  {isFullyBalanced ? '✓ Cuadrado' : 'Descuadrado'}
                 </span>
               </h3>
               <p className="text-xs text-slate-400">

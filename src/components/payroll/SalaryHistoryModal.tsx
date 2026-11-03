@@ -100,7 +100,7 @@ export const SalaryHistoryModal: React.FC<SalaryHistoryModalProps> = ({
       };
 
       await onSave(updatedEmployee);
-      setNotification(`✅ Nueva vigencia registrada: $${newSalary.toLocaleString('es-CL')} vigente desde ${newStartDate}. El sueldo anterior quedó sin vigencia.`);
+      setNotification(`Nueva vigencia registrada: $${newSalary.toLocaleString('es-CL')} vigente desde ${newStartDate}. El sueldo anterior quedó sin vigencia.`);
       setIsAddingNew(false);
       setTimeout(() => setNotification(''), 4000);
     } catch (error) {
@@ -158,7 +158,7 @@ export const SalaryHistoryModal: React.FC<SalaryHistoryModalProps> = ({
           </div>
 
           {/* Sueldo Actual Resumido */}
-          <div className="bg-gradient-to-r from-indigo-900 to-slate-900 text-white p-4 rounded-xl flex items-center justify-between">
+          <div className="bg-indigo-900 text-white p-4 rounded-xl flex items-center justify-between">
             <div>
               <span className="text-[11px] font-bold text-indigo-200 uppercase tracking-wider block">
                 Sueldo Base Vigente Actual
@@ -305,7 +305,7 @@ export const SalaryHistoryModal: React.FC<SalaryHistoryModalProps> = ({
                               : 'bg-slate-200 text-slate-600'
                           }`}
                         >
-                          {isCurrent ? '🟢 Vigente' : '⚪ Sin Vigencia (Histórico)'}
+                          {isCurrent ? 'Vigente' : 'Sin Vigencia (Histórico)'}
                         </span>
                         <span className="text-sm font-mono font-bold text-slate-900">
                           ${item.baseSalary.toLocaleString('es-CL')} CLP

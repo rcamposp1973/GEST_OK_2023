@@ -264,7 +264,7 @@ export const ActivoFijoView: React.FC<ActivoFijoViewProps> = ({
       };
 
       await onCentralizeVoucher(voucher);
-      alert(`🎉 ¡Comprobante de Traspaso de Depreciación ($${totals.depTrib.toLocaleString('es-CL')}) generado exitosamente en el Libro Diario!`);
+      alert(` ¡Comprobante de Traspaso de Depreciación ($${totals.depTrib.toLocaleString('es-CL')}) generado exitosamente en el Libro Diario!`);
     } catch (err: any) {
       alert("Error al centralizar comprobante: " + err.message);
     } finally {

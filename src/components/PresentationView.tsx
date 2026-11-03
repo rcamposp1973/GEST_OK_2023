@@ -263,25 +263,25 @@ export default function PresentationView() {
   // =========================================================================
 
   // WHATSAPP: MENSAJE PARA GRUPOS
-  const whatsappGroupText = `🇨🇱 *¿CUÁNTAS HORAS PIERDE TU ESTUDIO CONTABLE AL MES DIGITANDO FACTURAS Y CUADRANDO BANCOS A MANO?* ⏱️📊
+  const whatsappGroupText = `🇨🇱 *¿CUÁNTAS HORAS PIERDE TU ESTUDIO CONTABLE AL MES DIGITANDO FACTURAS Y CUADRANDO BANCOS A MANO?* ⏱️
 
 Colegas contadores y administradores, les presento *Pulso Contable*, la plataforma contable en la nube creada en Chile *por contadores para contadores*:
 
-⚡ *Conexión y Rescate RCV Seguro del SII:* Rescata compras, ventas y boletas de honorarios en 2 segundos con máxima seguridad y confidencialidad.
-📥 *Importación Inteligente sin Duplicados:* Cargas los archivos del SII y el sistema detecta duplicados y crea los auxiliares automáticamente.
-🏦 *Conciliación Bancaria en 1 Clic:* Importas cartolas de cualquier banco y concilias facturas pendientes al instante.
-🛡️ *Exigibilidad Estricta de Análisis:* Cero descuadres de RUT o Centro de Costo en auditorías.
-📑 *Formulario 29 y Balance 8 Columnas IFRS:* Listos en tiempo real para cerrar el mes sin trasnoches.
+ *Conexión y Rescate RCV Seguro del SII:* Rescata compras, ventas y boletas de honorarios en 2 segundos con máxima seguridad y confidencialidad.
+ *Importación Inteligente sin Duplicados:* Cargas los archivos del SII y el sistema detecta duplicados y crea los auxiliares automáticamente.
+ *Conciliación Bancaria en 1 Clic:* Importas cartolas de cualquier banco y concilias facturas pendientes al instante.
+ *Exigibilidad Estricta de Análisis:* Cero descuadres de RUT o Centro de Costo en auditorías.
+ *Formulario 29 y Balance 8 Columnas IFRS:* Listos en tiempo real para cerrar el mes sin trasnoches.
 
-🎁 *LANZAMIENTO EXCLUSIVO:*
+ *LANZAMIENTO EXCLUSIVO:*
 Estamos abriendo cupos para el *Programa de Estudios Fundadores*:
-✅ *15 días de prueba 100% gratuita*.
-✅ *Migración asistida* de tus empresas y plan de cuentas.
-✅ *Tarifa preferencial congelada de por vida*.
+ *15 días de prueba 100% gratuita*.
+ *Migración asistida* de tus empresas y plan de cuentas.
+ *Tarifa preferencial congelada de por vida*.
 
-👉 Agenda una demo rápida de 15 minutos o solicita tu acceso aquí:
-📲 *WhatsApp Directo:* +56 9 4631 8783
-🌐 *Web:* https://app.pulsocontable.cl`;
+ Agenda una demo rápida de 15 minutos o solicita tu acceso aquí:
+ *WhatsApp Directo:* +56 9 4631 8783
+ *Web:* https://app.pulsocontable.cl`;
 
   // WHATSAPP: MENSAJE DIRECTO 1 A 1
   const whatsappDirectText = `Hola [Nombre del Contador o Socio], ¿cómo estás? Te escribo porque sé lo desgastante que son los cierres mensuales y la digitación manual de facturas y cartolas bancarias.
@@ -296,32 +296,32 @@ Te invito a probarlo gratis por 15 días con migración asistida de tu primera e
 ¿Tienes 10 minutos esta semana para mostrarte una demo rápida por pantalla? Escríbenos al WhatsApp +56 9 4631 8783 o entra a app.pulsocontable.cl. Un abrazo.`;
 
   // INSTAGRAM: COPY COMPLETO CON HASHTAGS
-  const instagramPostCopy = `¿Sigues cerrando el mes a las 3 AM por culpa de la digitación manual? 😫📉
+  const instagramPostCopy = `¿Sigues cerrando el mes a las 3 AM por culpa de la digitación manual? 
 
 Los sistemas contables tradicionales y softwares obsoletos se quedaron en interfaces lentas, con cobros abusivos por cada usuario extra y sin automatizaciones reales.
 
-Es momento de dar el salto a la contabilidad moderna 🚀
+Es momento de dar el salto a la contabilidad moderna 
 
 Con Pulso Contable gestionas tu estudio contable con tecnología de punta:
-⚡ Rescate y carga automática de Compras, Ventas y Boletas de Honorarios desde el SII con validación anti-duplicados y total seguridad.
-🏦 Conciliación Bancaria en 1 clic de cualquier banco.
-🛡️ Exigibilidad estricta que previene descuadres de análisis antes de guardar.
-📊 Formulario 29 mensual y Balance IFRS de 8 columnas en tiempo real.
+ Rescate y carga automática de Compras, Ventas y Boletas de Honorarios desde el SII con validación anti-duplicados y total seguridad.
+ Conciliación Bancaria en 1 clic de cualquier banco.
+ Exigibilidad estricta que previene descuadres de análisis antes de guardar.
+ Formulario 29 mensual y Balance IFRS de 8 columnas en tiempo real.
 
-🎁 BENEFICIO DE LANZAMIENTO:
+ BENEFICIO DE LANZAMIENTO:
 Súmate hoy al Programa de Estudios Fundadores:
-✅ 15 Días Gratis de acceso completo.
-✅ Migración asistida de tu plan de cuentas y empresas en menos de 48 hrs.
-✅ Tarifa preferencial congelada de por vida.
+ 15 Días Gratis de acceso completo.
+ Migración asistida de tu plan de cuentas y empresas en menos de 48 hrs.
+ Tarifa preferencial congelada de por vida.
 
-👉 Comenta la palabra "DEMO" o entra a app.pulsocontable.cl
-📲 Escríbenos directamente al WhatsApp: +56 9 4631 8783
+ Comenta la palabra "DEMO"o entra a app.pulsocontable.cl
+ Escríbenos directamente al WhatsApp: +56 9 4631 8783
 
 ---
 #PulsoContable #ContadoresChile #ContabilidadChile #PymesChile #EmprendedoresChile #SoftwareContable #FacturaElectronica #SIIChile #OperacionRenta #EstudiosContables #FinanzasChile #GestionPyme #ConciliacionBancaria #Formulario29`;
 
   // FACEBOOK: POST PARA GRUPOS DE CONTADORES Y EMPRENDEDORES
-  const facebookGroupPost = `🚨 ATENCIÓN CONTADORES Y SOCIOS DE ESTUDIOS EN CHILE: ¿Cuánto tiempo le dedican a tareas mecánicas que un software debería hacer solo?
+  const facebookGroupPost = `ATENCIÓN CONTADORES Y SOCIOS DE ESTUDIOS EN CHILE: ¿Cuánto tiempo le dedican a tareas mecánicas que un software debería hacer solo?
 
 Hicimos una encuesta con más de 40 contadores y encontramos 3 dolores comunes:
 1️⃣ Digitar manualmente facturas y notas de crédito en softwares de escritorio obsoletos.
@@ -330,15 +330,15 @@ Hicimos una encuesta con más de 40 contadores y encontramos 3 dolores comunes:
 
 Por eso creamos Pulso Contable (https://app.pulsocontable.cl), la plataforma contable en la nube diseñada exclusivamente para la normativa chilena:
 
-🔹 CONEXIÓN Y RESCATE RCV SEGURO: Carga en segundos compras, ventas y boletas de honorarios con respaldo protegido en la nube.
-🔹 IMPORTADOR INTELIGENTE RCV: Arrastras el archivo del SII y en 3 segundos tienes registradas las compras y ventas con creación automática de fichas de proveedores/clientes.
-🔹 CONCILIACIÓN BANCARIA EN 1 CLIC: Reconoce cargos y abonos de cualquier banco y cruza contra tus facturas pendientes.
-🔹 AUDITORÍA Y F29 EN VIVO: El débito, crédito y retenciones de honorarios se calculan en tiempo real.
+ CONEXIÓN Y RESCATE RCV SEGURO: Carga en segundos compras, ventas y boletas de honorarios con respaldo protegido en la nube.
+ IMPORTADOR INTELIGENTE RCV: Arrastras el archivo del SII y en 3 segundos tienes registradas las compras y ventas con creación automática de fichas de proveedores/clientes.
+ CONCILIACIÓN BANCARIA EN 1 CLIC: Reconoce cargos y abonos de cualquier banco y cruza contra tus facturas pendientes.
+ AUDITORÍA Y F29 EN VIVO: El débito, crédito y retenciones de honorarios se calculan en tiempo real.
 
 Estamos recibiendo a los primeros 25 estudios en el "Programa de Estudios Fundadores":
-🎯 15 días de prueba gratuita.
-🎯 Te ayudamos personalmente a migrar tus planes de cuentas y auxiliares.
-🎯 Precio congelado de por vida con usuarios ilimitados.
+ 15 días de prueba gratuita.
+ Te ayudamos personalmente a migrar tus planes de cuentas y auxiliares.
+ Precio congelado de por vida con usuarios ilimitados.
 
 ¿Te gustaría probarlo en tu estudio? Escribe "QUIERO DEMO" en los comentarios, entra a app.pulsocontable.cl o escríbenos al WhatsApp +56 9 4631 8783.`;
 
@@ -533,7 +533,7 @@ Estamos recibiendo a los primeros 25 estudios en el "Programa de Estudios Fundad
           <span className="text-xl md:text-2xl font-black text-white leading-tight">
             CONCILIACIÓN BANCARIA EN 1
           </span>
-          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-xl bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 border border-emerald-500/50 text-emerald-300 font-black text-xl md:text-2xl shadow-lg">
+          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-xl bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 font-black text-xl md:text-2xl shadow-lg">
             <span>CLIC</span>
             <span className="relative flex items-center justify-center">
               <span className="animate-ping absolute inline-flex h-4 w-4 rounded-full bg-emerald-400 opacity-75"></span>
@@ -571,7 +571,7 @@ Estamos recibiendo a los primeros 25 estudios en el "Programa de Estudios Fundad
             </div>
             <div className="flex items-center justify-center">
               <span className="text-[10px] text-emerald-400 font-bold bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-700 flex items-center gap-1">
-                ⚡ Coincide con Factura N° 4580 (Sodimac)
+                 Coincide con Factura N° 4580 (Sodimac)
               </span>
             </div>
             <div className="flex items-center justify-between text-[10.5px] p-2 bg-slate-950 rounded-lg border border-slate-800">
@@ -615,7 +615,7 @@ Estamos recibiendo a los primeros 25 estudios en el "Programa de Estudios Fundad
               <span className="text-[10px] text-slate-500 block">Compras Netas: $15.343.158</span>
             </div>
           </div>
-          <div className="p-2.5 bg-gradient-to-r from-purple-950 to-indigo-950 border border-purple-700/60 rounded-xl text-[11px] space-y-1">
+          <div className="p-2.5 bg-purple-950 border border-purple-700/60 rounded-xl text-[11px] space-y-1">
             <div className="flex items-center justify-between font-bold text-white">
               <span>Balance de 8 Columnas IFRS:</span>
               <span className="text-emerald-400 font-mono">Cuadrado al Peso</span>
@@ -636,7 +636,7 @@ Estamos recibiendo a los primeros 25 estudios en el "Programa de Estudios Fundad
       accentColor: "from-emerald-500 to-teal-500",
       content: (
         <div className="space-y-3 text-center font-sans">
-          <div className="p-3 bg-gradient-to-r from-emerald-950 to-teal-950 border border-emerald-700 rounded-xl space-y-2">
+          <div className="p-3 bg-emerald-950 border border-emerald-700 rounded-xl space-y-2">
             <span className="inline-block px-3 py-0.5 bg-emerald-500 text-slate-950 font-black text-[11px] rounded-full">
               CUPOS LIMITADOS &bull; ACCESO INMEDIATO
             </span>
@@ -649,7 +649,7 @@ Estamos recibiendo a los primeros 25 estudios en el "Programa de Estudios Fundad
           </div>
           <div className="p-2.5 bg-slate-900 rounded-xl border border-emerald-500/40 space-y-1 text-center">
             <p className="text-emerald-400 font-bold text-xs">
-              Solicita tu acceso o agenda una demo 📲
+              Solicita tu acceso o agenda una demo 
             </p>
             <p className="text-slate-300 text-[11.5px] font-medium">
               WhatsApp: <strong className="text-white">+56 9 4631 8783</strong> &bull; app.pulsocontable.cl
@@ -880,7 +880,7 @@ ${facebookGroupPost}
       {/* BARRA SUPERIOR DE CONTROL EJECUTIVO */}
       <div className="bg-slate-900/95 border-b border-slate-800 px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 backdrop-blur-md">
         <div className="flex items-center gap-3">
-          <div className="bg-gradient-to-r from-emerald-500 via-teal-400 to-indigo-500 p-2 rounded-xl font-black text-slate-950 text-xs tracking-wider shadow-md">
+          <div className="bg-emerald-500 p-2 rounded-xl font-black text-slate-950 text-xs tracking-wider shadow-md">
             PULSO CONTABLE
           </div>
           <div>
@@ -890,7 +890,7 @@ ${facebookGroupPost}
                 {APP_VERSION}
               </span>
               <span className="text-[10px] bg-amber-950 text-amber-300 font-bold px-2 py-0.5 rounded border border-amber-800">
-                🔒 Solo Super Admin
+                 Solo Super Admin
               </span>
             </div>
             <p className="text-[11px] text-slate-400">Material visual y textos persuasivos listos para enviar a grupos de WhatsApp, Instagram y Facebook.</p>
@@ -901,7 +901,7 @@ ${facebookGroupPost}
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={downloadAllPack}
-            className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-500 via-teal-400 to-indigo-500 hover:opacity-95 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 shadow-md transition-transform hover:scale-102 cursor-pointer"
+            className="px-3.5 py-1.5 bg-emerald-500 hover:opacity-95 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 shadow-md transition-transform hover:scale-102 cursor-pointer"
             title="Descarga automáticamente las imágenes en alta resolución y el archivo .txt con todos los copys"
           >
             <Download className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -925,7 +925,7 @@ ${facebookGroupPost}
               onClick={() => setActiveTab('instagram')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'instagram'
-                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-sm'
+                  ? 'bg-purple-600 text-white shadow-sm'
                   : 'text-slate-400 hover:text-white hover:bg-slate-900'
               }`}
             >
@@ -998,7 +998,7 @@ ${facebookGroupPost}
                       : 'bg-slate-950 text-slate-400 border border-slate-800 hover:text-white'
                   }`}
                 >
-                  📢 Para Grupos de Contadores
+                   Para Grupos de Contadores
                 </button>
                 <button
                   onClick={() => setWhatsappTemplate('direct')}
@@ -1008,7 +1008,7 @@ ${facebookGroupPost}
                       : 'bg-slate-950 text-slate-400 border border-slate-800 hover:text-white'
                   }`}
                 >
-                  👤 Mensaje 1 a 1 para Socios
+                   Mensaje 1 a 1 para Socios
                 </button>
               </div>
             </div>
@@ -1055,7 +1055,7 @@ ${facebookGroupPost}
                         alt="Pulso Contable Portada WhatsApp" 
                         className="w-full h-48 object-cover object-top"
                       />
-                      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/85 via-black/50 to-transparent p-2 text-[11px] font-bold text-white">
+                      <div className="absolute bottom-0 inset-x-0 bg-black/85 p-2 text-[11px] font-bold text-white">
                         PULSO CONTABLE &bull; Software Contable en la Nube con Rescate RCV SII
                       </div>
                     </div>
@@ -1074,7 +1074,7 @@ ${facebookGroupPost}
 
                 {/* ACCIONES DE ENVÍO DIRECTO */}
                 <div className="bg-[#202c33] px-4 py-3 border-t border-slate-700/50 flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-[11px] text-slate-400">💡 Tip: Copia el texto y adjunta la imagen para lograr una tasa de apertura del 90%.</span>
+                  <span className="text-[11px] text-slate-400"> Tip: Copia el texto y adjunta la imagen para lograr una tasa de apertura del 90%.</span>
                   <a
                     href={`https://wa.me/?text=${encodeURIComponent(whatsappTemplate === 'group' ? whatsappGroupText : whatsappDirectText)}`}
                     target="_blank"
@@ -1151,7 +1151,7 @@ ${facebookGroupPost}
             {/* SELECTOR DE FORMATO INSTAGRAM */}
             <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/90 p-4 rounded-2xl border border-slate-800">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl shadow">
+                <div className="p-2.5 bg-purple-500 text-white rounded-xl shadow">
                   <Instagram className="w-5 h-5" />
                 </div>
                 <div>
@@ -1165,21 +1165,21 @@ ${facebookGroupPost}
                   onClick={() => setInstagramFormat('carousel')}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     instagramFormat === 'carousel'
-                      ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow'
+                      ? 'bg-purple-600 text-white shadow'
                       : 'bg-slate-950 text-slate-400 border border-slate-800 hover:text-white'
                   }`}
                 >
-                  📸 Carrusel de 6 Láminas (1:1)
+                   Carrusel de 6 Láminas (1:1)
                 </button>
                 <button
                   onClick={() => setInstagramFormat('reel')}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     instagramFormat === 'reel'
-                      ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow'
+                      ? 'bg-purple-600 text-white shadow'
                       : 'bg-slate-950 text-slate-400 border border-slate-800 hover:text-white'
                   }`}
                 >
-                  📱 Reel / Story Vertical (9:16)
+                   Reel / Story Vertical (9:16)
                 </button>
               </div>
             </div>
@@ -1192,11 +1192,11 @@ ${facebookGroupPost}
                 <div className="lg:col-span-7 flex flex-col items-center space-y-4">
                   <div 
                     ref={currentSlideCardRef}
-                    className="w-full max-w-md aspect-square bg-gradient-to-b from-slate-900 to-slate-950 rounded-3xl border-2 border-slate-800 shadow-2xl p-6 flex flex-col justify-between relative overflow-hidden select-none"
+                    className="w-full max-w-md aspect-square bg-slate-900 rounded-3xl border-2 border-slate-800 shadow-2xl p-6 flex flex-col justify-between relative overflow-hidden select-none"
                   >
                     
                     {/* BARRAS DECORATIVAS */}
-                    <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-purple-500 via-pink-500 to-amber-500"></div>
+                    <div className="absolute top-0 inset-x-0 h-2 bg-purple-500"></div>
 
                     {/* ENCABEZADO DE LÁMINA */}
                     <div className="flex items-center justify-between pt-2">
@@ -1233,7 +1233,7 @@ ${facebookGroupPost}
                         Pulso Contable
                       </span>
                       <span className="text-purple-400 font-bold">
-                        {currentSlideIdx < carouselSlides.length - 1 ? 'Desliza para ver más 👉' : '¡Guarda este post! 📌'}
+                        {currentSlideIdx < carouselSlides.length - 1 ? 'Desliza para ver más ' : '¡Guarda este post! '}
                       </span>
                     </div>
 
@@ -1294,7 +1294,7 @@ ${facebookGroupPost}
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         onClick={downloadCurrentSlidePNG}
-                        className="p-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 shadow cursor-pointer transition-all active:scale-95"
+                        className="p-2.5 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 shadow cursor-pointer transition-all active:scale-95"
                         title="Descarga la lámina visible como imagen PNG de 1080x1080 px"
                       >
                         <ImageIcon className="w-3.5 h-3.5" />
@@ -1304,7 +1304,7 @@ ${facebookGroupPost}
                       <button
                         onClick={downloadAllSlidesZip}
                         disabled={isExporting}
-                        className="p-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 shadow cursor-pointer transition-all disabled:opacity-50 active:scale-95"
+                        className="p-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 shadow cursor-pointer transition-all disabled:opacity-50 active:scale-95"
                         title="Descarga un solo archivo .ZIP con las 6 láminas en PNG HD + archivos de texto"
                       >
                         <Archive className="w-3.5 h-3.5" />
@@ -1363,7 +1363,7 @@ ${facebookGroupPost}
                       </span>
                       <button
                         onClick={() => copyToClipboard(instagramPostCopy, 'ig_copy')}
-                        className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow cursor-pointer"
+                        className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow cursor-pointer"
                       >
                         {copiedKey === 'ig_copy' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                         <span>{copiedKey === 'ig_copy' ? '¡Copiado!' : 'Copiar Texto + Tags'}</span>
@@ -1393,7 +1393,7 @@ ${facebookGroupPost}
                       alt="Gest_OK Reel Story Background" 
                       className="absolute inset-0 w-full h-full object-cover opacity-60"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-slate-950/70" />
+                    <div className="absolute inset-0 bg-slate-950" />
 
                     {/* BARRA SUPERIOR DE HISTORIA (STORIES BAR) */}
                     <div className="relative z-10 px-4 pt-3 flex gap-1">
@@ -1412,7 +1412,7 @@ ${facebookGroupPost}
                     {/* CABECERA DE PERFIL */}
                     <div className="relative z-10 px-4 pt-2 flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-gradient-to-r from-emerald-400 to-teal-400 text-slate-950 font-black text-xs flex items-center justify-center">
+                        <div className="w-7 h-7 rounded-full bg-emerald-400 text-slate-950 font-black text-xs flex items-center justify-center">
                           PC
                         </div>
                         <span className="text-xs font-bold text-white drop-shadow">pulsocontable.cl</span>
@@ -1438,7 +1438,7 @@ ${facebookGroupPost}
                     </div>
 
                     {/* PIE CON CONTROLES */}
-                    <div className="relative z-10 p-4 space-y-3 bg-gradient-to-t from-slate-950 to-transparent">
+                    <div className="relative z-10 p-4 space-y-3 bg-slate-950">
                       <div className="flex items-center justify-between text-xs">
                         <button
                           onClick={toggleVoice}
@@ -1476,7 +1476,7 @@ ${facebookGroupPost}
                   <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
                     <button
                       onClick={() => downloadFile(storyReelImg, 'PulsoContable_Story_Reel_Vertical_9x16.jpg')}
-                      className="px-4 py-2.5 bg-gradient-to-r from-teal-400 to-emerald-500 hover:from-teal-300 hover:to-emerald-400 text-slate-950 font-black rounded-xl text-xs flex items-center gap-2 shadow-lg cursor-pointer transition-all"
+                      className="px-4 py-2.5 bg-teal-400 hover:bg-teal-300 text-slate-950 font-black rounded-xl text-xs flex items-center gap-2 shadow-lg cursor-pointer transition-all"
                     >
                       <Download className="w-4 h-4 stroke-[2.5]" />
                       <span>Descargar Gráfica Reel (9:16 HD)</span>
@@ -1581,7 +1581,7 @@ ${facebookGroupPost}
                       <span>Pulso Contable Chile &bull; Software Contable en la Nube</span>
                       <CheckCircle2 className="w-3.5 h-3.5 text-blue-400" />
                     </p>
-                    <p className="text-[10px] text-slate-400">Publicado para Grupos de Contadores &bull; Hace un momento &bull; 🌐</p>
+                    <p className="text-[10px] text-slate-400">Publicado para Grupos de Contadores &bull; Hace un momento &bull; </p>
                   </div>
                 </div>
               </div>
@@ -1603,8 +1603,6 @@ ${facebookGroupPost}
               {/* INTERACCIONES DE FACEBOOK SIMULADAS */}
               <div className="p-3 bg-[#18191a] flex items-center justify-between text-xs text-slate-400 border-t border-slate-700/40">
                 <div className="flex items-center gap-1.5">
-                  <span className="p-1 bg-blue-500 rounded-full text-white text-[10px]">👍</span>
-                  <span className="p-1 bg-rose-500 rounded-full text-white text-[10px]">❤️</span>
                   <span className="text-[11px] text-slate-300 ml-1">48 contadores y pymes interesadas</span>
                 </div>
                 <div className="text-[11px] text-slate-400">
@@ -1719,7 +1717,7 @@ ${facebookGroupPost}
                 </div>
                 <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
                   <div 
-                    className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-indigo-500 transition-all duration-100 ease-linear"
+                    className="h-full bg-emerald-500 transition-all duration-100 ease-linear"
                     style={{ width: `${reelProgress}%` }}
                   />
                 </div>
@@ -1772,7 +1770,7 @@ ${facebookGroupPost}
                 <button
                   onClick={downloadAllSlidesZip}
                   disabled={isExporting}
-                  className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow cursor-pointer transition-all disabled:opacity-50 active:scale-95"
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow cursor-pointer transition-all disabled:opacity-50 active:scale-95"
                 >
                   <Archive className="w-4 h-4" />
                   <span>Descargar Pack ZIP (6 Láminas)</span>
@@ -1828,7 +1826,7 @@ ${facebookGroupPost}
                     <div className="flex items-center gap-2 pt-1">
                       <button
                         onClick={() => downloadSlidePNGDirect(idx)}
-                        className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 shadow cursor-pointer transition-all active:scale-95"
+                        className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 shadow cursor-pointer transition-all active:scale-95"
                       >
                         <Download className="w-3.5 h-3.5" />
                         <span>Descargar PNG (HD)</span>

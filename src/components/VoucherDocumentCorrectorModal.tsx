@@ -497,7 +497,7 @@ export default function VoucherDocumentCorrectorModal({
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-6xl overflow-hidden flex flex-col max-h-[92vh]">
         
         {/* Header */}
-        <div className="p-6 border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-700 text-white flex items-center justify-between">
+        <div className="p-6 border-b border-slate-200 dark:border-slate-800 bg-blue-600 text-white flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-inner">
               <Wrench className="w-6 h-6 text-white" />
@@ -752,7 +752,7 @@ export default function VoucherDocumentCorrectorModal({
               <button
                 onClick={handleExecuteUpgrade}
                 disabled={isProcessing || selectedCount === 0}
-                className="px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 rounded-xl shadow-lg shadow-blue-600/30 flex items-center space-x-2 transition-all transform active:scale-95"
+                className="px-6 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-xl shadow-lg shadow-blue-600/30 flex items-center space-x-2 transition-all transform active:scale-95"
               >
                 {isProcessing ? (
                   <>

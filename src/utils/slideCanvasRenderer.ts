@@ -243,7 +243,7 @@ export function renderSlideToCanvas(slideIdx: number): HTMLCanvasElement {
     ctx.fillStyle = "#6ee7b7";
     ctx.font = "bold 17px sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("2025 / OCT 🔒", cardX + 615, cardY + 64);
+    ctx.fillText("2025 / OCT ", cardX + 615, cardY + 64);
 
     // Indicadores Chilenos Oficiales (UF & Dólar)
     drawRoundedRect(ctx, cardX + 710, cardY + 35, 195, 46, 10);
@@ -333,7 +333,7 @@ export function renderSlideToCanvas(slideIdx: number): HTMLCanvasElement {
     ctx.textAlign = "center";
     ctx.fillStyle = "#818cf8";
     ctx.font = "bold 20px sans-serif";
-    ctx.fillText("⚡ Navegación Instantánea & Atajos F1", 540, cardY + 420);
+    ctx.fillText("Navegación Instantánea & Atajos F1", 540, cardY + 420);
     ctx.fillStyle = "#e2e8f0";
     ctx.font = "18px sans-serif";
     ctx.fillText("Todo el trabajo del contador en una barra unificada sin recargas de página.", 540, cardY + 465);
@@ -359,7 +359,7 @@ export function renderSlideToCanvas(slideIdx: number): HTMLCanvasElement {
     ctx.textAlign = "left";
     ctx.fillStyle = "#2dd4bf";
     ctx.font = "bold 22px sans-serif";
-    ctx.fillText("📥 Registro de Compras y Ventas (RCV SII)", cardX + 40, cardY + 58);
+    ctx.fillText("Registro de Compras y Ventas (RCV SII)", cardX + 40, cardY + 58);
     ctx.textAlign = "right";
     ctx.fillStyle = "#6ee7b7";
     ctx.font = "bold 17px monospace";
@@ -430,7 +430,7 @@ export function renderSlideToCanvas(slideIdx: number): HTMLCanvasElement {
     ctx.textAlign = "center";
     ctx.fillStyle = "#2dd4bf";
     ctx.font = "bold 20px sans-serif";
-    ctx.fillText("⚡ Generación Masiva del Comprobante en 2 Segundos", 540, cardY + 480);
+    ctx.fillText("Generación Masiva del Comprobante en 2 Segundos", 540, cardY + 480);
     ctx.fillStyle = "#94a3b8";
     ctx.font = "17px sans-serif";
     ctx.fillText("Asignación de cuenta de gasto según proveedor • Sin digitar RUTs a mano • Detección anti-duplicados", 540, cardY + 520);
@@ -453,7 +453,7 @@ export function renderSlideToCanvas(slideIdx: number): HTMLCanvasElement {
     ctx.textAlign = "left";
     ctx.fillStyle = "#c4b5fd";
     ctx.font = "bold 22px sans-serif";
-    ctx.fillText("📑 Comprobante de Traspaso N° 108  •  Compras Octubre", cardX + 40, cardY + 58);
+    ctx.fillText("Comprobante de Traspaso N° 108  •  Compras Octubre", cardX + 40, cardY + 58);
     ctx.textAlign = "right";
     ctx.fillStyle = "#4ade80";
     ctx.font = "bold 18px sans-serif";
@@ -573,7 +573,7 @@ export function renderSlideToCanvas(slideIdx: number): HTMLCanvasElement {
     ctx.textAlign = "left";
     ctx.fillStyle = "#6ee7b7";
     ctx.font = "bold 22px sans-serif";
-    ctx.fillText("🏦 Conciliación Bancaria • Banco de Chile Cta Cte", cardX + 40, cardY + 58);
+    ctx.fillText("Conciliación Bancaria • Banco de Chile Cta Cte", cardX + 40, cardY + 58);
     ctx.textAlign = "right";
     ctx.fillStyle = "#a7f3d0";
     ctx.font = "bold 17px monospace";
@@ -635,7 +635,7 @@ export function renderSlideToCanvas(slideIdx: number): HTMLCanvasElement {
     ctx.textAlign = "center";
     ctx.fillStyle = "#a7f3d0";
     ctx.font = "bold 24px sans-serif";
-    ctx.fillText("⚡ MATCH AUTOMÁTICO EN 1 CLIC (Diferencia: $0)", 540, cardY + 408);
+    ctx.fillText("MATCH AUTOMÁTICO EN 1 CLIC (Diferencia: $0)", 540, cardY + 408);
 
     // Banner explicativo inferior
     drawRoundedRect(ctx, cardX + 20, cardY + 455, cardW - 40, 100, 14);
@@ -669,7 +669,7 @@ export function renderSlideToCanvas(slideIdx: number): HTMLCanvasElement {
     ctx.textAlign = "left";
     ctx.fillStyle = "#fde68a";
     ctx.font = "bold 22px sans-serif";
-    ctx.fillText("📊 Cierres Mensuales: Formulario 29 & Balance 8 Columnas", cardX + 40, cardY + 58);
+    ctx.fillText("Cierres Mensuales: Formulario 29 & Balance 8 Columnas", cardX + 40, cardY + 58);
     ctx.textAlign = "right";
     ctx.fillStyle = "#f59e0b";
     ctx.font = "bold 17px monospace";
@@ -817,7 +817,7 @@ export function renderSlideToCanvas(slideIdx: number): HTMLCanvasElement {
     ctx.textAlign = "center";
     ctx.fillStyle = "#f8fafc";
     ctx.font = "bold 22px sans-serif";
-    ctx.fillText("📲 WhatsApp Directo: +56 9 4631 8783  |  app.pulsocontable.cl", 540, cardY + 522);
+    ctx.fillText("WhatsApp Directo: +56 9 4631 8783  |  app.pulsocontable.cl", 540, cardY + 522);
   }
   ctx.restore();
 
@@ -851,7 +851,7 @@ export function renderSlideToCanvas(slideIdx: number): HTMLCanvasElement {
   ctx.fillStyle = "#38bdf8";
   ctx.font = "bold 22px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
   ctx.fillText(
-    slideIdx < 5 ? "Desliza para ver más 👉" : "¡Guarda este post! 📌",
+    slideIdx < 5 ? "Desliza para ver más " : "¡Guarda este post! ",
     1010,
     1000
   );

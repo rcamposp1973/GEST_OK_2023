@@ -762,7 +762,7 @@ export default function AuxiliaryUpgradeModal({
       <div className="bg-white w-full max-w-5xl rounded-2xl shadow-2xl border border-slate-200 flex flex-col max-h-[92vh] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         
         {/* ENCABEZADO DEL MODAL */}
-        <div className="px-6 py-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+        <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-indigo-600/30 rounded-xl border border-indigo-400/30 text-indigo-300">
               <Sparkles className="w-5 h-5 text-indigo-400" />
@@ -799,7 +799,7 @@ export default function AuxiliaryUpgradeModal({
             <div className="space-y-6 max-w-4xl mx-auto">
               
               {/* PANEL DE DESCARGA PREVIA DE LA BASE DE DATOS ACTUAL */}
-              <div className="bg-gradient-to-br from-indigo-50/70 via-white to-blue-50/50 p-5 rounded-2xl border border-indigo-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="bg-indigo-50/70 p-5 rounded-2xl border border-indigo-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <Download className="w-5 h-5 text-indigo-600" />
@@ -841,7 +841,7 @@ export default function AuxiliaryUpgradeModal({
                 <div className="pt-2 flex justify-center gap-3">
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-bold rounded-xl text-sm shadow-md flex items-center gap-2 cursor-pointer transition-all active:scale-95"
+                    className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-sm shadow-md flex items-center gap-2 cursor-pointer transition-all active:scale-95"
                   >
                     <Upload className="w-4 h-4" />
                     <span>Seleccionar Archivo Excel (.xlsx / .csv)</span>
@@ -1218,7 +1218,7 @@ export default function AuxiliaryUpgradeModal({
                   <button
                     onClick={handleExecuteUpgrade}
                     disabled={isProcessing || (summaryResults.updated === 0 && summaryResults.created === 0)}
-                    className="px-6 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs rounded-xl shadow-md flex items-center gap-2 cursor-pointer transition-all active:scale-95 disabled:opacity-50"
+                    className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl shadow-md flex items-center gap-2 cursor-pointer transition-all active:scale-95 disabled:opacity-50"
                   >
                     <Sparkles className="w-4 h-4 text-emerald-200" />
                     <span>Aplicar Actualización Masiva ({summaryResults.updated + summaryResults.created} Registros)</span>

@@ -186,7 +186,7 @@ export default function SiiFolioControlView({
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-6 rounded-2xl text-white shadow-md border border-slate-800">
+      <div className="bg-slate-900 p-6 rounded-2xl text-white shadow-md border border-slate-800">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2.5">

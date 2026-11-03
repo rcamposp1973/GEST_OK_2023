@@ -306,25 +306,25 @@ export default function JuniorAITrainingCenter() {
     const allMatches = [...matchingCompanyRules, ...matchingGlobalRules];
     setAppliedRules(allMatches);
 
-    let output = `🧠 **Respuesta Generada por Junior (Evaluación de Entrenamiento):**\n\n`;
+    let output = ` **Respuesta Generada por Junior (Evaluación de Entrenamiento):**\n\n`;
     
     if (matchingCompanyRules.length > 0) {
-      output += `🏢 **Criterio Aislado de la Empresa (${currentCompanyObj?.name || 'Empresa Seleccionada'}):**\n`;
+      output += ` **Criterio Aislado de la Empresa (${currentCompanyObj?.name || 'Empresa Seleccionada'}):**\n`;
       matchingCompanyRules.forEach(r => {
         output += `• **${r.title}**: ${r.directiveContent}\n`;
         if (r.recommendedEntries) {
-          output += `  👉 *Asiento sugerido:* \`${r.recommendedEntries}\`\n`;
+          output += `   *Asiento sugerido:* \`${r.recommendedEntries}\`\n`;
         }
       });
       output += `\n`;
     }
 
     if (matchingGlobalRules.length > 0) {
-      output += `🏛️ **Normativa General y Conocimiento Tributario / IFRS:**\n`;
+      output += ` **Normativa General y Conocimiento Tributario / IFRS:**\n`;
       matchingGlobalRules.forEach(r => {
         output += `• **${r.title}**: ${r.directiveContent}\n`;
         if (r.recommendedEntries) {
-          output += `  👉 *Asiento / Criterio:* \`${r.recommendedEntries}\`\n`;
+          output += `   *Asiento / Criterio:* \`${r.recommendedEntries}\`\n`;
         }
       });
     }
@@ -341,7 +341,7 @@ export default function JuniorAITrainingCenter() {
       {/* Header */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-slate-900 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
+          <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
             <BrainCircuit className="w-6 h-6" />
           </div>
           <div>
@@ -560,7 +560,7 @@ export default function JuniorAITrainingCenter() {
 
                   {item.recommendedEntries && (
                     <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 text-[11px] font-mono text-slate-800">
-                      <span className="font-sans font-bold text-slate-700 block mb-1">👉 Asiento / Criterio Recomendado:</span>
+                      <span className="font-sans font-bold text-slate-700 block mb-1"> Asiento / Criterio Recomendado:</span>
                       {item.recommendedEntries}
                     </div>
                   )}
@@ -619,7 +619,7 @@ export default function JuniorAITrainingCenter() {
 
             <button
               onClick={handleRunPlaygroundTest}
-              className="w-full py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-black text-xs rounded-lg shadow-sm transition-all flex items-center justify-center gap-2"
+              className="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white font-black text-xs rounded-lg shadow-sm transition-all flex items-center justify-center gap-2"
             >
               <Send className="w-4 h-4" />
               <span>Evaluar Respuesta de Junior</span>

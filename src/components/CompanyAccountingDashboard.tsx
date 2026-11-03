@@ -354,10 +354,10 @@ export default function CompanyAccountingDashboard({
       });
       await fetchData();
       setShowQuickApiConfig(false);
-      alert(`✅ Configuración de API Guardada con Éxito para ${company.name}:\n\n• Proveedor: ${quickApiProvider}\n• API Key: ${quickApiKey ? '••••' + quickApiKey.slice(-4) : 'Sin Key'}\n• URL Endpoint: ${finalUrl}`);
+      alert(`Configuración de API Guardada con Éxito para ${company.name}:\n\n• Proveedor: ${quickApiProvider}\n• API Key: ${quickApiKey ? '••••' + quickApiKey.slice(-4) : 'Sin Key'}\n• URL Endpoint: ${finalUrl}`);
     } catch (err) {
       console.error('Error saving API settings:', err);
-      alert('❌ Error al guardar la configuración de la API.');
+      alert('Error al guardar la configuración de la API.');
     }
   };
 
@@ -434,18 +434,18 @@ export default function CompanyAccountingDashboard({
 
   const handleSaveF29CodeSettings = async () => {
     if (isReadOnly) {
-      alert('🔒 Modo Solo Lectura: El perfil Observador no puede modificar configuraciones contables ni tributarias.');
+      alert('Modo Solo Lectura: El perfil Observador no puede modificar configuraciones contables ni tributarias.');
       return;
     }
     try {
       await updateDoc(companyRef, {
         f29CodeSettings: companyF29Codes
       });
-      alert('✅ Configuración de Códigos F.29 guardada exitosamente para ' + company.name);
+      alert('Configuración de Códigos F.29 guardada exitosamente para ' + company.name);
       await fetchData();
     } catch (err) {
       console.error('Error al guardar configuración de códigos F29:', err);
-      alert('❌ Error al guardar la configuración en la base de datos.');
+      alert('Error al guardar la configuración en la base de datos.');
     }
   };
 
@@ -551,7 +551,7 @@ export default function CompanyAccountingDashboard({
     vouchersToCreate: Voucher[]
   ) => {
     if (isReadOnly) {
-      alert('🔒 Modo Solo Lectura: El perfil Observador no puede registrar operaciones comerciales ni generar comprobantes.');
+      alert('Modo Solo Lectura: El perfil Observador no puede registrar operaciones comerciales ni generar comprobantes.');
       return;
     }
 
@@ -646,7 +646,7 @@ export default function CompanyAccountingDashboard({
   // HANDLERS PARA MAESTRO DE BODEGAS (ERP FASE 1)
   const handleSaveWarehouse = async (whData: Partial<Warehouse>) => {
     if (isReadOnly) {
-      alert('🔒 Modo Solo Lectura: No tienes permisos para gestionar bodegas.');
+      alert('Modo Solo Lectura: No tienes permisos para gestionar bodegas.');
       return;
     }
     try {
@@ -697,7 +697,7 @@ export default function CompanyAccountingDashboard({
 
   const handleDeleteWarehouse = async (whId: string) => {
     if (isReadOnly) {
-      alert('🔒 Modo Solo Lectura: No tienes permisos para eliminar bodegas.');
+      alert('Modo Solo Lectura: No tienes permisos para eliminar bodegas.');
       return;
     }
     try {
@@ -786,7 +786,7 @@ export default function CompanyAccountingDashboard({
     autoVoucher?: Partial<Voucher>
   ) => {
     if (isReadOnly) {
-      alert('🔒 Modo Solo Lectura: No tienes permisos para registrar movimientos de inventario.');
+      alert('Modo Solo Lectura: No tienes permisos para registrar movimientos de inventario.');
       return;
     }
 
@@ -1839,7 +1839,7 @@ export default function CompanyAccountingDashboard({
   // Parser for official SII CSV / TXT / Excel files with precise column mapping for Ventas, Compras and Honorarios
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, tipoRegistro: 'Compra' | 'Venta' | 'Honorarios') => {
     if (isReadOnly) {
-      alert('🔒 Modo Solo Lectura: El perfil Observador no puede importar ni modificar archivos RCV.');
+      alert('Modo Solo Lectura: El perfil Observador no puede importar ni modificar archivos RCV.');
       e.target.value = '';
       return;
     }
@@ -1847,7 +1847,7 @@ export default function CompanyAccountingDashboard({
     // Validación estricta de período contable seleccionado
     const periodCheck = checkIsPeriodClosed(selectedRcvPeriod);
     if (periodCheck.isClosed) {
-      alert(`⚠️ Acción Bloqueada:\n\n${periodCheck.errorMsg}\n\nPara importar documentos en este mes, debes abrir el período en el menú 'Configuraciones > Períodos Contables'.`);
+      alert(`Acción Bloqueada:\n\n${periodCheck.errorMsg}\n\nPara importar documentos en este mes, debes abrir el período en el menú 'Configuraciones > Períodos Contables'.`);
       e.target.value = '';
       return;
     }
@@ -1944,7 +1944,7 @@ export default function CompanyAccountingDashboard({
         let targetUploadPeriod = selectedRcvPeriod;
         if (detectedFromFile && detectedFromFile !== selectedRcvPeriod) {
           const confirmSwitch = window.confirm(
-            `⚠️ Validación de Período RCV:\n\n` +
+            `Validación de Período RCV:\n\n` +
             `El archivo "${file.name}" indica que corresponde al período [${detectedFromFile}].\n` +
             `En pantalla tienes seleccionado el período [${selectedRcvPeriod}].\n\n` +
             `¿Deseas cargar este archivo en el período del archivo [${detectedFromFile}]?\n\n` +
@@ -2207,7 +2207,7 @@ export default function CompanyAccountingDashboard({
           const cols = tableRows[i];
           if (!cols || cols.length === 0) continue;
 
-          // 🛑 FIN DE TABLA: Detenerse justo en la línea de Totales
+          //  FIN DE TABLA: Detenerse justo en la línea de Totales
           const firstCell = (cols[0] || '').toLowerCase().trim();
           const fullRowText = cols.join(' ').toLowerCase().trim();
           if (
@@ -2229,7 +2229,7 @@ export default function CompanyAccountingDashboard({
             continue;
           }
 
-          // 🛑 EXCLUSIÓN DE BOLETAS NULAS / ANULADAS:
+          //  EXCLUSIÓN DE BOLETAS NULAS / ANULADAS:
           const estadoVal = (headerMap['estado'] !== undefined ? cols[headerMap['estado']] : '').toUpperCase().trim();
           const fechaAnulacionVal = (headerMap['fechaAnulacion'] !== undefined ? cols[headerMap['fechaAnulacion']] : '').trim();
 
@@ -2688,7 +2688,7 @@ export default function CompanyAccountingDashboard({
       }
 
       await fetchData();
-      alert(`🧹 Base de datos depurada:\n\nSe eliminaron exitosamente ${demoDocs.length} registros ficticios/de prueba. Ahora la empresa cuenta únicamente con registros 100% reales.`);
+      alert(`Base de datos depurada:\n\nSe eliminaron exitosamente ${demoDocs.length} registros ficticios/de prueba. Ahora la empresa cuenta únicamente con registros 100% reales.`);
     } catch (err: any) {
       console.error("Error purgando datos demo:", err);
       alert('Error al depurar documentos: ' + err.message);
@@ -2700,7 +2700,7 @@ export default function CompanyAccountingDashboard({
   // Direct API sync for RCV Compras, Ventas and Honorarios from Facturador SII
   const handleRescatarRcvApi = async () => {
     if (isReadOnly) {
-      alert('🔒 Modo Solo Lectura: El perfil Observador no puede ejecutar acciones de rescate.');
+      alert('Modo Solo Lectura: El perfil Observador no puede ejecutar acciones de rescate.');
       return;
     }
 
@@ -2711,7 +2711,7 @@ export default function CompanyAccountingDashboard({
 
     const periodCheck = checkIsPeriodClosed(selectedRcvPeriod);
     if (periodCheck.isClosed) {
-      alert(`⚠️ Acción Bloqueada:\n\n${periodCheck.errorMsg}\n\nPara rescatar e importar documentos en este mes, debes abrir el período en 'Configuraciones > Períodos Contables'.`);
+      alert(`Acción Bloqueada:\n\n${periodCheck.errorMsg}\n\nPara rescatar e importar documentos en este mes, debes abrir el período en 'Configuraciones > Períodos Contables'.`);
       return;
     }
 
@@ -2719,7 +2719,7 @@ export default function CompanyAccountingDashboard({
 
     // GEST_OK: Confirmación explícita de período antes de sincronizar
     const confirmSync = window.confirm(
-      `🌐 Confirmación de Sincronización SII:\n\n` +
+      `Confirmación de Sincronización SII:\n\n` +
       `Se rescatarán documentos para el período tributario [${selectedRcvPeriod}].\n\n` +
       `¿Es correcto este período de proceso?`
     );
@@ -2738,9 +2738,9 @@ export default function CompanyAccountingDashboard({
       if (!certB64 && !repClave) {
         setShowManualUpload(true);
         alert(
-          `⚠️ Credenciales Requeridas para Consulta Automática del SII:\n\n` +
+          `Credenciales Requeridas para Consulta Automática del SII:\n\n` +
           `Para consultar automáticamente el Registro de Compras, Ventas y Honorarios del SII desde el servidor, la empresa debe tener ingresado su Certificado Digital (.pfx) o la Clave del SII del Representante Legal.\n\n` +
-          `📌 PASO FÁCIL Y RECOMENDADO:\n` +
+          `PASO FÁCIL Y RECOMENDADO:\n` +
           `Como tienes abierta la pestaña del SII, descarga el archivo Detalle en CSV/TXT y súbelo en la sección "Cargar CSV/TXT Manual" que acabamos de desplegar abajo.`
         );
         setIsRescatandoRcvApi(false);
@@ -2764,16 +2764,16 @@ export default function CompanyAccountingDashboard({
 
       if (!data.success) {
         if (data.needsCertificate) {
-          alert(`⚠️ Certificado Digital Requerido para Sincronización Automática:\n\n${data.error}\n\nPara consultar automáticamente vía API del SII, la empresa debe tener configurado su Certificado Digital (.pfx).\n\nAlternativamente, puede cargar directamente los archivos oficiales descargados del portal del SII usando el botón "📥 Cargar CSV/TXT Manual".`);
+          alert(`Certificado Digital Requerido para Sincronización Automática:\n\n${data.error}\n\nPara consultar automáticamente vía API del SII, la empresa debe tener configurado su Certificado Digital (.pfx).\n\nAlternativamente, puede cargar directamente los archivos oficiales descargados del portal del SII usando el botón "Cargar CSV/TXT Manual".`);
           return;
         }
-        alert(`❌ Error al conectar con la API del Facturador SII:\n\n${data.error || 'No se pudo completar el rescate desde la API.'}`);
+        alert(`Error al conectar con la API del Facturador SII:\n\n${data.error || 'No se pudo completar el rescate desde la API.'}`);
         return;
       }
 
       const fetchedDocs = data.documents || [];
       if (fetchedDocs.length === 0) {
-        alert(data.message || `ℹ️ Solicitud enviada a la API del SII con éxito para el período ${selectedRcvPeriod}.\n\nNo se encontraron nuevos documentos de Compras, Ventas u Honorarios en dicho período.`);
+        alert(data.message || `Solicitud enviada a la API del SII con éxito para el período ${selectedRcvPeriod}.\n\nNo se encontraron nuevos documentos de Compras, Ventas u Honorarios en dicho período.`);
         return;
       }
 
@@ -2984,7 +2984,7 @@ export default function CompanyAccountingDashboard({
       await fetchData();
 
       alert(
-        `✅ ¡Rescate RCV vía API SII Exitoso!\n\n` +
+        ` ¡Rescate RCV vía API SII Exitoso!\n\n` +
         `• Período rescatado: ${selectedRcvPeriod}\n` +
         `• Nuevos documentos guardados en Firestore: ${loadedCount}\n` +
         (boletasPisadasCount > 0 ? `• Boletas de descarga anterior pisadas y actualizadas: ${boletasPisadasCount} (se reemplazaron por el nuevo resumen oficial acumulado)\n` : '') +
@@ -2996,7 +2996,7 @@ export default function CompanyAccountingDashboard({
 
     } catch (err: any) {
       console.error('Error al rescatar RCV vía API:', err);
-      alert(`❌ Ocurrió un error al intentar rescatar datos desde la API SII: ${err.message || String(err)}`);
+      alert(`Ocurrió un error al intentar rescatar datos desde la API SII: ${err.message || String(err)}`);
     } finally {
       setIsRescatandoRcvApi(false);
     }
@@ -3047,7 +3047,7 @@ export default function CompanyAccountingDashboard({
 
       await fetchData();
       alert(
-        `✅ ¡Boletas pisadas con éxito!\n\n` +
+        ` ¡Boletas pisadas con éxito!\n\n` +
         `• Resúmenes intermediarios eliminados: ${toDelete.length}\n` +
         `• Resumen oficial conservado: Folio #${keepDoc.folio} ($${(keepDoc.montoTotal || 0).toLocaleString('es-CL')})`
       );
@@ -3124,13 +3124,13 @@ export default function CompanyAccountingDashboard({
 
       if (obsoleteIds.size > 0) {
         alert(
-          `🧹 ¡Depuración de duplicados completada con éxito!\n\n` +
+          ` ¡Depuración de duplicados completada con éxito!\n\n` +
           `• Documentos duplicados eliminados de la base de datos: ${obsoleteIds.size}\n` +
           `• Registros únicos conservados y estandarizados.\n\n` +
           `El registro de Compras, Ventas y Honorarios ha quedado 100% limpio y consistente.`
         );
       } else {
-        alert('✅ No se detectaron registros duplicados. El registro de compras, ventas y honorarios está completamente limpio y consistente.');
+        alert('No se detectaron registros duplicados. El registro de compras, ventas y honorarios está completamente limpio y consistente.');
       }
     } catch (err: any) {
       console.error('Error depurando duplicados:', err);
@@ -3723,7 +3723,7 @@ export default function CompanyAccountingDashboard({
 
   const handleContabilizarSingle = async (docId: string) => {
     if (isReadOnly) {
-      alert('🔒 Modo Solo Lectura: El perfil Observador no puede contabilizar documentos contables ni generar comprobantes.');
+      alert('Modo Solo Lectura: El perfil Observador no puede contabilizar documentos contables ni generar comprobantes.');
       return;
     }
     try {
@@ -3733,7 +3733,7 @@ export default function CompanyAccountingDashboard({
       const targetPeriod = docItem.period || (docItem.fechaEmision ? docItem.fechaEmision.substring(0, 7) : selectedRcvPeriod);
       const periodCheck = checkIsPeriodClosed(targetPeriod);
       if (periodCheck.isClosed) {
-        alert(`⚠️ Acción Bloqueada:\n\n${periodCheck.errorMsg}\n\nPara contabilizar documentos en este período (${targetPeriod}), debes abrirlo primero en 'Configuraciones > Períodos Contables'.`);
+        alert(`Acción Bloqueada:\n\n${periodCheck.errorMsg}\n\nPara contabilizar documentos en este período (${targetPeriod}), debes abrirlo primero en 'Configuraciones > Períodos Contables'.`);
         return;
       }
 
@@ -3787,7 +3787,7 @@ export default function CompanyAccountingDashboard({
 
   const handleContabilizarSelected = async () => {
     if (isReadOnly) {
-      alert('🔒 Modo Solo Lectura: El perfil Observador no puede contabilizar documentos contables.');
+      alert('Modo Solo Lectura: El perfil Observador no puede contabilizar documentos contables.');
       return;
     }
     if (selectedRcvIds.length === 0) return;
@@ -3798,7 +3798,7 @@ export default function CompanyAccountingDashboard({
       const targetPeriod = docItem.period || (docItem.fechaEmision ? docItem.fechaEmision.substring(0, 7) : selectedRcvPeriod);
       const periodCheck = checkIsPeriodClosed(targetPeriod);
       if (periodCheck.isClosed) {
-        alert(`⚠️ Acción Bloqueada:\n\n${periodCheck.errorMsg}\n\nEl documento Folio #${docItem.folio} (${docItem.razonSocialEmisor}) pertenece al período ${targetPeriod} que está CERRADO. Abre el período antes de contabilizar.`);
+        alert(`Acción Bloqueada:\n\n${periodCheck.errorMsg}\n\nEl documento Folio #${docItem.folio} (${docItem.razonSocialEmisor}) pertenece al período ${targetPeriod} que está CERRADO. Abre el período antes de contabilizar.`);
         return;
       }
     }
@@ -3860,13 +3860,13 @@ export default function CompanyAccountingDashboard({
 
   const handleContabilizarAllPending = async () => {
     if (isReadOnly) {
-      alert('🔒 Modo Solo Lectura: El perfil Observador no puede contabilizar documentos contables.');
+      alert('Modo Solo Lectura: El perfil Observador no puede contabilizar documentos contables.');
       return;
     }
 
     const periodCheck = checkIsPeriodClosed(selectedRcvPeriod);
     if (periodCheck.isClosed) {
-      alert(`⚠️ Acción Bloqueada:\n\n${periodCheck.errorMsg}\n\nEl período ${selectedRcvPeriod} está CERRADO. Abre el período en 'Configuraciones > Períodos Contables' para centralizar.`);
+      alert(`Acción Bloqueada:\n\n${periodCheck.errorMsg}\n\nEl período ${selectedRcvPeriod} está CERRADO. Abre el período en 'Configuraciones > Períodos Contables'para centralizar.`);
       return;
     }
 
@@ -4231,7 +4231,7 @@ export default function CompanyAccountingDashboard({
 
   const handleDeleteVoucher = (v: Voucher) => {
     if (isReadOnly) {
-      alert('🔒 Modo Solo Lectura: El perfil Observador no tiene permisos para eliminar comprobantes contables.');
+      alert('Modo Solo Lectura: El perfil Observador no tiene permisos para eliminar comprobantes contables.');
       return;
     }
     setVoucherActionModal({
@@ -4243,7 +4243,7 @@ export default function CompanyAccountingDashboard({
 
   const handleToggleAnularVoucher = (v: Voucher) => {
     if (isReadOnly) {
-      alert('🔒 Modo Solo Lectura: El perfil Observador no tiene permisos para anular ni reactivar comprobantes.');
+      alert('Modo Solo Lectura: El perfil Observador no tiene permisos para anular ni reactivar comprobantes.');
       return;
     }
 
@@ -4268,7 +4268,7 @@ export default function CompanyAccountingDashboard({
     const { type, voucher: v, reason } = voucherActionModal;
 
     if (isReadOnly) {
-      alert('🔒 Modo Solo Lectura: El perfil Observador no tiene permisos para modificar o eliminar comprobantes.');
+      alert('Modo Solo Lectura: El perfil Observador no tiene permisos para modificar o eliminar comprobantes.');
       return;
     }
 
@@ -4334,7 +4334,7 @@ export default function CompanyAccountingDashboard({
         if (selectedVoucher?.id === v.id) {
           setSelectedVoucher({ ...v, status: 'Anulado', anuladoReason: trimmedReason });
         }
-        alert(`✅ Comprobante N° ${v.voucherNumber} anulado con éxito.`);
+        alert(`Comprobante N° ${v.voucherNumber} anulado con éxito.`);
       } else if (type === 'eliminar') {
         // 1. Revert associated RCV document if any
         const linkedRcvDocs = rcvDocuments.filter(d => d.voucherId === v.id || (v.createdFromRcvId && d.id === v.createdFromRcvId));
@@ -4346,7 +4346,7 @@ export default function CompanyAccountingDashboard({
             return data.lines?.some(l => l.matchedVoucherId === v.id);
         });
 
-        if (isConciliated && !window.confirm(`⚠️ EL COMPROBANTE N° ${v.voucherNumber} ESTÁ CONCILIADO EN EL MÓDULO BANCARIO.\n\nAl eliminarlo, se romperá la vinculación en la conciliación bancaria y la partida quedará como Pendiente para volver a conciliar.\n\n¿Deseas continuar?`)) {
+        if (isConciliated && !window.confirm(`EL COMPROBANTE N° ${v.voucherNumber} ESTÁ CONCILIADO EN EL MÓDULO BANCARIO.\n\nAl eliminarlo, se romperá la vinculación en la conciliación bancaria y la partida quedará como Pendiente para volver a conciliar.\n\n¿Deseas continuar?`)) {
             return;
         }
 
@@ -4415,7 +4415,7 @@ export default function CompanyAccountingDashboard({
           setSelectedVoucher(null);
         }
 
-        alert(`✅ Comprobante N° ${v.voucherNumber} eliminado con éxito.${isConciliated ? ' Se desvinculó de la conciliación bancaria y la partida quedó disponible como pendiente.' : ''}`);
+        alert(`Comprobante N° ${v.voucherNumber} eliminado con éxito.${isConciliated ? 'Se desvinculó de la conciliación bancaria y la partida quedó disponible como pendiente.' : ''}`);
       } else if (type === 'reactivar') {
         await updateDoc(doc(companyRef, 'vouchers', v.id), {
           status: 'Valido',
@@ -4448,7 +4448,7 @@ export default function CompanyAccountingDashboard({
         if (selectedVoucher?.id === v.id) {
           setSelectedVoucher({ ...v, status: 'Valido', anuladoReason: null });
         }
-        alert(`✅ Comprobante N° ${v.voucherNumber} reactivado como Válido.`);
+        alert(`Comprobante N° ${v.voucherNumber} reactivado como Válido.`);
       }
 
       setVoucherActionModal(null);
@@ -4458,15 +4458,15 @@ export default function CompanyAccountingDashboard({
       let friendlyMessage = 'Ocurrió un error al procesar la acción sobre el comprobante.';
       const rawMsg = String(err?.message || err || '');
       if (rawMsg.includes('permission-denied') || rawMsg.includes('insufficient permissions')) {
-        friendlyMessage = '🔒 Permisos Insuficientes: No cuentas con permisos de Administrador para eliminar o modificar comprobantes contables.';
+        friendlyMessage = 'Permisos Insuficientes: No cuentas con permisos de Administrador para eliminar o modificar comprobantes contables.';
       } else if (rawMsg.includes('not-found') || rawMsg.includes('No document to update')) {
-        friendlyMessage = '⚠️ El comprobante contable o registro vinculado ya no existe en el sistema.';
+        friendlyMessage = 'El comprobante contable o registro vinculado ya no existe en el sistema.';
       } else if (rawMsg.includes('network') || rawMsg.includes('unavailable') || rawMsg.includes('failed to fetch')) {
-        friendlyMessage = '📡 Error de Conexión: No se pudo conectar con el servidor. Revisa tu conexión a internet e inténtalo nuevamente.';
+        friendlyMessage = 'Error de Conexión: No se pudo conectar con el servidor. Revisa tu conexión a internet e inténtalo nuevamente.';
       } else if (rawMsg.includes('unsupported field value') || rawMsg.includes('undefined')) {
-        friendlyMessage = '⚠️ Error en los datos del comprobante o de la conciliación bancaria asociada. Por favor actualiza la vista e intenta nuevamente.';
+        friendlyMessage = 'Error en los datos del comprobante o de la conciliación bancaria asociada. Por favor actualiza la vista e intenta nuevamente.';
       } else if (rawMsg) {
-        friendlyMessage = `⚠️ No fue posible ${type === 'eliminar' ? 'eliminar' : type === 'anular' ? 'anular' : 'reactivar'} el comprobante N° ${v.voucherNumber}.\n\nDetalle: ${rawMsg}`;
+        friendlyMessage = `No fue posible ${type === 'eliminar' ? 'eliminar' : type === 'anular' ? 'anular' : 'reactivar'} el comprobante N° ${v.voucherNumber}.\n\nDetalle: ${rawMsg}`;
       }
       alert(friendlyMessage);
     } finally {
@@ -4476,13 +4476,13 @@ export default function CompanyAccountingDashboard({
 
   const handleBulkDeleteVouchers = async () => {
     if (isReadOnly) {
-      alert('🔒 Modo Solo Lectura: El perfil Observador no tiene permisos para eliminar comprobantes contables.');
+      alert('Modo Solo Lectura: El perfil Observador no tiene permisos para eliminar comprobantes contables.');
       return;
     }
     if (selectedVoucherIds.length === 0) return;
 
     const count = selectedVoucherIds.length;
-    if (!window.confirm(`⚠️ ELIMINACIÓN MASIVA DE COMPROBANTES\n\n¿Estás seguro de que deseas eliminar definitivamente los ${count} comprobante(s) seleccionado(s)?\n\n• Se desvincularán de los documentos RCV asociados (quedando listos para volver a contabilizar si corresponde).\n• Se desvincularán de las conciliaciones bancarias.\n• Esta acción es definitiva.`)) {
+    if (!window.confirm(`ELIMINACIÓN MASIVA DE COMPROBANTES\n\n¿Estás seguro de que deseas eliminar definitivamente los ${count} comprobante(s) seleccionado(s)?\n\n• Se desvincularán de los documentos RCV asociados (quedando listos para volver a contabilizar si corresponde).\n• Se desvincularán de las conciliaciones bancarias.\n• Esta acción es definitiva.`)) {
       return;
     }
 
@@ -4546,17 +4546,17 @@ export default function CompanyAccountingDashboard({
           setSelectedVoucher(null);
         }
         await fetchData();
-        alert(`✅ Eliminación Masiva Exitosa:\n\nSe eliminaron correctamente ${count} comprobante(s) contable(s).`);
+        alert(`Eliminación Masiva Exitosa:\n\nSe eliminaron correctamente ${count} comprobante(s) contable(s).`);
       });
     } catch (err: any) {
       console.error('Error al eliminar comprobantes en masa:', err);
-      alert(`❌ Error al eliminar comprobantes en masa: ${err.message || 'Error desconocido'}`);
+      alert(`Error al eliminar comprobantes en masa: ${err.message || 'Error desconocido'}`);
     }
   };
 
   const handleAutoFixCeecVouchers = async () => {
     if (isReadOnly) {
-      alert('🔒 Modo Solo Lectura: El perfil Observador no puede modificar comprobantes.');
+      alert('Modo Solo Lectura: El perfil Observador no puede modificar comprobantes.');
       return;
     }
 
@@ -4606,11 +4606,11 @@ export default function CompanyAccountingDashboard({
     }).join('\n');
 
     const confirmMsg = 
-      `🏗️ REGULARIZACIÓN AUTOMÁTICA DE CRÉDITO ESPECIAL CONSTRUCTORA (CEEC ART. 21 D.L. 910)\n\n` +
+      `REGULARIZACIÓN AUTOMÁTICA DE CRÉDITO ESPECIAL CONSTRUCTORA (CEEC ART. 21 D.L. 910)\n\n` +
       `Se detectaron ${candidates.length} comprobante(s) de ventas descuadrados por la deducción de la franquicia constructora:\n\n` +
       sampleList +
       (candidates.length > 6 ? `\n ... y ${candidates.length - 6} comprobante(s) más.` : '') +
-      `\n\n💰 Total Crédito Constructora a Imputar: $${Math.round(totalDiffToFix).toLocaleString('es-CL')}\n\n` +
+      `\n\n Total Crédito Constructora a Imputar: $${Math.round(totalDiffToFix).toLocaleString('es-CL')}\n\n` +
       `¿Qué hará esta función?\n` +
       `1. Agregará automáticamente a cada asiento la línea al Debe:\n` +
       `   [1107001] Crédito Especial Empresas Constructoras (Art. 21 D.L. 910) por el monto exacto de la rebaja.\n` +
@@ -4722,14 +4722,14 @@ export default function CompanyAccountingDashboard({
       });
 
       await fetchData();
-      alert(`✅ ¡Regularización Exitosa!\n\nSe cuadraron automáticamente ${candidates.length} comprobantes de venta con la cuenta [1107001] Crédito Especial Constructora.\n\nAhora todos los asientos son VÁLIDOS y el Balance de 8 Columnas los incorpora inmediatamente reflejando las cifras actualizadas.`);
+      alert(` ¡Regularización Exitosa!\n\nSe cuadraron automáticamente ${candidates.length} comprobantes de venta con la cuenta [1107001] Crédito Especial Constructora.\n\nAhora todos los asientos son VÁLIDOS y el Balance de 8 Columnas los incorpora inmediatamente reflejando las cifras actualizadas.`);
     });
   };
 
   const handleSaveVoucherForm = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isReadOnly) {
-      alert('🔒 Modo Solo Lectura: El perfil Observador no puede crear ni modificar comprobantes contables.');
+      alert('Modo Solo Lectura: El perfil Observador no puede crear ni modificar comprobantes contables.');
       return;
     }
     if (!voucherForm) return;
@@ -4737,7 +4737,7 @@ export default function CompanyAccountingDashboard({
     const voucherPeriod = voucherForm.date ? voucherForm.date.substring(0, 7) : selectedRcvPeriod;
     const periodCheck = checkIsPeriodClosed(voucherPeriod);
     if (periodCheck.isClosed) {
-      alert(`⚠️ Acción Bloqueada:\n\n${periodCheck.errorMsg}\n\nNo puedes registrar ni modificar comprobantes en la fecha ${voucherForm.date} porque su período contable está CERRADO.`);
+      alert(`Acción Bloqueada:\n\n${periodCheck.errorMsg}\n\nNo puedes registrar ni modificar comprobantes en la fecha ${voucherForm.date} porque su período contable está CERRADO.`);
       return;
     }
 
@@ -4771,7 +4771,7 @@ export default function CompanyAccountingDashboard({
 
     if (missingAnalysisErrors.length > 0) {
       alert(
-        `⚠️ ANÁLISIS CONTABLES OBLIGATORIOS FALTANTES:\n\n` +
+        `ANÁLISIS CONTABLES OBLIGATORIOS FALTANTES:\n\n` +
         `El comprobante no puede ser guardado porque las siguientes cuentas exigen análisis según el Plan de Cuentas:\n\n` +
         missingAnalysisErrors.join('\n') +
         `\n\nPor favor haz clic en "Análisis" en las líneas correspondientes para ingresar la información requerida.`
@@ -4898,7 +4898,7 @@ export default function CompanyAccountingDashboard({
   // Delete Single RCV Document (Purchases, Sales, Honorarios, etc.)
   const handleDeleteSingleRcvDoc = async (docId: string, tipo: string, folio: string) => {
     if (isReadOnly) {
-      alert('🔒 Modo Solo Lectura: El perfil Observador no puede eliminar documentos.');
+      alert('Modo Solo Lectura: El perfil Observador no puede eliminar documentos.');
       return;
     }
 
@@ -4906,7 +4906,7 @@ export default function CompanyAccountingDashboard({
     if (targetDoc && targetDoc.period) {
       const periodCheck = checkIsPeriodClosed(targetDoc.period);
       if (periodCheck.isClosed) {
-        alert(`⚠️ Acción Bloqueada:\n\n${periodCheck.errorMsg}\n\nNo puedes eliminar documentos de un período contable cerrado.`);
+        alert(`Acción Bloqueada:\n\n${periodCheck.errorMsg}\n\nNo puedes eliminar documentos de un período contable cerrado.`);
         return;
       }
     }
@@ -4938,7 +4938,7 @@ export default function CompanyAccountingDashboard({
   // Delete Selected RCV Documents
   const handleDeleteSelectedRcvDocs = async () => {
     if (isReadOnly) {
-      alert('🔒 Modo Solo Lectura: El perfil Observador no puede eliminar documentos.');
+      alert('Modo Solo Lectura: El perfil Observador no puede eliminar documentos.');
       return;
     }
     if (selectedRcvIds.length === 0) return;
@@ -4951,7 +4951,7 @@ export default function CompanyAccountingDashboard({
       if (d.period && d.period.length === 7) {
         const pCheck = checkIsPeriodClosed(d.period);
         if (pCheck.isClosed) {
-          alert(`⚠️ Acción Bloqueada:\n\nEl documento ${d.tipoDoc || d.tipoRegistro} Folio #${d.folio} pertenece al período cerrado (${pCheck.periodStr}).\n\nNo puedes eliminar documentos en períodos fiscales cerrados.`);
+          alert(`Acción Bloqueada:\n\nEl documento ${d.tipoDoc || d.tipoRegistro} Folio #${d.folio} pertenece al período cerrado (${pCheck.periodStr}).\n\nNo puedes eliminar documentos en períodos fiscales cerrados.`);
           return;
         }
       }
@@ -4986,7 +4986,7 @@ export default function CompanyAccountingDashboard({
   // Seed default Chilean Chart of Accounts if empty
   const handleSeedDefaultAccounts = async () => {
     if (isReadOnly) {
-      alert('🔒 Modo Solo Lectura: El perfil Observador no puede cargar planes de cuenta.');
+      alert('Modo Solo Lectura: El perfil Observador no puede cargar planes de cuenta.');
       return;
     }
     if (accounts.length > 0) {
@@ -5032,7 +5032,7 @@ export default function CompanyAccountingDashboard({
   // Seed Historical Exchange Rates from Jan 2020 to Date
   const handleSeedExchangeRates = async () => {
     if (isReadOnly) {
-      alert('🔒 Modo Solo Lectura: El perfil Observador no puede generar ni modificar indicadores históricos.');
+      alert('Modo Solo Lectura: El perfil Observador no puede generar ni modificar indicadores históricos.');
       return;
     }
     if (exchangeRates.length > 500) {
@@ -5098,7 +5098,7 @@ export default function CompanyAccountingDashboard({
   const handleSaveAccount = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (isReadOnly) {
-      alert('🔒 Modo Solo Lectura: El perfil Observador no puede crear ni modificar cuentas contables.');
+      alert('Modo Solo Lectura: El perfil Observador no puede crear ni modificar cuentas contables.');
       return;
     }
     const formData = new FormData(e.currentTarget);
@@ -5199,7 +5199,7 @@ export default function CompanyAccountingDashboard({
   // Save Auxiliary from Modal
   const handleSaveAuxiliary = async (auxData: Partial<Auxiliary>) => {
     if (isReadOnly) {
-      alert('🔒 Modo Solo Lectura: El perfil Observador no puede crear ni modificar auxiliares.');
+      alert('Modo Solo Lectura: El perfil Observador no puede crear ni modificar auxiliares.');
       return;
     }
 
@@ -5329,7 +5329,7 @@ export default function CompanyAccountingDashboard({
   const handleSaveRcvParams = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (isReadOnly) {
-      alert('🔒 Modo Solo Lectura: El perfil Observador no puede modificar parámetros.');
+      alert('Modo Solo Lectura: El perfil Observador no puede modificar parámetros.');
       return;
     }
     const formData = new FormData(e.currentTarget);
@@ -5378,7 +5378,7 @@ export default function CompanyAccountingDashboard({
 
   const handleSaveMasterAccountingParams = async (params: MasterAccountingParameters) => {
     if (isReadOnly) {
-      alert('🔒 Modo Solo Lectura: El perfil Observador no puede modificar parámetros.');
+      alert('Modo Solo Lectura: El perfil Observador no puede modificar parámetros.');
       return;
     }
     try {
@@ -5427,7 +5427,7 @@ export default function CompanyAccountingDashboard({
   const handleToggleMonthStatus = async (year: number, monthNum: number, currentStatus: 'Abierto' | 'Cerrado') => {
     // Los administradores de estudio y superusuarios siempre pueden gestionar periodos
     if (currentUserRole === UserRole.OBSERVER) {
-      alert('🔒 Modo Solo Lectura: El perfil Observador no tiene permisos para abrir o cerrar períodos.');
+      alert('Modo Solo Lectura: El perfil Observador no tiene permisos para abrir o cerrar períodos.');
       return;
     }
     const fyId = String(year);
@@ -5497,7 +5497,7 @@ export default function CompanyAccountingDashboard({
       return 'px-3 py-1 text-xs rounded-lg font-semibold flex items-center gap-1.5 transition-all whitespace-nowrap flex-shrink-0 bg-indigo-50/80 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 shadow-2xs cursor-pointer';
     }
     if (variant === 'gradient') {
-      return 'px-3 py-1 text-xs rounded-lg font-semibold flex items-center gap-1.5 transition-all whitespace-nowrap flex-shrink-0 bg-gradient-to-r from-indigo-50 to-blue-50 hover:from-indigo-100 hover:to-blue-100 text-indigo-900 border border-indigo-200 shadow-2xs cursor-pointer';
+      return 'px-3 py-1 text-xs rounded-lg font-semibold flex items-center gap-1.5 transition-all whitespace-nowrap flex-shrink-0 bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 shadow-2xs cursor-pointer';
     }
     return 'px-3 py-1 text-xs rounded-lg font-semibold flex items-center gap-1.5 transition-all whitespace-nowrap flex-shrink-0 bg-white hover:bg-slate-50 text-slate-700 hover:text-[#0D253D] border border-slate-200/80 shadow-2xs cursor-pointer';
   };
@@ -5589,7 +5589,6 @@ export default function CompanyAccountingDashboard({
           className="fixed bottom-3 left-3 z-50 bg-[#0D253D] hover:bg-slate-800 text-indigo-200 border border-slate-600 px-3 py-2 rounded-xl shadow-2xl text-xs font-bold flex items-center gap-2 cursor-pointer transition-all animate-bounce"
           title="Mostrar barra de acceso rápido"
         >
-          <span>📂</span>
           <span>Mostrar Barra de Acceso Rápido</span>
         </button>
       )}
@@ -5616,7 +5615,7 @@ export default function CompanyAccountingDashboard({
           {isReadOnly && (
             <div className="mb-2 bg-amber-500/10 border border-amber-500/30 px-3 py-1.5 rounded-lg flex items-center justify-between text-amber-900 text-xs shrink-0">
               <span className="flex items-center gap-2 font-bold">
-                <span>🔒 Modo Solo Lectura</span>
+                <span> Modo Solo Lectura</span>
                 <span className="text-[11px] font-normal text-amber-700">Visualización activa para el perfil observador.</span>
               </span>
               <span className="text-[10px] font-mono font-bold bg-amber-200/80 px-2 py-0.5 rounded">OBSERVADOR</span>
@@ -5625,11 +5624,11 @@ export default function CompanyAccountingDashboard({
 
           {/* Banner Modo Showroom / Empresa Modelo */}
           {isDemoCompany && (
-            <div className="mb-2.5 bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-indigo-500/10 border border-amber-500/40 p-2.5 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs shrink-0 shadow-2xs">
+            <div className="mb-2.5 bg-amber-500/15 border border-amber-500/40 p-2.5 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs shrink-0 shadow-2xs">
               <div className="flex items-center gap-2.5 flex-wrap">
                 <span className="px-2 py-0.5 rounded-md bg-amber-500 text-white font-black text-[10px] tracking-wide uppercase flex items-center gap-1 shadow-2xs">
                   <Sparkles className="w-3 h-3 text-amber-200" />
-                  <span>🌟 Modo Showroom Activo</span>
+                  <span> Modo Showroom Activo</span>
                 </span>
                 <span className="font-extrabold text-slate-900">
                   {DEMO_COMPANY_NAME}
@@ -5657,11 +5656,11 @@ export default function CompanyAccountingDashboard({
                 <button
                   type="button"
                   onClick={() => setShowDemoManagerModal(true)}
-                  className="px-3 py-1 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-extrabold rounded-lg shadow-xs text-[11px] cursor-pointer flex items-center gap-1 transition-all shrink-0"
+                  className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white font-extrabold rounded-lg shadow-xs text-[11px] cursor-pointer flex items-center gap-1 transition-all shrink-0"
                   title="Restablecer o purgar todos los datos de prueba del año 2026"
                 >
                   <Sparkles className="w-3 h-3 text-amber-200" />
-                  <span>🎯 Reiniciar Demo 2026</span>
+                  <span> Reiniciar Demo 2026</span>
                 </button>
               </div>
             </div>
@@ -5673,7 +5672,6 @@ export default function CompanyAccountingDashboard({
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-4xl w-full max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             <div className="p-4 bg-slate-900 text-white flex justify-between items-center border-b border-slate-800">
               <div className="flex items-center gap-2">
-                <span className="text-base">📊</span>
                 <h3 className="font-bold text-sm">Histórico Completo de Indicadores Económicos (UF, Dólar, UTM, Euro, Yen)</h3>
               </div>
               <button
@@ -5900,7 +5898,6 @@ export default function CompanyAccountingDashboard({
         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm max-w-5xl mx-auto space-y-6">
           <div className="border-b border-slate-200 pb-4">
             <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <span>⚙️</span>
               <span>Parámetros Contables del RCV (Cuentas y Análisis por Defecto)</span>
             </h3>
             <p className="text-xs text-slate-500 mt-1">
@@ -5912,7 +5909,6 @@ export default function CompanyAccountingDashboard({
 
           <div className="bg-indigo-50/80 border border-indigo-200 rounded-xl p-3.5 flex items-center justify-between gap-4">
             <div className="flex items-center gap-2.5">
-              <span className="text-xl">✨</span>
               <div>
                 <h4 className="text-xs font-bold text-indigo-900">¿Deseas configurar la contabilidad de todos los módulos en un solo lugar?</h4>
                 <p className="text-[11px] text-indigo-700">Accede a la Matriz Maestra de Parametrización en el Motor de Centralizaciones (Capa 2 ERP).</p>
@@ -5933,7 +5929,6 @@ export default function CompanyAccountingDashboard({
               {/* Bloque 1: Impuestos Centralizados */}
               <div className="space-y-4 bg-slate-50/70 p-4 rounded-xl border border-slate-200">
                 <h4 className="text-xs font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
-                  <span>🏛️</span>
                   <span>Impuestos Centralizados</span>
                 </h4>
                 
@@ -5980,7 +5975,6 @@ export default function CompanyAccountingDashboard({
                 <div className="bg-amber-50/80 p-3.5 rounded-lg border border-amber-300">
                   <div className="flex items-center justify-between mb-1.5 flex-wrap gap-2">
                     <label className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
-                      <span>🏗️</span>
                       <span>Franquicia Tributaria Empresas Constructoras (CEEC Art. 21 D.L. 910)</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-amber-900 bg-white px-2.5 py-1 rounded border border-amber-300 shadow-sm">
@@ -6015,7 +6009,6 @@ export default function CompanyAccountingDashboard({
               {/* Bloque 2: Cuentas y Contrapartidas por Defecto (Fallback) */}
               <div className="space-y-4 bg-slate-50/70 p-4 rounded-xl border border-slate-200">
                 <h4 className="text-xs font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
-                  <span>🔄</span>
                   <span>Cuentas y Contrapartidas por Defecto (Fallback)</span>
                 </h4>
                 
@@ -6072,7 +6065,6 @@ export default function CompanyAccountingDashboard({
             {/* Bloque 3: Parámetros de Análisis por Defecto (Fallback si el auxiliar no tiene configurado) */}
             <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200 space-y-4">
               <div className="flex items-center gap-2">
-                <span className="text-base">📊</span>
                 <h4 className="text-xs font-bold text-indigo-900 uppercase tracking-wider">
                   Parámetros de Análisis por Defecto (Fallback Empresa)
                 </h4>
@@ -6128,7 +6120,6 @@ export default function CompanyAccountingDashboard({
                 type="submit"
                 className="w-full sm:w-auto px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-colors shadow-sm flex items-center justify-center gap-2"
               >
-                <span>💾</span>
                 <span>Guardar Parámetros Contables RCV</span>
               </button>
             </div>
@@ -6142,7 +6133,6 @@ export default function CompanyAccountingDashboard({
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-200 pb-4 gap-4">
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xl">📋</span>
                 <h3 className="text-lg font-bold text-slate-900">Maestro y Configuración de Códigos F.29 ({company.name})</h3>
               </div>
               <p className="text-xs text-slate-500 mt-1">
@@ -6191,7 +6181,6 @@ export default function CompanyAccountingDashboard({
             {/* Sección IVA Débito y Crédito */}
             <div className="space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
               <h4 className="text-xs font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
-                <span>📑</span>
                 <span>Secciones I y II: Débito y Crédito Fiscal IVA</span>
               </h4>
 
@@ -6251,7 +6240,6 @@ export default function CompanyAccountingDashboard({
             {/* Sección Retenciones, PPM y Otros */}
             <div className="space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
               <h4 className="text-xs font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
-                <span>💼</span>
                 <span>Secciones IV, V y VI: Retenciones, PPM y Otros</span>
               </h4>
 
@@ -6328,7 +6316,6 @@ export default function CompanyAccountingDashboard({
               onClick={handleSaveF29CodeSettings}
               className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-6 rounded-lg transition-colors text-xs flex items-center gap-2 shadow-sm"
             >
-              <span>💾</span>
               <span>Guardar Configuración Códigos F.29</span>
             </button>
           </div>
@@ -6429,12 +6416,10 @@ export default function CompanyAccountingDashboard({
                 >
                   {isRescatandoRcvApi ? (
                     <>
-                      <span className="animate-spin text-sm">🔄</span>
                       <span>Sincronizando con SII...</span>
                     </>
                   ) : (
                     <>
-                      <span className="text-sm">⚡</span>
                       <span>Sincronizar con SII ({selectedRcvPeriod})</span>
                     </>
                   )}
@@ -6448,7 +6433,7 @@ export default function CompanyAccountingDashboard({
                   className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs px-3 py-2 rounded-lg border border-slate-300 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
                   title="Cargar archivos CSV o TXT descargados manualmente desde el portal del SII"
                 >
-                  <span>{showManualUpload ? '✕ Ocultar Carga CSV' : '📥 Cargar CSV/TXT Manual'}</span>
+                  <span>{showManualUpload ? '✕ Ocultar Carga CSV' : 'Cargar CSV/TXT Manual'}</span>
                 </button>
               </div>
 
@@ -6471,7 +6456,7 @@ export default function CompanyAccountingDashboard({
             <div className="bg-slate-50 border border-slate-200 p-5 rounded-xl space-y-3 animate-in fade-in duration-150">
               <div className="flex items-center justify-between">
                 <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                  <span>📂 Carga de Archivos Oficiales del SII (Período: {selectedRcvPeriod})</span>
+                  <span> Carga de Archivos Oficiales del SII (Período: {selectedRcvPeriod})</span>
                 </h4>
                 <span className="text-[11px] text-slate-500">Formatos admitidos: .xlsx, .xls, .csv o .txt descargados del portal del SII</span>
               </div>
@@ -6507,7 +6492,6 @@ export default function CompanyAccountingDashboard({
               </div>
 
               <div className="bg-blue-50/70 border border-blue-200 text-blue-950 p-3 rounded-lg text-xs flex items-center gap-2">
-                <span className="text-base">💡</span>
                 <p>
                   <strong>Instrucciones rápidas:</strong> En el portal del SII presiona el botón azul <strong>"Descargar Detalles"</strong> (o <em>"Descargar Resúmenes"</em>) y selecciónalo aquí en <strong>2. Ventas SII</strong> o <strong>1. Compras SII</strong> para procesar de inmediato todas las Facturas de Exportación (110), Facturas (33), Boletas y Notas de Crédito.
                 </p>
@@ -6566,7 +6550,6 @@ export default function CompanyAccountingDashboard({
                       className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-medium px-3.5 py-1.5 rounded-lg transition-colors shadow-sm flex items-center gap-1"
                       title="Eliminar los documentos seleccionados"
                     >
-                      <span>🗑️</span>
                       <span>Eliminar Seleccionados ({selectedRcvIds.length})</span>
                     </button>
                   </div>
@@ -6578,7 +6561,6 @@ export default function CompanyAccountingDashboard({
                   className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer"
                   title="Auditar la base de datos y eliminar permanentemente cualquier documento duplicado de compras, ventas u honorarios"
                 >
-                  <span>🧹</span>
                   <span>Depurar Duplicados</span>
                 </button>
                 <button
@@ -6609,7 +6591,6 @@ export default function CompanyAccountingDashboard({
               return (
                 <div className="bg-emerald-50 border border-emerald-300 rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-xs">
                   <div className="flex items-start gap-2.5">
-                    <span className="text-lg leading-none">✅</span>
                     <div>
                       <p className="font-bold text-emerald-950">
                         Consolidación de Boletas: Se conserva el último resumen oficial acumulado (Folio #{keepDoc.folio} por ${(keepDoc.montoTotal || 0).toLocaleString('es-CL')})
@@ -6624,7 +6605,6 @@ export default function CompanyAccountingDashboard({
                     className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-3.5 py-2 rounded-lg text-xs shadow-xs transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer"
                     title="Consolidar y dejar solo el último resumen oficial acumulado"
                   >
-                    <span>🧹</span>
                     <span>Dejar Solo Último Resumen</span>
                   </button>
                 </div>
@@ -6841,7 +6821,7 @@ export default function CompanyAccountingDashboard({
                           )}
                           {(docItem.montoCeec || (docItem.tipoRegistro === 'Venta' && docItem.montoTotal > 0 && docItem.montoTotal < (docItem.montoNeto + docItem.montoIva + (docItem.montoExento || 0)))) ? (
                             <div className="text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded text-[9px] font-medium mt-0.5 inline-block ml-1">
-                              🏗️ CEEC Constructora
+                               CEEC Constructora
                             </div>
                           ) : null}
                         </td>
@@ -6911,7 +6891,6 @@ export default function CompanyAccountingDashboard({
                               className="text-rose-600 hover:text-rose-800 hover:bg-rose-50 p-1 rounded transition-colors text-xs"
                               title="Eliminar documento de la base de datos"
                             >
-                              🗑️
                             </button>
                           </div>
                         </td>
@@ -7065,7 +7044,7 @@ export default function CompanyAccountingDashboard({
 
                           setEditingRcvDoc(null);
                           await fetchData();
-                          alert('✅ Documento actualizado y datos sincronizados correctamente.');
+                          alert('Documento actualizado y datos sincronizados correctamente.');
                         } catch (err: any) {
                           alert('Error actualizando documento: ' + err.message);
                         }
@@ -7152,7 +7131,6 @@ export default function CompanyAccountingDashboard({
                         <div className="bg-amber-50/80 p-3.5 rounded-xl border border-amber-300 space-y-3">
                           <div className="flex items-center justify-between">
                             <span className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
-                              <span>🚫</span>
                               <span>IVA Sin Derecho a Crédito Fiscal (No Recuperable)</span>
                             </span>
                             <div className="flex items-center gap-2">
@@ -7273,7 +7251,6 @@ export default function CompanyAccountingDashboard({
                         <div className="bg-emerald-50/70 p-3 rounded-lg border border-emerald-200">
                           <div className="flex justify-between items-center mb-1">
                             <label className="font-bold text-emerald-950 flex items-center gap-1.5">
-                              <span>🏗️</span>
                               <span>Crédito Especial Empresa Constructora (CEEC Art. 21 D.L. 910)</span>
                             </label>
                           </div>
@@ -7303,7 +7280,7 @@ export default function CompanyAccountingDashboard({
                                 }}
                                 className="text-[11px] bg-emerald-100 hover:bg-emerald-200 text-emerald-900 font-semibold px-2.5 py-1.5 rounded-lg border border-emerald-300 cursor-pointer"
                               >
-                                ⚡ Sugerir Tope 65% IVA
+                                 Sugerir Tope 65% IVA
                               </button>
                             </div>
                           </div>
@@ -7332,7 +7309,7 @@ export default function CompanyAccountingDashboard({
           {/* Cabecera Estandarizada: Título y Botones de Acción */}
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 pb-4 border-b border-slate-200">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#0D253D] to-indigo-700 text-white flex items-center justify-center shadow-sm shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-[#0D253D] text-white flex items-center justify-center shadow-sm shrink-0">
                 <FileText className="w-5 h-5" />
               </div>
               <div>
@@ -7383,7 +7360,6 @@ export default function CompanyAccountingDashboard({
                 className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer relative"
                 title="Reexpresar asientos en Dólares / UF a Pesos (CLP) con Tipo de Cambio Oficial"
               >
-                <span>💵</span>
                 <span>Reexpresar Divisas</span>
                 {foreignDiscrepanciesCount > 0 && (
                   <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping absolute -top-0.5 -right-0.5" />
@@ -7514,7 +7490,6 @@ export default function CompanyAccountingDashboard({
           {foreignDiscrepanciesCount > 0 && (
             <div className="bg-amber-50 border border-amber-300 rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-amber-950 shadow-xs">
               <div className="flex items-center gap-2.5">
-                <span className="text-xl">⚠️</span>
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-amber-900">Alerta de Moneda Extranjera (USD / UF):</span>
@@ -7531,7 +7506,6 @@ export default function CompanyAccountingDashboard({
                 onClick={() => setShowForeignCurrencyCorrectorModal(true)}
                 className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg shadow-xs transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1.5"
               >
-                <span>💵</span>
                 <span>Reexpresar a Pesos (CLP)</span>
               </button>
             </div>
@@ -7743,7 +7717,7 @@ export default function CompanyAccountingDashboard({
                             onClick={() => setShowExcelImportModal(true)}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 font-medium rounded-lg text-xs hover:bg-indigo-100 border border-indigo-200 cursor-pointer"
                           >
-                            <span>📥</span> Cargar Comprobantes desde Excel
+                            Cargar Comprobantes desde Excel
                           </button>
                         </div>
                       ) : (
@@ -7763,7 +7737,7 @@ export default function CompanyAccountingDashboard({
                             }}
                             className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg text-xs hover:bg-indigo-700 shadow-xs cursor-pointer"
                           >
-                            <span>🔄</span> Restablecer Filtros y Ver Todos ({vouchers.length})
+                            Restablecer Filtros y Ver Todos ({vouchers.length})
                           </button>
                         </div>
                       )}
@@ -7846,42 +7820,42 @@ export default function CompanyAccountingDashboard({
                               <div className="flex flex-wrap gap-1 max-w-[280px]">
                                 {line.auxiliaryRut && (
                                   <span className="bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.5 rounded text-[10px] font-mono" title={line.auxiliaryName}>
-                                    👤 {line.auxiliaryRut}
+                                     {line.auxiliaryRut}
                                   </span>
                                 )}
                                 {line.costCenter && (
                                   <span className="bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded text-[10px]">
-                                    🏢 {line.costCenter}
+                                     {line.costCenter}
                                   </span>
                                 )}
                                 {line.bankDocRef && (
                                   <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded text-[10px] font-mono">
-                                    🏦 {line.bankDocRef}
+                                     {line.bankDocRef}
                                   </span>
                                 )}
                                 {line.dueDate && (
                                   <span className="bg-purple-50 text-purple-700 border border-purple-200 px-1.5 py-0.5 rounded text-[10px]">
-                                    📅 {line.dueDate}
+                                     {line.dueDate}
                                   </span>
                                 )}
                                 {line.expenseItem && (
                                   <span className="bg-orange-50 text-orange-700 border border-orange-200 px-1.5 py-0.5 rounded text-[10px]">
-                                    🏷️ {line.expenseItem}
+                                     {line.expenseItem}
                                   </span>
                                 )}
                                 {line.project && (
                                   <span className="bg-teal-50 text-teal-700 border border-teal-200 px-1.5 py-0.5 rounded text-[10px]">
-                                    🏗️ {line.project}
+                                     {line.project}
                                   </span>
                                 )}
                                 {line.product && (
                                   <span className="bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.5 rounded text-[10px]">
-                                    📦 {line.product}
+                                     {line.product}
                                   </span>
                                 )}
                                 {line.customAnalyses && Object.entries(line.customAnalyses).map(([k, v]) => v ? (
                                   <span key={k} className="bg-slate-100 text-slate-700 border border-slate-300 px-1.5 py-0.5 rounded text-[10px]">
-                                    ⚙️ {k}: {v}
+                                     {k}: {v}
                                   </span>
                                 ) : null)}
                                 {!line.auxiliaryRut && !line.costCenter && !line.bankDocRef && !line.dueDate && !line.expenseItem && !line.project && !line.product && (!line.customAnalyses || Object.keys(line.customAnalyses).length === 0) && (
@@ -7977,8 +7951,8 @@ export default function CompanyAccountingDashboard({
                       voucherActionModal.type === 'anular' ? 'bg-purple-600 text-white' :
                       'bg-emerald-600 text-white'
                     }`}>
-                      {voucherActionModal.type === 'eliminar' ? '🗑️' :
-                       voucherActionModal.type === 'anular' ? '🚫' : '🔄'}
+                      {voucherActionModal.type === 'eliminar' ? '' :
+                       voucherActionModal.type === 'anular' ? '' : ''}
                     </div>
                     <div>
                       <h3 className="font-bold text-slate-900 text-base">
@@ -8006,7 +7980,7 @@ export default function CompanyAccountingDashboard({
                   {voucherActionModal.type === 'eliminar' && (
                     <div className="p-3 bg-rose-50/70 border border-rose-200 rounded-lg text-rose-900 space-y-2">
                       <p className="font-semibold text-rose-800">
-                        ⚠️ ¿Deseas eliminar este comprobante contable de forma definitiva?
+                         ¿Deseas eliminar este comprobante contable de forma definitiva?
                       </p>
                       <p className="text-[11px] leading-relaxed">
                         El comprobante será eliminado de la base de datos. Si proviene de un documento cargado desde el RCV (Compras, Ventas o Boleta de Honorarios), dicho documento quedará inmediatamente <strong className="underline font-bold">liberado y en estado Pendiente de Contabilizar</strong> para que puedas volver a contabilizarlo con las cuentas y análisis correctos.
@@ -8018,7 +7992,7 @@ export default function CompanyAccountingDashboard({
                     <div className="space-y-3">
                       <div className="p-3 bg-purple-50/70 border border-purple-200 rounded-lg text-purple-900 space-y-2">
                         <p className="font-semibold text-purple-800">
-                          ℹ️ Efecto de la anulación contable:
+                           Efecto de la anulación contable:
                         </p>
                         <p className="text-[11px] leading-relaxed">
                           El comprobante quedará marcado como <strong className="font-bold">Anulado</strong> preservando su número correlativo para fines de auditoría e historial. Los documentos de origen del RCV vinculados volverán a quedar <strong className="underline font-bold">Pendientes de Contabilizar</strong> para su corrección o re-emisión.
@@ -8042,7 +8016,7 @@ export default function CompanyAccountingDashboard({
                   {voucherActionModal.type === 'reactivar' && (
                     <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-lg text-emerald-900 space-y-2">
                       <p className="font-semibold text-emerald-800">
-                        🔄 ¿Confirmas reactivar este comprobante?
+                         ¿Confirmas reactivar este comprobante?
                       </p>
                       <p className="text-[11px] leading-relaxed">
                         El comprobante volverá al estado <strong className="font-bold">Válido</strong> e impactará nuevamente los balances, libros y mayores contables.
@@ -8165,7 +8139,7 @@ export default function CompanyAccountingDashboard({
                         <div className="flex justify-between items-center mb-1">
                           <label className="block font-semibold text-slate-700">Glosa General del Comprobante *</label>
                           <span className="text-[11px] text-slate-500 italic">
-                            💡 La glosa general se copiará automáticamente en las líneas que se vayan ingresando
+                             La glosa general se copiará automáticamente en las líneas que se vayan ingresando
                           </span>
                         </div>
                         <input
@@ -8220,7 +8194,7 @@ export default function CompanyAccountingDashboard({
                             }}
                             className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg font-medium transition-colors"
                           >
-                            ⚖️ Auto-cuadrar Saldo
+                             Auto-cuadrar Saldo
                           </button>
                           <button
                             type="button"
@@ -8256,7 +8230,7 @@ export default function CompanyAccountingDashboard({
                             className="text-xs bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 px-3 py-1.5 rounded-lg font-semibold transition-colors flex items-center gap-1 cursor-pointer"
                             title="Añadir línea automática de Crédito Especial Constructora CEEC (Art. 21 D.L. 910)"
                           >
-                            🏗️ Cuadrar con CEEC (Constructora)
+                             Cuadrar con CEEC (Constructora)
                           </button>
                           <button
                             type="button"
@@ -8275,7 +8249,7 @@ export default function CompanyAccountingDashboard({
                             }}
                             className="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg font-semibold transition-colors flex items-center gap-1"
                           >
-                            ➕ Agregar Línea
+                             Agregar Línea
                           </button>
                         </div>
                       </div>
@@ -8407,7 +8381,6 @@ export default function CompanyAccountingDashboard({
                                             : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
                                         }`}
                                       >
-                                        <span>📊</span>
                                         <span>
                                           {hasMissing && line.accountId
                                             ? `Faltan ${valResult.missingFields.length}`
@@ -8434,7 +8407,6 @@ export default function CompanyAccountingDashboard({
                                         className="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded text-xs font-semibold flex items-center gap-1 transition-colors whitespace-nowrap"
                                         title="Distribuir esta línea en múltiples centros de costos, ítems de gasto o cuentas"
                                       >
-                                        <span>✂️</span>
                                         <span>Distribuir</span>
                                       </button>
                                     </div>
@@ -8483,7 +8455,6 @@ export default function CompanyAccountingDashboard({
                                           title="Copiar glosa general a esta línea"
                                           className="absolute right-1 text-slate-400 hover:text-indigo-600 p-1 text-[11px]"
                                         >
-                                          📋
                                         </button>
                                       )}
                                     </div>
@@ -8560,7 +8531,7 @@ export default function CompanyAccountingDashboard({
                                   {!isCuadrado && sumDebit + sumCredit > 0 && (
                                     <tr className="bg-rose-50 text-rose-700">
                                       <td colSpan={7} className="p-2 text-center font-medium">
-                                        ⚠️ Descuadre Contable: Diferencia de ${diff.toLocaleString('es-CL')} (Debe: ${sumDebit.toLocaleString('es-CL')} | Haber: ${sumCredit.toLocaleString('es-CL')})
+                                         Descuadre Contable: Diferencia de ${diff.toLocaleString('es-CL')} (Debe: ${sumDebit.toLocaleString('es-CL')} | Haber: ${sumCredit.toLocaleString('es-CL')})
                                       </td>
                                     </tr>
                                   )}
@@ -8611,10 +8582,10 @@ export default function CompanyAccountingDashboard({
                   return (
                     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm">
                       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                        <div className="p-4 bg-gradient-to-r from-slate-900 to-indigo-950 text-white flex justify-between items-center">
+                        <div className="p-4 bg-slate-900 text-white flex justify-between items-center">
                           <div>
                             <h4 className="font-bold text-sm flex items-center gap-2">
-                              <span>📊 Análisis Contables - Línea #{targetIdx + 1}</span>
+                              <span> Análisis Contables - Línea #{targetIdx + 1}</span>
                               {lineAcc && (
                                 <span className="bg-indigo-500/30 text-indigo-200 text-xs px-2 py-0.5 rounded font-mono border border-indigo-400/40">
                                   {lineAcc.code}
@@ -8640,17 +8611,17 @@ export default function CompanyAccountingDashboard({
                             <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
                               <span className="font-bold text-slate-700 block">Exigencias según Plan de Cuentas:</span>
                               <div className="flex flex-wrap gap-1.5">
-                                {lineAcc.requiereAuxiliarRUT ? <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 rounded font-semibold">⚠️ Exige Auxiliar / RUT</span> : null}
-                                {lineAcc.requiereDocumento ? <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded font-semibold">⚠️ Exige N° Documento</span> : null}
-                                {lineAcc.requiereCentroCosto ? <span className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded font-semibold">⚠️ Exige Centro de Costos</span> : null}
-                                {lineAcc.requiereConciliacionBancaria ? <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded font-semibold">⚠️ Exige Banco / Cheque</span> : null}
-                                {lineAcc.requiereVencimiento ? <span className="px-2 py-0.5 bg-purple-100 text-purple-800 rounded font-semibold">⚠️ Exige Fecha Vencimiento</span> : null}
-                                {lineAcc.requiereItemGasto ? <span className="px-2 py-0.5 bg-orange-100 text-orange-800 rounded font-semibold">⚠️ Exige Ítem Gasto</span> : null}
-                                {lineAcc.requiereProyecto ? <span className="px-2 py-0.5 bg-teal-100 text-teal-800 rounded font-semibold">⚠️ Exige Proyecto</span> : null}
-                                {lineAcc.requiereProducto ? <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 rounded font-semibold">⚠️ Exige Producto</span> : null}
+                                {lineAcc.requiereAuxiliarRUT ? <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 rounded font-semibold"> Exige Auxiliar / RUT</span> : null}
+                                {lineAcc.requiereDocumento ? <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded font-semibold"> Exige N° Documento</span> : null}
+                                {lineAcc.requiereCentroCosto ? <span className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded font-semibold"> Exige Centro de Costos</span> : null}
+                                {lineAcc.requiereConciliacionBancaria ? <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded font-semibold"> Exige Banco / Cheque</span> : null}
+                                {lineAcc.requiereVencimiento ? <span className="px-2 py-0.5 bg-purple-100 text-purple-800 rounded font-semibold"> Exige Fecha Vencimiento</span> : null}
+                                {lineAcc.requiereItemGasto ? <span className="px-2 py-0.5 bg-orange-100 text-orange-800 rounded font-semibold"> Exige Ítem Gasto</span> : null}
+                                {lineAcc.requiereProyecto ? <span className="px-2 py-0.5 bg-teal-100 text-teal-800 rounded font-semibold"> Exige Proyecto</span> : null}
+                                {lineAcc.requiereProducto ? <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 rounded font-semibold"> Exige Producto</span> : null}
                                 {customCols.map(col => {
                                   if (isCustomAnalysisRequired(lineAcc, col)) {
-                                    return <span key={col} className="px-2 py-0.5 bg-slate-200 text-slate-800 rounded font-semibold">⚠️ Exige {col}</span>;
+                                    return <span key={col} className="px-2 py-0.5 bg-slate-200 text-slate-800 rounded font-semibold"> Exige {col}</span>;
                                   }
                                   return null;
                                 })}
@@ -8665,7 +8636,7 @@ export default function CompanyAccountingDashboard({
                             {/* 1. Auxiliar RUT & Selector */}
                             <div className="sm:col-span-2 p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
                               <label className="font-bold text-slate-800 flex items-center gap-1.5">
-                                <span>👤 Auxiliar / RUT</span>
+                                <span> Auxiliar / RUT</span>
                                 {lineAcc?.requiereAuxiliarRUT && <span className="text-rose-600 font-bold">* (Obligatorio)</span>}
                               </label>
                               <SearchableAuxiliarySelect
@@ -8708,7 +8679,7 @@ export default function CompanyAccountingDashboard({
                             <div>
                               <div className="flex justify-between items-center mb-1">
                                 <label className="font-bold text-slate-800 block">
-                                  📄 N° Documento / Ref DTE
+                                   N° Documento / Ref DTE
                                   {lineAcc?.requiereDocumento && <span className="text-rose-600 font-bold ml-1">* (Obligatorio)</span>}
                                 </label>
                                 {nonSiiDocTypes.length > 0 && (
@@ -8749,7 +8720,7 @@ export default function CompanyAccountingDashboard({
                             {/* 3. Centro de Costos */}
                             <div>
                               <label className="font-bold text-slate-800 block mb-1">
-                                🏢 Centro de Costos
+                                 Centro de Costos
                                 {lineAcc?.requiereCentroCosto && <span className="text-rose-600 font-bold ml-1">* (Obligatorio)</span>}
                               </label>
                               {costCenters.length > 0 ? (
@@ -8787,7 +8758,7 @@ export default function CompanyAccountingDashboard({
                             {/* 4. Ref. Bancaria / N° Cheque */}
                             <div>
                               <label className="font-bold text-slate-800 block mb-1">
-                                🏦 Ref Bancaria / N° Cheque / Cartola
+                                 Ref Bancaria / N° Cheque / Cartola
                                 {lineAcc?.requiereConciliacionBancaria && <span className="text-rose-600 font-bold ml-1">* (Obligatorio)</span>}
                               </label>
                               <input
@@ -8807,7 +8778,7 @@ export default function CompanyAccountingDashboard({
                             <div>
                               <div className="flex justify-between items-center mb-1">
                                 <label className="font-bold text-slate-800">
-                                  📅 Fecha de Vencimiento
+                                   Fecha de Vencimiento
                                   {lineAcc?.requiereVencimiento && <span className="text-rose-600 font-bold ml-1">* (Obligatorio)</span>}
                                 </label>
                                 {voucherForm.date && (
@@ -8847,7 +8818,7 @@ export default function CompanyAccountingDashboard({
                             {/* 6. Ítem de Gasto */}
                             <div>
                               <label className="font-bold text-slate-800 block mb-1">
-                                🏷️ Ítem de Gasto
+                                 Ítem de Gasto
                                 {lineAcc?.requiereItemGasto && <span className="text-rose-600 font-bold ml-1">* (Obligatorio)</span>}
                               </label>
                               {expenseItems.length > 0 ? (
@@ -8885,7 +8856,7 @@ export default function CompanyAccountingDashboard({
                             {/* 7. Proyecto */}
                             <div>
                               <label className="font-bold text-slate-800 block mb-1">
-                                🏗️ Proyecto / Obra
+                                 Proyecto / Obra
                                 {lineAcc?.requiereProyecto && <span className="text-rose-600 font-bold ml-1">* (Obligatorio)</span>}
                               </label>
                               {projects.length > 0 ? (
@@ -8923,7 +8894,7 @@ export default function CompanyAccountingDashboard({
                             {/* 8. Producto */}
                             <div>
                               <label className="font-bold text-slate-800 block mb-1">
-                                📦 Producto / Servicio
+                                 Producto / Servicio
                                 {lineAcc?.requiereProducto && <span className="text-rose-600 font-bold ml-1">* (Obligatorio)</span>}
                               </label>
                               {products.length > 0 ? (
@@ -8967,7 +8938,7 @@ export default function CompanyAccountingDashboard({
                               return (
                                 <div key={col}>
                                   <label className="font-bold text-slate-800 block mb-1">
-                                    ⚙️ {col}
+                                     {col}
                                     {isReq && <span className="text-rose-600 font-bold ml-1">* (Obligatorio)</span>}
                                   </label>
                                   {colItems.length > 0 ? (
@@ -9018,7 +8989,6 @@ export default function CompanyAccountingDashboard({
                             }}
                             className="px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5"
                           >
-                            <span>✂️</span>
                             <span>Distribuir esta Línea (CC / Gastos / Cuentas)</span>
                           </button>
                           <button

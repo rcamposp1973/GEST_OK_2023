@@ -98,7 +98,7 @@ interface PlanillaConsultasDinamicasViewProps {
 const FACTORY_TEMPLATES: SavedAccountingQuery[] = [
   {
     id: 'tpl_mayor_1101001',
-    name: '📘 Mayor Cuenta 1101001 (Bancos / Caja) al 30-04-2026',
+    name: 'Mayor Cuenta 1101001 (Bancos / Caja) al 30-04-2026',
     description: 'Movimientos del Libro Mayor y saldo acumulado al 30 de abril de 2026.',
     sourceType: 'MAYOR',
     accountCode: '1101001',
@@ -109,7 +109,7 @@ const FACTORY_TEMPLATES: SavedAccountingQuery[] = [
   },
   {
     id: 'tpl_prov_pendientes',
-    name: '📥 Facturas de Proveedores Pendientes a Hoy',
+    name: 'Facturas de Proveedores Pendientes a Hoy',
     description: 'Lista todas las facturas y documentos de compras por pagar a la fecha actual.',
     sourceType: 'PROVEEDORES_RCV',
     cutoffDate: 'HOY',
@@ -119,7 +119,7 @@ const FACTORY_TEMPLATES: SavedAccountingQuery[] = [
   },
   {
     id: 'tpl_clientes_pendientes',
-    name: '📤 Facturas de Clientes Pendientes de Cobro',
+    name: 'Facturas de Clientes Pendientes de Cobro',
     description: 'Documentos de venta emitidos con saldo pendiente de cobranza a hoy.',
     sourceType: 'CLIENTES_RCV',
     cutoffDate: 'HOY',
@@ -129,7 +129,7 @@ const FACTORY_TEMPLATES: SavedAccountingQuery[] = [
   },
   {
     id: 'tpl_nomina_pagos',
-    name: '💳 Nómina de Pagos: Proveedores Pendientes a Hoy',
+    name: 'Nómina de Pagos: Proveedores Pendientes a Hoy',
     description: 'Generación de nómina de transferencias bancarias masivas a proveedores.',
     sourceType: 'NOMINA_PAGO',
     cutoffDate: 'HOY',
@@ -139,7 +139,7 @@ const FACTORY_TEMPLATES: SavedAccountingQuery[] = [
   },
   {
     id: 'tpl_costos_comparativo',
-    name: '📈 Comparativo Anual de Centros de Costo',
+    name: 'Comparativo Anual de Centros de Costo',
     description: 'Comparación dinámica de gastos y costos por Centro de Costo entre períodos.',
     sourceType: 'COMPARATIVO',
     viewMode: 'COMPARATIVO',
@@ -147,7 +147,7 @@ const FACTORY_TEMPLATES: SavedAccountingQuery[] = [
   },
   {
     id: 'tpl_partidas_abiertas',
-    name: '⚖️ Partidas Abiertas y Calce entre Cuentas',
+    name: 'Partidas Abiertas y Calce entre Cuentas',
     description: 'Compensación de partidas pendientes entre cuentas contables.',
     sourceType: 'PARTIDAS_ABIERTAS',
     cutoffDate: 'HOY',
@@ -1260,12 +1260,12 @@ export default function PlanillaConsultasDinamicasView({
       {/* --- CABECERA PRINCIPAL ESTILO STUDIO CONTABLE --- */}
       <div className="bg-slate-900 text-white p-4 rounded-xl shadow-sm border border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-emerald-600 flex items-center justify-center text-white shadow-md">
+          <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center text-white shadow-md">
             <FileSpreadsheet className="w-6 h-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-bold tracking-tight">Pizarra Mágica: Planilla Dinámica de Consultas & Análisis</h2>
+              <h2 className="text-base font-bold tracking-tight">Planilla dinámica de consultas y análisis</h2>
               <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-mono px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
                 Motor Multidimensional
               </span>
@@ -1284,7 +1284,7 @@ export default function PlanillaConsultasDinamicasView({
               onClick={onBackToTraditionalAnalysis}
               className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors"
             >
-              <span>⚖️ Ver Calce Tradicional</span>
+              <span> Ver Calce Tradicional</span>
             </button>
           )}
 
@@ -1351,12 +1351,12 @@ export default function PlanillaConsultasDinamicasView({
               }}
               className="bg-white border border-slate-300 rounded px-2 py-1 text-xs font-bold text-slate-900 focus:outline-none"
             >
-              <option value="MAYOR">📘 Libro Mayor (Cuentas)</option>
-              <option value="PARTIDAS_ABIERTAS">⚖️ Partidas Abiertas / Calce</option>
-              <option value="PROVEEDORES_RCV">📥 Facturas por Pagar (Compras)</option>
-              <option value="CLIENTES_RCV">📤 Facturas por Cobrar (Ventas)</option>
-              <option value="NOMINA_PAGO">💳 Nómina de Pagos</option>
-              <option value="COMPARATIVO">📈 Comparativo de Períodos</option>
+              <option value="MAYOR"> Libro Mayor (Cuentas)</option>
+              <option value="PARTIDAS_ABIERTAS"> Partidas Abiertas / Calce</option>
+              <option value="PROVEEDORES_RCV"> Facturas por Pagar (Compras)</option>
+              <option value="CLIENTES_RCV"> Facturas por Cobrar (Ventas)</option>
+              <option value="NOMINA_PAGO"> Nómina de Pagos</option>
+              <option value="COMPARATIVO"> Comparativo de Períodos</option>
             </select>
           </div>
 
@@ -1475,7 +1475,7 @@ export default function PlanillaConsultasDinamicasView({
               className="bg-indigo-50 border border-indigo-200 text-indigo-900 rounded-lg px-2.5 py-1.5 text-xs font-bold shadow-2xs focus:ring-1 focus:ring-indigo-500 focus:outline-none max-w-xs truncate"
               title="Cargar una plantilla predefinida o consulta guardada de la empresa"
             >
-              <option value="">📂 Cargar plantilla o consulta guardada...</option>
+              <option value=""> Cargar plantilla o consulta guardada...</option>
               <optgroup label="Plantillas de Fábrica">
                 {FACTORY_TEMPLATES.map(t => (
                   <option key={t.id} value={t.id}>{t.name}</option>
@@ -1484,7 +1484,7 @@ export default function PlanillaConsultasDinamicasView({
               {savedQueries.length > 0 && (
                 <optgroup label="Consultas Guardadas (Empresa)">
                   {savedQueries.map(q => (
-                    <option key={q.id} value={q.id}>⭐ {q.name}</option>
+                    <option key={q.id} value={q.id}> {q.name}</option>
                   ))}
                 </optgroup>
               )}

@@ -326,7 +326,7 @@ export default function JuniorGlossAutomationModal({
         {/* Header */}
         <div
           {...dragProps}
-          className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-5 flex items-center justify-between border-b border-indigo-900/50 cursor-grab active:cursor-grabbing select-none"
+          className="bg-slate-900 text-white p-5 flex items-center justify-between border-b border-indigo-900/50 cursor-grab active:cursor-grabbing select-none"
           title="Haz clic y arrastra para mover esta ventana"
         >
           <div className="flex items-center gap-3">
@@ -468,7 +468,7 @@ export default function JuniorGlossAutomationModal({
                                 ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                                 : 'bg-blue-100 text-blue-800 border border-blue-200'
                             }`}>
-                              {isCargo ? '📤 Cargo (Egreso)' : isAbono ? '📥 Abono (Ingreso)' : '🔄 Ambos'}
+                              {isCargo ? 'Cargo (Egreso)' : isAbono ? 'Abono (Ingreso)' : 'Ambos'}
                             </span>
                             <span className="font-mono font-black text-slate-900 text-sm bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
                               "{rule.pattern}"
@@ -604,7 +604,7 @@ export default function JuniorGlossAutomationModal({
                           : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
-                      📤 Cargos (Egresos)
+                       Cargos (Egresos)
                     </button>
                     <button
                       type="button"
@@ -615,7 +615,7 @@ export default function JuniorGlossAutomationModal({
                           : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
-                      📥 Abonos (Ingresos)
+                       Abonos (Ingresos)
                     </button>
                     <button
                       type="button"
@@ -626,7 +626,7 @@ export default function JuniorGlossAutomationModal({
                           : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
-                      🔄 Ambos
+                       Ambos
                     </button>
                   </div>
                 </div>
@@ -681,7 +681,7 @@ export default function JuniorGlossAutomationModal({
                       <label className="text-[11px] font-bold text-slate-700">Centro de Costos:</label>
                       {selectedFormAccount?.requiereCentroCosto && (
                         <span className="text-[10px] font-black text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-200">
-                          ⚠️ Requerido
+                           Requerido
                         </span>
                       )}
                     </div>
@@ -709,7 +709,7 @@ export default function JuniorGlossAutomationModal({
                       <label className="text-[11px] font-bold text-slate-700">Ítem de Gasto / Clasificación:</label>
                       {selectedFormAccount?.requiereItemGasto && (
                         <span className="text-[10px] font-black text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-200">
-                          ⚠️ Requerido
+                           Requerido
                         </span>
                       )}
                     </div>
@@ -737,7 +737,7 @@ export default function JuniorGlossAutomationModal({
                       <label className="text-[11px] font-bold text-slate-700">Proyecto:</label>
                       {selectedFormAccount?.requiereProyecto && (
                         <span className="text-[10px] font-black text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-200">
-                          ⚠️ Requerido
+                           Requerido
                         </span>
                       )}
                     </div>
@@ -765,7 +765,7 @@ export default function JuniorGlossAutomationModal({
                       <label className="text-[11px] font-bold text-slate-700">Auxiliar (RUT / Entidad):</label>
                       {selectedFormAccount?.requiereAuxiliarRUT && (
                         <span className="text-[10px] font-black text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-200">
-                          ⚠️ Requerido
+                           Requerido
                         </span>
                       )}
                     </div>
@@ -842,7 +842,7 @@ export default function JuniorGlossAutomationModal({
                 <div className="space-y-2 pt-2">
                   <div className="flex justify-between items-center text-xs font-bold text-slate-700">
                     <span>
-                      📋 Movimientos Encontrados en Cartolas ({scannedItems.length}):
+                       Movimientos Encontrados en Cartolas ({scannedItems.length}):
                     </span>
                     <span className="text-indigo-700 font-mono font-black">
                       Total: ${scannedItems.reduce((s, i) => s + (i.line.charge || i.line.deposit || 0), 0).toLocaleString('es-CL')}
@@ -876,7 +876,7 @@ export default function JuniorGlossAutomationModal({
                             <td className="p-2 text-center">
                               {item.isDateShifted ? (
                                 <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold" title="Mes cerrado, trasladado">
-                                  {item.effectiveDate} ⚠️
+                                  {item.effectiveDate} 
                                 </span>
                               ) : (
                                 <span className="text-slate-600">{item.effectiveDate}</span>

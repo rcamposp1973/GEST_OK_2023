@@ -245,7 +245,7 @@ export default function VoucherLineDistributionModal({
   // Validation before apply
   const handleApply = () => {
     if (!isPerfectAmount) {
-      alert(`⚠️ La distribución no coincide con el monto total original ($${originalTotal.toLocaleString('es-CL')}). Diferencia pendiente: $${diffAmount.toLocaleString('es-CL')}`);
+      alert(`La distribución no coincide con el monto total original ($${originalTotal.toLocaleString('es-CL')}). Diferencia pendiente: $${diffAmount.toLocaleString('es-CL')}`);
       return;
     }
 
@@ -275,7 +275,7 @@ export default function VoucherLineDistributionModal({
       const acc = accounts.find(a => a.id === line.accountId || a.code === line.accountCode);
       const val = validateVoucherLine(line, acc, customColumns);
       if (!val.isValid) {
-        alert(`⚠️ Línea #${i + 1} (${line.accountCode} - ${line.accountName}): Faltan análisis obligatorios:\n\n${val.missingFields.join('\n')}`);
+        alert(`Línea #${i + 1} (${line.accountCode} - ${line.accountName}): Faltan análisis obligatorios:\n\n${val.missingFields.join('\n')}`);
         return;
       }
     }
@@ -310,7 +310,7 @@ export default function VoucherLineDistributionModal({
                 Distribución Contable de Línea (Prorrateo de Centros de Costo / Ítems)
               </h3>
               <p className="text-[11px] text-slate-400">
-                Divida el monto de la línea en múltiples centros de costos, ítems de gasto o cuentas contables. (Ventana movible)
+                Divida el monto de la línea en múltiples centros de costos, ítems de gasto o cuentas contables.
               </p>
             </div>
           </div>
@@ -415,7 +415,6 @@ export default function VoucherLineDistributionModal({
               onClick={handleAddSubLine}
               className="px-3.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold transition-colors border border-indigo-200 flex items-center gap-1"
             >
-              <span>➕</span>
               <span>Agregar Sub-Línea</span>
             </button>
           </div>
@@ -618,7 +617,7 @@ export default function VoucherLineDistributionModal({
                   <td colSpan={5} className="p-2.5">
                     {!isPerfectAmount ? (
                       <span className="text-rose-700 font-medium flex items-center gap-1">
-                        <span>⚠️ Diferencia:</span>
+                        <span> Diferencia:</span>
                         <strong className="font-mono">${diffAmount.toLocaleString('es-CL')}</strong>
                         <button
                           type="button"

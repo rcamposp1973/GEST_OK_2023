@@ -278,7 +278,7 @@ export const CockpitTabBar: React.FC<CockpitTabBarProps> = ({
                     const isOpen = currFy ? currFy.months[m] === 'Abierto' : false;
                     monthOptions.push({
                       periodStr,
-                      label: `${monthNames[m]} ${selectedYear} ${isOpen ? '●' : '🔒'}`,
+                      label: `${monthNames[m]} ${selectedYear} ${isOpen ? '●' : ''}`,
                       isOpen
                     });
                   }

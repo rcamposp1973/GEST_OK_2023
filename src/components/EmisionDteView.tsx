@@ -190,10 +190,10 @@ export default function EmisionDteView({
       if (!resData.success) {
         const errorMsg = resData.error || 'No se pudo autenticar con el portal del SII o la API del proveedor.';
         alert(
-          `⚠️ SINCRONIZACIÓN AUTOMÁTICA SII / RCV:\n\n` +
+          `SINCRONIZACIÓN AUTOMÁTICA SII / RCV:\n\n` +
           `${errorMsg}\n\n` +
           `----------------------------------------\n` +
-          `📌 PARA OBTENER TUS DATOS 100% REALES:\n\n` +
+          `PARA OBTENER TUS DATOS 100% REALES:\n\n` +
           `1. Si posees una API Key de integración (SimpleAPI, OpenFactura, LibreDTE):\n` +
           `   Inscríbela en la pestaña "Credenciales & Firma Digital" de la empresa.\n\n` +
           `2. Si descargas tu RCV oficial de sii.cl:\n` +
@@ -207,7 +207,7 @@ export default function EmisionDteView({
       const realDocs = resData.documents || [];
 
       if (realDocs.length === 0) {
-        alert(`ℹ️ El portal del SII respondió correctamente, pero no registra documentos de RCV emitidos en el año ${yearToSync} para ${company.name}.`);
+        alert(`El portal del SII respondió correctamente, pero no registra documentos de RCV emitidos en el año ${yearToSync} para ${company.name}.`);
         return;
       }
 
@@ -346,7 +346,7 @@ export default function EmisionDteView({
       await onRefreshData();
 
       alert(
-        `✅ ¡Sincronización RCV SII Completada con Éxito (${yearToSync})!\n\n` +
+        ` ¡Sincronización RCV SII Completada con Éxito (${yearToSync})!\n\n` +
         `• Total documentos REALES rescatados: ${newFetchedDocs.length}\n` +
         `• Todos los registros han sido agregados a tu contabilidad RCV de ${company.name}.`
       );
@@ -354,7 +354,7 @@ export default function EmisionDteView({
     } catch (err) {
       console.error('Error syncing DTEs / RCV from SII:', err);
       const errorMessage = err instanceof Error ? err.message : String(err);
-      alert(`❌ Error al conectar con el servidor para rescatar RCV/DTEs:\n${errorMessage}`);
+      alert(`Error al conectar con el servidor para rescatar RCV/DTEs:\n${errorMessage}`);
     } finally {
       setIsSyncingSii(false);
     }
@@ -364,7 +364,7 @@ export default function EmisionDteView({
   const handlePurgeAllSimulatedData = async (silent: boolean = false) => {
     if (!silent) {
       const confirmMessage =
-        `🗑️ ¿CONFIRMAS BORRAR TODOS LOS REGISTROS Y DTEs DE PRUEBA?\n\n` +
+        ` ¿CONFIRMAS BORRAR TODOS LOS REGISTROS Y DTEs DE PRUEBA?\n\n` +
         `Esta acción eliminará de forma irreversible todos los DTEs e Historial RCV registrados previamente para ${company.name}.\n` +
         `Tu base de datos quedará 100% limpia (0 documentos) para conectar tu API Key del SII o cargar tus datos reales.`;
 
@@ -390,11 +390,11 @@ export default function EmisionDteView({
       await onRefreshData();
 
       if (!silent) {
-        alert(`✅ ¡Base de Datos Limpiada con Éxito!\n\nSe han eliminado todos los registros de prueba. La contabilidad de ${company.name} ha quedado 100% limpia (0 registros) para recibir datos reales vía API Key.`);
+        alert(` ¡Base de Datos Limpiada con Éxito!\n\nSe han eliminado todos los registros de prueba. La contabilidad de ${company.name} ha quedado 100% limpia (0 registros) para recibir datos reales vía API Key.`);
       }
     } catch (err) {
       console.error('Error purging simulated data:', err);
-      if (!silent) alert('❌ Ocurrió un error al intentar eliminar los datos de prueba.');
+      if (!silent) alert('Ocurrió un error al intentar eliminar los datos de prueba.');
     } finally {
       setIsSyncingSii(false);
     }
@@ -497,10 +497,10 @@ export default function EmisionDteView({
         dteModuleEnabled: enabled,
       });
       await onRefreshData();
-      alert(`✅ Módulo Facturador SII ${enabled ? 'Habilitado' : 'Deshabilitado'} correctamente.`);
+      alert(`Módulo Facturador SII ${enabled ? 'Habilitado' : 'Deshabilitado'} correctamente.`);
     } catch (err) {
       console.error('Error toggling DTE module:', err);
-      alert('❌ Error al actualizar el estado del módulo DTE.');
+      alert('Error al actualizar el estado del módulo DTE.');
     }
   };
 
@@ -522,9 +522,9 @@ export default function EmisionDteView({
     }));
 
     if (freshRutRep || freshNombreRep) {
-      alert(`✅ Datos rescatados exitosamente desde la Ficha de la Sociedad:\n\n- Representante Legal: ${freshNombreRep} (${freshRutRep})\n- Empresa / RUT: ${company.name} (${company.rut})\n- Comuna / Ciudad: ${freshComuna}, ${freshCiudad}\n\nPuedes ingresar o modificar las Claves SII a continuación si aún no las has ingresado y presionar "Guardar Credenciales Duales".`);
+      alert(`Datos rescatados exitosamente desde la Ficha de la Sociedad:\n\n- Representante Legal: ${freshNombreRep} (${freshRutRep})\n- Empresa / RUT: ${company.name} (${company.rut})\n- Comuna / Ciudad: ${freshComuna}, ${freshCiudad}\n\nPuedes ingresar o modificar las Claves SII a continuación si aún no las has ingresado y presionar "Guardar Credenciales Duales".`);
     } else {
-      alert(`⚠️ La Ficha de la Sociedad "${company.name}" no tenía registrado el RUT o Nombre del Representante Legal.\n\nSe han sincronizado la Razón Social y Domicilio (${company.rut}, ${freshComuna}). Por favor ingresa el RUT del Representante en el campo correspondiente.`);
+      alert(`La Ficha de la Sociedad "${company.name}"no tenía registrado el RUT o Nombre del Representante Legal.\n\nSe han sincronizado la Razón Social y Domicilio (${company.rut}, ${freshComuna}). Por favor ingresa el RUT del Representante en el campo correspondiente.`);
     }
   };
 
@@ -634,10 +634,10 @@ export default function EmisionDteView({
       setClaveCompInput(compClave);
       setClaveCertInput(certClave);
       await onRefreshData();
-      alert(`✅ ¡Credenciales e Integración SII Guardadas con Éxito!\n\n- Modo Emisión: ${updatedConfig.ambiente}\n- Proveedor API: ${updatedConfig.siiApiProvider}\n- URL API: ${updatedConfig.siiApiUrl || 'Por defecto'}\n- API Key: ${updatedConfig.siiApiKey ? '••••' + updatedConfig.siiApiKey.slice(-4) : 'Sin API Key'}\n- Sociedad: ${company.name} (${company.rut})\n- Rep. Legal: ${config.nombreRepresentante} (${config.rutRepresentante})`);
+      alert(` ¡Credenciales e Integración SII Guardadas con Éxito!\n\n- Modo Emisión: ${updatedConfig.ambiente}\n- Proveedor API: ${updatedConfig.siiApiProvider}\n- URL API: ${updatedConfig.siiApiUrl || 'Por defecto'}\n- API Key: ${updatedConfig.siiApiKey ? '••••' + updatedConfig.siiApiKey.slice(-4) : 'Sin API Key'}\n- Sociedad: ${company.name} (${company.rut})\n- Rep. Legal: ${config.nombreRepresentante} (${config.rutRepresentante})`);
     } catch (err) {
       console.error('Error saving DTE config:', err);
-      alert('❌ Error al guardar la configuración de Factura Electrónica.');
+      alert('Error al guardar la configuración de Factura Electrónica.');
     } finally {
       setLoading(false);
     }
@@ -703,12 +703,12 @@ export default function EmisionDteView({
   // Create & Process DTE (Emit & Contabilizar)
   const handleEmitirDTE = async () => {
     if (!receptorRut || !receptorRazonSocial) {
-      alert('⚠️ Debe ingresar el RUT y Razón Social del Receptor.');
+      alert('Debe ingresar el RUT y Razón Social del Receptor.');
       return;
     }
 
     if (items.length === 0 || montoTotal <= 0) {
-      alert('⚠️ El documento debe tener al menos un ítem con monto mayor a $0.');
+      alert('El documento debe tener al menos un ítem con monto mayor a $0.');
       return;
     }
 
@@ -982,9 +982,9 @@ export default function EmisionDteView({
       setPreviewDoc({ ...newDoc, voucherNumber: nextVoucherNum });
       setShowPreviewModal(true);
 
-      const modeTag = isSandbox ? '🧪 [MODO PRUEBAS / SANDBOX SII]' : '🟢 [PRODUCCIÓN SII EN VIVO]';
+      const modeTag = isSandbox ? ' [MODO PRUEBAS / SANDBOX SII]' : ' [PRODUCCIÓN SII EN VIVO]';
       alert(
-        `🚀 ¡DTE ${labelMap[tipoDTE]} N° ${nextFolio} Emitido y Contabilizado con Éxito!\n\n` +
+        ` ¡DTE ${labelMap[tipoDTE]} N° ${nextFolio} Emitido y Contabilizado con Éxito!\n\n` +
         `• Entorno: ${modeTag}\n` +
         `• Voucher Contable: N° ${nextVoucherNum} generado en Libro Diario.\n` +
         `• Registrado en RCV Ventas para cálculo F29.\n` +
@@ -995,7 +995,7 @@ export default function EmisionDteView({
       );
     } catch (err) {
       console.error('Error al emitir DTE:', err);
-      alert('❌ Ocurrió un error al procesar la emisión del DTE.');
+      alert('Ocurrió un error al procesar la emisión del DTE.');
     } finally {
       setLoading(false);
     }
@@ -1007,7 +1007,6 @@ export default function EmisionDteView({
       <div className="bg-slate-900 text-white rounded-2xl p-6 shadow-xl border border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-2xl">⚡</span>
             <h2 className="text-xl font-bold tracking-tight">Emisión Directa de DTEs (Facturador del SII)</h2>
             <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${isModuleEnabled ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'}`}>
               {isModuleEnabled ? '● MÓDULO HABILITADO' : '○ MÓDULO DESHABILITADO'}
@@ -1029,7 +1028,7 @@ export default function EmisionDteView({
                 : 'bg-amber-600 hover:bg-amber-700 text-white'
             }`}
           >
-            <span>{isModuleEnabled ? '✓ Habilitado' : '⚡ Activar Módulo'}</span>
+            <span>{isModuleEnabled ? '✓ Habilitado' : 'Activar Módulo'}</span>
           </button>
         </div>
       </div>
@@ -1038,7 +1037,6 @@ export default function EmisionDteView({
       {!isModuleEnabled && (
         <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-8 text-center space-y-4 shadow-sm">
           <div className="w-16 h-16 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center mx-auto text-3xl font-bold">
-            🔒
           </div>
           <div className="max-w-xl mx-auto space-y-2">
             <h3 className="text-lg font-bold text-amber-900">El Módulo de Emisión Directa DTE está Deshabilitado</h3>
@@ -1050,7 +1048,7 @@ export default function EmisionDteView({
             onClick={() => handleToggleModule(true)}
             className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all shadow-md"
           >
-            🟢 Habilitar Módulo para {company.name}
+             Habilitar Módulo para {company.name}
           </button>
         </div>
       )}
@@ -1077,7 +1075,7 @@ export default function EmisionDteView({
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              <span>📑 Histórico de DTEs Emitidos ({dteDocs.length})</span>
+              <span> Histórico de DTEs Emitidos ({dteDocs.length})</span>
             </button>
             <button
               onClick={() => setActiveTab('configuracion')}
@@ -1087,7 +1085,7 @@ export default function EmisionDteView({
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              <span>⚙️ Credenciales & Firma Digital (Bóveda Segura)</span>
+              <span> Credenciales & Firma Digital (Bóveda Segura)</span>
             </button>
           </div>
 
@@ -1098,7 +1096,7 @@ export default function EmisionDteView({
               <div className="p-4 bg-slate-900 text-white rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-md">
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg ${siiEnvironmentMode === 'SANDBOX' ? 'bg-amber-500 text-slate-950' : 'bg-emerald-500 text-slate-950'}`}>
-                    {siiEnvironmentMode === 'SANDBOX' ? '🧪' : '⚡'}
+                    {siiEnvironmentMode === 'SANDBOX' ? '' : ''}
                   </div>
                   <div>
                     <h4 className="font-bold text-sm flex items-center gap-2">
@@ -1125,7 +1123,7 @@ export default function EmisionDteView({
                         : 'text-slate-400 hover:text-white'
                     }`}
                   >
-                    🧪 Modo Pruebas
+                     Modo Pruebas
                   </button>
                   <button
                     type="button"
@@ -1136,7 +1134,7 @@ export default function EmisionDteView({
                         : 'text-slate-400 hover:text-white'
                     }`}
                   >
-                    🟢 Modo Producción
+                     Modo Producción
                   </button>
                 </div>
               </div>
@@ -1183,7 +1181,7 @@ export default function EmisionDteView({
                     <div className="bg-linear-to-br from-indigo-900 to-slate-900 text-white p-5 rounded-2xl border border-indigo-700 shadow-md space-y-4">
                       <div className="flex items-center justify-between border-b border-indigo-800 pb-2">
                         <h3 className="text-sm font-bold text-indigo-200 uppercase tracking-wider flex items-center gap-2">
-                          <span>🌐 Datos de Exportación & Aduana (DTE {tipoDTE})</span>
+                          <span> Datos de Exportación & Aduana (DTE {tipoDTE})</span>
                         </h3>
                         <span className="text-xs bg-indigo-500/30 text-indigo-300 px-2 py-0.5 rounded-full font-mono">
                           Norma SII Art. 12 Letra D
@@ -1691,7 +1689,7 @@ export default function EmisionDteView({
                         Resumen de Emisión DTE
                       </h3>
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${siiEnvironmentMode === 'SANDBOX' ? 'bg-amber-400 text-slate-950 font-extrabold' : 'bg-emerald-400 text-slate-950 font-extrabold'}`}>
-                        {siiEnvironmentMode === 'SANDBOX' ? '🧪 SANDBOX' : '🟢 EN VIVO'}
+                        {siiEnvironmentMode === 'SANDBOX' ? 'SANDBOX' : 'EN VIVO'}
                       </span>
                     </div>
 
@@ -1764,7 +1762,7 @@ export default function EmisionDteView({
                         <span>Procesando Firma y Transmisión...</span>
                       ) : (
                         <>
-                          <span>🚀 Emitir DTE y Contabilizar</span>
+                          <span> Emitir DTE y Contabilizar</span>
                         </>
                       )}
                     </button>
@@ -1781,7 +1779,7 @@ export default function EmisionDteView({
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
                 <div>
                   <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                    <span>📜 Histórico y Registro de DTEs Emitidos</span>
+                    <span> Histórico y Registro de DTEs Emitidos</span>
                     <span className="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
                       Conexión Directa SII
                     </span>
@@ -1821,7 +1819,7 @@ export default function EmisionDteView({
                       </>
                     ) : (
                       <>
-                        <span>⚡ Rescatar / Sincronizar DTEs ({selectedSyncYear})</span>
+                        <span> Rescatar / Sincronizar DTEs ({selectedSyncYear})</span>
                       </>
                     )}
                   </button>
@@ -1832,7 +1830,7 @@ export default function EmisionDteView({
                     className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold rounded-lg transition-colors cursor-pointer"
                     title="Actualizar lista local"
                   >
-                    🔄 Actualizar
+                     Actualizar
                   </button>
 
                   <button
@@ -1842,7 +1840,7 @@ export default function EmisionDteView({
                     className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-800 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1"
                     title="Limpiar y borrar todos los DTEs y RCV de prueba o simulados"
                   >
-                    🗑️ Limpiar Datos de Prueba
+                     Limpiar Datos de Prueba
                   </button>
                 </div>
               </div>
@@ -1851,7 +1849,6 @@ export default function EmisionDteView({
               {dteDocs.length > 0 && (
                 <div className="bg-rose-50 border border-rose-300 rounded-xl p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-rose-950 font-semibold">
                   <div className="flex items-center gap-2">
-                    <span className="text-base">🗑️</span>
                     <span>Hay {dteDocs.length} registros en la base de datos. Si corresponden a datos ficticios de prueba, haz clic para borrarlos todos y dejar la base de datos en 0.</span>
                   </div>
                   <button
@@ -1880,7 +1877,7 @@ export default function EmisionDteView({
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                       <div className="bg-indigo-50/70 border border-indigo-200 rounded-xl p-3.5 space-y-1">
                         <div className="flex justify-between items-center text-xs text-indigo-900 font-semibold">
-                          <span>📄 Facturas (33/34)</span>
+                          <span> Facturas (33/34)</span>
                           <span className="font-mono bg-indigo-200 text-indigo-900 text-[10px] px-1.5 py-0.5 rounded font-bold">{facturasList.length}</span>
                         </div>
                         <div className="text-base font-black text-indigo-950">${totalFacturas.toLocaleString('es-CL')}</div>
@@ -1889,7 +1886,7 @@ export default function EmisionDteView({
 
                       <div className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-3.5 space-y-1">
                         <div className="flex justify-between items-center text-xs text-emerald-900 font-semibold">
-                          <span>🧾 Boletas Electrónicas (39/41)</span>
+                          <span> Boletas Electrónicas (39/41)</span>
                           <span className="font-mono bg-emerald-200 text-emerald-900 text-[10px] px-1.5 py-0.5 rounded font-bold">{boletasList.length}</span>
                         </div>
                         <div className="text-base font-black text-emerald-950">${totalBoletas.toLocaleString('es-CL')}</div>
@@ -1898,7 +1895,7 @@ export default function EmisionDteView({
 
                       <div className="bg-amber-50/70 border border-amber-200 rounded-xl p-3.5 space-y-1">
                         <div className="flex justify-between items-center text-xs text-amber-900 font-semibold">
-                          <span>📑 Notas de Crédito (61)</span>
+                          <span> Notas de Crédito (61)</span>
                           <span className="font-mono bg-amber-200 text-amber-900 text-[10px] px-1.5 py-0.5 rounded font-bold">{ncsList.length}</span>
                         </div>
                         <div className="text-base font-black text-amber-950">${totalNCs.toLocaleString('es-CL')}</div>
@@ -1907,7 +1904,7 @@ export default function EmisionDteView({
 
                       <div className="bg-slate-100 border border-slate-300 rounded-xl p-3.5 space-y-1 flex flex-col justify-center">
                         <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
-                          <span>🛡️ Resguardo de Contabilidad</span>
+                          <span> Resguardo de Contabilidad</span>
                         </div>
                         <p className="text-[10px] text-slate-600 leading-tight">
                           {selectedSyncYear < 2026
@@ -1940,7 +1937,7 @@ export default function EmisionDteView({
                             : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                         }`}
                       >
-                        📄 Facturas ({facturasList.length})
+                         Facturas ({facturasList.length})
                       </button>
                       <button
                         type="button"
@@ -1951,7 +1948,7 @@ export default function EmisionDteView({
                             : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                         }`}
                       >
-                        🧾 Boletas Electrónicas ({boletasList.length})
+                         Boletas Electrónicas ({boletasList.length})
                       </button>
                       <button
                         type="button"
@@ -1962,7 +1959,7 @@ export default function EmisionDteView({
                             : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                         }`}
                       >
-                        📑 Notas de Crédito ({ncsList.length})
+                         Notas de Crédito ({ncsList.length})
                       </button>
                     </div>
                   </div>
@@ -1982,10 +1979,9 @@ export default function EmisionDteView({
                 if (displayDocs.length === 0) {
                   return (
                     <div className="text-center py-12 bg-slate-50 rounded-xl border border-dashed border-slate-300 space-y-3">
-                      <span className="text-3xl">📥</span>
                       <h4 className="text-sm font-bold text-slate-700">No hay DTEs sincronizados para el año {selectedSyncYear}</h4>
                       <p className="text-xs text-slate-500 max-w-md mx-auto">
-                        Presiona el botón <span className="font-bold text-emerald-700">⚡ Rescatar / Sincronizar DTEs ({selectedSyncYear})</span> para traer automáticamente todas las Facturas y Boletas emitidas desde el SII.
+                        Presiona el botón <span className="font-bold text-emerald-700"> Rescatar / Sincronizar DTEs ({selectedSyncYear})</span> para traer automáticamente todas las Facturas y Boletas emitidas desde el SII.
                       </p>
                       <button
                         type="button"
@@ -1993,7 +1989,7 @@ export default function EmisionDteView({
                         onClick={() => handleSyncDteFromSII(selectedSyncYear)}
                         className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition-all cursor-pointer"
                       >
-                        ⚡ Sincronizar AHORA Año {selectedSyncYear}
+                         Sincronizar AHORA Año {selectedSyncYear}
                       </button>
                     </div>
                   );
@@ -2024,15 +2020,15 @@ export default function EmisionDteView({
                               <td className="p-3 font-sans">
                                 {isBoleta ? (
                                   <span className="bg-emerald-100 text-emerald-900 border border-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                                    🧾 {doc.tipoDTELabel}
+                                     {doc.tipoDTELabel}
                                   </span>
                                 ) : isNC ? (
                                   <span className="bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                                    📑 {doc.tipoDTELabel}
+                                     {doc.tipoDTELabel}
                                   </span>
                                 ) : (
                                   <span className="bg-indigo-100 text-indigo-900 border border-indigo-300 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                                    📄 {doc.tipoDTELabel}
+                                     {doc.tipoDTELabel}
                                   </span>
                                 )}
                               </td>
@@ -2057,7 +2053,7 @@ export default function EmisionDteView({
                                   </span>
                                 ) : selectedSyncYear < 2026 ? (
                                   <span className="bg-slate-100 text-slate-600 border border-slate-200 text-[10px] font-medium px-2 py-0.5 rounded" title="Años anteriores guardados como historial informativo sin alterar libros">
-                                    🛡️ Historial Informativo
+                                     Historial Informativo
                                   </span>
                                 ) : (
                                   <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-medium px-2 py-0.5 rounded">
@@ -2086,7 +2082,7 @@ export default function EmisionDteView({
                                     className="px-2 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border border-emerald-300 text-[11px] font-bold rounded transition-colors cursor-pointer"
                                     title="Descargar XML DTE"
                                   >
-                                    XML 📥
+                                    XML 
                                   </button>
                                 </div>
                               </td>
@@ -2107,7 +2103,6 @@ export default function EmisionDteView({
               <div className="border-b border-slate-200 pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xl">🔒</span>
                     <h3 className="text-lg font-bold text-slate-900">Credenciales Duales & Conexión Directa SII</h3>
                   </div>
                   <p className="text-xs text-slate-500 mt-1">
@@ -2121,7 +2116,7 @@ export default function EmisionDteView({
                     className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-900 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 shadow-xs"
                     title="Rescatar RUT, Nombre de Representante y Domicilio desde la Ficha de la Empresa"
                   >
-                    <span>📥 Rescatar Ficha Sociedad</span>
+                    <span> Rescatar Ficha Sociedad</span>
                   </button>
                   <button
                     type="button"
@@ -2133,7 +2128,7 @@ export default function EmisionDteView({
                       <span>Probando Conexión...</span>
                     ) : (
                       <>
-                        <span>⚡ Probar Conexión Dual SII</span>
+                        <span> Probar Conexión Dual SII</span>
                       </>
                     )}
                   </button>
@@ -2145,7 +2140,7 @@ export default function EmisionDteView({
                 <div className={`p-4 rounded-xl border space-y-3 text-xs ${diagnosticResult.success ? 'bg-emerald-50 border-emerald-300 text-emerald-950' : 'bg-amber-50 border-amber-300 text-amber-950'}`}>
                   <div className="flex justify-between items-center font-bold">
                     <span className="flex items-center gap-2 text-sm">
-                      {diagnosticResult.success ? '✅ Conexión Exitosa con Servidores del SII (zeus.sii.cl)' : '⚠️ Advertencia de Conexión SII'}
+                      {diagnosticResult.success ? 'Conexión Exitosa con Servidores del SII (zeus.sii.cl)' : 'Advertencia de Conexión SII'}
                     </span>
                     <span className="font-mono text-[11px] bg-white/60 px-2 py-0.5 rounded border">
                       Latencia: {diagnosticResult.latencyMs}ms | {diagnosticResult.environment}
@@ -2181,7 +2176,7 @@ export default function EmisionDteView({
                 <div className="p-5 bg-indigo-50/40 border border-indigo-200 rounded-2xl space-y-4">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                     <h4 className="font-bold text-indigo-950 text-sm flex items-center gap-2">
-                      <span>👤 Credencial 1: Representante Legal (Portal RCV & Facturador SII)</span>
+                      <span> Credencial 1: Representante Legal (Portal RCV & Facturador SII)</span>
                     </h4>
                     <div className="flex items-center gap-2">
                       <button
@@ -2189,7 +2184,7 @@ export default function EmisionDteView({
                         onClick={handleRescatarDatosSociedad}
                         className="text-[11px] bg-indigo-100 hover:bg-indigo-200 text-indigo-900 font-bold px-2.5 py-1 rounded-lg border border-indigo-300 transition-colors flex items-center gap-1"
                       >
-                        <span>📥 Sincronizar Ficha</span>
+                        <span> Sincronizar Ficha</span>
                       </button>
                       <span className="text-[10px] bg-indigo-100 text-indigo-800 font-bold px-2 py-0.5 rounded-full border border-indigo-200">
                         Requerido para RCV y Boletas
@@ -2246,7 +2241,7 @@ export default function EmisionDteView({
                           className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 font-bold cursor-pointer"
                           title={showClaveRep ? "Ocultar clave" : "Ver clave"}
                         >
-                          {showClaveRep ? '👁️' : '🙈'}
+                          {showClaveRep ? '' : ''}
                         </button>
                       </div>
                     </div>
@@ -2270,7 +2265,7 @@ export default function EmisionDteView({
                 <div className="p-5 bg-purple-50/50 border border-purple-200 rounded-2xl space-y-4">
                   <div className="flex items-center justify-between">
                     <h4 className="font-bold text-purple-950 text-sm flex items-center gap-2">
-                      <span>🔑 Firma Digital / Certificado Electrónico (.pfx / .p12)</span>
+                      <span> Firma Digital / Certificado Electrónico (.pfx / .p12)</span>
                     </h4>
                     <span className="text-[10px] bg-purple-100 text-purple-800 font-bold px-2 py-0.5 rounded-full border border-purple-200">
                       Obligatorio Timbrado SII
@@ -2285,7 +2280,7 @@ export default function EmisionDteView({
                       <label className="block font-semibold text-slate-700 mb-1">Archivo Certificado (.pfx / .p12)</label>
                       <div className="flex items-center gap-2">
                         <label className="cursor-pointer bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold py-2 px-3 rounded-lg flex items-center gap-1.5 transition-colors shadow-sm shrink-0">
-                          <span>📂 Cargar .PFX</span>
+                          <span> Cargar .PFX</span>
                           <input
                             type="file"
                             accept=".pfx,.p12"
@@ -2307,7 +2302,7 @@ export default function EmisionDteView({
                         </p>
                       ) : (
                         <p className="text-[10px] text-amber-600 font-medium mt-1">
-                          ⚠️ Carga tu .pfx para habilitar rescate RCV vía SimpleAPI
+                           Carga tu .pfx para habilitar rescate RCV vía SimpleAPI
                         </p>
                       )}
                     </div>
@@ -2333,7 +2328,7 @@ export default function EmisionDteView({
                           className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 font-bold cursor-pointer"
                           title={showClaveCert ? "Ocultar clave" : "Ver clave"}
                         >
-                          {showClaveCert ? '👁️' : '🙈'}
+                          {showClaveCert ? '' : ''}
                         </button>
                       </div>
                     </div>
@@ -2354,7 +2349,7 @@ export default function EmisionDteView({
                 <div className="p-5 bg-amber-50/70 border border-amber-300 rounded-2xl space-y-4">
                   <div className="flex items-center justify-between">
                     <h4 className="font-bold text-amber-950 text-sm flex items-center gap-2">
-                      <span>🌐 Casillero de Conexión API (Facturador SII & Proveedores)</span>
+                      <span> Casillero de Conexión API (Facturador SII & Proveedores)</span>
                     </h4>
                     <span className="text-[10px] bg-amber-200 text-amber-950 font-bold px-2 py-0.5 rounded-full border border-amber-300">
                       Conexión API Facturador SII
@@ -2397,7 +2392,7 @@ export default function EmisionDteView({
                       />
                       <span className="text-[11px] text-slate-500 block mt-1">
                         {config.siiApiProvider === 'SIMPLE_API' 
-                          ? '💡 Endpoint oficial de SimpleAPI: https://api.simpleapi.cl/v1. Si lo dejas vacío o con el enlace de registro, el sistema usará el endpoint oficial automáticamente.' 
+                          ? 'Endpoint oficial de SimpleAPI: https://api.simpleapi.cl/v1. Si lo dejas vacío o con el enlace de registro, el sistema usará el endpoint oficial automáticamente.' 
                           : 'URL base del servicio de emisión DTE'}
                       </span>
                     </div>
@@ -2419,7 +2414,7 @@ export default function EmisionDteView({
                 <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
                   <div className="flex items-center justify-between">
                     <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-                      <span>🏢 Credencial 2: Empresa (Boletas de Honorarios BHE & F29)</span>
+                      <span> Credencial 2: Empresa (Boletas de Honorarios BHE & F29)</span>
                     </h4>
                     <span className="text-[10px] bg-slate-200 text-slate-800 font-bold px-2 py-0.5 rounded-full">
                       Acceso Directo Empresa
@@ -2461,7 +2456,7 @@ export default function EmisionDteView({
                           className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 font-bold cursor-pointer"
                           title={showClaveComp ? "Ocultar clave" : "Ver clave"}
                         >
-                          {showClaveComp ? '👁️' : '🙈'}
+                          {showClaveComp ? '' : ''}
                         </button>
                       </div>
                     </div>
@@ -2471,7 +2466,7 @@ export default function EmisionDteView({
                 {/* DOMICILIO EMISOR & FALLBACK DE CIUDAD (VALIDACIÓN CRÍTICA) */}
                 <div className="p-5 bg-emerald-50/50 border border-emerald-200 rounded-2xl space-y-3">
                   <h4 className="font-bold text-slate-900 flex items-center gap-1.5 text-xs">
-                    <span>📍 Domicilio Emisor & Fallback de Ciudad (Validación SII)</span>
+                    <span> Domicilio Emisor & Fallback de Ciudad (Validación SII)</span>
                   </h4>
                   <p className="text-[11px] text-slate-600">
                     El sistema del SII rechaza las facturas si falta la Ciudad o Comuna en la sección de dirección del emisor o receptor. Define los valores de respaldo para que tus DTEs nunca fallan:
@@ -2524,7 +2519,6 @@ export default function EmisionDteView({
             {/* MODAL HEADER */}
             <div className="p-4 bg-slate-900 text-white flex justify-between items-center border-b border-slate-800">
               <div className="flex items-center gap-2">
-                <span className="text-base">📄</span>
                 <h3 className="font-bold text-sm">
                   Representación Impresa DTE - {previewDoc.tipoDTELabel} N° {previewDoc.folio}
                 </h3>
@@ -2664,7 +2658,7 @@ export default function EmisionDteView({
                   }}
                   className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5 shadow-xs"
                 >
-                  <span>📥 Descargar XML DTE Oficial</span>
+                  <span> Descargar XML DTE Oficial</span>
                 </button>
 
                 <button

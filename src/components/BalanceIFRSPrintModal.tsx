@@ -127,7 +127,7 @@ export const BalanceIFRSPrintModal: React.FC<BalanceIFRSPrintModalProps> = ({
                     ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
                     : 'bg-rose-50 text-rose-800 border-rose-300'
                 }`}>
-                  {isBalanced ? '✓ Cuadrado' : '⚠️ Descuadrado'}
+                  {isBalanced ? '✓ Cuadrado' : 'Descuadrado'}
                 </span>
               </h2>
               <p className="text-xs text-slate-500">

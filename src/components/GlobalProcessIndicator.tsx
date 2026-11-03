@@ -17,12 +17,12 @@ export default function GlobalProcessIndicator() {
       <div className="fixed top-0 left-0 right-0 z-[9999] h-1 bg-transparent overflow-hidden pointer-events-none">
         {percentage !== null ? (
           <div
-            className="h-full bg-gradient-to-r from-indigo-500 via-emerald-400 to-indigo-600 transition-all duration-300 ease-out shadow-[0_0_8px_rgba(99,102,241,0.8)]"
+            className="h-full bg-indigo-500 transition-all duration-300 ease-out shadow-[0_0_8px_rgba(99,102,241,0.8)]"
             style={{ width: `${percentage}%` }}
           />
         ) : (
           <div className="h-full w-full bg-slate-100/30 overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-indigo-500 via-emerald-400 to-indigo-600 animate-[indeterminate_1.5s_infinite_linear] origin-left shadow-[0_0_10px_rgba(99,102,241,0.9)]" />
+            <div className="h-full bg-indigo-500 animate-[indeterminate_1.5s_infinite_linear] origin-left shadow-[0_0_10px_rgba(99,102,241,0.9)]" />
           </div>
         )}
       </div>
@@ -63,7 +63,7 @@ export default function GlobalProcessIndicator() {
             {percentage !== null && (
               <div className="mt-1.5 w-full bg-slate-800 rounded-full h-1.5 overflow-hidden border border-slate-700">
                 <div
-                  className="bg-gradient-to-r from-emerald-400 to-indigo-500 h-full rounded-full transition-all duration-200"
+                  className="bg-emerald-400 h-full rounded-full transition-all duration-200"
                   style={{ width: `${percentage}%` }}
                 />
               </div>

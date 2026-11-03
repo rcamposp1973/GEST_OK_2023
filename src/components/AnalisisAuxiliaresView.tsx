@@ -1350,7 +1350,7 @@ export default function AnalisisAuxiliaresView({
       <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-gradient-to-tr from-indigo-600 to-sky-500 text-white rounded-xl shadow-sm">
+            <div className="p-2.5 bg-indigo-600 text-white rounded-xl shadow-sm">
               <Layers className="w-6 h-6" />
             </div>
             <div>
@@ -1397,7 +1397,7 @@ export default function AnalisisAuxiliaresView({
 
           <button
             onClick={() => setShowCorrectorModal(true)}
-            className="px-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all shadow-md shadow-blue-500/20 cursor-pointer animate-pulse hover:animate-none"
+            className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all shadow-md shadow-blue-500/20 cursor-pointer animate-pulse hover:animate-none"
             title="Auto-corregir egresos con 'Documento Interno' en cuenta 2102001 y cancelar facturas correspondientes"
           >
             <Wrench className="w-3.5 h-3.5 text-blue-100" />
@@ -1440,7 +1440,7 @@ export default function AnalisisAuxiliaresView({
                 : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white'
             }`}
           >
-            🌐 Todas ({accounts.filter(a => isAuxiliaryAccount(a.code, a.name, a)).length})
+             Todas ({accounts.filter(a => isAuxiliaryAccount(a.code, a.name, a)).length})
           </button>
 
           <button
@@ -1453,7 +1453,7 @@ export default function AnalisisAuxiliaresView({
             title="Clientes del giro comercial (Cuentas 1102xxx, 1103xxx)"
           >
             <Building2 className="w-3.5 h-3.5" />
-            <span>🏢 Clientes (Giro)</span>
+            <span> Clientes (Giro)</span>
           </button>
 
           <button
@@ -1466,7 +1466,7 @@ export default function AnalisisAuxiliaresView({
             title="Proveedores del giro comercial (Cuentas 2101xxx)"
           >
             <Briefcase className="w-3.5 h-3.5" />
-            <span>🏭 Proveedores (Giro)</span>
+            <span> Proveedores (Giro)</span>
           </button>
 
           <button
@@ -1479,7 +1479,7 @@ export default function AnalisisAuxiliaresView({
             title="Personal y Trabajadores (Anticipos 1104009, Préstamos 1104003, Sueldos 2102xxx)"
           >
             <UserCheck className="w-3.5 h-3.5" />
-            <span>👥 Personal / Trabajadores</span>
+            <span> Personal / Trabajadores</span>
           </button>
 
           <button
@@ -1492,7 +1492,7 @@ export default function AnalisisAuxiliaresView({
             title="Deudores varios no relacionados con el giro (Cuentas 1105xxx, préstamos a terceros)"
           >
             <Wallet className="w-3.5 h-3.5" />
-            <span>🔄 Deudores Varios</span>
+            <span> Deudores Varios</span>
           </button>
 
           <button
@@ -1505,7 +1505,7 @@ export default function AnalisisAuxiliaresView({
             title="Acreedores varios (Bancos, Instituciones Previsionales, Socios, Accionistas 2104xxx, 2105xxx)"
           >
             <Landmark className="w-3.5 h-3.5" />
-            <span>🏦 Acreedores Varios (Socios / Bancos)</span>
+            <span> Acreedores Varios (Socios / Bancos)</span>
           </button>
         </div>
       </div>
@@ -1563,7 +1563,6 @@ export default function AnalisisAuxiliaresView({
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <span>📌</span>
               <span>Solo con Saldo Pendiente (Ocultar $0)</span>
             </button>
             <button
@@ -1574,7 +1573,6 @@ export default function AnalisisAuxiliaresView({
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <span>📋</span>
               <span>Todos los Movimientos (Incluye $0)</span>
             </button>
           </div>
@@ -1739,7 +1737,7 @@ export default function AnalisisAuxiliaresView({
                 onClick={handleToggleExpandAll}
                 className="text-xs font-bold text-indigo-700 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg border border-indigo-200 transition-colors cursor-pointer"
               >
-                {accountGroups.every(g => expandedKeys[g.accountCode]) ? '🔼 Contraer Todas' : '🔽 Desplegar Todas las Cuentas'}
+                {accountGroups.every(g => expandedKeys[g.accountCode]) ? 'Contraer Todas' : 'Desplegar Todas las Cuentas'}
               </button>
             </div>
           </div>
@@ -1789,11 +1787,11 @@ export default function AnalisisAuxiliaresView({
                                 ? 'bg-cyan-50 text-cyan-800 border-cyan-200'
                                 : 'bg-orange-50 text-orange-800 border-orange-200'
                             }`}>
-                              {accGroup.accountCategory === 'PERSONAL' && '👥 Personal / Trabajadores'}
-                              {accGroup.accountCategory === 'DEUDOR' && '🏢 Clientes (Giro)'}
-                              {accGroup.accountCategory === 'ACREEDOR' && '🏭 Proveedores (Giro)'}
-                              {accGroup.accountCategory === 'DEUDOR_VARIO' && '🔄 Deudores Varios'}
-                              {accGroup.accountCategory === 'ACREEDOR_VARIO' && '🏦 Acreedores Varios'}
+                              {accGroup.accountCategory === 'PERSONAL' && 'Personal / Trabajadores'}
+                              {accGroup.accountCategory === 'DEUDOR' && 'Clientes (Giro)'}
+                              {accGroup.accountCategory === 'ACREEDOR' && 'Proveedores (Giro)'}
+                              {accGroup.accountCategory === 'DEUDOR_VARIO' && 'Deudores Varios'}
+                              {accGroup.accountCategory === 'ACREEDOR_VARIO' && 'Acreedores Varios'}
                             </span>
                           </div>
                           <div className="text-[11px] text-slate-500 mt-1 flex items-center gap-2">
@@ -1964,7 +1962,7 @@ export default function AnalisisAuxiliaresView({
                                                 <td colSpan={8} className="p-3">
                                                   <div className="bg-white p-2.5 rounded-lg border border-indigo-100 shadow-2xs space-y-1.5">
                                                     <div className="text-[10px] font-bold text-slate-700 flex justify-between items-center">
-                                                      <span>📋 Asientos y Comprobantes Contables:</span>
+                                                      <span> Asientos y Comprobantes Contables:</span>
                                                       <span className="text-slate-500 font-normal">
                                                         Debe: ${doc.totalDebits.toLocaleString('es-CL')} | Haber: ${doc.totalCredits.toLocaleString('es-CL')}
                                                       </span>
@@ -2052,7 +2050,7 @@ export default function AnalisisAuxiliaresView({
                 onClick={handleToggleExpandAll}
                 className="text-xs font-bold text-indigo-700 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg border border-indigo-200 transition-colors cursor-pointer"
               >
-                {auxiliaryGroups.every(g => expandedKeys[g.cleanRut]) ? '🔼 Contraer Todos' : '🔽 Desplegar Todos los Auxiliares'}
+                {auxiliaryGroups.every(g => expandedKeys[g.cleanRut]) ? 'Contraer Todos' : 'Desplegar Todos los Auxiliares'}
               </button>
             </div>
           </div>
@@ -2257,7 +2255,7 @@ export default function AnalisisAuxiliaresView({
                                                 <td colSpan={8} className="p-3">
                                                   <div className="bg-white p-2.5 rounded-lg border border-indigo-100 shadow-2xs space-y-1.5">
                                                     <div className="text-[10px] font-bold text-slate-700 flex justify-between items-center">
-                                                      <span>📋 Asientos y Comprobantes Contables:</span>
+                                                      <span> Asientos y Comprobantes Contables:</span>
                                                       <span className="text-slate-500 font-normal">
                                                         Debe: ${doc.totalDebits.toLocaleString('es-CL')} | Haber: ${doc.totalCredits.toLocaleString('es-CL')}
                                                       </span>

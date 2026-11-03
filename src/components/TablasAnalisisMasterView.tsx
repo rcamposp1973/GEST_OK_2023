@@ -562,7 +562,6 @@ export default function TablasAnalisisMasterView({
       <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-2xl">🗂️</span>
             <h2 className="text-lg font-black text-slate-900 tracking-tight uppercase">
               Tablas Maestras de Análisis Contables
             </h2>
@@ -582,7 +581,6 @@ export default function TablasAnalisisMasterView({
             className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-1.5"
             title="Precargar registros estándar sugeridos si los catálogos están vacíos"
           >
-            <span>⚡</span>
             <span>Carga Inicial Sugerida</span>
           </button>
           <button
@@ -598,7 +596,6 @@ export default function TablasAnalisisMasterView({
             disabled={isReadOnly}
             className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
           >
-            <span>➕</span>
             <span>Nuevo Registro</span>
           </button>
         </div>
@@ -614,7 +611,6 @@ export default function TablasAnalisisMasterView({
               : 'border-transparent text-slate-600 hover:text-slate-900'
           }`}
         >
-          <span>🏢</span>
           <span>Centros de Costo</span>
           <span className="px-1.5 py-0.2 bg-slate-200 text-slate-700 rounded-full text-[10px] font-mono font-bold">
             {costCenters.length}
@@ -629,7 +625,6 @@ export default function TablasAnalisisMasterView({
               : 'border-transparent text-slate-600 hover:text-slate-900'
           }`}
         >
-          <span>🏷️</span>
           <span>Ítems de Gasto</span>
           <span className="px-1.5 py-0.2 bg-slate-200 text-slate-700 rounded-full text-[10px] font-mono font-bold">
             {expenseItems.length}
@@ -644,7 +639,6 @@ export default function TablasAnalisisMasterView({
               : 'border-transparent text-slate-600 hover:text-slate-900'
           }`}
         >
-          <span>📄</span>
           <span>Documentos No SII / Internos</span>
           <span className="px-1.5 py-0.2 bg-slate-200 text-slate-700 rounded-full text-[10px] font-mono font-bold">
             {nonSiiDocTypes.length}
@@ -659,7 +653,6 @@ export default function TablasAnalisisMasterView({
               : 'border-transparent text-slate-600 hover:text-slate-900'
           }`}
         >
-          <span>🏗️</span>
           <span>Proyectos / Obras</span>
           <span className="px-1.5 py-0.2 bg-slate-200 text-slate-700 rounded-full text-[10px] font-mono font-bold">
             {projects.length}
@@ -674,7 +667,6 @@ export default function TablasAnalisisMasterView({
               : 'border-transparent text-slate-600 hover:text-slate-900'
           }`}
         >
-          <span>📦</span>
           <span>Productos / Servicios</span>
           <span className="px-1.5 py-0.2 bg-slate-200 text-slate-700 rounded-full text-[10px] font-mono font-bold">
             {products.length}
@@ -689,7 +681,6 @@ export default function TablasAnalisisMasterView({
               : 'border-transparent text-slate-600 hover:text-slate-900'
           }`}
         >
-          <span>⚙️</span>
           <span>Análisis Personalizados ({customCols.length})</span>
         </button>
       </div>
@@ -704,7 +695,6 @@ export default function TablasAnalisisMasterView({
             onChange={e => setSearchQuery(e.target.value)}
             className="border border-slate-300 p-2 pl-8 w-full rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 font-medium"
           />
-          <span className="absolute left-2.5 top-2.5 text-slate-400 text-xs">🔍</span>
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
@@ -1071,7 +1061,6 @@ export default function TablasAnalisisMasterView({
             <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
               <div className="p-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
                 <span className="font-bold text-xs text-slate-800 flex items-center gap-1.5">
-                  <span>⚙️</span>
                   <span>Tabla de Registros Válidos para: <strong>{selectedCustomCol}</strong></span>
                 </span>
                 <span className="text-[11px] text-slate-500">
@@ -1135,7 +1124,6 @@ export default function TablasAnalisisMasterView({
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             <div className="p-4 bg-slate-900 text-white flex justify-between items-center border-b border-slate-800">
               <h3 className="font-bold text-sm flex items-center gap-2">
-                <span>➕</span>
                 <span>
                   {activeTab === 'costCenters' && (editingCostCenter ? 'Editar Centro de Costo' : 'Nuevo Centro de Costo')}
                   {activeTab === 'expenseItems' && (editingExpenseItem ? 'Editar Ítem de Gasto' : 'Nuevo Ítem de Gasto')}

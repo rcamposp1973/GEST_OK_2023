@@ -118,7 +118,7 @@ export const SuperAdminIndicatorsCenter: React.FC<SuperAdminIndicatorsCenterProp
       } catch {}
 
       setPreviredSaveSuccess(true);
-      setPreviredStatusMsg(`✅ Indicadores previsionales guardados en base de datos central para ${period}.`);
+      setPreviredStatusMsg(`Indicadores previsionales guardados en base de datos central para ${period}.`);
       setTimeout(() => setPreviredSaveSuccess(false), 4000);
     } catch (e: any) {
       console.error(e);
@@ -229,7 +229,7 @@ export const SuperAdminIndicatorsCenter: React.FC<SuperAdminIndicatorsCenterProp
         return updated;
       });
 
-      setCurrencyStatusMsg(`✅ Tasa para ${selectedRateDate} guardada y propagada a todos los estudios.`);
+      setCurrencyStatusMsg(`Tasa para ${selectedRateDate} guardada y propagada a todos los estudios.`);
       setTimeout(() => setCurrencyStatusMsg(null), 4000);
     } catch (err: any) {
       console.error(err);
@@ -252,7 +252,7 @@ export const SuperAdminIndicatorsCenter: React.FC<SuperAdminIndicatorsCenterProp
   return (
     <div className="space-y-6">
       {/* Banner Principal Super Administrador */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 rounded-3xl border border-indigo-900/50 shadow-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="bg-slate-900 text-white p-6 rounded-3xl border border-indigo-900/50 shadow-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-mono font-bold uppercase tracking-wider">

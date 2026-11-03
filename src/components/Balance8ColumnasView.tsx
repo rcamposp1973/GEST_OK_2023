@@ -535,7 +535,7 @@ export default function Balance8ColumnasView({
       });
 
       alert(
-        `✅ Balance Oficial Emitido con Éxito\n\n` +
+        `Balance Oficial Emitido con Éxito\n\n` +
         `• Folios SII Utilizados: N° ${resultBook.startFolio} al N° ${resultBook.endFolio} (${resultBook.pagesCount} página${resultBook.pagesCount > 1 ? 's' : ''})\n` +
         `• Resolución SII: N° ${resultBook.resolutionNumber} del ${resultBook.resolutionDate}\n` +
         `• Formato: Crystal Reports Oficial Horizontal con Cuadre y Timbraje Autorizado.\n` +
@@ -563,7 +563,7 @@ export default function Balance8ColumnasView({
               ? 'bg-emerald-50 text-emerald-800 border-emerald-300' 
               : 'bg-rose-50 text-rose-800 border-rose-300'
           }`}>
-            {isFullyBalanced ? '✓ Cuadrado' : '⚠️ Descuadrado'}
+            {isFullyBalanced ? '✓ Cuadrado' : 'Descuadrado'}
           </span>
         </div>
 
@@ -584,7 +584,6 @@ export default function Balance8ColumnasView({
               className="p-2 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-lg border border-amber-300 flex items-center justify-center transition-colors shadow-2xs cursor-pointer"
               title="Detectar y regularizar automáticamente comprobantes con Crédito Especial Constructora CEEC"
             >
-              <span className="text-sm">⚡</span>
             </button>
           )}
           <button

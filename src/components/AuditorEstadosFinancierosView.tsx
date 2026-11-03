@@ -1029,7 +1029,7 @@ export default function AuditorEstadosFinancierosView({
   return (
     <div className="space-y-4 pb-12">
       {/* 1. HERO HEADER DE AUDITORÍA */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 text-white p-5 rounded-2xl shadow-sm border border-slate-700">
+      <div className="bg-slate-900 text-white p-5 rounded-2xl shadow-sm border border-slate-700">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
@@ -1644,11 +1644,11 @@ export default function AuditorEstadosFinancierosView({
               </p>
               <div className="pt-2 text-[11px]">
                 {auditData.currentRatio >= 1.5 ? (
-                  <span className="text-emerald-700 font-bold">🟢 Nivel Saludable de Liquidez</span>
+                  <span className="text-emerald-700 font-bold"> Nivel Saludable de Liquidez</span>
                 ) : auditData.currentRatio >= 1.0 ? (
-                  <span className="text-amber-700 font-bold">🟡 Liquidez Ajustada</span>
+                  <span className="text-amber-700 font-bold"> Liquidez Ajustada</span>
                 ) : (
-                  <span className="text-rose-700 font-bold">🔴 Déficit de Capital de Trabajo</span>
+                  <span className="text-rose-700 font-bold"> Déficit de Capital de Trabajo</span>
                 )}
               </div>
             </div>
@@ -1666,9 +1666,9 @@ export default function AuditorEstadosFinancierosView({
               </p>
               <div className="pt-2 text-[11px]">
                 {auditData.acidRatio >= 1.0 ? (
-                  <span className="text-emerald-700 font-bold">🟢 Cobertura Inmediata Óptima</span>
+                  <span className="text-emerald-700 font-bold"> Cobertura Inmediata Óptima</span>
                 ) : (
-                  <span className="text-amber-700 font-bold">🟡 Dependencia de Cobranza/Rotación</span>
+                  <span className="text-amber-700 font-bold"> Dependencia de Cobranza/Rotación</span>
                 )}
               </div>
             </div>

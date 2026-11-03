@@ -587,9 +587,9 @@ export default function CobranzaView({
       }
 
       if (!isBankUsed) {
-        alert(`✅ Aplicación de Nota de Crédito registrada con éxito.\nSe generó automáticamente el Comprobante de Traspaso N° ${nextVoucherNumber} por $${recordAmount.toLocaleString('es-CL')} (sin línea de banco). Los documentos fueron compensados en cartera.`);
+        alert(`Aplicación de Nota de Crédito registrada con éxito.\nSe generó automáticamente el Comprobante de Traspaso N° ${nextVoucherNumber} por $${recordAmount.toLocaleString('es-CL')} (sin línea de banco). Los documentos fueron compensados en cartera.`);
       } else {
-        alert(`✅ Recaudación N° ${nextRecordNumber} registrada con éxito.\nSe generó automáticamente el Comprobante de ${voucherType} N° ${nextVoucherNumber} por $${recordAmount.toLocaleString('es-CL')}.`);
+        alert(`Recaudación N° ${nextRecordNumber} registrada con éxito.\nSe generó automáticamente el Comprobante de ${voucherType} N° ${nextVoucherNumber} por $${recordAmount.toLocaleString('es-CL')}.`);
       }
 
       setShowCollectModal(false);
@@ -652,7 +652,7 @@ export default function CobranzaView({
         }
       });
 
-      alert('✅ Recaudación y comprobante anulados exitosamente.');
+      alert('Recaudación y comprobante anulados exitosamente.');
       fetchCollections();
       if (onVouchersUpdated) onVouchersUpdated();
     } catch (err: any) {
@@ -717,7 +717,7 @@ export default function CobranzaView({
               onClick={() => setIsAgingCollapsed(!isAgingCollapsed)}
               className="px-2.5 py-1 text-xs font-bold text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-100 rounded-lg border border-slate-200 transition-all flex items-center gap-1 cursor-pointer"
             >
-              <span>{isAgingCollapsed ? '🔽 Mostrar Tramos' : '🔼 Comprimir'}</span>
+              <span>{isAgingCollapsed ? 'Mostrar Tramos' : 'Comprimir'}</span>
             </button>
           </div>
         </div>
@@ -797,7 +797,7 @@ export default function CobranzaView({
               : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
-          <span>⏳ Facturas Pendientes</span>
+          <span> Facturas Pendientes</span>
           <span className="bg-indigo-100 text-[#533AFD] px-1.5 py-0.2 rounded-full text-[10px] font-bold">{invoicesWithAging.length}</span>
         </button>
 
@@ -809,7 +809,7 @@ export default function CobranzaView({
               : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
-          <span>📑 Historial de Recaudaciones</span>
+          <span> Historial de Recaudaciones</span>
           <span className="bg-slate-100 text-slate-700 px-1.5 py-0.2 rounded-full text-[10px] font-bold">{collectionRecords.length}</span>
         </button>
 
@@ -821,7 +821,7 @@ export default function CobranzaView({
               : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
-          <span>👤 Cuenta Corriente por Cliente</span>
+          <span> Cuenta Corriente por Cliente</span>
         </button>
       </div>
 
@@ -877,7 +877,7 @@ export default function CobranzaView({
                       : 'Registrar Cobro e Ingreso'
                   }
                 >
-                  <span>{selectedItemsToCollect.isCompensation ? '⚖️' : '⚡'}</span>
+                  <span>{selectedItemsToCollect.isCompensation ? '' : ''}</span>
                   <span>
                     {selectedItemsToCollect.isCompensation
                       ? `Aplicar NC a Factura (${Object.keys(selectedInvoiceIds).length})`
@@ -891,7 +891,6 @@ export default function CobranzaView({
                 className="px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-lg border border-slate-200 shadow-2xs transition-colors flex items-center gap-1 cursor-pointer"
                 title="Descargar reporte de antigüedad de saldos en formato CSV / Excel"
               >
-                <span>📥</span>
                 <span>Exportar CSV</span>
               </button>
 
@@ -1061,7 +1060,7 @@ export default function CobranzaView({
                         <td className="py-2 px-2.5 font-sans font-semibold">
                           {isNC ? (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-bold border border-rose-300 text-[10px]">
-                              <span>📜</span> NC {inv.tipoDoc}
+                              NC {inv.tipoDoc}
                             </span>
                           ) : (
                             <span className="text-slate-800">
@@ -1126,7 +1125,7 @@ export default function CobranzaView({
                       <td className="py-2 px-3 font-sans font-bold text-slate-800">
                         {rec.paymentMethod === 'Compensación / Nota de Crédito' || rec.paymentMethod === 'Compensación' ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-indigo-50 text-indigo-800 border border-indigo-200 text-[10px] font-bold">
-                            ⚖️ Compensación NC
+                             Compensación NC
                           </span>
                         ) : (
                           rec.paymentMethod
@@ -1135,7 +1134,7 @@ export default function CobranzaView({
                       <td className="py-2 px-3 font-sans text-slate-900">
                         {rec.depositAccountCode === 'N/A' || !rec.depositAccountId ? (
                           <span className="text-slate-500 italic text-[11px] flex items-center gap-1 font-medium">
-                            <span className="text-indigo-600">⚖️</span> Sin Banco (Compensación)
+                            Sin Banco (Compensación)
                           </span>
                         ) : (
                           <>
@@ -1174,7 +1173,6 @@ export default function CobranzaView({
                             className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 text-[10px] font-bold rounded border border-rose-200"
                             title="Eliminar Recaudación permanentemente"
                           >
-                            🗑️
                           </button>
                         </div>
                       </td>
@@ -1274,7 +1272,7 @@ export default function CobranzaView({
             }`}>
               <div>
                 <h4 className="text-base font-black tracking-tight uppercase flex items-center gap-2">
-                  <span>{selectedItemsToCollect.isCompensation ? '⚖️' : '⚡'}</span>
+                  <span>{selectedItemsToCollect.isCompensation ? '' : ''}</span>
                   <span>
                     {selectedItemsToCollect.isCompensation
                       ? 'Aplicar Nota de Crédito a Factura (Compensación)'
@@ -1306,9 +1304,8 @@ export default function CobranzaView({
               {selectedItemsToCollect.isCompensation && (
                 <div className="p-3.5 bg-indigo-50/90 border border-indigo-200 rounded-xl space-y-2.5">
                   <div className="flex items-center gap-2">
-                    <span className="text-base">💡</span>
                     <span className="font-black text-indigo-950 text-xs">
-                      Detección Inteligente: Cruce de Nota de Crédito con Factura
+                      Detección: Cruce de Nota de Crédito con Factura
                     </span>
                     <span className={`ml-auto px-2 py-0.5 rounded text-[10px] font-bold border ${
                       selectedItemsToCollect.isExactMatch
@@ -1323,7 +1320,7 @@ export default function CobranzaView({
                     Se detectó la aplicación de <strong>{selectedItemsToCollect.notasCredito.length} Nota(s) de Crédito (${selectedItemsToCollect.totalNC.toLocaleString('es-CL')})</strong> a <strong>{selectedItemsToCollect.facturas.length} Factura(s) de Venta (${selectedItemsToCollect.totalFacturas.toLocaleString('es-CL')})</strong>.
                     {selectedItemsToCollect.isExactMatch ? (
                       <span className="block mt-1 font-semibold text-emerald-800">
-                        ✅ Los montos calzan al 100%. La línea de Banco NO se utiliza. Se emitirá automáticamente un <strong>Comprobante de Traspaso</strong> cruzando la Factura contra la Nota de Crédito en la cuenta Clientes.
+                         Los montos calzan al 100%. La línea de Banco NO se utiliza. Se emitirá automáticamente un <strong>Comprobante de Traspaso</strong> cruzando la Factura contra la Nota de Crédito en la cuenta Clientes.
                       </span>
                     ) : (
                       <span className="block mt-1 font-medium text-slate-700">
@@ -1348,7 +1345,7 @@ export default function CobranzaView({
                           className="mt-0.5 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                         />
                         <div>
-                          <div>⚡ Solo Aplicar NC (Sin Banco - Traspaso)</div>
+                          <div> Solo Aplicar NC (Sin Banco - Traspaso)</div>
                           <div className="text-[10px] font-normal text-slate-500">
                             Compensa hasta ${selectedItemsToCollect.compensatedAmount.toLocaleString('es-CL')}. Banco NO se utiliza.
                           </div>
@@ -1368,7 +1365,7 @@ export default function CobranzaView({
                           className="mt-0.5 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                         />
                         <div>
-                          <div>🏦 Cobro Mixto (NC + Saldo en Banco)</div>
+                          <div> Cobro Mixto (NC + Saldo en Banco)</div>
                           <div className="text-[10px] font-normal text-slate-500">
                             Aplica NC y deposita la diferencia (${Math.abs(selectedItemsToCollect.netDifference).toLocaleString('es-CL')}) en Banco.
                           </div>
@@ -1397,7 +1394,7 @@ export default function CobranzaView({
                   <label className="block font-bold text-slate-700 mb-1">Medio de Operación:</label>
                   {selectedItemsToCollect.isCompensation && (selectedItemsToCollect.isExactMatch || compensationMode === 'SIN_BANCO') ? (
                     <div className="w-full bg-indigo-50 border border-indigo-200 rounded px-3 py-1.5 font-bold text-indigo-900 flex items-center justify-between">
-                      <span>⚖️ Compensación / Nota de Crédito</span>
+                      <span> Compensación / Nota de Crédito</span>
                       <span className="text-[10px] text-indigo-600 font-semibold">(Sin flujo de caja)</span>
                     </div>
                   ) : (
@@ -1423,11 +1420,10 @@ export default function CobranzaView({
                   <div className="sm:col-span-2 p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs">
                     <div className="flex items-center justify-between mb-1">
                       <span className="font-bold text-slate-700 flex items-center gap-1.5">
-                        <span>🏦</span>
                         <span>Cuenta Bancaria o Caja:</span>
                       </span>
                       <span className="text-[10px] font-bold text-indigo-700 bg-indigo-100 border border-indigo-200 px-2 py-0.5 rounded">
-                        🚫 BANCO NO SE UTILIZA
+                         BANCO NO SE UTILIZA
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-600">
@@ -1444,7 +1440,7 @@ export default function CobranzaView({
                         className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-1 cursor-pointer"
                         title="Habilitar o agregar Fondos Fijos, Cajas Chicas u otras cuentas del plan"
                       >
-                        <span>⚙️</span> Habilitar Cuentas
+                        Habilitar Cuentas
                       </button>
                     </div>
                     <select
@@ -1452,7 +1448,7 @@ export default function CobranzaView({
                       onChange={(e) => setSelectedDepositAccountId(e.target.value)}
                       className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                     >
-                      <optgroup label="🏦 Cuentas Bancarias y Tesorería (Predeterminadas)">
+                      <optgroup label="Cuentas Bancarias y Tesorería (Predeterminadas)">
                         {defaultBanks.map(acc => (
                           <option key={acc.id} value={acc.id}>
                             {acc.code} - {acc.name}
@@ -1461,7 +1457,7 @@ export default function CobranzaView({
                       </optgroup>
 
                       {customEnabled.length > 0 && (
-                        <optgroup label="💼 Fondos Fijos, Cajas y Cuentas Habilitadas">
+                        <optgroup label="Fondos Fijos, Cajas y Cuentas Habilitadas">
                           {customEnabled.map(acc => (
                             <option key={acc.id} value={acc.id}>
                               {acc.code} - {acc.name}
@@ -1471,7 +1467,7 @@ export default function CobranzaView({
                       )}
 
                       {showAllAccounts && (
-                        <optgroup label="📋 Todas las demás Cuentas del Plan">
+                        <optgroup label="Todas las demás Cuentas del Plan">
                           {allOtherAccounts.map(acc => (
                             <option key={acc.id} value={acc.id}>
                               {acc.code} - {acc.name} ({acc.type})
@@ -1484,10 +1480,10 @@ export default function CobranzaView({
                     <div className="mt-1 flex items-center justify-between text-[11px]">
                       <span className="text-slate-500">
                         {defaultBanks.some(b => b.id === selectedDepositAccountId)
-                          ? '🏦 Cuenta Bancaria'
+                          ? 'Cuenta Bancaria'
                           : customEnabled.some(c => c.id === selectedDepositAccountId)
-                          ? '💼 Fondo Fijo / Cuenta Habilitada'
-                          : '📋 Cuenta Contable Personalizada'}
+                          ? 'Fondo Fijo / Cuenta Habilitada'
+                          : 'Cuenta Contable Personalizada'}
                       </span>
                       <button
                         type="button"
@@ -1525,7 +1521,6 @@ export default function CobranzaView({
                       [HABER] Clientes por Cobrar (Cancelación Factura de Venta): -${(selectedItemsToCollect.isExactMatch ? selectedItemsToCollect.totalFacturas : selectedItemsToCollect.compensatedAmount).toLocaleString('es-CL')}
                     </div>
                     <div className="text-emerald-800 text-[10px] pt-1 font-sans font-semibold border-t border-slate-200 mt-1 flex items-center gap-1.5">
-                      <span>⚖️</span>
                       <span>Partida doble cuadrada al 100%. Línea de Banco omitida (Banco no se utiliza).</span>
                     </div>
                   </div>

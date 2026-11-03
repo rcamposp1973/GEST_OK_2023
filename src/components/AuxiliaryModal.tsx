@@ -248,7 +248,7 @@ export default function AuxiliaryModal({
                 {editingAuxiliary ? 'Modificar Ficha de Auxiliar' : 'Registrar Nuevo Auxiliar (Cliente / Proveedor)'}
               </h2>
               <p className="text-xs text-slate-400">
-                Gestión de cuentas corrientes de auxiliares y parámetros por defecto (Ventana movible)
+                Gestión de cuentas corrientes de auxiliares y parámetros por defecto
               </p>
             </div>
           </div>
@@ -322,12 +322,12 @@ export default function AuxiliaryModal({
                   disabled={isReadOnly}
                   className="w-full px-3 py-2 text-xs font-bold bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none text-slate-900"
                 >
-                  <option value="Deudor">🏢 Deudor (Clientes del giro)</option>
-                  <option value="Acreedor">🏭 Acreedor (Proveedores del giro)</option>
-                  <option value="Personal">👥 Personal (Trabajadores / Anticipos / Préstamos)</option>
-                  <option value="Deudores Varios">🔄 Deudores Varios (No relacionados con el giro)</option>
-                  <option value="Acreedores Varios">🏦 Acreedores Varios (Bancos / Socios / Previsión)</option>
-                  <option value="Ambos">🔀 Ambos / Mixto (Cliente y Proveedor simultáneo)</option>
+                  <option value="Deudor"> Deudor (Clientes del giro)</option>
+                  <option value="Acreedor"> Acreedor (Proveedores del giro)</option>
+                  <option value="Personal"> Personal (Trabajadores / Anticipos / Préstamos)</option>
+                  <option value="Deudores Varios"> Deudores Varios (No relacionados con el giro)</option>
+                  <option value="Acreedores Varios"> Acreedores Varios (Bancos / Socios / Previsión)</option>
+                  <option value="Ambos"> Ambos / Mixto (Cliente y Proveedor simultáneo)</option>
                 </select>
               </div>
 
@@ -487,7 +487,7 @@ export default function AuxiliaryModal({
             </div>
 
             {/* GLOSA SUGERIDA / PREDETERMINADA */}
-            <div className="p-3.5 bg-gradient-to-br from-indigo-50/70 to-blue-50/50 rounded-xl border border-indigo-100 space-y-2.5">
+            <div className="p-3.5 bg-indigo-50/70 rounded-xl border border-indigo-100 space-y-2.5">
               <div className="flex items-center justify-between">
                 <label className="block text-xs font-bold text-slate-900 flex items-center gap-1.5">
                   <FileText className="w-3.5 h-3.5 text-indigo-600" />
@@ -555,7 +555,7 @@ export default function AuxiliaryModal({
               )}
 
               <p className="text-[10.5px] text-slate-500 leading-relaxed">
-                💡 Al ingresar comprobantes contables manuales, procesar facturas del RCV o realizar conciliaciones bancarias asociadas a este RUT, el sistema precompletará esta glosa automáticamente ahorrándote digitación.
+                 Al ingresar comprobantes contables manuales, procesar facturas del RCV o realizar conciliaciones bancarias asociadas a este RUT, el sistema precompletará esta glosa automáticamente ahorrándote digitación.
               </p>
             </div>
 

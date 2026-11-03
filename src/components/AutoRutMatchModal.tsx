@@ -401,12 +401,12 @@ function AutoRutMatchModalContent({
   const handleExecuteAutoMatch = async () => {
     const selectedMatches = matchResults.filter(m => m.selected);
     if (selectedMatches.length === 0) {
-      alert('⚠️ Seleccione al menos un movimiento para contabilizar y conciliar.');
+      alert('Seleccione al menos un movimiento para contabilizar y conciliar.');
       return;
     }
 
     if (!bankAccountId) {
-      alert('⚠️ Por favor seleccione la Cuenta Bancaria para el asiento.');
+      alert('Por favor seleccione la Cuenta Bancaria para el asiento.');
       return;
     }
 
@@ -575,7 +575,7 @@ function AutoRutMatchModalContent({
             title: `Memoria de Conciliación Nuez Mariposa (${company.name})`,
             keywords: ['conciliacion', 'nuez mariposa', 'rut', 'cartola', 'honorarios', 'clientes', 'proveedores'],
             directiveContent: `Junior ha memorizado ${Object.keys(newLearnedRules).length} RUTs y contrapartes bancarias habituales de ${company.name} para conciliar automáticamente abonos (Clientes) y cargos (Proveedores y Honorarios por Pagar), aplicando traslados automáticos de fechas a mes abierto (día 01) si el mes se encuentra cerrado.`,
-            recommendedEntries: 'Revisa Conciliación Bancaria > 🧠 Nuez Mariposa para cruce en 1 clic.',
+            recommendedEntries: 'Revisa Conciliación Bancaria > Nuez Mariposa para cruce en 1 clic.',
             scope: 'company',
             studyId,
             companyId: company.id,
@@ -601,17 +601,17 @@ function AutoRutMatchModalContent({
       onApplyMatches(updatedLines, createdVouchers);
       if (onVouchersUpdated) onVouchersUpdated();
 
-      alert(`🎉 ¡PROCESO DE LA NUEZ MARIPOSA FINALIZADO CON ÉXITO!
+      alert(` ¡PROCESO DE LA NUEZ MARIPOSA FINALIZADO CON ÉXITO!
 --------------------------------------------------
-✅ Comprobantes generados: ${createdVouchers}
-✅ Movimientos bancarios conciliados: ${createdVouchers}
-📅 Fechas asignadas según cartola (y trasladadas a día 01 en meses cerrados).
-🧠 Junior ha memorizado los RUTs y cuentas asignadas para futuras conciliaciones.`);
+ Comprobantes generados: ${createdVouchers}
+ Movimientos bancarios conciliados: ${createdVouchers}
+ Fechas asignadas según cartola (y trasladadas a día 01 en meses cerrados).
+ Junior ha memorizado los RUTs y cuentas asignadas para futuras conciliaciones.`);
 
       onClose();
     } catch (error: any) {
       console.error('Error in Auto RUT match:', error);
-      alert(`⚠️ Ocurrió un error durante la contabilización: ${error.message || error}`);
+      alert(`Ocurrió un error durante la contabilización: ${error.message || error}`);
     } finally {
       setIsProcessing(false);
     }
@@ -633,8 +633,8 @@ function AutoRutMatchModalContent({
           {...dragProps}
           className={`p-4 sm:p-5 text-white relative flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-all duration-500 cursor-grab active:cursor-grabbing select-none ${
             themeMode === 'NUEZ_MARIPOSA' 
-              ? 'bg-gradient-to-r from-amber-950 via-amber-900 to-yellow-950' 
-              : 'bg-gradient-to-r from-slate-950 via-rose-950 to-slate-900 border-b border-rose-500/40'
+              ? 'bg-amber-950' 
+              : 'bg-slate-950 border-b border-rose-500/40'
           }`}
           title="Haz clic y arrastra para mover esta ventana"
         >
@@ -642,8 +642,8 @@ function AutoRutMatchModalContent({
             
             {/* ICON: ANIMATED NUEZ MARIPOSA / CEREBRO or MAZINGER-Z */}
             {themeMode === 'NUEZ_MARIPOSA' ? (
-              <div className="relative group cursor-pointer" title="Nuez Mariposa - Cerebro Inteligente de Cartolas & Junior AI">
-                <div className="absolute -inset-1 bg-gradient-to-r from-amber-400 to-yellow-300 rounded-full blur-md opacity-75 animate-pulse group-hover:opacity-100 transition"></div>
+              <div className="relative group cursor-pointer" title="Contabilización por RUT">
+                <div className="absolute -inset-1 bg-amber-400 rounded-full blur-md opacity-75 animate-pulse group-hover:opacity-100 transition"></div>
                 <div className="relative w-12 h-12 bg-amber-950 border-2 border-yellow-400/80 rounded-2xl flex items-center justify-center text-2xl shadow-inner transform transition hover:scale-110 active:rotate-12">
                   <svg className="w-8 h-8 text-yellow-400 animate-spin-slow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M12 2C8 2 5 4.5 5 8c0 2 1 3.5 2.5 4.5C6 13.5 5 15 5 17c0 3 3 5 7 5s7-2 7-5c0-2-1-3.5-2.5-4.5C18 11.5 19 10 19 8c0-3.5-3-6-7-6z" fill="rgba(251, 191, 36, 0.15)" />
@@ -657,9 +657,9 @@ function AutoRutMatchModalContent({
               </div>
             ) : (
               <div className="relative group cursor-pointer" title="Robot Mazinger-Z Mode">
-                <div className="absolute -inset-1 bg-gradient-to-r from-rose-600 to-red-500 rounded-full blur-md opacity-80 animate-ping"></div>
+                <div className="absolute -inset-1 bg-rose-600 rounded-full blur-md opacity-80 animate-ping"></div>
                 <div className="relative w-12 h-12 bg-slate-900 border-2 border-rose-500 rounded-2xl flex items-center justify-center text-2xl shadow-inner transform transition hover:scale-110">
-                  <span className="text-3xl animate-bounce">🤖</span>
+                  
                 </div>
               </div>
             )}
@@ -667,7 +667,7 @@ function AutoRutMatchModalContent({
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-base sm:text-lg font-black tracking-tight text-amber-200 uppercase flex items-center gap-1.5">
-                  {themeMode === 'NUEZ_MARIPOSA' ? '🧠 Nuez Mariposa' : '🤖 Mazinger-Z'} Motor Inteligente de RUT & Contabilización
+                  Contabilización por RUT
                 </h3>
                 <span className="text-[10px] bg-amber-400 text-amber-950 font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
                   APRENDIZAJE JUNIOR ACTIVO
@@ -689,7 +689,7 @@ function AutoRutMatchModalContent({
                   : 'text-amber-200 hover:text-white'
               }`}
             >
-              <span>🧠 Nuez Mariposa</span>
+              <span> Nuez Mariposa</span>
             </button>
             <button
               onClick={() => setThemeMode('MAZINGER_Z')}
@@ -699,7 +699,7 @@ function AutoRutMatchModalContent({
                   : 'text-rose-200 hover:text-white'
               }`}
             >
-              <span>🤖 Mazinger-Z</span>
+              <span> Mazinger-Z</span>
             </button>
             <button 
               onClick={onClose}
@@ -716,7 +716,7 @@ function AutoRutMatchModalContent({
         <div className="bg-slate-50 p-4 border-b border-slate-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div>
             <label className="block text-xs font-bold text-slate-800 mb-1 flex items-center gap-1">
-              <span>📥 Cta. Clientes (Abonos):</span>
+              <span> Cta. Clientes (Abonos):</span>
             </label>
             <select
               value={collectionAccountId}
@@ -734,7 +734,7 @@ function AutoRutMatchModalContent({
 
           <div>
             <label className="block text-xs font-bold text-slate-800 mb-1 flex items-center gap-1">
-              <span>📤 Cta. Proveedores (Cargos):</span>
+              <span> Cta. Proveedores (Cargos):</span>
             </label>
             <select
               value={paymentAccountId}
@@ -752,7 +752,7 @@ function AutoRutMatchModalContent({
 
           <div>
             <label className="block text-xs font-bold text-slate-800 mb-1 flex items-center gap-1">
-              <span>📜 Cta. Honorarios por Pagar:</span>
+              <span> Cta. Honorarios por Pagar:</span>
             </label>
             <select
               value={honorariosAccountId}
@@ -770,7 +770,7 @@ function AutoRutMatchModalContent({
 
           <div>
             <label className="block text-xs font-bold text-slate-800 mb-1 flex items-center gap-1">
-              <span>🏦 Cta. Banco Asiento:</span>
+              <span> Cta. Banco Asiento:</span>
             </label>
             <select
               value={bankAccountId}
@@ -805,7 +805,7 @@ function AutoRutMatchModalContent({
                 filterType === 'SOLO_EXACTOS' ? 'bg-emerald-700 text-white border-emerald-800' : 'bg-white text-slate-700 border-slate-300'
               }`}
             >
-              ✨ Exactos ({matchResults.filter(m => m.matchStatus === 'EXACTO_MONTO_Y_RUT').length})
+               Exactos ({matchResults.filter(m => m.matchStatus === 'EXACTO_MONTO_Y_RUT').length})
             </button>
             <button
               onClick={() => setFilterType('DIFERENCIAS_MENORES')}
@@ -814,7 +814,7 @@ function AutoRutMatchModalContent({
               }`}
               title="Diferencias menores a $10 que quedan pendientes pero informadas"
             >
-              ⚠️ Dif. &lt; $10 ({matchResults.filter(m => m.matchStatus === 'DIFERENCIA_MENOR_10_PENDIENTE').length})
+               Dif. &lt; $10 ({matchResults.filter(m => m.matchStatus === 'DIFERENCIA_MENOR_10_PENDIENTE').length})
             </button>
             <button
               onClick={() => setFilterType('ABONOS')}
@@ -822,7 +822,7 @@ function AutoRutMatchModalContent({
                 filterType === 'ABONOS' ? 'bg-indigo-700 text-white border-indigo-800' : 'bg-white text-slate-700 border-slate-300'
               }`}
             >
-              📥 Abonos (Clientes)
+               Abonos (Clientes)
             </button>
             <button
               onClick={() => setFilterType('CARGOS')}
@@ -830,7 +830,7 @@ function AutoRutMatchModalContent({
                 filterType === 'CARGOS' ? 'bg-rose-700 text-white border-rose-800' : 'bg-white text-slate-700 border-slate-300'
               }`}
             >
-              📤 Cargos (Proveedores)
+               Cargos (Proveedores)
             </button>
             <button
               onClick={() => setFilterType('HONORARIOS')}
@@ -838,7 +838,7 @@ function AutoRutMatchModalContent({
                 filterType === 'HONORARIOS' ? 'bg-purple-700 text-white border-purple-800' : 'bg-white text-purple-900 border-purple-300'
               }`}
             >
-              📜 Honorarios ({matchResults.filter(m => m.isHonorario).length})
+               Honorarios ({matchResults.filter(m => m.isHonorario).length})
             </button>
           </div>
 
@@ -859,7 +859,7 @@ function AutoRutMatchModalContent({
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
           {filteredProposals.length === 0 ? (
             <div className="text-center py-12 bg-slate-50 rounded-xl border border-dashed border-slate-300">
-              <span className="text-4xl block mb-2">🔍</span>
+              
               <p className="text-sm font-bold text-slate-700">
                 No se encontraron movimientos no conciliados con RUTs detectables en la glosa.
               </p>
@@ -907,7 +907,7 @@ function AutoRutMatchModalContent({
                           <div className="font-bold text-slate-900">{item.originalDate}</div>
                           {item.isPeriodShifted ? (
                             <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300 mt-0.5" title="El mes original se encuentra CERRADO. Se contabilizará el día 01 del siguiente mes abierto.">
-                              <span>🔄</span> A {item.effectiveDate}
+                              A {item.effectiveDate}
                             </span>
                           ) : (
                             <span className="text-[10px] text-emerald-700 font-semibold flex items-center gap-0.5 mt-0.5">
@@ -945,7 +945,7 @@ function AutoRutMatchModalContent({
                             </span>
                             {item.isJuniorLearned && (
                               <span className="bg-indigo-100 text-indigo-800 text-[9px] px-1 py-0.2 rounded font-black border border-indigo-200" title="RUT aprendido previamente por Junior">
-                                🧠 Junior
+                                 Junior
                               </span>
                             )}
                           </div>
@@ -962,12 +962,12 @@ function AutoRutMatchModalContent({
                         <td className="p-2.5">
                           {isExact ? (
                             <span className="px-2 py-1 rounded-lg text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-300 flex items-center gap-1 w-fit">
-                              <span>✨</span> Exacto ({item.docType ? `Doc ${item.docType} ` : ''}Folio {item.docNumber})
+                              Exacto ({item.docType ? `Doc ${item.docType} ` : ''}Folio {item.docNumber})
                             </span>
                           ) : isSmallDiff ? (
                             <div className="p-1.5 rounded-lg text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 max-w-xs">
                               <div className="flex items-center gap-1 text-amber-950 font-black">
-                                <span>⚠️</span> Dif. &lt; $10 ({item.differenceAmount && item.differenceAmount > 0 ? `+$${item.differenceAmount.toFixed(0)}` : `-$${Math.abs(item.differenceAmount || 0).toFixed(0)}`})
+                                Dif. &lt; $10 ({item.differenceAmount && item.differenceAmount > 0 ? `+$${item.differenceAmount.toFixed(0)}` : `-$${Math.abs(item.differenceAmount || 0).toFixed(0)}`})
                               </div>
                               <div className="text-[9px] text-amber-800 font-normal">
                                 Pendiente de registro (Doc {item.docNumber || 'RCV'} por ${(item.amount - (item.differenceAmount || 0)).toLocaleString('es-CL')})
@@ -975,15 +975,15 @@ function AutoRutMatchModalContent({
                             </div>
                           ) : item.matchedDocument ? (
                             <span className="px-2 py-1 rounded-lg text-[11px] font-bold bg-blue-50 text-blue-800 border border-blue-300 flex items-center gap-1 w-fit">
-                              <span>📄</span> Doc {item.docType} Folio {item.docNumber} (${(item.matchedDocument.montoTotal || 0).toLocaleString('es-CL')})
+                              Doc {item.docType} Folio {item.docNumber} (${(item.matchedDocument.montoTotal || 0).toLocaleString('es-CL')})
                             </span>
                           ) : item.matchedAuxiliary ? (
                             <span className="px-2 py-1 rounded-lg text-[11px] font-bold bg-indigo-50 text-indigo-800 border border-indigo-300 flex items-center gap-1 w-fit">
-                              <span>👤</span> Auxiliar Maestro Registrado
+                              Auxiliar Maestro Registrado
                             </span>
                           ) : (
                             <span className="px-2 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-300 flex items-center gap-1 w-fit">
-                              <span>🔍</span> Propuesta por RUT Glosa
+                              Propuesta por RUT Glosa
                             </span>
                           )}
                         </td>
@@ -1017,7 +1017,7 @@ function AutoRutMatchModalContent({
             Seleccionados: <strong className="text-slate-900 font-bold">{selectedCount}</strong> de {matchResults.length} movimientos
             {matchResults.some(m => m.matchStatus === 'DIFERENCIA_MENOR_10_PENDIENTE') && (
               <span className="ml-2 text-amber-800 font-bold">
-                (⚠️ {matchResults.filter(m => m.matchStatus === 'DIFERENCIA_MENOR_10_PENDIENTE').length} con dif. &lt; $10 pendientes e informados)
+                ( {matchResults.filter(m => m.matchStatus === 'DIFERENCIA_MENOR_10_PENDIENTE').length} con dif. &lt; $10 pendientes e informados)
               </span>
             )}
           </div>
@@ -1038,22 +1038,17 @@ function AutoRutMatchModalContent({
               disabled={isProcessing || selectedCount === 0}
               className={`px-5 py-2.5 text-xs font-black rounded-xl text-white shadow-lg transition flex items-center justify-center gap-2 w-full sm:w-auto cursor-pointer ${
                 themeMode === 'NUEZ_MARIPOSA'
-                  ? 'bg-gradient-to-r from-amber-600 via-amber-700 to-yellow-600 hover:from-amber-700 hover:to-yellow-700 shadow-amber-500/30'
-                  : 'bg-gradient-to-r from-rose-600 via-red-600 to-slate-900 hover:from-rose-700 hover:to-slate-950 shadow-rose-600/30'
+                  ? 'bg-amber-600 hover:bg-amber-700 shadow-amber-500/30'
+                  : 'bg-rose-600 hover:bg-rose-700 shadow-rose-600/30'
               } disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               {isProcessing ? (
                 <>
-                  <span className="animate-spin text-base">⏳</span>
+                  
                   <span>Generando Comprobantes y Conciliando...</span>
                 </>
               ) : (
                 <>
-                  {themeMode === 'NUEZ_MARIPOSA' ? (
-                    <span className="text-base animate-pulse">🧠</span>
-                  ) : (
-                    <span className="text-base animate-bounce">🤖</span>
-                  )}
                   <span>Contabilizar y Conciliar {selectedCount} Movimientos</span>
                 </>
               )}

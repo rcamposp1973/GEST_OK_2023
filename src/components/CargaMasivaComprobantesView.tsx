@@ -589,7 +589,7 @@ export default function CargaMasivaComprobantesView({
         id: `line_${i}`,
         accountId: matchedAccount ? matchedAccount.id : `acc_${accCode}`,
         accountCode: (accCode || 'SIN_CUENTA').toUpperCase(),
-        accountName: matchedAccount ? matchedAccount.name.toUpperCase() : '❌ CUENTA NO CONFIGURADA EN PLAN DE CUENTAS',
+        accountName: matchedAccount ? matchedAccount.name.toUpperCase() : 'CUENTA NO CONFIGURADA EN PLAN DE CUENTAS',
         debit: finalDebit,
         credit: finalCredit,
         moneda: lineCurrency,
@@ -738,7 +738,7 @@ export default function CargaMasivaComprobantesView({
         validateMatrixData(rawRows, renumberMode);
       } catch (err: any) {
         console.error('Error procesando archivo:', err);
-        alert('❌ Error al procesar el archivo: ' + err.message);
+        alert('Error al procesar el archivo: ' + err.message);
       }
     };
     reader.readAsBinaryString(file);
@@ -926,7 +926,7 @@ export default function CargaMasivaComprobantesView({
 
     const validDrafts = parsedVouchers.filter(d => d.isValid);
     if (validDrafts.length === 0) {
-      alert('⚠️ No hay comprobantes válidos y totalmente cuadrados para importar.');
+      alert('No hay comprobantes válidos y totalmente cuadrados para importar.');
       return;
     }
 
@@ -947,7 +947,7 @@ export default function CargaMasivaComprobantesView({
 
     if (closedDrafts.length > 0) {
       alert(
-        `🔒 ACCIÓN BLOQUEADA POR PERÍODO CERRADO:\n\n` +
+        `ACCIÓN BLOQUEADA POR PERÍODO CERRADO:\n\n` +
         `Se detectaron comprobantes con fecha en períodos contables CERRADOS:\n` +
         closedDrafts.slice(0, 5).join('\n') +
         (closedDrafts.length > 5 ? `\n...y ${closedDrafts.length - 5} más.` : '') +
@@ -1051,13 +1051,13 @@ export default function CargaMasivaComprobantesView({
       setParsedVouchers([]);
       setFileMetadata(null);
 
-      alert(`✅ ¡Éxito! Se contabilizaron correctamente ${validDrafts.length} comprobantes en la empresa.`);
+      alert(` ¡Éxito! Se contabilizaron correctamente ${validDrafts.length} comprobantes en la empresa.`);
       if (onVouchersUpdated) {
         onVouchersUpdated();
       }
     } catch (err: any) {
       console.error('Error en carga masiva:', err);
-      alert('❌ Error durante el guardado de comprobantes: ' + err.message);
+      alert('Error durante el guardado de comprobantes: ' + err.message);
     } finally {
       setLoading(false);
       setIsCommitting(false);
@@ -1079,7 +1079,6 @@ export default function CargaMasivaComprobantesView({
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-xl">⚡</span>
             <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase">
               Carga Masiva de Vouchers por Archivo
             </h3>
@@ -1095,14 +1094,12 @@ export default function CargaMasivaComprobantesView({
             onClick={handleDownloadExcelTemplate}
             className="px-3.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold rounded-lg border border-emerald-200 transition-colors flex items-center gap-1.5"
           >
-            <span>📊</span>
             <span>Plantilla Excel (.xlsx)</span>
           </button>
           <button
             onClick={handleDownloadCsvTemplate}
             className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-lg border border-slate-300 transition-colors flex items-center gap-1.5"
           >
-            <span>📥</span>
             <span>Plantilla CSV</span>
           </button>
         </div>
@@ -1112,7 +1109,6 @@ export default function CargaMasivaComprobantesView({
       {uploadSuccessCount !== null && (
         <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-xl text-emerald-900 flex items-center justify-between shadow-xs">
           <div className="flex items-center gap-3">
-            <span className="text-2xl">🎉</span>
             <div>
               <h4 className="font-bold text-sm">¡Comprobantes Importados Exitosamente!</h4>
               <p className="text-xs text-emerald-700">
@@ -1162,7 +1158,6 @@ export default function CargaMasivaComprobantesView({
             />
             <label htmlFor="voucher-file-input" className="cursor-pointer block space-y-3">
               <div className="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto text-2xl shadow-xs">
-                📁
               </div>
               <div>
                 <p className="text-sm font-bold text-slate-800">
@@ -1180,13 +1175,13 @@ export default function CargaMasivaComprobantesView({
 
           <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs space-y-1.5 text-slate-600">
             <p className="font-bold text-slate-800 flex items-center gap-1">
-              <span>💡</span> Estructura Recomendada de Columnas en el Archivo:
+              Estructura Recomendada de Columnas en el Archivo:
             </p>
             <p className="font-mono text-[11px] bg-white p-2 rounded border border-slate-200 overflow-x-auto text-slate-700">
               NumComprobante | Fecha (YYYY-MM-DD) | Tipo (Ingreso/Egreso/Traspaso) | GlosaComprobante | CodigoCuenta | Debe | Haber | RutAuxiliar | NombreAuxiliar | GlosaLinea | RefDTE
             </p>
             <p className="text-[11px] text-indigo-800 font-medium">
-              🛡️ <strong>Evite duplicados de Folio:</strong> El sistema re-numerará automáticamente los folios comenzando desde el correlativo siguiente (N° {maxExistingNum + 1}) o le permitirá mantener los del archivo.
+               <strong>Evite duplicados de Folio:</strong> El sistema re-numerará automáticamente los folios comenzando desde el correlativo siguiente (N° {maxExistingNum + 1}) o le permitirá mantener los del archivo.
             </p>
           </div>
         </div>
@@ -1196,7 +1191,6 @@ export default function CargaMasivaComprobantesView({
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 bg-indigo-50/70 border border-indigo-200 rounded-xl gap-3">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-indigo-600 text-white rounded-lg flex items-center justify-center font-bold text-lg">
-                📊
               </div>
               <div>
                 <div className="flex items-center gap-2">
@@ -1217,7 +1211,6 @@ export default function CargaMasivaComprobantesView({
                 className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
                 title="Re-validar asientos contra el Plan de Cuentas actual"
               >
-                <span>🔄</span>
                 <span>Re-Validar</span>
               </button>
               <button
@@ -1236,7 +1229,6 @@ export default function CargaMasivaComprobantesView({
         <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-xs">
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-sm">🔢</span>
               <h4 className="text-xs font-black text-slate-900 uppercase tracking-wide">
                 Asignación de Folios de Comprobantes
               </h4>
@@ -1255,7 +1247,6 @@ export default function CargaMasivaComprobantesView({
                   : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
-              <span>⚡</span>
               <span>Auto-numerar (Correlativo N° {maxExistingNum + 1})</span>
             </button>
             <button
@@ -1266,7 +1257,6 @@ export default function CargaMasivaComprobantesView({
                   : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
-              <span>📄</span>
               <span>Mantener N° de Archivo</span>
             </button>
           </div>
@@ -1277,7 +1267,6 @@ export default function CargaMasivaComprobantesView({
       {selectedFile && parsedVouchers.length > 0 && (
         <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-xs">
           <div className="flex items-center gap-2.5">
-            <span className="text-xl">💵</span>
             <div>
               <div className="flex items-center gap-2">
                 <h4 className="text-xs font-black text-emerald-950 uppercase tracking-wide">
@@ -1318,7 +1307,6 @@ export default function CargaMasivaComprobantesView({
         <div className="p-4 bg-amber-50 border-2 border-amber-300 rounded-xl space-y-3 shadow-xs">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start gap-2.5">
-              <span className="text-2xl">⚠️</span>
               <div>
                 <h4 className="font-black text-amber-900 text-xs uppercase tracking-wide">
                   Falta Configuración: Cuentas Inexistentes en Plan de Cuentas ({missingAccountCodes.length})
@@ -1335,7 +1323,6 @@ export default function CargaMasivaComprobantesView({
                 onClick={() => onNavigateTab('accounts')}
                 className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-black rounded-lg shadow-xs transition-colors shrink-0 flex items-center gap-1.5"
               >
-                <span>⚙️</span>
                 <span>Ir al Plan de Cuentas</span>
               </button>
             )}
@@ -1375,7 +1362,7 @@ export default function CargaMasivaComprobantesView({
                 </span>
                 {parsedVouchers.filter(v => !v.isValid).length > 0 && (
                   <span className="font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
-                    ⚠️ {parsedVouchers.filter(v => !v.isValid).length} Con Errores
+                     {parsedVouchers.filter(v => !v.isValid).length} Con Errores
                   </span>
                 )}
               </div>
@@ -1391,7 +1378,6 @@ export default function CargaMasivaComprobantesView({
                     : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
                 }`}
               >
-                <span>💾</span>
                 <span>
                   {loading || isCommitting
                     ? 'Guardando...'
@@ -1445,7 +1431,7 @@ export default function CargaMasivaComprobantesView({
                             key={errIdx}
                             className="px-2.5 py-0.5 bg-rose-100 text-rose-900 rounded font-bold text-[10px] border border-rose-300"
                           >
-                            ⚠️ {err}
+                             {err}
                           </span>
                         ))}
                       </div>
@@ -1486,7 +1472,7 @@ export default function CargaMasivaComprobantesView({
                             <td className="py-1 px-2 font-sans">
                               {l.isAccountMissing ? (
                                 <span className="text-amber-900 font-bold flex items-center gap-1">
-                                  <span>❌</span> {l.accountName}
+                                  {l.accountName}
                                 </span>
                               ) : (
                                 <div>
@@ -1495,7 +1481,7 @@ export default function CargaMasivaComprobantesView({
                                     <div className="text-[10px] text-rose-700 font-bold mt-0.5 space-y-0.5">
                                       {l.requiredErrors!.map((err, ei) => (
                                         <div key={ei} className="flex items-center gap-1">
-                                          <span>⚠️</span> {err}
+                                          {err}
                                         </div>
                                       ))}
                                     </div>
@@ -1507,47 +1493,47 @@ export default function CargaMasivaComprobantesView({
                               <div className="flex flex-wrap items-center gap-1">
                                 {l.auxiliaryRut ? (
                                   <span className="px-1.5 py-0.5 bg-slate-100 text-slate-800 rounded text-[10px] font-mono border border-slate-200">
-                                    👤 {l.auxiliaryRut} {l.auxiliaryName ? `(${l.auxiliaryName})` : ''}
+                                     {l.auxiliaryRut} {l.auxiliaryName ? `(${l.auxiliaryName})` : ''}
                                   </span>
                                 ) : null}
                                 {l.documentRef ? (
                                   <span className="px-1.5 py-0.5 bg-blue-50 text-blue-800 rounded text-[10px] font-mono border border-blue-200">
-                                    📄 {l.documentRef}
+                                     {l.documentRef}
                                   </span>
                                 ) : null}
                                 {l.costCenter ? (
                                   <span className="px-1.5 py-0.5 bg-amber-50 text-amber-800 rounded text-[10px] font-mono border border-amber-200">
-                                    🏢 CC: {l.costCenter}
+                                     CC: {l.costCenter}
                                   </span>
                                 ) : null}
                                 {l.bankDocRef ? (
                                   <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-800 rounded text-[10px] font-mono border border-emerald-200">
-                                    🏦 {l.bankDocRef}
+                                     {l.bankDocRef}
                                   </span>
                                 ) : null}
                                 {l.dueDate ? (
                                   <span className="px-1.5 py-0.5 bg-purple-50 text-purple-800 rounded text-[10px] font-mono border border-purple-200">
-                                    📅 Vto: {l.dueDate}
+                                     Vto: {l.dueDate}
                                   </span>
                                 ) : null}
                                 {l.expenseItem ? (
                                   <span className="px-1.5 py-0.5 bg-orange-50 text-orange-800 rounded text-[10px] font-mono border border-orange-200">
-                                    🏷️ Gasto: {l.expenseItem}
+                                     Gasto: {l.expenseItem}
                                   </span>
                                 ) : null}
                                 {l.project ? (
                                   <span className="px-1.5 py-0.5 bg-teal-50 text-teal-800 rounded text-[10px] font-mono border border-teal-200">
-                                    🏗️ Proy: {l.project}
+                                     Proy: {l.project}
                                   </span>
                                 ) : null}
                                 {l.product ? (
                                   <span className="px-1.5 py-0.5 bg-indigo-50 text-indigo-800 rounded text-[10px] font-mono border border-indigo-200">
-                                    📦 Prod: {l.product}
+                                     Prod: {l.product}
                                   </span>
                                 ) : null}
                                 {l.customAnalyses && Object.entries(l.customAnalyses).map(([k, vVal]) => (
                                   <span key={k} className="px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded text-[10px] font-mono border border-slate-200">
-                                    ⚙️ {k}: {vVal}
+                                     {k}: {vVal}
                                   </span>
                                 ))}
                                 {!l.auxiliaryRut && !l.documentRef && !l.costCenter && !l.bankDocRef && !l.dueDate && !l.expenseItem && !l.project && !l.product && (!l.customAnalyses || Object.keys(l.customAnalyses).length === 0) && (

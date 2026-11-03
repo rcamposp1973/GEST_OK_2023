@@ -39,7 +39,7 @@ export function checkIsPeriodClosed(
     return {
       isClosed: true,
       periodStr: clean,
-      errorMsg: `🔒 Período No Permitido: El sistema contable opera únicamente desde el año comercial ${MIN_SYSTEM_YEAR} en adelante.`
+      errorMsg: `Período No Permitido: El sistema contable opera únicamente desde el año comercial ${MIN_SYSTEM_YEAR} en adelante.`
     };
   }
 
@@ -54,7 +54,7 @@ export function checkIsPeriodClosed(
     isClosed,
     periodStr: clean,
     errorMsg: isClosed
-      ? `🔒 Período Contable Cerrado: El período ${monthName} ${yearNum} (${clean}) se encuentra CERRADO. Para registrar comprobantes, importar o realizar procesos en este mes, debe abrirlo previamente en 'Configuraciones > Períodos Contables'.`
+      ? `Período Contable Cerrado: El período ${monthName} ${yearNum} (${clean}) se encuentra CERRADO. Para registrar comprobantes, importar o realizar procesos en este mes, debe abrirlo previamente en 'Configuraciones > Períodos Contables'.`
       : ''
   };
 }

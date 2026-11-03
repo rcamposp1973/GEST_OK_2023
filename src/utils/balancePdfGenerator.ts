@@ -228,7 +228,7 @@ export function generateBalance8ColumnasPDF(options: GenerateBalancePDFOptions):
         doc.text('✓ Balance Cuadrado', pageWidth - 10, 22, { align: 'right' });
       } else {
         doc.setTextColor(225, 29, 72); // Rose
-        doc.text('⚠️ Balance Descuadrado', pageWidth - 10, 22, { align: 'right' });
+        doc.text('Balance Descuadrado', pageWidth - 10, 22, { align: 'right' });
       }
 
       // Separator line

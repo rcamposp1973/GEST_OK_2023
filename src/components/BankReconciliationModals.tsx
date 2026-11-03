@@ -82,7 +82,7 @@ function ImportCSVModalContent({
             </div>
             <div>
               <h4 className="text-sm font-black text-slate-900 uppercase flex items-center gap-1.5">
-                <span>📥</span> Importar Cartola Bancaria (Saldos Acumulativos Multimes)
+                Importar Cartola Bancaria (Saldos Acumulativos Multimes)
               </h4>
               <p className="text-xs text-slate-500 mt-0.5">
                 Al importar, los movimientos se grabarán automáticamente y encadenarán los saldos de mes a mes.
@@ -136,7 +136,7 @@ function ImportCSVModalContent({
 
         <div className="flex justify-between items-center pt-2">
           <span className="text-[11px] text-emerald-700 font-bold flex items-center gap-1">
-            <span>💾</span> Grabado automático inmediato al importar
+            Grabado automático inmediato al importar
           </span>
           <div className="flex gap-2">
             <button
@@ -260,7 +260,7 @@ function ManualMatchModalContent({
             </div>
             <div>
               <h4 className="text-sm font-black text-slate-900 uppercase flex items-center gap-1.5">
-                <span>🔗</span> Conciliar Partida con Asiento (1 a 1 o 1 a Varios)
+                Conciliar Partida con Asiento (1 a 1 o 1 a Varios)
               </h4>
               <div className="text-xs text-slate-600 mt-0.5">
                 Línea Cartola: <strong className="text-slate-900">{manualMatchLine.description}</strong> ({manualMatchLine.date}) — Monto:{' '}
@@ -369,7 +369,6 @@ function ManualMatchModalContent({
           if (exactMatchingVouchers.length >= 2) {
             return (
               <div className="p-2.5 bg-amber-50 border border-amber-300 rounded-lg text-xs text-amber-900 flex items-start gap-2">
-                <span className="text-base leading-none">⚠️</span>
                 <div>
                   <strong className="font-bold">Advertencia de Asientos Múltiples / Duplicados en Libros:</strong>
                   <p className="mt-0.5 text-[11px] text-amber-800">
@@ -441,7 +440,7 @@ function ManualMatchModalContent({
                         <div>{bv.date}</div>
                         {isCrossPeriod ? (
                           <span className="text-[9px] font-sans font-bold bg-indigo-100 text-indigo-800 px-1 rounded border border-indigo-200">
-                            🔄 Período {bv.period}
+                             Período {bv.period}
                           </span>
                         ) : (
                           <span className="text-[9px] text-slate-500 font-sans">Mismo período</span>
@@ -460,7 +459,7 @@ function ManualMatchModalContent({
                       <td className="p-2 text-right font-bold text-slate-900">
                         ${(bv.debit > 0 ? bv.debit : bv.credit).toLocaleString('es-CL')}
                         {isExact && (
-                          <span className="block text-[9px] text-emerald-700 font-sans font-bold">⭐ Coincide</span>
+                          <span className="block text-[9px] text-emerald-700 font-sans font-bold"> Coincide</span>
                         )}
                       </td>
                       <td className="p-2 text-center">
@@ -1131,41 +1130,41 @@ function QuickVoucherModalContent({
     // MULTI-ACCOUNT SUBMISSION (Previred, payroll, multiple counterpart accounts)
     if (voucherMode === 'MULTI') {
       if (!selectedBankAccount) {
-        setValidationError('⚠️ No se ha seleccionado una Cuenta Bancaria de origen.');
+        setValidationError('No se ha seleccionado una Cuenta Bancaria de origen.');
         return;
       }
 
       if (multiLines.length < 2) {
-        setValidationError('⚠️ En modo multi-cuentas debe ingresar al menos 2 líneas de imputación contable (por ejemplo, para Previred o pagos desglosados).');
+        setValidationError('En modo multi-cuentas debe ingresar al menos 2 líneas de imputación contable (por ejemplo, para Previred o pagos desglosados).');
         return;
       }
 
       for (let i = 0; i < multiLines.length; i++) {
         const line = multiLines[i];
         if (!line.accountId) {
-          setValidationError(`⚠️ En la fila #${i + 1} no has seleccionado la Cuenta Contable.`);
+          setValidationError(`En la fila #${i + 1} no has seleccionado la Cuenta Contable.`);
           return;
         }
         if ((Number(line.amount) || 0) <= 0) {
-          setValidationError(`⚠️ En la fila #${i + 1} el monto debe ser mayor a $0.`);
+          setValidationError(`En la fila #${i + 1} el monto debe ser mayor a $0.`);
           return;
         }
         const acc = accounts.find(a => a.id === line.accountId);
         if (acc) {
           if (acc.requiereAuxiliarRUT && !line.auxiliaryRut?.trim()) {
-            setValidationError(`⚠️ La cuenta [${acc.code} - ${acc.name}] en la fila #${i + 1} exige Auxiliar / RUT de forma obligatoria según el Plan de Cuentas.`);
+            setValidationError(`La cuenta [${acc.code} - ${acc.name}] en la fila #${i + 1} exige Auxiliar / RUT de forma obligatoria según el Plan de Cuentas.`);
             return;
           }
           if (acc.requiereDocumento && !line.documentRef?.trim()) {
-            setValidationError(`⚠️ La cuenta [${acc.code} - ${acc.name}] en la fila #${i + 1} exige N° de Documento / Folio de forma obligatoria según el Plan de Cuentas.`);
+            setValidationError(`La cuenta [${acc.code} - ${acc.name}] en la fila #${i + 1} exige N° de Documento / Folio de forma obligatoria según el Plan de Cuentas.`);
             return;
           }
           if (acc.requiereCentroCosto && !line.costCenter?.trim()) {
-            setValidationError(`⚠️ La cuenta [${acc.code} - ${acc.name}] en la fila #${i + 1} exige Centro de Costos de forma obligatoria.`);
+            setValidationError(`La cuenta [${acc.code} - ${acc.name}] en la fila #${i + 1} exige Centro de Costos de forma obligatoria.`);
             return;
           }
           if (acc.requiereItemGasto && !line.expenseItem?.trim()) {
-            setValidationError(`⚠️ La cuenta [${acc.code} - ${acc.name}] en la fila #${i + 1} exige Ítem de Gasto de forma obligatoria.`);
+            setValidationError(`La cuenta [${acc.code} - ${acc.name}] en la fila #${i + 1} exige Ítem de Gasto de forma obligatoria.`);
             return;
           }
         }
@@ -1173,7 +1172,7 @@ function QuickVoucherModalContent({
 
       if (multiDifference !== 0) {
         setValidationError(
-          `⚠️ Descuadre en Multi-Cuentas:\n\n` +
+          `Descuadre en Multi-Cuentas:\n\n` +
           `• Monto Total de la Cartola: $${bankAmount.toLocaleString('es-CL')}\n` +
           `• Total Asignado en Cuentas: $${multiTotalAmount.toLocaleString('es-CL')}\n` +
           `• Diferencia pendiente: $${multiDifference.toLocaleString('es-CL')}\n\n` +
@@ -1184,7 +1183,7 @@ function QuickVoucherModalContent({
 
       const pCheck = checkIsPeriodClosed(quickVoucherPeriod, fiscalYears);
       if (pCheck.isClosed) {
-        setValidationError(`⚠️ Acción Bloqueada:\n\n${pCheck.errorMsg}\n\nNo puedes registrar comprobantes en un período cerrado.`);
+        setValidationError(`Acción Bloqueada:\n\n${pCheck.errorMsg}\n\nNo puedes registrar comprobantes en un período cerrado.`);
         return;
       }
 
@@ -1242,12 +1241,12 @@ function QuickVoucherModalContent({
     }
 
     if (!selectedAccount) {
-      setValidationError('⚠️ Debe seleccionar una Cuenta Contable de Contrapartida.');
+      setValidationError('Debe seleccionar una Cuenta Contable de Contrapartida.');
       return;
     }
 
     if (!selectedBankAccount) {
-      setValidationError('⚠️ No se ha seleccionado una Cuenta Bancaria de origen.');
+      setValidationError('No se ha seleccionado una Cuenta Bancaria de origen.');
       return;
     }
 
@@ -1292,7 +1291,7 @@ function QuickVoucherModalContent({
 
     if (missingRequirements.length > 0) {
       setValidationError(
-        `⚠️ CAMPOS OBLIGATORIOS REQUERIDOS:\n\n` +
+        `CAMPOS OBLIGATORIOS REQUERIDOS:\n\n` +
         `La cuenta contable [${selectedAccount.code} - ${selectedAccount.name}] exige los siguientes análisis de forma OBLIGATORIA según el Plan de Cuentas:\n\n` +
         missingRequirements.map(m => `• ${m}`).join('\n')
       );
@@ -1430,7 +1429,7 @@ function QuickVoucherModalContent({
       if (dif !== 0 && Math.abs(dif) <= 2) {
         const aj = onEnsureRoundingAccount ? await onEnsureRoundingAccount() : (buscarCuentaRedondeo(accounts) as ChartOfAccount | undefined) || null;
         if (!aj) {
-          setValidationError(`⚠️ Hay una diferencia de $${Math.abs(dif)} por redondeo y no existe la cuenta "Ajuste por redondeo". Créala en el plan de cuentas o ajusta los montos a mano.`);
+          setValidationError(`Hay una diferencia de $${Math.abs(dif)} por redondeo y no existe la cuenta "Ajuste por redondeo". Créala en el plan de cuentas o ajusta los montos a mano.`);
           return;
         }
         const aDebe = isCharge ? dif > 0 : dif < 0;
@@ -1450,7 +1449,7 @@ function QuickVoucherModalContent({
     // Period closing validation
     const pCheck = checkIsPeriodClosed(quickVoucherPeriod, fiscalYears);
     if (pCheck.isClosed) {
-      setValidationError(`⚠️ Acción Bloqueada:\n\n${pCheck.errorMsg}\n\nNo puedes registrar comprobantes en un período cerrado.`);
+      setValidationError(`Acción Bloqueada:\n\n${pCheck.errorMsg}\n\nNo puedes registrar comprobantes en un período cerrado.`);
       return;
     }
 
@@ -1546,7 +1545,7 @@ function QuickVoucherModalContent({
         {/* Header */}
         <div
           {...dragProps}
-          className="p-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex justify-between items-center shadow-sm cursor-grab active:cursor-grabbing select-none"
+          className="p-4 bg-slate-900 text-white flex justify-between items-center shadow-sm cursor-grab active:cursor-grabbing select-none"
           title="Haz clic y arrastra para mover esta ventana"
         >
           <div className="flex items-center gap-2.5">
@@ -1555,10 +1554,10 @@ function QuickVoucherModalContent({
             </div>
             <div>
               <h4 className="text-sm font-black uppercase tracking-wider flex items-center gap-2">
-                <span>⚡</span> Contabilizar Partida Bancaria Automática
+                Contabilizar movimiento bancario
               </h4>
               <p className="text-xs text-indigo-200 mt-0.5">
-                Imputación directa con validación estricta de análisis según Plan de Cuentas (Ventana movible)
+                Contabilización según el plan de cuentas
               </p>
             </div>
           </div>
@@ -1574,7 +1573,6 @@ function QuickVoucherModalContent({
           {/* Notification banner if original bank statement period is closed */}
           {effectiveShiftInfo?.wasShifted && (
             <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl flex items-start gap-2.5 text-amber-900 text-xs shadow-2xs">
-              <span className="text-base leading-none">🔒</span>
               <div className="space-y-0.5">
                 <div className="font-bold text-amber-950 flex items-center gap-1.5">
                   <span>Período de Cartola ({effectiveShiftInfo.originalPeriod}) Cerrado Contablemente</span>
@@ -1588,10 +1586,10 @@ function QuickVoucherModalContent({
           )}
 
           {/* Bank Movement Card */}
-          <div className="bg-gradient-to-r from-slate-50 to-indigo-50/40 p-3.5 rounded-xl border border-indigo-100 flex flex-wrap justify-between items-center gap-3">
+          <div className="bg-slate-50 p-3.5 rounded-xl border border-indigo-100 flex flex-wrap justify-between items-center gap-3">
             <div className="space-y-1">
               <div className="flex items-center gap-2 text-slate-700 font-bold">
-                <span>🏦 Banco:</span>
+                <span> Banco:</span>
                 <span className="bg-white px-2 py-0.5 rounded border font-mono text-indigo-950">
                   {selectedBankAccount ? `${selectedBankAccount.code} - ${selectedBankAccount.name}` : 'No seleccionado'}
                 </span>
@@ -1610,7 +1608,7 @@ function QuickVoucherModalContent({
                 ${bankAmount.toLocaleString('es-CL')}
               </div>
               <div className="text-[10px] font-bold text-slate-500 uppercase">
-                {isCharge ? '🔴 Cargo / Egreso Bancario' : '🟢 Abono / Ingreso Bancario'}
+                {isCharge ? 'Cargo / Egreso Bancario' : 'Abono / Ingreso Bancario'}
               </div>
             </div>
           </div>
@@ -1626,7 +1624,6 @@ function QuickVoucherModalContent({
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <span>📄</span>
               <span>Cuenta Única / Facturas Abiertas</span>
             </button>
             <button
@@ -1657,7 +1654,7 @@ function QuickVoucherModalContent({
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
             <div>
               <label className="block font-bold text-slate-800 mb-1">
-                📅 Período Imputación:
+                 Período Imputación:
               </label>
               <input
                 type="month"
@@ -1675,7 +1672,7 @@ function QuickVoucherModalContent({
 
             <div>
               <label className="block font-bold text-slate-800 mb-1">
-                📆 Fecha Asiento:
+                 Fecha Asiento:
               </label>
               <input
                 type="date"
@@ -1732,7 +1729,7 @@ function QuickVoucherModalContent({
                   </div>
                 )}
                 <label className="block font-bold text-slate-800 mb-1">
-                  📊 Cuenta Contable de Contrapartida: <span className="text-rose-600 font-bold">*</span>
+                   Cuenta Contable de Contrapartida: <span className="text-rose-600 font-bold">*</span>
                 </label>
                 <SearchableAccountSelect
                   accounts={accounts}
@@ -1778,7 +1775,7 @@ function QuickVoucherModalContent({
                     className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 hover:border-indigo-300 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs active:scale-95"
                     title="Cargar automáticamente AFP, Fonasa/Salud, AFC, Mutual de Seguridad y CCAF con RUT Previred"
                   >
-                    <span>⚡ Previred (Leyes Sociales)</span>
+                    <span> Previred (Leyes Sociales)</span>
                   </button>
                   <button
                     type="button"
@@ -1786,7 +1783,7 @@ function QuickVoucherModalContent({
                     className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs active:scale-95"
                     title="Cargar automáticamente IVA F29, PPM y Retención de Honorarios con RUT TGR"
                   >
-                    <span>🏛️ Impuestos TGR (F29)</span>
+                    <span> Impuestos TGR (F29)</span>
                   </button>
                 </div>
 
@@ -1870,7 +1867,7 @@ function QuickVoucherModalContent({
                       {multiLines.length === 0 ? (
                         <tr>
                           <td colSpan={6} className="py-8 text-center text-slate-400 italic">
-                            No has agregado cuentas contables. Haz clic en "⚡ Previred (Leyes Sociales)" o en "+ Agregar Cuenta".
+                            No has agregado cuentas contables. Haz clic en "Previred (Leyes Sociales)"o en "+ Agregar Cuenta".
                           </td>
                         </tr>
                       ) : (
@@ -1927,7 +1924,7 @@ function QuickVoucherModalContent({
                                     title="Calcular y rellenar automáticamente con el saldo restante del banco"
                                   >
                                     <Calculator className="w-2.5 h-2.5" />
-                                    <span>⚡ Resto</span>
+                                    <span> Resto</span>
                                   </button>
                                 </div>
                               </td>
@@ -2023,7 +2020,7 @@ function QuickVoucherModalContent({
           {voucherMode === 'SINGLE' && selectedAccount && (
             <div className="p-3 bg-indigo-50/70 border border-indigo-200 rounded-xl space-y-1.5">
               <div className="font-bold text-indigo-950 flex items-center gap-1.5">
-                <span>📋 Exigencias de Análisis según Plan de Cuentas:</span>
+                <span> Exigencias de Análisis según Plan de Cuentas:</span>
                 <span className="font-mono bg-indigo-200 text-indigo-900 px-2 py-0.5 rounded text-[11px]">
                   {selectedAccount.code}
                 </span>
@@ -2031,44 +2028,44 @@ function QuickVoucherModalContent({
               <div className="flex flex-wrap gap-1.5">
                 {selectedAccount.requiereAuxiliarRUT ? (
                   <span className="px-2 py-0.5 bg-indigo-600 text-white rounded font-bold text-[10px] shadow-2xs">
-                    ⚠️ Exige Auxiliar / RUT
+                     Exige Auxiliar / RUT
                   </span>
                 ) : null}
                 {selectedAccount.requiereDocumento ? (
                   <span className="px-2 py-0.5 bg-blue-600 text-white rounded font-bold text-[10px] shadow-2xs">
-                    ⚠️ Exige N° Documento
+                     Exige N° Documento
                   </span>
                 ) : null}
                 {selectedAccount.requiereCentroCosto ? (
                   <span className="px-2 py-0.5 bg-amber-600 text-white rounded font-bold text-[10px] shadow-2xs">
-                    ⚠️ Exige Centro de Costos
+                     Exige Centro de Costos
                   </span>
                 ) : null}
                 {selectedAccount.requiereVencimiento ? (
                   <span className="px-2 py-0.5 bg-purple-600 text-white rounded font-bold text-[10px] shadow-2xs">
-                    ⚠️ Exige Vencimiento
+                     Exige Vencimiento
                   </span>
                 ) : null}
                 {selectedAccount.requiereItemGasto ? (
                   <span className="px-2 py-0.5 bg-orange-600 text-white rounded font-bold text-[10px] shadow-2xs">
-                    ⚠️ Exige Ítem Gasto
+                     Exige Ítem Gasto
                   </span>
                 ) : null}
                 {selectedAccount.requiereProyecto ? (
                   <span className="px-2 py-0.5 bg-teal-600 text-white rounded font-bold text-[10px] shadow-2xs">
-                    ⚠️ Exige Proyecto
+                     Exige Proyecto
                   </span>
                 ) : null}
                 {selectedAccount.requiereProducto ? (
                   <span className="px-2 py-0.5 bg-indigo-800 text-white rounded font-bold text-[10px] shadow-2xs">
-                    ⚠️ Exige Producto
+                     Exige Producto
                   </span>
                 ) : null}
                 {customColumns.map(col => {
                   if (isCustomAttrRequired(col)) {
                     return (
                       <span key={col} className="px-2 py-0.5 bg-slate-700 text-white rounded font-bold text-[10px] shadow-2xs">
-                        ⚠️ Exige {col}
+                         Exige {col}
                       </span>
                     );
                   }
@@ -2095,7 +2092,7 @@ function QuickVoucherModalContent({
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-2">
                 <div>
                   <h5 className="font-bold text-slate-900 text-xs uppercase flex items-center gap-1.5">
-                    <span>📑</span> Composición de la Cuenta / {
+                    Composición de la Cuenta / {
                       isHonorarios
                         ? 'Boletas de Honorarios Pendientes por Pagar (BHE)'
                         : isProveedores
@@ -2135,7 +2132,7 @@ function QuickVoucherModalContent({
                     onClick={handleAutoAllocateBankAmount}
                     className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors shadow-2xs flex items-center gap-1"
                   >
-                    <span>⚡</span> Pagar/Cobrar Saldo Banco (${bankAmount.toLocaleString('es-CL')})
+                    Pagar/Cobrar Saldo Banco (${bankAmount.toLocaleString('es-CL')})
                   </button>
                 </div>
               </div>
@@ -2289,7 +2286,7 @@ function QuickVoucherModalContent({
           {selectedAccount && (
             <div className="space-y-3 border border-slate-200 p-4 rounded-xl bg-slate-50/70 shadow-2xs">
               <h5 className="font-bold text-slate-900 text-xs uppercase flex items-center gap-1.5 border-b pb-2">
-                <span>📝</span> Atributos y Datos de Análisis Requeridos
+                Atributos y Datos de Análisis Requeridos
               </h5>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
@@ -2297,7 +2294,7 @@ function QuickVoucherModalContent({
                 {selectedAccount.requiereAuxiliarRUT && (
                   <div>
                     <label className="font-bold text-slate-800 block mb-1">
-                      👤 Auxiliar (RUT y Razón Social):
+                       Auxiliar (RUT y Razón Social):
                       <span className="text-rose-600 font-bold ml-1">* (Obligatorio según Plan de Cuentas)</span>
                     </label>
                     <SearchableAuxiliarySelect
@@ -2319,7 +2316,7 @@ function QuickVoucherModalContent({
                 {/* 2. N° Documento de Referencia */}
                 <div>
                   <label className="font-bold text-slate-800 block mb-1">
-                    📄 N° Documento / Folio / Referencia:
+                     N° Documento / Folio / Referencia:
                     {selectedAccount.requiereDocumento && <span className="text-rose-600 font-bold ml-1">* (Obligatorio)</span>}
                   </label>
                   <input
@@ -2336,7 +2333,7 @@ function QuickVoucherModalContent({
                 {/* 3. Fecha Vencimiento */}
                 <div>
                   <label className="font-bold text-slate-800 block mb-1">
-                    📅 Fecha de Vencimiento:
+                     Fecha de Vencimiento:
                     {selectedAccount.requiereVencimiento && <span className="text-rose-600 font-bold ml-1">* (Obligatorio)</span>}
                   </label>
                   <input
@@ -2352,7 +2349,7 @@ function QuickVoucherModalContent({
                 {/* 4. Centro de Costos (Ordenados Alfabéticamente por Código) */}
                 <div>
                   <label className="font-bold text-slate-800 block mb-1">
-                    🏢 Centro de Costos:
+                     Centro de Costos:
                     {selectedAccount.requiereCentroCosto && <span className="text-rose-600 font-bold ml-1">* (Obligatorio)</span>}
                   </label>
                   {sortedCostCenters.length > 0 ? (
@@ -2386,7 +2383,7 @@ function QuickVoucherModalContent({
                 {/* 5. Ítem de Gasto (Ordenados Alfabéticamente por Código) */}
                 <div>
                   <label className="font-bold text-slate-800 block mb-1">
-                    🏷️ Ítem de Gasto:
+                     Ítem de Gasto:
                     {selectedAccount.requiereItemGasto && <span className="text-rose-600 font-bold ml-1">* (Obligatorio)</span>}
                   </label>
                   {sortedExpenseItems.length > 0 ? (
@@ -2420,7 +2417,7 @@ function QuickVoucherModalContent({
                 {/* 6. Proyecto */}
                 <div>
                   <label className="font-bold text-slate-800 block mb-1">
-                    🏗️ Proyecto / Obra:
+                     Proyecto / Obra:
                     {selectedAccount.requiereProyecto && <span className="text-rose-600 font-bold ml-1">* (Obligatorio)</span>}
                   </label>
                   {projects.length > 0 ? (
@@ -2454,7 +2451,7 @@ function QuickVoucherModalContent({
                 {/* 7. Producto */}
                 <div>
                   <label className="font-bold text-slate-800 block mb-1">
-                    📦 Producto / Servicio:
+                     Producto / Servicio:
                     {selectedAccount.requiereProducto && <span className="text-rose-600 font-bold ml-1">* (Obligatorio)</span>}
                   </label>
                   {products.length > 0 ? (
@@ -2494,7 +2491,7 @@ function QuickVoucherModalContent({
                   return (
                     <div key={col}>
                       <label className="font-bold text-slate-800 block mb-1">
-                        ⚙️ {col}:
+                         {col}:
                         {isReq && <span className="text-rose-600 font-bold ml-1">* (Obligatorio)</span>}
                       </label>
                       {colItems.length > 0 ? (
@@ -2529,7 +2526,7 @@ function QuickVoucherModalContent({
           {/* Glosa del Asiento */}
           <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
             <label className="block font-bold text-slate-800 mb-1">
-              ✏️ Glosa General del Comprobante:
+               Glosa General del Comprobante:
             </label>
             <input
               type="text"
@@ -2544,7 +2541,7 @@ function QuickVoucherModalContent({
           {validationError && (
             <div className="p-4 bg-rose-50 border-2 border-rose-300 rounded-xl text-rose-900 text-xs font-medium space-y-1 shadow-xs animate-shake">
               <div className="font-bold text-rose-950 text-xs flex items-center gap-1.5">
-                <span className="text-base">🚨</span> ERROR DE VALIDACIÓN DE ANÁLISIS
+                ERROR DE VALIDACIÓN DE ANÁLISIS
               </div>
               <pre className="font-sans whitespace-pre-wrap leading-relaxed">{validationError}</pre>
             </div>

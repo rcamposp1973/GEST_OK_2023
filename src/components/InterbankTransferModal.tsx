@@ -226,7 +226,7 @@ export default function InterbankTransferModal({
       if (res.success && res.totalVouchersCreated > 0) {
         notify.success(
           `¡Éxito! Se crearon ${res.totalVouchersCreated} comprobante(s) de traspaso y se conciliaron ${res.totalOriginLinesReconciled + res.totalDestinationLinesReconciled} líneas de cartola por $${res.totalAmountTransferred.toLocaleString('es-CL')}.`,
-          '✅ Traspasos Contabilizados y Conciliados',
+          'Traspasos Contabilizados y Conciliados',
           5000
         );
 
@@ -267,7 +267,7 @@ export default function InterbankTransferModal({
         {/* Header (Draggable) */}
         <div 
           {...dragProps}
-          className="px-6 py-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between border-b border-indigo-900/40 select-none cursor-move"
+          className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-indigo-900/40 select-none cursor-move"
         >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-indigo-600/30 border border-indigo-400/40 flex items-center justify-center shadow-inner">
@@ -335,7 +335,7 @@ export default function InterbankTransferModal({
                 onChange={(e) => setSelectedMonth(e.target.value)}
                 className="bg-transparent font-bold text-indigo-700 focus:outline-none cursor-pointer"
               >
-                <option value="TODOS">📅 Todo el Año {selectedYear} (Ene - Dic)</option>
+                <option value="TODOS"> Todo el Año {selectedYear} (Ene - Dic)</option>
                 {ALL_MONTHS.map(m => (
                   <option key={m} value={m}>{MONTH_NAMES[m]} ({selectedYear}-{m})</option>
                 ))}
@@ -411,7 +411,7 @@ export default function InterbankTransferModal({
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-indigo-600 shrink-0" />
             <span>
-              <strong>Algoritmo de Detección Inteligente:</strong> Cruza cargos en banco emisor con abonos en banco receptor (1 a 1, concentrado N a 1 ej: 10 transferencias de $7M = 1 abono de $70M, y fraccionado 1 a N).
+              <strong>Algoritmo de Detección:</strong> Cruza cargos en banco emisor con abonos en banco receptor (1 a 1, concentrado N a 1 ej: 10 transferencias de $7M = 1 abono de $70M, y fraccionado 1 a N).
             </span>
           </div>
           <span className="text-[11px] text-indigo-600 font-semibold shrink-0 ml-4">
@@ -488,7 +488,7 @@ export default function InterbankTransferModal({
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-xs text-slate-800">
-                              📅 {prop.suggestedVoucherDate}
+                               {prop.suggestedVoucherDate}
                             </span>
                             {prop.daysDifference !== 0 && (
                               <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded-md text-[10px] font-bold">
@@ -515,7 +515,7 @@ export default function InterbankTransferModal({
                         <div className="flex-1 bg-rose-50/70 border border-rose-200 rounded-lg p-2.5 text-xs text-left">
                           <div className="flex items-center justify-between font-bold text-rose-950">
                             <span className="flex items-center gap-1">
-                              <span className="text-rose-600">📤 Cargo (Salida):</span>
+                              <span className="text-rose-600"> Cargo (Salida):</span>
                               <span className="truncate max-w-[140px]">{prop.originBankAccountName}</span>
                             </span>
                             <span className="text-rose-800 font-bold">${prop.totalAmount.toLocaleString('es-CL')}</span>
@@ -536,7 +536,7 @@ export default function InterbankTransferModal({
                         <div className="flex-1 bg-emerald-50/70 border border-emerald-200 rounded-lg p-2.5 text-xs text-left">
                           <div className="flex items-center justify-between font-bold text-emerald-950">
                             <span className="flex items-center gap-1">
-                              <span className="text-emerald-600">📥 Abono (Entrada):</span>
+                              <span className="text-emerald-600"> Abono (Entrada):</span>
                               <span className="truncate max-w-[140px]">{prop.destinationBankAccountName}</span>
                             </span>
                             <span className="text-emerald-800 font-bold">${prop.totalAmount.toLocaleString('es-CL')}</span>
@@ -730,7 +730,7 @@ export default function InterbankTransferModal({
               type="button"
               disabled={selectedCount === 0 || isExecuting}
               onClick={handleExecute}
-              className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 disabled:from-slate-400 disabled:to-slate-400 text-white font-bold rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:cursor-not-allowed text-xs"
+              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:from-slate-400 disabled:to-slate-400 text-white font-bold rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:cursor-not-allowed text-xs"
             >
               {isExecuting ? (
                 <>

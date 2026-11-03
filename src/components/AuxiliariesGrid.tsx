@@ -563,7 +563,7 @@ export default function AuxiliariesGrid({
               className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white text-xs font-bold rounded-lg shadow-sm transition-colors flex items-center gap-1.5"
             >
               <Trash2 className="w-4 h-4" />
-              <span>🧹 Depurar y Eliminar ({garbageAuxiliaries.length})</span>
+              <span> Depurar y Eliminar ({garbageAuxiliaries.length})</span>
             </button>
           </div>
         </div>
@@ -582,23 +582,23 @@ export default function AuxiliariesGrid({
               Total: {uniqueAuxiliaries.length}
             </span>
             <span className="bg-blue-50 text-blue-800 px-2.5 py-1 rounded-lg border border-blue-200" title="Clientes del giro">
-              🏢 Clientes: {uniqueAuxiliaries.filter(a => a.role === 'Deudor' || a.role === 'Ambos').length}
+               Clientes: {uniqueAuxiliaries.filter(a => a.role === 'Deudor' || a.role === 'Ambos').length}
             </span>
             <span className="bg-amber-50 text-amber-800 px-2.5 py-1 rounded-lg border border-amber-200" title="Proveedores del giro">
-              🏭 Proveedores: {uniqueAuxiliaries.filter(a => a.role === 'Acreedor' || a.role === 'Ambos').length}
+               Proveedores: {uniqueAuxiliaries.filter(a => a.role === 'Acreedor' || a.role === 'Ambos').length}
             </span>
             <span className="bg-emerald-50 text-emerald-800 px-2.5 py-1 rounded-lg border border-emerald-200" title="Personal / Trabajadores">
-              👥 Personal: {uniqueAuxiliaries.filter(a => a.role === 'Personal').length}
+               Personal: {uniqueAuxiliaries.filter(a => a.role === 'Personal').length}
             </span>
             <span className="bg-cyan-50 text-cyan-800 px-2.5 py-1 rounded-lg border border-cyan-200" title="Deudores Varios (no giro)">
-              🔄 Deud. Varios: {uniqueAuxiliaries.filter(a => a.role === 'Deudores Varios').length}
+               Deud. Varios: {uniqueAuxiliaries.filter(a => a.role === 'Deudores Varios').length}
             </span>
             <span className="bg-orange-50 text-orange-800 px-2.5 py-1 rounded-lg border border-orange-200" title="Acreedores Varios (socios, previsión, bancos)">
-              🏦 Acred. Varios: {uniqueAuxiliaries.filter(a => a.role === 'Acreedores Varios').length}
+               Acred. Varios: {uniqueAuxiliaries.filter(a => a.role === 'Acreedores Varios').length}
             </span>
             {garbageAuxiliaries.length > 0 && (
               <span className="bg-rose-100 text-rose-800 px-2.5 py-1 rounded-lg border border-rose-300 font-bold flex items-center gap-1">
-                <span>⚠️ Malformados:</span>
+                <span> Malformados:</span>
                 <span>{garbageAuxiliaries.length}</span>
               </span>
             )}
@@ -641,11 +641,11 @@ export default function AuxiliariesGrid({
 
           <button
             onClick={() => setShowUpgradeModal(true)}
-            className="px-3.5 py-1.5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 active:from-indigo-800 active:to-blue-800 text-white text-xs font-black rounded-lg shadow-sm flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+            className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 active:from-indigo-800 active:to-blue-800 text-white text-xs font-black rounded-lg shadow-sm flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
             title="Descargar base a Excel, modificar configuraciones/cuentas masivamente y actualizar en 1 clic"
           >
             <Sparkles className="w-3.5 h-3.5 text-indigo-200" />
-            <span>⚡ Upgrade / Cargar Excel</span>
+            <span> Upgrade / Cargar Excel</span>
           </button>
 
           <button
@@ -776,7 +776,7 @@ export default function AuxiliariesGrid({
                   >
                     <option value="ALL">Todos los RUTs</option>
                     <option value="VALID">Solo RUTs Válidos</option>
-                    <option value="INVALID">⚠️ Solo RUTs Inválidos / Erróneos</option>
+                    <option value="INVALID"> Solo RUTs Inválidos / Erróneos</option>
                   </select>
                 </th>
                 <th className="p-1 border-r border-slate-800">
@@ -804,12 +804,12 @@ export default function AuxiliariesGrid({
                     className="w-full bg-slate-950 border border-slate-700 text-slate-200 px-1 py-0.5 rounded text-[10px] outline-none focus:ring-1 focus:ring-emerald-400"
                   >
                     <option value="ALL">Todos los Roles</option>
-                    <option value="Deudor">🏢 Deudor (Clientes)</option>
-                    <option value="Acreedor">🏭 Acreedor (Proveedores)</option>
-                    <option value="Personal">👥 Personal (Trabajadores)</option>
-                    <option value="Deudores Varios">🔄 Deudores Varios</option>
-                    <option value="Acreedores Varios">🏦 Acreedores Varios</option>
-                    <option value="Ambos">🔀 Ambos / Mixto</option>
+                    <option value="Deudor"> Deudor (Clientes)</option>
+                    <option value="Acreedor"> Acreedor (Proveedores)</option>
+                    <option value="Personal"> Personal (Trabajadores)</option>
+                    <option value="Deudores Varios"> Deudores Varios</option>
+                    <option value="Acreedores Varios"> Acreedores Varios</option>
+                    <option value="Ambos"> Ambos / Mixto</option>
                   </select>
                 </th>
                 <th className="p-1 border-r border-slate-800">
@@ -934,7 +934,6 @@ export default function AuxiliariesGrid({
                             </span>
                             {!analysis.isValid && (
                               <span title="Dígito verificador no coincide con Módulo 11" className="text-amber-500 text-[10px]">
-                                ⚠️
                               </span>
                             )}
                           </div>
@@ -980,12 +979,12 @@ export default function AuxiliariesGrid({
                             ? 'bg-orange-100 text-orange-800 border border-orange-200'
                             : 'bg-purple-100 text-purple-800 border border-purple-200'
                         }`}>
-                          {aux.role === 'Deudor' && '🏢'}
-                          {aux.role === 'Acreedor' && '🏭'}
-                          {aux.role === 'Personal' && '👥'}
-                          {aux.role === 'Deudores Varios' && '🔄'}
-                          {aux.role === 'Acreedores Varios' && '🏦'}
-                          {aux.role === 'Ambos' && '🔀'}
+                          {aux.role === 'Deudor' && ''}
+                          {aux.role === 'Acreedor' && ''}
+                          {aux.role === 'Personal' && ''}
+                          {aux.role === 'Deudores Varios' && ''}
+                          {aux.role === 'Acreedores Varios' && ''}
+                          {aux.role === 'Ambos' && ''}
                           <span>{aux.role || 'Deudor'}</span>
                         </span>
                       </td>
@@ -1136,7 +1135,7 @@ export default function AuxiliariesGrid({
               </div>
 
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-amber-900 text-[11px] space-y-1">
-                <p className="font-bold">⚠️ Esta acción eliminará permanentemente estos registros corruptos.</p>
+                <p className="font-bold"> Esta acción eliminará permanentemente estos registros corruptos.</p>
                 <p>Tus auxiliares reales y válidos no se verán afectados.</p>
               </div>
             </div>
@@ -1248,7 +1247,7 @@ export default function AuxiliariesGrid({
 
                 {hasMovements ? (
                   <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-amber-900 space-y-1">
-                    <p className="font-bold">🔒 Protección de Integridad Contable:</p>
+                    <p className="font-bold"> Protección de Integridad Contable:</p>
                     <p className="text-[11px] leading-relaxed">
                       Este auxiliar registra movimientos o imputaciones en comprobantes contables activos. No puede ser eliminado para preservar la coherencia contable y auditoría. Puedes <strong>Desactivarlo</strong> si ya no opera.
                     </p>

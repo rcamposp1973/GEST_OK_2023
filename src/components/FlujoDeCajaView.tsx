@@ -337,8 +337,8 @@ export default function FlujoDeCajaView({
       ['(-) 2. EGRESOS REALES (PAGADOS)', ...hybridCashFlow.monthlyRealOutflows.map(v => v.toString()), hybridCashFlow.totalRealOutflow.toString()],
       ['(=) FLUJO NETO REAL', ...hybridCashFlow.netRealFlow.map(v => v.toString()), hybridCashFlow.netRealFlow.reduce((a,b)=>a+b,0).toString()],
       [''],
-      ['(📌) 3. PROYECCIÓN DE INGRESOS', ...hybridCashFlow.monthlyProjInflows.map(v => v.toString()), hybridCashFlow.totalProjInflow.toString()],
-      ['(📌) 4. PROYECCIÓN DE EGRESOS', ...hybridCashFlow.monthlyProjOutflows.map(v => v.toString()), hybridCashFlow.totalProjOutflow.toString()],
+      ['() 3. PROYECCIÓN DE INGRESOS', ...hybridCashFlow.monthlyProjInflows.map(v => v.toString()), hybridCashFlow.totalProjInflow.toString()],
+      ['() 4. PROYECCIÓN DE EGRESOS', ...hybridCashFlow.monthlyProjOutflows.map(v => v.toString()), hybridCashFlow.totalProjOutflow.toString()],
       ['(=) FLUJO NETO PROYECTADO', ...hybridCashFlow.netProjFlow.map(v => v.toString()), hybridCashFlow.netProjFlow.reduce((a,b)=>a+b,0).toString()],
       [''],
       ['(=) SALDO ACUMULADO TRAYECTORIA', ...hybridCashFlow.accumulatedTrajectory.map(v => v.toString()), hybridCashFlow.accumulatedTrajectory[11].toString()]
@@ -360,7 +360,6 @@ export default function FlujoDeCajaView({
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-xl">🌊</span>
             <h3 className="text-lg font-black text-slate-950 tracking-tight uppercase">
               Tesorería & Flujo de Caja Híbrido (Multi-Ejercicio)
             </h3>
@@ -398,7 +397,6 @@ export default function FlujoDeCajaView({
             onClick={handleExportCSV}
             className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-semibold rounded-lg border border-emerald-300 flex items-center gap-1.5 transition-colors shadow-2xs"
           >
-            <span>📥</span>
             <span>Exportar CSV</span>
           </button>
         </div>
@@ -412,7 +410,6 @@ export default function FlujoDeCajaView({
             activeSubView === 'matriz' ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
           }`}
         >
-          <span>📊</span>
           <span>Matriz de Caja (Real + Proy)</span>
         </button>
 
@@ -422,7 +419,6 @@ export default function FlujoDeCajaView({
             activeSubView === 'proyecciones' ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
           }`}
         >
-          <span>📝</span>
           <span>Proyecciones Manuales & Auditoría ({projections.length})</span>
         </button>
 
@@ -432,7 +428,6 @@ export default function FlujoDeCajaView({
             activeSubView === 'comparativo' ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
           }`}
         >
-          <span>📈</span>
           <span>Comparativo Real v/s Proyección</span>
         </button>
       </div>
@@ -444,7 +439,7 @@ export default function FlujoDeCajaView({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="bg-emerald-50/70 p-3.5 rounded-xl border border-emerald-200 shadow-2xs">
               <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 flex items-center gap-1">
-                <span>🟢</span> Saldo Real en Caja (T &le; Tcorte)
+                Saldo Real en Caja (T &le; Tcorte)
               </span>
               <p className="text-xl font-black text-emerald-950 mt-1 font-mono">
                 ${hybridCashFlow.saldoRealCorte.toLocaleString('es-CL')}
@@ -454,7 +449,7 @@ export default function FlujoDeCajaView({
 
             <div className="bg-blue-50/70 p-3.5 rounded-xl border border-blue-200 shadow-2xs">
               <span className="text-[11px] font-bold uppercase tracking-wider text-blue-800 flex items-center gap-1">
-                <span>📈</span> Total Proyección Ingresos
+                Total Proyección Ingresos
               </span>
               <p className="text-xl font-black text-blue-950 mt-1 font-mono">
                 ${hybridCashFlow.totalProjInflow.toLocaleString('es-CL')}
@@ -464,7 +459,7 @@ export default function FlujoDeCajaView({
 
             <div className="bg-amber-50/70 p-3.5 rounded-xl border border-amber-200 shadow-2xs">
               <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800 flex items-center gap-1">
-                <span>📉</span> Total Proyección Egresos
+                Total Proyección Egresos
               </span>
               <p className="text-xl font-black text-amber-950 mt-1 font-mono">
                 ${hybridCashFlow.totalProjOutflow.toLocaleString('es-CL')}
@@ -474,7 +469,7 @@ export default function FlujoDeCajaView({
 
             <div className="bg-indigo-900 text-white p-3.5 rounded-xl border border-indigo-950 shadow-2xs">
               <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-200 flex items-center gap-1">
-                <span>🏁</span> Saldo Final Estimado ({selectedYear})
+                Saldo Final Estimado ({selectedYear})
               </span>
               <p className="text-xl font-black text-white mt-1 font-mono">
                 ${hybridCashFlow.saldoEstimadoFinMes.toLocaleString('es-CL')}
@@ -487,7 +482,6 @@ export default function FlujoDeCajaView({
           <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
             <div className="p-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-xs font-semibold text-slate-700">
               <div className="flex items-center gap-2">
-                <span>📊</span>
                 <span>Matriz Consolidada de Tesorería Híbrida (Ejercicio {selectedYear})</span>
               </div>
               <div className="flex items-center gap-4 text-[11px]">
@@ -510,7 +504,7 @@ export default function FlujoDeCajaView({
                 <tbody className="divide-y divide-slate-200 font-mono">
                   <tr className="bg-emerald-50/50 hover:bg-emerald-50 text-emerald-950 font-bold">
                     <td className="p-2.5 font-sans border-r border-slate-200 uppercase flex items-center gap-1.5 bg-emerald-50 sticky left-0 z-10">
-                      <span className="text-emerald-700">🟢</span> (+) Ingresos Reales de Caja (Cobrados)
+                      (+) Ingresos Reales de Caja (Cobrados)
                     </td>
                     {hybridCashFlow.monthlyRealInflows.map((v, i) => (
                       <td key={i} className="p-2 text-right border-r border-slate-200">
@@ -524,7 +518,7 @@ export default function FlujoDeCajaView({
 
                   <tr className="bg-rose-50/50 hover:bg-rose-50 text-rose-950 font-bold">
                     <td className="p-2.5 font-sans border-r border-slate-200 uppercase flex items-center gap-1.5 bg-rose-50 sticky left-0 z-10">
-                      <span className="text-rose-700">🔴</span> (-) Egresos Reales de Caja (Pagados)
+                      (-) Egresos Reales de Caja (Pagados)
                     </td>
                     {hybridCashFlow.monthlyRealOutflows.map((v, i) => (
                       <td key={i} className="p-2 text-right border-r border-slate-200">
@@ -538,7 +532,7 @@ export default function FlujoDeCajaView({
 
                   <tr className="bg-blue-50/40 hover:bg-blue-50 text-blue-950 italic">
                     <td className="p-2.5 font-sans border-r border-slate-200 uppercase flex items-center gap-1.5 font-semibold bg-blue-50 sticky left-0 z-10">
-                      <span className="text-blue-600">📈</span> (📌) Proyección de Ingresos (RCV + Manuales)
+                      () Proyección de Ingresos (RCV + Manuales)
                     </td>
                     {hybridCashFlow.monthlyProjInflows.map((v, i) => (
                       <td key={i} className="p-2 text-right border-r border-slate-200 text-blue-800">
@@ -552,7 +546,7 @@ export default function FlujoDeCajaView({
 
                   <tr className="bg-amber-50/40 hover:bg-amber-50 text-amber-950 italic">
                     <td className="p-2.5 font-sans border-r border-slate-200 uppercase flex items-center gap-1.5 font-semibold bg-amber-50 sticky left-0 z-10">
-                      <span className="text-amber-600">📉</span> (📌) Proyección de Egresos (RCV + Manuales)
+                      () Proyección de Egresos (RCV + Manuales)
                     </td>
                     {hybridCashFlow.monthlyProjOutflows.map((v, i) => (
                       <td key={i} className="p-2 text-right border-r border-slate-200 text-amber-800">
@@ -566,7 +560,7 @@ export default function FlujoDeCajaView({
 
                   <tr className="bg-indigo-900 text-white font-black">
                     <td className="p-2.5 font-sans border-r border-indigo-800 uppercase text-[11px] flex items-center gap-1.5 bg-indigo-900 sticky left-0 z-10">
-                      <span>🏁</span> (=) Posición Acumulada Híbrida (Real + Proy)
+                      (=) Posición Acumulada Híbrida (Real + Proy)
                     </td>
                     {hybridCashFlow.accumulatedTrajectory.map((v, i) => (
                       <td key={i} className="p-2 text-right border-r border-indigo-800 text-indigo-100 font-mono">
@@ -604,7 +598,6 @@ export default function FlujoDeCajaView({
               }}
               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 shadow-xs"
             >
-              <span>➕</span>
               <span>Nueva Proyección Presupuestaria</span>
             </button>
           </div>
@@ -648,7 +641,7 @@ export default function FlujoDeCajaView({
                           onClick={() => setShowAuditModal(p)}
                           className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[11px] font-bold border border-slate-300"
                         >
-                          📜 Ver Historial ({p.auditTrail?.length || 1})
+                           Ver Historial ({p.auditTrail?.length || 1})
                         </button>
                       </td>
                       <td className="p-2.5 text-center font-sans space-x-2">

@@ -146,7 +146,7 @@ export default function PendingItemsReportModal({
                 Reporte de Partidas Pendientes de Conciliación Bancaria
               </h3>
               <p className="text-xs text-slate-300">
-                {company.name} ({company.rut}) • Período: <strong className="text-amber-300 font-mono">{period}</strong> (Ventana movible)
+                {company.name} ({company.rut}) • Período: <strong className="text-amber-300 font-mono">{period}</strong>
               </p>
             </div>
           </div>
@@ -244,7 +244,7 @@ export default function PendingItemsReportModal({
             {/* Cargos Banco */}
             <div className="p-3 border-b border-slate-100 bg-slate-50/50">
               <div className="flex justify-between items-center font-bold text-rose-900 mb-2">
-                <span>🔻 Cargos Bancarios No Contabilizados (Comisiones, Giros, Pagos Automáticos):</span>
+                <span> Cargos Bancarios No Contabilizados (Comisiones, Giros, Pagos Automáticos):</span>
                 <span className="font-mono font-black">-${totalUnmatchedCharges.toLocaleString('es-CL')}</span>
               </div>
               {unmatchedCharges.length > 0 ? (
@@ -268,7 +268,7 @@ export default function PendingItemsReportModal({
             {/* Abonos Banco */}
             <div className="p-3 bg-slate-50/50">
               <div className="flex justify-between items-center font-bold text-emerald-900 mb-2">
-                <span>🟢 Abonos Bancarios No Contabilizados (Transferencias de Clientes no registradas):</span>
+                <span> Abonos Bancarios No Contabilizados (Transferencias de Clientes no registradas):</span>
                 <span className="font-mono font-black">+${totalUnmatchedDeposits.toLocaleString('es-CL')}</span>
               </div>
               {unmatchedDeposits.length > 0 ? (
@@ -302,7 +302,7 @@ export default function PendingItemsReportModal({
             {/* Cheques Girados y no Cobrados / Transferencias en Tránsito */}
             <div className="p-3 border-b border-slate-100 bg-slate-50/50">
               <div className="flex justify-between items-center font-bold text-indigo-950 mb-2">
-                <span>📋 Cheques Girados y No Cobrados / Pagos en Tránsito (Créditos en Libro):</span>
+                <span> Cheques Girados y No Cobrados / Pagos en Tránsito (Créditos en Libro):</span>
                 <span className="font-mono font-black text-rose-700">-${totalOutstandingChecks.toLocaleString('es-CL')}</span>
               </div>
               {outstandingChecks.length > 0 ? (
@@ -337,7 +337,7 @@ export default function PendingItemsReportModal({
             {/* Depósitos en Tránsito */}
             <div className="p-3 bg-slate-50/50">
               <div className="flex justify-between items-center font-bold text-indigo-950 mb-2">
-                <span>📥 Depósitos en Tránsito (Débitos en Libro Mayor aún no acreditados en Cartola):</span>
+                <span> Depósitos en Tránsito (Débitos en Libro Mayor aún no acreditados en Cartola):</span>
                 <span className="font-mono font-black text-emerald-700">+${totalDepositsInTransit.toLocaleString('es-CL')}</span>
               </div>
               {depositsInTransit.length > 0 ? (

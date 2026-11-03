@@ -273,7 +273,7 @@ export default function PlanDeCuentasGrid({ studyId, company, onRefreshCompany }
       });
 
       if (hasImputations) {
-        showNotice('error', `🔒 Protección de Integridad: No se puede eliminar la cuenta ${code} porque registra imputaciones en comprobantes contables.`);
+        showNotice('error', `Protección de Integridad: No se puede eliminar la cuenta ${code} porque registra imputaciones en comprobantes contables.`);
         return;
       }
 
@@ -332,7 +332,7 @@ export default function PlanDeCuentasGrid({ studyId, company, onRefreshCompany }
             (v.lines || []).some((l: any) => l.accountId === acc.id || l.accountCode === acc.code)
           );
           if (hasImputations && acc.isImputable === false) {
-            showNotice('error', `🔒 Protección de Integridad: No se puede cambiar a NO IMPUTABLE la cuenta "${acc.code}" porque tiene movimientos en comprobantes.`);
+            showNotice('error', `Protección de Integridad: No se puede cambiar a NO IMPUTABLE la cuenta "${acc.code}"porque tiene movimientos en comprobantes.`);
             return;
           }
         }
@@ -1489,7 +1489,7 @@ export default function PlanDeCuentasGrid({ studyId, company, onRefreshCompany }
               </div>
 
               <div className="bg-indigo-50 p-3 rounded-xl border border-indigo-100 text-[11px] text-indigo-800 space-y-1">
-                <p className="font-semibold">💡 Ejemplos recomendados:</p>
+                <p className="font-semibold"> Ejemplos recomendados:</p>
                 <ul className="list-disc pl-4 space-y-0.5">
                   <li><code>REQUIERE SUCURSAL</code> (Para estudios con múltiples sedes)</li>
                   <li><code>REQUIERE ZONA_GEOGRAFICA</code> (Para análisis regional)</li>

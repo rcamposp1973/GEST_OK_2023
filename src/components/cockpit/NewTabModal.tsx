@@ -181,7 +181,7 @@ export const NewTabModal: React.FC<NewTabModalProps> = ({
                 <Reorder.Item
                   key={mod.id}
                   value={mod}
-                  className="group relative rounded-xl border transition-all cursor-grab active:cursor-grabbing bg-gradient-to-b from-slate-850 to-slate-900 hover:from-slate-800 hover:to-slate-850"
+                  className="group relative rounded-xl border transition-all cursor-grab active:cursor-grabbing bg-slate-850 hover:bg-slate-800"
                 >
                   <div
                     onClick={() => {

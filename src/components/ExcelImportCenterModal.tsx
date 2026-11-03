@@ -500,22 +500,22 @@ export default function ExcelImportCenterModal({
 
         if (isComprobanteFile && activeTab !== 'comprobantes') {
           setActiveTab('comprobantes');
-          setDetectedBadge('✨ Archivo identificado como Comprobantes Contables (Se seleccionó la pestaña 4 automáticamente)');
+          setDetectedBadge('Archivo identificado como Comprobantes Contables (Se seleccionó la pestaña 4 automáticamente)');
           parsePreview(content, 'comprobantes');
           return;
         } else if (isPlanFile && activeTab !== 'cuentas') {
           setActiveTab('cuentas');
-          setDetectedBadge('✨ Archivo identificado como Plan de Cuentas (Se seleccionó la pestaña 1)');
+          setDetectedBadge('Archivo identificado como Plan de Cuentas (Se seleccionó la pestaña 1)');
           parsePreview(content, 'cuentas');
           return;
         } else if (isClientesFile && activeTab !== 'clientes') {
           setActiveTab('clientes');
-          setDetectedBadge('✨ Archivo identificado como Clientes (Se seleccionó la pestaña 2)');
+          setDetectedBadge('Archivo identificado como Clientes (Se seleccionó la pestaña 2)');
           parsePreview(content, 'clientes');
           return;
         } else if (isProveedoresFile && activeTab !== 'proveedores') {
           setActiveTab('proveedores');
-          setDetectedBadge('✨ Archivo identificado como Proveedores (Se seleccionó la pestaña 3)');
+          setDetectedBadge('Archivo identificado como Proveedores (Se seleccionó la pestaña 3)');
           parsePreview(content, 'proveedores');
           return;
         }
@@ -611,7 +611,7 @@ export default function ExcelImportCenterModal({
       if (looksLikeVoucher) {
         setActiveTab('comprobantes');
         alert(
-          '🛡️ ¡Protección de Plan de Cuentas activada!\n\n' +
+          ' ¡Protección de Plan de Cuentas activada!\n\n' +
           'El archivo seleccionado corresponde a Comprobantes Contables (contiene fechas y tipos Ingreso/Egreso/Traspaso), pero estaba seleccionada la pestaña "1. Plan de Cuentas".\n\n' +
           'Hemos cambiado automáticamente a la pestaña "4. Comprobantes Contables" para evitar alterar su plan de cuentas. Por favor revise la vista previa y presione "Cargar COMPROBANTES a la Empresa".'
         );
@@ -627,7 +627,7 @@ export default function ExcelImportCenterModal({
       if (looksLikePlan) {
         setActiveTab('cuentas');
         alert(
-          '🛡️ ¡Protección de Comprobantes activada!\n\n' +
+          ' ¡Protección de Comprobantes activada!\n\n' +
           'El archivo seleccionado parece ser un Plan de Cuentas. Hemos cambiado automáticamente a la pestaña "1. Plan de Cuentas".'
         );
         return;
@@ -1097,11 +1097,11 @@ export default function ExcelImportCenterModal({
         }
       });
 
-      setImportReport(`✅ Proceso finalizado con éxito: ${successCount} registros importados correctamente. (Errores/Filas vacías omitidas: ${errorCount})`);
+      setImportReport(`Proceso finalizado con éxito: ${successCount} registros importados correctamente. (Errores/Filas vacías omitidas: ${errorCount})`);
       onDataImported();
     } catch (err: any) {
       console.error('Error importing Excel data:', err);
-      setImportReport(`❌ Error durante la importación: ${err.message}`);
+      setImportReport(`Error durante la importación: ${err.message}`);
     } finally {
       setIsProcessing(false);
     }
@@ -1114,7 +1114,7 @@ export default function ExcelImportCenterModal({
         <div className="p-4 bg-slate-900 text-white flex justify-between items-center border-b border-slate-800">
           <div>
             <h3 className="font-black text-sm uppercase tracking-wide flex items-center gap-2">
-              <span>📥</span> Centro de Carga Masiva de Archivos Excel / CSV
+              Centro de Carga Masiva de Archivos Excel / CSV
             </h3>
             <p className="text-xs text-slate-400">
               Empresa: <span className="text-indigo-300 font-bold">{company.name}</span> (RUT: {company.rut})
@@ -1131,10 +1131,10 @@ export default function ExcelImportCenterModal({
         {/* Tab Navigation */}
         <div className="flex border-b border-slate-200 bg-slate-50 px-4 pt-2 gap-2 text-xs font-bold overflow-x-auto">
           {[
-            { id: 'cuentas', label: '1. Plan de Cuentas', icon: '🗂️' },
-            { id: 'clientes', label: '2. Clientes (Deudores)', icon: '👥' },
-            { id: 'proveedores', label: '3. Proveedores (Acreedores)', icon: '🏢' },
-            { id: 'comprobantes', label: '4. Comprobantes Contables', icon: '📝' }
+            { id: 'cuentas', label: '1. Plan de Cuentas', icon: '' },
+            { id: 'clientes', label: '2. Clientes (Deudores)', icon: '' },
+            { id: 'proveedores', label: '3. Proveedores (Acreedores)', icon: '' },
+            { id: 'comprobantes', label: '4. Comprobantes Contables', icon: '' }
           ].map(tab => (
             <button
               key={tab.id}
@@ -1163,7 +1163,7 @@ export default function ExcelImportCenterModal({
           <div className="bg-indigo-50/70 border border-indigo-200 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div>
               <h4 className="font-bold text-indigo-950 text-xs flex items-center gap-1.5">
-                <span>📄</span> Paso 1: Descargar Plantilla Oficial Excel/CSV
+                Paso 1: Descargar Plantilla Oficial Excel/CSV
               </h4>
               <p className="text-indigo-800 text-[11px] mt-0.5">
                 Descargue el formato con los encabezados y filas de ejemplo estándar chilenos para completar su información.
@@ -1177,7 +1177,6 @@ export default function ExcelImportCenterModal({
                   className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5 shadow-xs whitespace-nowrap cursor-pointer"
                   title="Descargar plantilla formateada en formato Excel (.xlsx)"
                 >
-                  <span>📊</span>
                   <span>Plantilla Excel (.xlsx)</span>
                 </button>
               )}
@@ -1187,7 +1186,6 @@ export default function ExcelImportCenterModal({
                 className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-3.5 py-2 rounded-lg transition-colors flex items-center gap-1.5 shadow-xs whitespace-nowrap cursor-pointer"
                 title="Descargar plantilla estándar en formato CSV delimitado por punto y coma (;)"
               >
-                <span>📥</span>
                 <span>Plantilla CSV (.csv)</span>
               </button>
             </div>
@@ -1207,7 +1205,6 @@ export default function ExcelImportCenterModal({
               className="cursor-pointer flex flex-col items-center justify-center gap-2"
             >
               <div className="w-12 h-12 bg-white border border-slate-200 rounded-full flex items-center justify-center text-xl shadow-xs text-indigo-600">
-                📁
               </div>
               <span className="font-bold text-slate-800 text-xs">
                 {fileName ? `Archivo seleccionado: ${fileName}` : 'Haga clic para seleccionar archivo Excel/CSV o arrástrelo aquí'}
@@ -1228,7 +1225,7 @@ export default function ExcelImportCenterModal({
           {activeTab === 'comprobantes' && (
             <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
               <div className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
-                <span>🔢</span> Numeración de Comprobantes a Generar:
+                Numeración de Comprobantes a Generar:
               </div>
               <div className="space-y-2 text-xs">
                 <label className="flex items-start gap-2 cursor-pointer">
@@ -1315,7 +1312,6 @@ export default function ExcelImportCenterModal({
           {importedBatchInfo && (
             <div className="p-4 bg-emerald-50 border-2 border-emerald-400 rounded-xl space-y-3">
               <div className="flex items-center gap-2.5 text-emerald-900 font-black text-sm">
-                <span className="text-xl">🎉</span>
                 <span>¡{importedBatchInfo.count} Comprobantes Contables guardados en la contabilidad!</span>
               </div>
               <div className="text-xs text-emerald-800 space-y-1 bg-white/70 p-3 rounded-lg border border-emerald-200 font-mono">
@@ -1331,7 +1327,7 @@ export default function ExcelImportCenterModal({
                   }}
                   className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
                 >
-                  <span>🔍 Ver Comprobantes Importados en la Contabilidad (N° {importedBatchInfo.startNum} - N° {importedBatchInfo.endNum})</span>
+                  <span> Ver Comprobantes Importados en la Contabilidad (N° {importedBatchInfo.startNum} - N° {importedBatchInfo.endNum})</span>
                 </button>
               )}
             </div>
@@ -1355,7 +1351,6 @@ export default function ExcelImportCenterModal({
                 : 'bg-indigo-600 hover:bg-indigo-700 text-white'
             }`}
           >
-            <span>⚡</span>
             <span>{isProcessing ? 'Importando a la Base de Datos...' : `Cargar ${activeTab.toUpperCase()} a la Empresa`}</span>
           </button>
         </div>

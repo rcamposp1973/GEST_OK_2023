@@ -27,7 +27,7 @@ export const AnimatedOkLogo: React.FC<AnimatedOkLogoProps> = ({
       <span className="absolute -inset-1 rounded-full bg-emerald-400/30 animate-ping opacity-75 duration-1000 pointer-events-none" />
       
       {/* Contenedor circular con degradado moderno */}
-      <div className={`relative ${currentSize.container} rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-emerald-950/40 border border-emerald-300/40 group-hover:scale-105 transition-transform duration-200`}>
+      <div className={`relative ${currentSize.container} rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-md shadow-emerald-950/40 border border-emerald-300/40 group-hover:scale-105 transition-transform duration-200`}>
         {/* Ícono de aprobación "OK" animado */}
         <BadgeCheck className={`${currentSize.icon} text-emerald-100 animate-pulse`} />
         

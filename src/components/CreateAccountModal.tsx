@@ -291,10 +291,9 @@ export const CreateAccountModal: React.FC<CreateAccountModalProps> = ({
       <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-3xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-auto flex flex-col max-h-[92vh]">
         
         {/* Header */}
-        <div className="px-5 py-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex justify-between items-center border-b border-indigo-900/50 shrink-0">
+        <div className="px-5 py-4 bg-slate-900 text-white flex justify-between items-center border-b border-indigo-900/50 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-xl shadow-inner">
-              📚
             </div>
             <div>
               <h3 className="text-base font-bold text-white flex items-center gap-2">
@@ -397,7 +396,7 @@ export const CreateAccountModal: React.FC<CreateAccountModalProps> = ({
                 onClick={() => applyPreset('TITULO')}
                 className="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-lg text-[11px] font-semibold flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
               >
-                <span>📁 Cuenta de Título</span>
+                <span> Cuenta de Título</span>
               </button>
             </div>
           </div>

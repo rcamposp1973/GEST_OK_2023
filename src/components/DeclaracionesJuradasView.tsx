@@ -153,7 +153,7 @@ export const DeclaracionesJuradasView: React.FC<DeclaracionesJuradasViewProps> =
   return (
     <div className="space-y-6">
       {/* HEADER BANNER OFICIAL */}
-      <div className="bg-gradient-to-r from-amber-950 via-indigo-950 to-slate-900 p-6 rounded-2xl text-white shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="bg-amber-950 p-6 rounded-2xl text-white shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-6 h-6 text-amber-400" />
@@ -247,7 +247,7 @@ export const DeclaracionesJuradasView: React.FC<DeclaracionesJuradasViewProps> =
             <div className="flex items-center gap-2">
               <button
                 onClick={() => handleOpenCertificados('CERT_6_SUELDOS')}
-                className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white text-xs font-extrabold rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-extrabold rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
                 title="Generar e imprimir Certificados N° 6 con formato oficial SII"
               >
                 <Printer className="w-4 h-4 text-indigo-200" />
@@ -362,7 +362,7 @@ export const DeclaracionesJuradasView: React.FC<DeclaracionesJuradasViewProps> =
             <div className="flex items-center gap-2">
               <button
                 onClick={() => handleOpenCertificados('CERT_2_HONORARIOS')}
-                className="px-4 py-2 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white text-xs font-extrabold rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-extrabold rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
                 title="Generar e imprimir Certificados N° 2 con formato oficial SII"
               >
                 <Printer className="w-4 h-4 text-amber-200" />

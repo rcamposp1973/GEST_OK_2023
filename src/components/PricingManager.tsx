@@ -137,15 +137,15 @@ export const DEFAULT_INITIAL_PRICING_PLANS: Omit<LandingPricingPlan, 'id'>[] = [
     priceCLP: 27900,
     period: '/ mes + IVA',
     popular: false,
-    badge: 'Agéntico 2040 ⚡ / 1 Empresa',
+    badge: 'Agéntico 2040  / 1 Empresa',
     subtitle: '1 empresa con Agente Auditor Autónomo 2040.',
     description: 'Para contadores individuales que auditan libros y cuadran balances de forma autónoma con IA.',
     maxCompanies: 1,
     maxUsers: 1,
     features: [
       '1 Empresa / RUT Comercial',
-      '🤖 Agente Auditor Autónomo 2040 en tiempo real',
-      '⚡ Copiloto Tributario F29 con alertas preventivas SII',
+      'Agente Auditor Autónomo 2040 en tiempo real',
+      'Copiloto Tributario F29 con alertas preventivas SII',
       'Balance 8 Columnas y Libros Oficiales',
       'Sincronización RCV instantánea'
     ],
@@ -160,7 +160,7 @@ export const DEFAULT_INITIAL_PRICING_PLANS: Omit<LandingPricingPlan, 'id'>[] = [
     priceCLP: 63900,
     period: '/ mes + IVA',
     popular: false,
-    badge: 'Agéntico 2040 ⚡ / 10 Empresas',
+    badge: 'Agéntico 2040  / 10 Empresas',
     subtitle: 'Plan para 2 usuarios y 10 empresas con Agentes Autónomos.',
     description: 'Estudios contables que operan con auditoría agéntica continua y conciliación bancaria inteligente.',
     maxCompanies: 10,
@@ -168,8 +168,8 @@ export const DEFAULT_INITIAL_PRICING_PLANS: Omit<LandingPricingPlan, 'id'>[] = [
     features: [
       '10 Empresas / Clientes',
       '1 Usuario Administrador - 1 Usuario Analista',
-      '🤖 Agente Auditor Autónomo 2040 continuo',
-      '⚡ Copiloto Tributario F29 y Cruce RCV',
+      'Agente Auditor Autónomo 2040 continuo',
+      'Copiloto Tributario F29 y Cruce RCV',
       'Conciliación Bancaria Agéntica Inteligente',
       'Balance 8 Columnas e IFRS Auditado'
     ],
@@ -184,7 +184,7 @@ export const DEFAULT_INITIAL_PRICING_PLANS: Omit<LandingPricingPlan, 'id'>[] = [
     priceCLP: 127900,
     period: '/ mes + IVA',
     popular: true,
-    badge: 'Agéntico 2040 ⚡ / 100 Empresas',
+    badge: 'Agéntico 2040  / 100 Empresas',
     subtitle: 'El estándar del 2040 para 4 usuarios y 100 empresas.',
     description: 'Para firmas contables de alto volumen que automatizan auditorías, dictámenes IFRS y reportes para clientes.',
     maxCompanies: 100,
@@ -192,8 +192,8 @@ export const DEFAULT_INITIAL_PRICING_PLANS: Omit<LandingPricingPlan, 'id'>[] = [
     features: [
       '100 Empresas / Clientes',
       '1 Usuario Administrador - 3 Usuarios Analistas',
-      '🤖 Centro de Mando Agéntico 2040 Completo',
-      '⚡ Copiloto SII 24/7 y Auditor Preventivo F29',
+      'Centro de Mando Agéntico 2040 Completo',
+      'Copiloto SII 24/7 y Auditor Preventivo F29',
       'Conciliación Bancaria Automática con IA',
       'Balance 8 Columnas e IFRS con Dictamen',
       'Visor para Clientes con Asistente Virtual'
@@ -210,16 +210,16 @@ export const DEFAULT_INITIAL_PRICING_PLANS: Omit<LandingPricingPlan, 'id'>[] = [
     priceCLP: 211900,
     period: '/ mes + IVA',
     popular: false,
-    badge: 'Pyme Agéntica 2040 ⚡',
+    badge: 'Pyme Agéntica 2040 ',
     subtitle: 'CFO Virtual Autónomo, Cobranza WhatsApp y Cazador de Fugas.',
     description: 'Para empresas y pymes que automatizan cobranzas, detectan fugas de dinero y proyectan flujo de caja.',
     maxCompanies: 50,
     maxUsers: 10,
     features: [
-      '🤖 Agente de Cobranza Inteligente WhatsApp',
-      '🛡️ Cazador de Fugas de Dinero y Gastos Fantasma',
-      '💬 Asistente Financiero Ejecutivo CFO 2040 en vivo',
-      '📈 Proyección de Flujo de Caja Predictivo a 30/60/90 días',
+      'Agente de Cobranza Inteligente WhatsApp',
+      'Cazador de Fugas de Dinero y Gastos Fantasma',
+      'Asistente Financiero Ejecutivo CFO 2040 en vivo',
+      'Proyección de Flujo de Caja Predictivo a 30/60/90 días',
       'Facturación DTE, Inventario Kardex y Tesorería',
       'Soporte prioritario y puesta en marcha personalizada'
     ],
@@ -495,11 +495,11 @@ export default function PricingManager() {
             type="button"
             onClick={handleSeedDefaults}
             disabled={isSaving}
-            className="px-3.5 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            className="px-3.5 py-2 bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             title="Carga o restablece los 8 planes oficiales con los nuevos valores exactos de UF"
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-            <span>⚡ Sincronizar 8 Planes Oficiales</span>
+            <span> Sincronizar 8 Planes Oficiales</span>
           </button>
 
           {plans.some(p => p.appFormat === 'VERSION_C1' || p.appFormat === 'VERSION_C2') === false && (
@@ -687,8 +687,8 @@ export default function PricingManager() {
               >
                 <option value="VERSION_A">Versión A: Estudio Clásico</option>
                 <option value="VERSION_B">Versión B: Pyme Clásica</option>
-                <option value="VERSION_C1">Versión C1: Estudio Agéntico 2040 ⚡</option>
-                <option value="VERSION_C2">Versión C2: Pyme Agéntica 2040 ⚡</option>
+                <option value="VERSION_C1">Versión C1: Estudio Agéntico 2040 </option>
+                <option value="VERSION_C2">Versión C2: Pyme Agéntica 2040 </option>
               </select>
             </div>
 
@@ -747,7 +747,7 @@ export default function PricingManager() {
               </label>
               <input
                 type="text"
-                placeholder="Ej. Agéntico 2040 ⚡ / 10 Empresas"
+                placeholder="Ej. Agéntico 2040  / 10 Empresas"
                 value={badge}
                 onChange={(e) => setBadge(e.target.value)}
                 className="w-full bg-[#F8FAFC] border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-[#0D253D] focus:outline-none focus:border-[#533AFD] focus:bg-white"
@@ -830,7 +830,7 @@ export default function PricingManager() {
             <textarea
               required
               rows={5}
-              placeholder={'10 Empresas / Clientes\n🤖 Agente Auditor Autónomo 2040 continuo\n⚡ Copiloto Tributario F29 y Cruce RCV\nConciliación Bancaria Agéntica Inteligente\nBalance 8 Columnas e IFRS Auditado'}
+              placeholder={'10 Empresas / Clientes\n Agente Auditor Autónomo 2040 continuo\n Copiloto Tributario F29 y Cruce RCV\nConciliación Bancaria Agéntica Inteligente\nBalance 8 Columnas e IFRS Auditado'}
               value={featuresText}
               onChange={(e) => setFeaturesText(e.target.value)}
               className="w-full bg-[#F8FAFC] border border-slate-200 rounded-xl p-3.5 text-xs text-[#0D253D] focus:outline-none focus:border-[#533AFD] focus:bg-white font-mono leading-relaxed"
@@ -933,7 +933,7 @@ export default function PricingManager() {
                     p.popular
                       ? 'border-2 border-[#533AFD] bg-white shadow-lg ring-2 ring-indigo-500/20'
                       : isAgentic
-                      ? 'border-violet-200 bg-gradient-to-b from-violet-50/50 to-white shadow-2xs'
+                      ? 'border-violet-200 bg-violet-50/50 shadow-2xs'
                       : isActive
                       ? 'border-slate-200 bg-white shadow-2xs'
                       : 'border-slate-200 bg-slate-50/70 opacity-60'
@@ -953,8 +953,8 @@ export default function PricingManager() {
                         fmt === 'VERSION_B' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
                         'bg-indigo-100 text-indigo-800 border border-indigo-200'
                       }`}>
-                        {fmt === 'VERSION_C1' ? 'C1 Agéntico ⚡' :
-                         fmt === 'VERSION_C2' ? 'C2 Agéntico ⚡' :
+                        {fmt === 'VERSION_C1' ? 'C1 Agéntico ' :
+                         fmt === 'VERSION_C2' ? 'C2 Agéntico ' :
                          fmt === 'VERSION_B' ? 'Versión B Pyme' : 'Versión A Estudio'}
                       </span>
                       <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full uppercase shrink-0 ${

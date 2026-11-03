@@ -133,9 +133,9 @@ export const CentralizacionesContablesView: React.FC<CentralizacionesContablesVi
   // Helper para buscar cuenta por ID o código
   const getAccountById = (id?: string) => accounts.find(a => a.id === id);
   const getAccountDisplay = (id?: string, fallback: string = 'Sin configurar') => {
-    if (!id) return <span className="text-amber-600 font-medium italic">⚠️ {fallback}</span>;
+    if (!id) return <span className="text-amber-600 font-medium italic"> {fallback}</span>;
     const acc = getAccountById(id);
-    if (!acc) return <span className="text-rose-600 font-medium italic">⚠️ Cuenta no encontrada ({id})</span>;
+    if (!acc) return <span className="text-rose-600 font-medium italic"> Cuenta no encontrada ({id})</span>;
     return (
       <span className="font-mono text-slate-800 text-xs">
         <strong className="text-indigo-700">[{acc.code}]</strong> {acc.name}
@@ -796,7 +796,7 @@ export const CentralizacionesContablesView: React.FC<CentralizacionesContablesVi
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-700 text-white flex items-center justify-center shadow-md">
+            <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-md">
               <Layers className="w-5 h-5" />
             </div>
             <div>
@@ -895,7 +895,7 @@ export const CentralizacionesContablesView: React.FC<CentralizacionesContablesVi
       {activeMainTab === 'TABLERO' && (
         <div className="space-y-6">
           {/* BANNER INFORMATIVO DE ARQUITECTURA */}
-          <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-4 rounded-2xl shadow-sm border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="bg-slate-900 text-white p-4 rounded-2xl shadow-sm border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-lg bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center shrink-0">
                 <Sparkles className="w-5 h-5 text-indigo-300" />
@@ -972,7 +972,7 @@ export const CentralizacionesContablesView: React.FC<CentralizacionesContablesVi
 
                 {salesAnalysis.foreignCount > 0 && (
                   <div className="mb-3 p-2 bg-blue-50/70 border border-blue-200 rounded-lg text-[11px] text-blue-800 flex items-center justify-between">
-                    <span>🌐 {salesAnalysis.foreignCount} docs en Divisas (USD/UF)</span>
+                    <span> {salesAnalysis.foreignCount} docs en Divisas (USD/UF)</span>
                     <span className="font-bold text-blue-900">Tipo de cambio OK</span>
                   </div>
                 )}
@@ -1037,7 +1037,7 @@ export const CentralizacionesContablesView: React.FC<CentralizacionesContablesVi
 
                 {purchasesAnalysis.foreignCount > 0 && (
                   <div className="mb-3 p-2 bg-blue-50/70 border border-blue-200 rounded-lg text-[11px] text-blue-800 flex items-center justify-between">
-                    <span>🌐 {purchasesAnalysis.foreignCount} docs en Divisas (USD/UF)</span>
+                    <span> {purchasesAnalysis.foreignCount} docs en Divisas (USD/UF)</span>
                     <span className="font-bold text-blue-900">Validado</span>
                   </div>
                 )}
@@ -1183,7 +1183,7 @@ export const CentralizacionesContablesView: React.FC<CentralizacionesContablesVi
                     Cartola bancaria electrónica, calce inteligente con comprobantes de egreso/ingreso y control de diferencias de cambio.
                   </p>
                   <div className="pt-2 text-slate-700 font-semibold text-xs flex items-center gap-1.5">
-                    <span>🏦 Banco principal:</span>
+                    <span> Banco principal:</span>
                     <span className="font-mono text-indigo-700">{getAccountDisplay(formData.primaryBankAccountId, '1101001')}</span>
                   </div>
                 </div>

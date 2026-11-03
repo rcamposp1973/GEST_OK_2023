@@ -58,7 +58,7 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
     { type: 'NAV', key: 'AGENTIC_PYME', title: 'Hub Agéntico Pyme 2040', subtitle: 'Centro de control y supervisión agéntica para empresas Pyme', icon: Sparkles },
 
     // TESORERIA
-    { type: 'NAV', key: 'CONCILIACION_BANCARIA', title: 'Conciliación Bancaria Inteligente', subtitle: 'Cuadratura de cartolas bancarias y calce automático', icon: Landmark },
+    { type: 'NAV', key: 'CONCILIACION_BANCARIA', title: 'Conciliación Bancaria', subtitle: 'Cuadratura de cartolas bancarias y calce automático', icon: Landmark },
     { type: 'NAV', key: 'LIBRO_BANCO_COLABORATIVO', title: 'Libro Banco - Cartola', subtitle: 'Control acumulado de cartola bancaria y contabilización de movimientos', icon: Landmark },
     { type: 'NAV', key: 'NOMINAS_PAGO', title: 'Nóminas de Pago', subtitle: 'Gestión y emisión de nóminas bancarias de pago', icon: CreditCard },
     { type: 'NAV', key: 'COBRANZA', title: 'Cobranza & Cartera', subtitle: 'Gestión de cobro a clientes y antigüedad de saldos', icon: TrendingUp },

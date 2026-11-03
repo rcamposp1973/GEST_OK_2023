@@ -386,7 +386,7 @@ export default function AuditLogsViewer({ studies = [], restrictedStudyId }: Aud
               onChange={(e) => setSelectedUser(e.target.value)}
               className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-indigo-500 focus:bg-white outline-none"
             >
-              <option value="TODOS">👤 Todos los Usuarios ({uniqueUsers.length})</option>
+              <option value="TODOS"> Todos los Usuarios ({uniqueUsers.length})</option>
               {uniqueUsers.map(u => (
                 <option key={u} value={u}>{u}</option>
               ))}
@@ -400,22 +400,22 @@ export default function AuditLogsViewer({ studies = [], restrictedStudyId }: Aud
               onChange={(e) => setSelectedModule(e.target.value)}
               className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-indigo-500 focus:bg-white outline-none"
             >
-              <option value="TODOS">📁 Todos los Módulos</option>
-              <option value="AUTENTICACION">🔐 AUTENTICACION</option>
-              <option value="COMPROBANTES">📑 COMPROBANTES</option>
-              <option value="RCV_COMPRAS">📥 RCV_COMPRAS</option>
-              <option value="RCV_VENTAS">📤 RCV_VENTAS</option>
-              <option value="RCV_HONORARIOS">💼 RCV_HONORARIOS</option>
-              <option value="PLAN_CUENTAS">📊 PLAN_CUENTAS</option>
-              <option value="AUXILIARES">👥 AUXILIARES</option>
-              <option value="PERIODOS_FISCALES">📅 PERIODOS_FISCALES</option>
-              <option value="EMPRESAS">🏢 EMPRESAS</option>
-              <option value="ESTUDIOS">🏛️ ESTUDIOS</option>
-              <option value="SUPER_ADMINS">🛡️ SUPER_ADMINS</option>
-              <option value="USUARIOS">👤 USUARIOS</option>
-              <option value="DTE">📄 DTE</option>
-              <option value="F29">💰 F29</option>
-              <option value="PAGOS_COBRANZAS">💳 PAGOS_COBRANZAS</option>
+              <option value="TODOS"> Todos los Módulos</option>
+              <option value="AUTENTICACION"> AUTENTICACION</option>
+              <option value="COMPROBANTES"> COMPROBANTES</option>
+              <option value="RCV_COMPRAS"> RCV_COMPRAS</option>
+              <option value="RCV_VENTAS"> RCV_VENTAS</option>
+              <option value="RCV_HONORARIOS"> RCV_HONORARIOS</option>
+              <option value="PLAN_CUENTAS"> PLAN_CUENTAS</option>
+              <option value="AUXILIARES"> AUXILIARES</option>
+              <option value="PERIODOS_FISCALES"> PERIODOS_FISCALES</option>
+              <option value="EMPRESAS"> EMPRESAS</option>
+              <option value="ESTUDIOS"> ESTUDIOS</option>
+              <option value="SUPER_ADMINS"> SUPER_ADMINS</option>
+              <option value="USUARIOS"> USUARIOS</option>
+              <option value="DTE"> DTE</option>
+              <option value="F29"> F29</option>
+              <option value="PAGOS_COBRANZAS"> PAGOS_COBRANZAS</option>
             </select>
           </div>
 
@@ -426,7 +426,7 @@ export default function AuditLogsViewer({ studies = [], restrictedStudyId }: Aud
               onChange={(e) => setSelectedAction(e.target.value)}
               className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-indigo-500 focus:bg-white outline-none"
             >
-              <option value="TODOS">⚡ Todas las Acciones</option>
+              <option value="TODOS"> Todas las Acciones</option>
               <option value="LOGIN">LOGIN</option>
               <option value="CREAR">CREAR</option>
               <option value="MODIFICAR">MODIFICAR</option>
@@ -447,7 +447,7 @@ export default function AuditLogsViewer({ studies = [], restrictedStudyId }: Aud
                 onChange={(e) => setSelectedStudyId(e.target.value)}
                 className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-indigo-500 focus:bg-white outline-none"
               >
-                <option value="TODOS">🏛️ Todos los Estudios ({studies.length})</option>
+                <option value="TODOS"> Todos los Estudios ({studies.length})</option>
                 {studies.map(s => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}

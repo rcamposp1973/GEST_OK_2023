@@ -511,8 +511,8 @@ export const ProductsServicesView: React.FC<ProductsServicesViewProps> = ({
                     onChange={e => setFormData({ ...formData, type: e.target.value as 'PRODUCT' | 'SERVICE' })}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-800 font-semibold focus:ring-2 focus:ring-indigo-500"
                   >
-                    <option value="PRODUCT">📦 PRODUCTO (Mueve Stock/Kardex)</option>
-                    <option value="SERVICE">🛠️ SERVICIO (Sin Inventario)</option>
+                    <option value="PRODUCT"> PRODUCTO (Mueve Stock/Kardex)</option>
+                    <option value="SERVICE"> SERVICIO (Sin Inventario)</option>
                   </select>
                 </div>
                 <div>

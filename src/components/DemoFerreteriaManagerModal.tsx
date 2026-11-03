@@ -56,7 +56,7 @@ export const DemoFerreteriaManagerModal: React.FC<DemoFerreteriaManagerModalProp
       `• Se configurarán 10 trabajadores con remuneraciones e Impuesto Único.\n` +
       `• Se generarán cartolas bancarias 100% conciliadas para los 12 meses de 2026.\n` +
       `• Se poblarán F29 pagados, DDJJ de renta (1887, 1879, 1835), RLI, Centros de Costos, Proyectos y Kardex.\n\n` +
-      `🔒 Esta acción solo afecta a la empresa de demostración, manteniendo seguras todas las demás empresas.`
+      `Esta acción solo afecta a la empresa de demostración, manteniendo seguras todas las demás empresas.`
     );
 
     if (!confirmPrompt) return;
@@ -95,7 +95,7 @@ export const DemoFerreteriaManagerModal: React.FC<DemoFerreteriaManagerModalProp
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
       <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 px-6 py-5 text-white flex items-center justify-between shadow-sm">
+        <div className="bg-amber-600 px-6 py-5 text-white flex items-center justify-between shadow-sm">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-white/15 rounded-xl backdrop-blur-md">
               <Sparkles className="w-6 h-6 text-amber-200 animate-pulse" />
@@ -256,10 +256,10 @@ export const DemoFerreteriaManagerModal: React.FC<DemoFerreteriaManagerModalProp
             <button
               onClick={handleExecuteReset}
               disabled={loading}
-              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 text-xs font-bold text-white bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 rounded-lg shadow-sm hover:shadow transition-all disabled:opacity-50"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-lg shadow-sm hover:shadow transition-all disabled:opacity-50"
             >
               <RotateCcw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              <span>{loading ? 'Generando Base Demo...' : '🔄 Resetear Demo al Estado Inicial'}</span>
+              <span>{loading ? 'Generando Base Demo...' : 'Resetear Demo al Estado Inicial'}</span>
             </button>
           </div>
         </div>

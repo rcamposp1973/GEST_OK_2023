@@ -281,12 +281,12 @@ export default function Agent1ConciliadorModal({
                 {isRunning ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Analizando con Gemini 3.8 Flash...</span>
+                    <span>Analizando cartola...</span>
                   </>
                 ) : (
                   <>
                     <Play className="w-4 h-4" />
-                    <span>Iniciar Análisis Inteligente de Cartola</span>
+                    <span>Analizar cartola</span>
                   </>
                 )}
               </button>

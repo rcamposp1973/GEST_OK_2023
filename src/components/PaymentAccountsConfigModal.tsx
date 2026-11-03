@@ -112,10 +112,9 @@ export default function PaymentAccountsConfigModal({
       <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         
         {/* Header */}
-        <div className="p-5 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex justify-between items-center border-b border-indigo-900/40">
+        <div className="p-5 bg-slate-900 text-white flex justify-between items-center border-b border-indigo-900/40">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-xl shadow-inner">
-              ⚙️
             </div>
             <div>
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
@@ -137,7 +136,6 @@ export default function PaymentAccountsConfigModal({
         {/* Informative Banner */}
         <div className="bg-amber-50 border-b border-amber-200 p-4 text-xs text-amber-900">
           <div className="flex items-start gap-2.5">
-            <span className="text-lg">💡</span>
             <div className="space-y-1">
               <p className="font-semibold text-amber-950">
                 Flexibilidad de Medios de Pago y Cancelación:
@@ -158,7 +156,7 @@ export default function PaymentAccountsConfigModal({
               className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer"
               title="Habilitar automáticamente cuentas de Fondos Fijos, Cajas Chicas y Rendiciones detectadas"
             >
-              <span>⚡</span> Habilitar Fondos Fijos & Cajas ({fondoFijoAccounts.length})
+              Habilitar Fondos Fijos & Cajas ({fondoFijoAccounts.length})
             </button>
             {selectedCustomIds.length > 0 && (
               <button
@@ -250,7 +248,7 @@ export default function PaymentAccountsConfigModal({
                         {acc.name}
                         {isFondo && (
                           <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                            💼 Fondo / Caja
+                             Fondo / Caja
                           </span>
                         )}
                       </div>
@@ -259,11 +257,11 @@ export default function PaymentAccountsConfigModal({
                     <td className="p-2.5">
                       {isDefaultBank ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
-                          🏦 Banco / Predeterminada
+                           Banco / Predeterminada
                         </span>
                       ) : isCustomSelected ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                          ✅ Habilitada Manualmente
+                           Habilitada Manualmente
                         </span>
                       ) : (
                         <span className="text-slate-400 text-[11px] italic">No seleccionada</span>
@@ -301,7 +299,7 @@ export default function PaymentAccountsConfigModal({
               disabled={saving}
               className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/20 flex items-center gap-1.5 transition-all cursor-pointer"
             >
-              {saving ? 'Guardando...' : savedSuccess ? '✅ Guardado' : '💾 Guardar Cuentas Habilitadas'}
+              {saving ? 'Guardando...' : savedSuccess ? 'Guardado' : 'Guardar Cuentas Habilitadas'}
             </button>
           </div>
         </div>

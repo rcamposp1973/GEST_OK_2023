@@ -172,7 +172,7 @@ export default function SuperUsersManager() {
     // Prevent blocking all super admins
     const activeCount = superUsers.filter(u => u.estado === 'Activo' || u.estado === 'Vigente').length;
     if (isCurrentlyActive && activeCount <= 1) {
-      alert("⚠️ No puedes desactivar al único Super Administrador activo del sistema.");
+      alert("No puedes desactivar al único Super Administrador activo del sistema.");
       return;
     }
 
@@ -193,7 +193,7 @@ export default function SuperUsersManager() {
     setSuccess(null);
 
     if (superUsers.length <= 1) {
-      alert("⚠️ Debe existir al menos un Super Administrador en la plataforma.");
+      alert("Debe existir al menos un Super Administrador en la plataforma.");
       return;
     }
 
@@ -262,15 +262,15 @@ export default function SuperUsersManager() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1 text-[11px] text-indigo-900">
           <div className="bg-white/80 p-2.5 rounded-lg border border-indigo-100">
-            <span className="font-bold text-indigo-950 block mb-1">🏢 Gestión Total de Estudios</span>
+            <span className="font-bold text-indigo-950 block mb-1"> Gestión Total de Estudios</span>
             Crea, edita, audita y bloquea Estudios Contables, Administradores de Estudio y Planes.
           </div>
           <div className="bg-white/80 p-2.5 rounded-lg border border-indigo-100">
-            <span className="font-bold text-indigo-950 block mb-1">🌐 Navegación Total</span>
+            <span className="font-bold text-indigo-950 block mb-1"> Navegación Total</span>
             Accede a cualquier estudio contable y empresa registrada para soporte y supervisión.
           </div>
           <div className="bg-white/80 p-2.5 rounded-lg border border-indigo-100">
-            <span className="font-bold text-rose-700 block mb-1">🔒 Restricción de Solo Lectura</span>
+            <span className="font-bold text-rose-700 block mb-1"> Restricción de Solo Lectura</span>
             Dentro de las empresas solo tiene permisos de LECTURA (Solo Ver). No puede alterar registros contables o tributarios.
           </div>
         </div>

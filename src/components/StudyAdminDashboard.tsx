@@ -72,7 +72,7 @@ export default function StudyAdminDashboard({
 
   const handleExecuteTestPurge = async () => {
     if (!isCurrentStudyTest) {
-      alert("⚠️ Acción bloqueada: Esta herramienta es exclusiva para demostraciones en 'ESTUDIO DE PRUEBA'.");
+      alert("Acción bloqueada: Esta herramienta es exclusiva para demostraciones en 'ESTUDIO DE PRUEBA'.");
       return;
     }
     if (testPurgeConfirmation.trim().toUpperCase() !== 'PURGAR_DEMO') {
@@ -94,7 +94,7 @@ export default function StudyAdminDashboard({
       );
       setLastTestPurgeStats(stats);
       setTestPurgeSuccessMessage(
-        `✅ Purga de datos de demostración completada con éxito. Se eliminaron ${stats.totalDeleted} registros en ${stats.purgedCompaniesCount} empresa(s). Las empresas y usuarios se mantienen intactos.`
+        `Purga de datos de demostración completada con éxito. Se eliminaron ${stats.totalDeleted} registros en ${stats.purgedCompaniesCount} empresa(s). Las empresas y usuarios se mantienen intactos.`
       );
       setTestPurgeConfirmation('');
       await fetchData();
@@ -301,7 +301,7 @@ export default function StudyAdminDashboard({
       );
 
       if (!isAssigned) {
-        alert(`🔒 Acceso Denegado: No tienes asignada la empresa "${comp.name}". Solicita al Administrador de tu Estudio que te asigne en la ficha de la empresa.`);
+        alert(`Acceso Denegado: No tienes asignada la empresa "${comp.name}". Solicita al Administrador de tu Estudio que te asigne en la ficha de la empresa.`);
         return;
       }
     }
@@ -346,7 +346,7 @@ export default function StudyAdminDashboard({
     if (isSavingUser) return; // Anti-double click protection
 
     if (isRestrictedWorker) {
-      alert('🔒 Acceso Denegado: Los perfiles Contador y Analista no tienen permisos para administrar usuarios.');
+      alert('Acceso Denegado: Los perfiles Contador y Analista no tienen permisos para administrar usuarios.');
       return;
     }
     const formData = new FormData(e.currentTarget);
@@ -364,7 +364,7 @@ export default function StudyAdminDashboard({
     // Limit check
     const userLimit = studyData?.maxUsers || 5;
     if (!editingUser && users.length >= userLimit) {
-      alert(`⚠️ Límite Alcanzado: El estudio ha completado el cupo máximo de ${userLimit} usuarios. Para aumentar el cupo, contacta al Administrador de Sistema.`);
+      alert(`Límite Alcanzado: El estudio ha completado el cupo máximo de ${userLimit} usuarios. Para aumentar el cupo, contacta al Administrador de Sistema.`);
       return;
     }
 
@@ -417,7 +417,7 @@ export default function StudyAdminDashboard({
 
   const handleToggleUserEstado = async (u: User) => {
     if (isRestrictedWorker) {
-      alert('🔒 Acceso Denegado: No tienes permisos para modificar el estado de usuarios.');
+      alert('Acceso Denegado: No tienes permisos para modificar el estado de usuarios.');
       return;
     }
     const nuevoEstado = u.estado === 'Inactivo' ? 'Activo' : 'Inactivo';
@@ -432,7 +432,7 @@ export default function StudyAdminDashboard({
 
   const handleDeleteUser = async (id: string) => {
     if (isRestrictedWorker) {
-      alert('🔒 Acceso Denegado: No tienes permisos para eliminar usuarios.');
+      alert('Acceso Denegado: No tienes permisos para eliminar usuarios.');
       return;
     }
     if (window.confirm('¿Eliminar este usuario?')) {
@@ -452,7 +452,7 @@ export default function StudyAdminDashboard({
     if (isSavingCompany) return; // Anti-double click protection
 
     if (isRestrictedWorker) {
-      alert('🔒 Acceso Denegado: Los usuarios con perfil Contador o Analista no tienen permisos para crear ni modificar empresas.');
+      alert('Acceso Denegado: Los usuarios con perfil Contador o Analista no tienen permisos para crear ni modificar empresas.');
       return;
     }
     const name = companyFormData.name.trim();
@@ -486,7 +486,7 @@ export default function StudyAdminDashboard({
     // Limit check for new companies
     const companyLimit = studyData?.maxCompanies || 10;
     if (!editingCompany && companies.length >= companyLimit) {
-      alert(`⚠️ Límite Alcanzado: El estudio ha completado el cupo máximo de ${companyLimit} empresas permitidas. Para ampliar el cupo, contacta al Administrador de Sistema.`);
+      alert(`Límite Alcanzado: El estudio ha completado el cupo máximo de ${companyLimit} empresas permitidas. Para ampliar el cupo, contacta al Administrador de Sistema.`);
       return;
     }
 
@@ -616,7 +616,7 @@ export default function StudyAdminDashboard({
 
   const handleToggleCompanyEstado = async (c: Company) => {
     if (isRestrictedWorker) {
-      alert('🔒 Acceso Denegado: No tienes permisos para cambiar el estado de la empresa.');
+      alert('Acceso Denegado: No tienes permisos para cambiar el estado de la empresa.');
       return;
     }
     const nuevoEstado = c.estado === 'Inactivo' ? 'Activo' : 'Inactivo';
@@ -631,7 +631,7 @@ export default function StudyAdminDashboard({
 
   const handleDeleteCompany = async (id: string) => {
     if (isRestrictedWorker) {
-      alert('🔒 Acceso Denegado: No tienes permisos para eliminar empresas.');
+      alert('Acceso Denegado: No tienes permisos para eliminar empresas.');
       return;
     }
     if (window.confirm('¿Eliminar esta empresa?')) {
@@ -649,7 +649,7 @@ export default function StudyAdminDashboard({
   const handleSaveAssignment = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (isRestrictedWorker) {
-      alert('🔒 Acceso Denegado: No tienes permisos para crear ni modificar asignaciones.');
+      alert('Acceso Denegado: No tienes permisos para crear ni modificar asignaciones.');
       return;
     }
     const formData = new FormData(e.currentTarget);
@@ -809,7 +809,7 @@ export default function StudyAdminDashboard({
             No tienes asignada la empresa <strong>{selectedCompanyForAccounting.name}</strong> (RUT: {selectedCompanyForAccounting.rut}).
           </p>
           <div className="text-xs text-slate-500 bg-slate-50 p-3 rounded-lg border border-slate-100 space-y-1 text-left">
-            <p className="font-semibold text-slate-700">🔒 Control de Acceso del Estudio:</p>
+            <p className="font-semibold text-slate-700"> Control de Acceso del Estudio:</p>
             <p>
               Como {isAnalyst ? 'Analista' : 'Contador'}, únicamente puedes ingresar a las empresas clientes que el Administrador de tu Estudio te haya asignado en la ficha de la empresa.
             </p>
@@ -866,7 +866,7 @@ export default function StudyAdminDashboard({
     { id: 'companies', label: 'Empresas Clientes' },
     { id: 'users', label: 'Gestión de Usuarios' },
     { id: 'assignments', label: 'Asignaciones' },
-    ...(isSuperUser && isCurrentStudyTest ? [{ id: 'demoPurge' as const, label: '🎯 Sociedad Demo (2026)' }] : [])
+    ...(isSuperUser && isCurrentStudyTest ? [{ id: 'demoPurge'as const, label: 'Sociedad Demo (2026)' }] : [])
   ];
 
   return (
@@ -1367,7 +1367,7 @@ export default function StudyAdminDashboard({
                           type="submit"
                           className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-5 py-2.5 rounded-lg transition-colors shadow-xs"
                         >
-                          {editingCompany ? '💾 Guardar Cambios' : '💾 Guardar Empresa Ahora'}
+                          {editingCompany ? 'Guardar Cambios' : 'Guardar Empresa Ahora'}
                         </button>
                         <button
                           type="button"
@@ -1461,7 +1461,7 @@ export default function StudyAdminDashboard({
                             type="submit"
                             className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-5 py-2 rounded-lg transition-colors shadow-xs text-xs"
                           >
-                            {editingCompany ? '💾 Guardar Cambios' : '💾 Guardar Empresa'}
+                            {editingCompany ? 'Guardar Cambios' : 'Guardar Empresa'}
                           </button>
                           <button
                             type="button"
@@ -1479,7 +1479,7 @@ export default function StudyAdminDashboard({
 
                   {companySection === 'sii' && (
                     <div className="space-y-4 animate-fadeIn">
-                      <div className="p-3.5 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border border-amber-200 flex items-start gap-3">
+                      <div className="p-3.5 bg-amber-50 rounded-xl border border-amber-200 flex items-start gap-3">
                         <div className="p-2 bg-amber-500 text-white rounded-lg shrink-0 mt-0.5 shadow-xs">
                           <Key className="w-5 h-5" />
                         </div>
@@ -1569,8 +1569,8 @@ export default function StudyAdminDashboard({
                               onChange={(e) => setCompanyFormData(prev => ({ ...prev, ambiente: e.target.value as any }))}
                               className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white font-medium"
                             >
-                              <option value="Producción">⚡ Producción Oficial (Emisión Real SII)</option>
-                              <option value="Certificación">🧪 Certificación / Pruebas (Sandbox SII)</option>
+                              <option value="Producción"> Producción Oficial (Emisión Real SII)</option>
+                              <option value="Certificación"> Certificación / Pruebas (Sandbox SII)</option>
                             </select>
                             <p className="text-[11px] text-slate-500 mt-1">Selecciona Producción para sincronización real de libros y DTE.</p>
                           </div>
@@ -1610,7 +1610,7 @@ export default function StudyAdminDashboard({
                             />
                             {companyFormData.certificadoNombre && (
                               <p className="text-[11px] text-indigo-700 font-mono mt-1 font-medium truncate">
-                                📄 {companyFormData.certificadoNombre}
+                                 {companyFormData.certificadoNombre}
                               </p>
                             )}
                           </div>
@@ -1653,7 +1653,7 @@ export default function StudyAdminDashboard({
                             type="submit"
                             className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-5 py-2 rounded-lg transition-colors shadow-xs text-xs"
                           >
-                            {editingCompany ? '💾 Guardar Cambios' : '💾 Guardar Empresa'}
+                            {editingCompany ? 'Guardar Cambios' : 'Guardar Empresa'}
                           </button>
                           <button
                             type="button"
@@ -1733,7 +1733,6 @@ export default function StudyAdminDashboard({
                           type="submit"
                           className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 py-2.5 rounded-lg transition-colors shadow-sm flex items-center gap-2 text-xs"
                         >
-                          <span>💾</span>
                           <span>{editingCompany ? 'Guardar Cambios de Empresa' : 'Registrar Empresa Cliente'}</span>
                         </button>
                       </div>
@@ -1816,7 +1815,7 @@ export default function StudyAdminDashboard({
           {activeTab === 'demoPurge' && (
             <div className="space-y-6">
               {/* Card Destacada: Sociedad de Demostración 2026 */}
-              <div className="bg-gradient-to-br from-amber-500/10 via-orange-500/10 to-indigo-500/10 p-6 rounded-3xl border border-amber-300 shadow-sm space-y-4">
+              <div className="bg-amber-500/10 p-6 rounded-3xl border border-amber-300 shadow-sm space-y-4">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
@@ -1838,7 +1837,7 @@ export default function StudyAdminDashboard({
                   <button
                     type="button"
                     onClick={() => setShowDemoFerreteriaModal(true)}
-                    className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-sm rounded-2xl shadow-lg shadow-orange-500/25 transition-all flex items-center gap-2 cursor-pointer shrink-0"
+                    className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm rounded-2xl shadow-lg shadow-orange-500/25 transition-all flex items-center gap-2 cursor-pointer shrink-0"
                   >
                     <Sparkles className="w-4 h-4" />
                     <span>Cargar / Resetear Demo 2026</span>

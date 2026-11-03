@@ -465,7 +465,7 @@ export const RendicionGastosView: React.FC<RendicionGastosViewProps> = ({
       );
 
       await fetchReports();
-      alert(`🎉 Rendición ${rep.folio} centralizada con éxito en el Comprobante Folio #${voucherPayload.voucherNumber}!`);
+      alert(`Rendición ${rep.folio} centralizada con éxito en el Comprobante Folio #${voucherPayload.voucherNumber}!`);
     } catch (err: any) {
       alert('Error al centralizar rendición: ' + err.message);
     } finally {
@@ -847,7 +847,7 @@ export const RendicionGastosView: React.FC<RendicionGastosViewProps> = ({
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl max-w-4xl w-full shadow-2xl border border-slate-200 overflow-hidden my-8 max-h-[90vh] flex flex-col">
             {/* Cabecera del modal */}
-            <div className="p-5 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex justify-between items-center shrink-0">
+            <div className="p-5 bg-slate-900 text-white flex justify-between items-center shrink-0">
               <div className="flex items-center gap-2.5">
                 <Receipt className="w-5 h-5 text-emerald-400" />
                 <h3 className="font-bold text-base">

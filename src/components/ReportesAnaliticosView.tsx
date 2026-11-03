@@ -1211,7 +1211,7 @@ export default function ReportesAnaliticosView({
           ========================================================================= */}
       <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
+          <div className="w-12 h-12 rounded-xl bg-indigo-500 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
             <BarChart3 className="w-6 h-6" />
           </div>
           <div>
@@ -1355,31 +1355,31 @@ export default function ReportesAnaliticosView({
                   onClick={() => applyPreset('CC_VS_MES')}
                   className="px-2.5 py-1 text-[11px] font-semibold bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-700 rounded-lg transition-colors cursor-pointer"
                 >
-                  🏢 Centros de Costo x Mes
+                   Centros de Costo x Mes
                 </button>
                 <button
                   onClick={() => applyPreset('CC_VS_ITEM')}
                   className="px-2.5 py-1 text-[11px] font-semibold bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-700 rounded-lg transition-colors cursor-pointer"
                 >
-                  📑 CC vs Ítem de Gasto
+                   CC vs Ítem de Gasto
                 </button>
                 <button
                   onClick={() => applyPreset('ITEM_VS_MES')}
                   className="px-2.5 py-1 text-[11px] font-semibold bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-700 rounded-lg transition-colors cursor-pointer"
                 >
-                  🏷️ Ítems de Gasto x Mes
+                   Ítems de Gasto x Mes
                 </button>
                 <button
                   onClick={() => applyPreset('CUENTAS_VS_AUXILIAR')}
                   className="px-2.5 py-1 text-[11px] font-semibold bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-700 rounded-lg transition-colors cursor-pointer"
                 >
-                  👥 Cuentas x Auxiliar
+                   Cuentas x Auxiliar
                 </button>
                 <button
                   onClick={() => applyPreset('PROYECTOS_VS_MES')}
                   className="px-2.5 py-1 text-[11px] font-semibold bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-700 rounded-lg transition-colors cursor-pointer"
                 >
-                  🏗️ Proyectos
+                   Proyectos
                 </button>
               </div>
             </div>

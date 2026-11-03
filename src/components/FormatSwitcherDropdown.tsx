@@ -38,9 +38,9 @@ export default function FormatSwitcherDropdown({
       case 'VERSION_B':
         return 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100';
       case 'VERSION_C1':
-        return 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white border-violet-400 shadow-xs shadow-violet-500/20';
+        return 'bg-violet-600 text-white border-violet-400 shadow-xs shadow-violet-500/20';
       case 'VERSION_C2':
-        return 'bg-gradient-to-r from-cyan-600 to-teal-600 text-white border-cyan-400 shadow-xs shadow-cyan-500/20';
+        return 'bg-cyan-600 text-white border-cyan-400 shadow-xs shadow-cyan-500/20';
       default:
         return 'bg-slate-50 text-slate-700 border-slate-200';
     }

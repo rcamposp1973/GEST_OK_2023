@@ -107,16 +107,16 @@ export default function AgenticPymeHub2040({
       let res = '';
 
       if (q.includes('cobrar') || q.includes('deudor') || q.includes('plata')) {
-        res = `💰 **CFO Virtual 2040 - Diagnóstico de Cuentas por Cobrar**:
+        res = ` **CFO Virtual 2040 - Diagnóstico de Cuentas por Cobrar**:
 - Total pendiente de cobro: **$${cobranzaAnalysis.totalPorCobrar.toLocaleString('es-CL')}**.
 - Monto vencido con prioridad alta (+30 días): **$${cobranzaAnalysis.totalVencido.toLocaleString('es-CL')}**.
 - Recomendación: Generar aviso de cobranza automático por WhatsApp a los 3 clientes con mayor saldo pendiente.`;
       } else if (q.includes('iva') || q.includes('impuesto') || q.includes('sii')) {
-        res = `📊 **CFO Virtual 2040 - Proyección Tributaria Pyme**:
+        res = ` **CFO Virtual 2040 - Proyección Tributaria Pyme**:
 - En base a las compras y ventas del RCV registradas, tu carga tributaria neta estimada está dentro de los rangos normales de tu giro.
 - Tasa PPM configurada: **${company.tasaPpm || 0.25}%**.`;
       } else {
-        res = `💡 **CFO Virtual 2040 - Estado de ${company.name}**:
+        res = ` **CFO Virtual 2040 - Estado de ${company.name}**:
 - Registras **${rcvDocuments.length} documentos tributarios** en el período.
 - Tu flujo proyectado a 30 días muestra liquidez positiva si se gestionan las cobranzas oportunamente.`;
       }
@@ -133,7 +133,7 @@ export default function AgenticPymeHub2040({
   return (
     <div className="space-y-6">
       {/* BANNER PYME AGÉNTICA 2040 */}
-      <div className="bg-gradient-to-r from-slate-950 via-cyan-950 to-slate-900 text-white p-6 rounded-3xl border border-cyan-800/40 shadow-xl relative overflow-hidden">
+      <div className="bg-slate-950 text-white p-6 rounded-3xl border border-cyan-800/40 shadow-xl relative overflow-hidden">
         <div className="absolute right-0 top-0 translate-x-10 -translate-y-10 w-96 h-96 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none"></div>
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="space-y-1.5">
@@ -143,7 +143,7 @@ export default function AgenticPymeHub2040({
                 VERSIÓN C2 · PYME & EMPRESA AGÉNTICA 2040
               </span>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-                Gestión Autónoma 24/7 🟢
+                Gestión Autónoma 24/7 
               </span>
             </div>
             <h2 className="text-xl md:text-2xl font-black tracking-tight text-white">
@@ -177,7 +177,7 @@ export default function AgenticPymeHub2040({
           }`}
         >
           <DollarSign className="w-4 h-4 text-cyan-300" />
-          <span>Agente de Cobranza Inteligente</span>
+          <span>Agente de Cobranza</span>
         </button>
 
         <button
@@ -307,7 +307,7 @@ export default function AgenticPymeHub2040({
             <div>
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-cyan-600" />
-                <span>Proyección Inteligente de Liquidez</span>
+                <span>Proyección de Liquidez</span>
               </h3>
               <p className="text-xs text-slate-500">Estimación combinada de cobros futuros vs compromisos de pago.</p>
             </div>
@@ -341,7 +341,7 @@ export default function AgenticPymeHub2040({
       )}
 
       {/* CHAT INTERACTIVO CON EL CFO VIRTUAL */}
-      <div className="bg-gradient-to-r from-slate-900 to-cyan-950 text-white p-5 rounded-2xl border border-cyan-800/40 shadow-md space-y-3">
+      <div className="bg-slate-900 text-white p-5 rounded-2xl border border-cyan-800/40 shadow-md space-y-3">
         <div className="flex items-center gap-2">
           <Bot className="w-5 h-5 text-cyan-400" />
           <h3 className="text-xs font-bold text-cyan-100">Consultar a tu CFO Virtual de Empresa</h3>

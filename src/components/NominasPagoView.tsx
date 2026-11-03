@@ -468,9 +468,9 @@ export default function NominasPagoView({
       }
 
       if (!isBankUsed) {
-        alert(`✅ Compensación N° ${nextBatchNumber} procesada con éxito.\nSe generó automáticamente el Comprobante de Traspaso N° ${nextVoucherNumber} (sin línea de banco). Documentos compensados en cartera de proveedores.`);
+        alert(`Compensación N° ${nextBatchNumber} procesada con éxito.\nSe generó automáticamente el Comprobante de Traspaso N° ${nextVoucherNumber} (sin línea de banco). Documentos compensados en cartera de proveedores.`);
       } else {
-        alert(`✅ Nómina N° ${nextBatchNumber} procesada con éxito.\nSe generó automáticamente el Comprobante de ${voucherType} N° ${nextVoucherNumber} por $${totalBatchAmount.toLocaleString('es-CL')}.`);
+        alert(`Nómina N° ${nextBatchNumber} procesada con éxito.\nSe generó automáticamente el Comprobante de ${voucherType} N° ${nextVoucherNumber} por $${totalBatchAmount.toLocaleString('es-CL')}.`);
       }
 
       // Reset form
@@ -538,7 +538,7 @@ export default function NominasPagoView({
         }
       });
 
-      alert(`✅ Nómina N° ${batch.batchNumber} y su comprobante contable fueron anulados con éxito.\nLas facturas asociadas han retornado a estado pendiente.`);
+      alert(`Nómina N° ${batch.batchNumber} y su comprobante contable fueron anulados con éxito.\nLas facturas asociadas han retornado a estado pendiente.`);
       fetchBatches();
       if (onVouchersUpdated) onVouchersUpdated();
     } catch (err: any) {
@@ -648,7 +648,7 @@ export default function NominasPagoView({
           {/* Top Form Parameters */}
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-4">
             <h4 className="text-sm font-bold text-slate-900 uppercase tracking-wide flex items-center gap-2">
-              <span>📋</span> Parámetros de la Nómina y Egreso Contable
+              Parámetros de la Nómina y Egreso Contable
             </h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
@@ -684,7 +684,7 @@ export default function NominasPagoView({
                     className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-1 cursor-pointer"
                     title="Habilitar o agregar Fondos Fijos, Cajas Chicas u otras cuentas del plan"
                   >
-                    <span>⚙️</span> Habilitar Cuentas
+                    Habilitar Cuentas
                   </button>
                 </div>
                 <select
@@ -692,7 +692,7 @@ export default function NominasPagoView({
                   onChange={(e) => setSelectedBankAccountId(e.target.value)}
                   className="w-full bg-white border border-slate-300 rounded-md px-3 py-1.5 font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 >
-                  <optgroup label="🏦 Cuentas Bancarias y Tesorería (Predeterminadas)">
+                  <optgroup label="Cuentas Bancarias y Tesorería (Predeterminadas)">
                     {defaultBanks.map(acc => (
                       <option key={acc.id} value={acc.id}>
                         {acc.code} - {acc.name}
@@ -701,7 +701,7 @@ export default function NominasPagoView({
                   </optgroup>
                   
                   {customEnabled.length > 0 && (
-                    <optgroup label="💼 Fondos Fijos, Cajas y Cuentas Habilitadas">
+                    <optgroup label="Fondos Fijos, Cajas y Cuentas Habilitadas">
                       {customEnabled.map(acc => (
                         <option key={acc.id} value={acc.id}>
                           {acc.code} - {acc.name}
@@ -711,7 +711,7 @@ export default function NominasPagoView({
                   )}
 
                   {showAllAccounts && (
-                    <optgroup label="📋 Todas las demás Cuentas del Plan">
+                    <optgroup label="Todas las demás Cuentas del Plan">
                       {allOtherAccounts.map(acc => (
                         <option key={acc.id} value={acc.id}>
                           {acc.code} - {acc.name} ({acc.type})
@@ -724,10 +724,10 @@ export default function NominasPagoView({
                 <div className="mt-1 flex items-center justify-between text-[11px]">
                   <span className="text-slate-500">
                     {defaultBanks.some(b => b.id === selectedBankAccountId)
-                      ? '🏦 Cuenta Bancaria'
+                      ? 'Cuenta Bancaria'
                       : customEnabled.some(c => c.id === selectedBankAccountId)
-                      ? '💼 Fondo Fijo / Cuenta Habilitada'
-                      : '📋 Cuenta Contable Personalizada'}
+                      ? 'Fondo Fijo / Cuenta Habilitada'
+                      : 'Cuenta Contable Personalizada'}
                   </span>
                   <button
                     type="button"
@@ -989,7 +989,7 @@ export default function NominasPagoView({
                             <td className="py-2 px-2.5 font-sans font-semibold">
                               {isNC ? (
                                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold border border-amber-300 text-[10px]">
-                                  <span>📜</span> NC {inv.tipoDoc}
+                                  NC {inv.tipoDoc}
                                 </span>
                               ) : (
                                 <span className="text-slate-800">
@@ -1083,7 +1083,6 @@ export default function NominasPagoView({
                       : 'bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black'
                   }`}
                 >
-                  <span>⚡</span>
                   <span>{isSubmitting ? 'Procesando Egreso...' : 'Generar Nómina y Comprobante de Egreso'}</span>
                 </button>
               </div>
@@ -1100,7 +1099,6 @@ export default function NominasPagoView({
                 onClick={() => setIsCreating(true)}
                 className="px-3 py-1.5 bg-[#533AFD] hover:bg-[#4326EB] text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
               >
-                <span>➕</span>
                 <span>Nueva Nómina de Pago</span>
               </button>
 
@@ -1190,7 +1188,7 @@ export default function NominasPagoView({
                               className="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-bold rounded border border-indigo-200"
                               title="Ver Detalle"
                             >
-                              👁️ Ver
+                               Ver
                             </button>
 
                             {b.status !== 'Anulado' && (
@@ -1200,21 +1198,21 @@ export default function NominasPagoView({
                                   className="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-[10px] font-bold rounded border border-blue-200"
                                   title="Exportar archivo TXT Banco de Chile"
                                 >
-                                  📥 Bco Chile
+                                   Bco Chile
                                 </button>
                                 <button
                                   onClick={() => handleExportBankFile(b, 'Santander')}
                                   className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 text-[10px] font-bold rounded border border-rose-200"
                                   title="Exportar archivo TXT Santander"
                                 >
-                                  📥 Santander
+                                   Santander
                                 </button>
                                 <button
                                   onClick={() => handleExportBankFile(b, 'GenericoCSV')}
                                   className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded border border-emerald-200"
                                   title="Exportar CSV"
                                 >
-                                  📥 CSV
+                                   CSV
                                 </button>
                                 <button
                                   onClick={() => handleVoidBatch(b)}
@@ -1231,7 +1229,6 @@ export default function NominasPagoView({
                               className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 text-[10px] font-bold rounded border border-rose-200"
                               title="Eliminar Nómina permanentemente"
                             >
-                              🗑️
                             </button>
                           </div>
                         </td>

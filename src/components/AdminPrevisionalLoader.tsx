@@ -114,7 +114,7 @@ export const AdminPrevisionalLoader: React.FC = () => {
       } catch {}
 
       setSaveSuccess(true);
-      setStatusMessage(`✅ Indicadores previsionales para ${period} guardados exitosamente.`);
+      setStatusMessage(`Indicadores previsionales para ${period} guardados exitosamente.`);
       setTimeout(() => setSaveSuccess(false), 4000);
     } catch (e: any) {
       console.error(e);

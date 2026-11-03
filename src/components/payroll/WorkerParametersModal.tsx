@@ -519,7 +519,7 @@ export const WorkerParametersModal: React.FC<WorkerParametersModalProps> = ({
                 <div className="md:col-span-2 p-3.5 bg-rose-50/60 border border-rose-200 rounded-xl space-y-3">
                   <div className="flex items-center justify-between">
                     <label className="block text-xs font-bold text-rose-950">
-                      ⚖️ Retención Judicial por Pensión de Alimentos (Tribunales de Familia)
+                       Retención Judicial por Pensión de Alimentos (Tribunales de Familia)
                     </label>
                     <span className="text-[10px] font-semibold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full">
                       Prioritario sobre el Líquido

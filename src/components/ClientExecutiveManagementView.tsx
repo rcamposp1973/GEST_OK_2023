@@ -240,7 +240,7 @@ export default function ClientExecutiveManagementView({
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
       
       {/* Top Banner: Observador de Gestión para Cliente Final */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-5 rounded-2xl shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="bg-slate-900 text-white p-5 rounded-2xl shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="bg-indigo-500/20 text-indigo-300 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-indigo-500/30 uppercase tracking-wider">
@@ -474,7 +474,7 @@ export default function ClientExecutiveManagementView({
               <p className="text-xs text-slate-500 mt-1 flex items-center justify-between">
                 <span>Estado Cartolas:</span>
                 <span className={`font-bold ${bankMetrics.isFullyBalanced ? 'text-emerald-600' : 'text-amber-600'}`}>
-                  {bankMetrics.isFullyBalanced ? '✓ Cuadradas' : '⚠ Descuadre'}
+                  {bankMetrics.isFullyBalanced ? '✓ Cuadradas' : 'Descuadre'}
                 </span>
               </p>
             </div>

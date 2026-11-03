@@ -458,7 +458,7 @@ export default function Formulario29View({
     // Reajuste DL 825 Art. 27: Variación UTM = (UTM Actual - UTM Anterior) * Remanente UTM
     const reajusteCorreccionMonetariaRemanente = Math.max(0, remanenteMesAnteriorPesos - remanenteHistoricoPesos);
 
-    // 🛑 CRUCIAL: El Total Crédito Fiscal NO debe recortarse a 0 con Math.max
+    //  CRUCIAL: El Total Crédito Fiscal NO debe recortarse a 0 con Math.max
     // Si las notas de crédito recibidas (debitoNotasCreditoRecibidas) son mayores a las facturas recibidas,
     // el saldo neto es negativo y debe fluir con su signo negativo para liquidarse en F29 o aumentar el impuesto a pagar.
     const totalCreditoFiscal = (
@@ -680,7 +680,7 @@ export default function Formulario29View({
       }
 
       await setDoc(doc(companyRef, 'f29Declarations', declarationId), payload);
-      alert(`✅ Declaración F29 del período ${selectedPeriod} guardada exitosamente con estado: ${declarationStatus}.`);
+      alert(`Declaración F29 del período ${selectedPeriod} guardada exitosamente con estado: ${declarationStatus}.`);
       fetchDeclarations();
     } catch (err: any) {
       console.error('Error saving F29:', err);
@@ -711,7 +711,7 @@ export default function Formulario29View({
         initialRemanentePesos: initialRemanentePesosSetting,
         updatedAt: new Date().toISOString()
       });
-      alert('✅ Parámetros de Cuentas Contables, Maestro F.29 y Tratamiento Tributario de la Empresa guardados exitosamente.');
+      alert('Parámetros de Cuentas Contables, Maestro F.29 y Tratamiento Tributario de la Empresa guardados exitosamente.');
     } catch (err: any) {
       console.error('Error saving company F29 settings:', err);
       alert('Error al guardar parámetros: ' + err.message);
@@ -972,7 +972,7 @@ export default function Formulario29View({
         updatedAt: new Date().toISOString()
       });
 
-      alert(`✅ Asiento Contable N° ${nextVoucherNumber} de Liquidación de Impuestos F29 generado y centralizado exitosamente con Corrección Monetaria e IVA Postergado.`);
+      alert(`Asiento Contable N° ${nextVoucherNumber} de Liquidación de Impuestos F29 generado y centralizado exitosamente con Corrección Monetaria e IVA Postergado.`);
       if (onVouchersUpdated) onVouchersUpdated();
       fetchDeclarations();
     } catch (err: any) {
@@ -1039,26 +1039,26 @@ export default function Formulario29View({
     const bLiq = bTotalBruto - bRet;
     const tRet = retencionesData.tasaEfectivaHonorarios || taxSettings.honorariosTaxRate;
 
-    let text = `📊 *RESUMEN TRIBUTARIO F29 - ${company.name || company.razonSocial}*\n`;
-    text += `🗓️ *Período:* ${selectedPeriod}\n\n`;
-    text += `🔹 *VENTAS:*\n`;
+    let text = ` *RESUMEN TRIBUTARIO F29 - ${company.name || company.razonSocial}*\n`;
+    text += ` *Período:* ${selectedPeriod}\n\n`;
+    text += ` *VENTAS:*\n`;
     text += `• Neto / Afecto: $${totalVentas.toLocaleString('es-CL')}\n`;
     text += `• Débito IVA: $${debitoFiscalData.totalDebitoFiscal.toLocaleString('es-CL')}\n\n`;
-    text += `🔹 *COMPRAS:*\n`;
+    text += ` *COMPRAS:*\n`;
     text += `• Neto Compras: $${totalComprNeto.toLocaleString('es-CL')}\n`;
     text += `• IVA Crédito: $${(creditoFiscalData.totalCreditoFiscal || 0).toLocaleString('es-CL')}\n`;
     text += `• IVA No Recuperable: $${totalIvaNoRec.toLocaleString('es-CL')}\n`;
     text += `• Total Compras: $${totalCompras.toLocaleString('es-CL')}\n\n`;
-    text += `🔹 *BOLETAS DE HONORARIOS (${honorariosDocsList.length} boletas):*\n`;
+    text += ` *BOLETAS DE HONORARIOS (${honorariosDocsList.length} boletas):*\n`;
     text += `• Monto Bruto: $${bTotalBruto.toLocaleString('es-CL')}${retencionesData.docsSinRetentionCount ? ` (Afecto Cód. 151: $${bBruto.toLocaleString('es-CL')})` : ''}\n`;
     text += `• Retención (${tRet}%): $${bRet.toLocaleString('es-CL')}\n`;
     text += `• Monto Líquido: $${bLiq.toLocaleString('es-CL')}\n\n`;
-    text += `🔹 *PPM (${taxSettings.ppmRate}%):* $${ppmData.montoPPM.toLocaleString('es-CL')}\n\n`;
-    text += `💰 *TOTAL A PAGAR F29 (Cód. 91):* *$${resumenF29.totalPagarF29.toLocaleString('es-CL')}*\n`;
-    text += `📅 *Plazo Pago:* ${plazoPagoFecha || '20 del mes siguiente'}\n`;
+    text += ` *PPM (${taxSettings.ppmRate}%):* $${ppmData.montoPPM.toLocaleString('es-CL')}\n\n`;
+    text += ` *TOTAL A PAGAR F29 (Cód. 91):* *$${resumenF29.totalPagarF29.toLocaleString('es-CL')}*\n`;
+    text += ` *Plazo Pago:* ${plazoPagoFecha || '20 del mes siguiente'}\n`;
     
     if (honorariosDocsList.length > 0) {
-      text += `\n📋 *Detalle Boletas de Honorarios:*\n`;
+      text += `\n *Detalle Boletas de Honorarios:*\n`;
       honorariosDocsList.forEach(h => {
         const folio = h.folio || '-';
         const prestador = h.razonSocialEmisor || h.razonSocialReceptor || 'Prestador';
@@ -1076,7 +1076,7 @@ export default function Formulario29View({
   const handleCopyClientSummary = () => {
     const txt = generateClientSummaryText();
     navigator.clipboard.writeText(txt);
-    alert('✅ Resumen copiado al portapapeles. ¡Ya puedes pegarlo en WhatsApp o correo!');
+    alert('Resumen copiado al portapapeles. ¡Ya puedes pegarlo en WhatsApp o correo!');
   };
 
   const handleSendWhatsApp = () => {
@@ -1493,7 +1493,7 @@ export default function Formulario29View({
       link.download = `Resumen_F29_${company.rut.replace(/[^a-zA-Z0-9]/g, '')}_${selectedPeriod}.png`;
       link.href = imageUri;
       link.click();
-      alert('✅ ¡Imagen del resumen F29 descargada con éxito! Ya puedes adjuntarla directamente en WhatsApp.');
+      alert(' ¡Imagen del resumen F29 descargada con éxito! Ya puedes adjuntarla directamente en WhatsApp.');
     } catch (err: any) {
       console.error('Error generating image:', err);
       alert('Error al generar la imagen: ' + err.message);
@@ -1512,7 +1512,7 @@ export default function Formulario29View({
           await navigator.clipboard.write([
             new ClipboardItem({ 'image/png': blob })
           ]);
-          alert('✅ ¡Imagen copiada al portapapeles! Ya puedes presionar Ctrl+V en WhatsApp para pegarla directamente.');
+          alert(' ¡Imagen copiada al portapapeles! Ya puedes presionar Ctrl+V en WhatsApp para pegarla directamente.');
         } catch (e) {
           handleDownloadImage();
         }
@@ -1588,7 +1588,7 @@ export default function Formulario29View({
             {(() => {
               const openPeriods = getAllOpenPeriods(fiscalYears);
               if (openPeriods.length === 0) {
-                return <option value={selectedPeriod || '2026-01'}>{selectedPeriod ? `${selectedPeriod} (Sin períodos abiertos)` : '⚠️ No hay períodos abiertos'}</option>;
+                return <option value={selectedPeriod || '2026-01'}>{selectedPeriod ? `${selectedPeriod} (Sin períodos abiertos)` : 'No hay períodos abiertos'}</option>;
               }
               return openPeriods.map(op => (
                 <option key={op.period} value={op.period}>
@@ -1620,10 +1620,10 @@ export default function Formulario29View({
             onChange={(e) => setDeclarationStatus(e.target.value as any)}
             className="w-full bg-slate-800 border border-slate-700 rounded-md px-3 py-1.5 font-bold text-white focus:ring-2 focus:ring-indigo-400 focus:outline-none"
           >
-            <option value="Borrador">⏳ Borrador / En Preparación</option>
+            <option value="Borrador"> Borrador / En Preparación</option>
             <option value="Validado">✓ Validado por Contador</option>
-            <option value="Declarado">📑 Declarado en SII</option>
-            <option value="Pagado">💰 Pagado en Banco / TGR</option>
+            <option value="Declarado"> Declarado en SII</option>
+            <option value="Pagado"> Pagado en Banco / TGR</option>
           </select>
         </div>
 
@@ -1672,7 +1672,7 @@ export default function Formulario29View({
           </span>
           <span className="text-[10px] text-slate-500">
             {creditoFiscalData.totalCreditoFiscal < 0
-              ? '⚠️ Saldo crédito negativo (NC superan compras)'
+              ? 'Saldo crédito negativo (NC superan compras)'
               : `${creditoFiscalData.docsCount} compras | Remanente ant: $${creditoFiscalData.remanenteMesAnteriorPesos.toLocaleString('es-CL')}`
             }
           </span>
@@ -1731,7 +1731,7 @@ export default function Formulario29View({
               : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
-          <span>📋 Formulario 29 Oficial (SII)</span>
+          <span> Formulario 29 Oficial (SII)</span>
         </button>
 
         <button
@@ -1742,7 +1742,7 @@ export default function Formulario29View({
               : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
-          <span>🔍 Auditoría y Trazabilidad RCV</span>
+          <span> Auditoría y Trazabilidad RCV</span>
           <span className="bg-slate-100 text-slate-700 px-1.5 py-0.2 rounded-full text-[10px]">{periodDocs.length} docs</span>
         </button>
 
@@ -1754,7 +1754,7 @@ export default function Formulario29View({
               : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
-          <span>⚙️ Parámetros Tributarios y UTM</span>
+          <span> Parámetros Tributarios y UTM</span>
         </button>
 
         <button
@@ -1765,7 +1765,7 @@ export default function Formulario29View({
               : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
-          <span>📑 Historial de Declaraciones F29</span>
+          <span> Historial de Declaraciones F29</span>
           <span className="bg-slate-100 text-slate-700 px-1.5 py-0.2 rounded-full text-[10px]">{savedDeclarations.length}</span>
         </button>
       </div>
@@ -1987,7 +1987,7 @@ export default function Formulario29View({
                         <span>TOTAL CRÉDITO FISCAL DEL PERÍODO</span>
                         {creditoFiscalData.totalCreditoFiscal < 0 && (
                           <span className="text-[10px] bg-rose-200 text-rose-800 px-2 py-0.5 rounded font-sans font-bold normal-case">
-                            ⚠️ Saldo Crédito Negativo (Notas de Crédito superan compras)
+                             Saldo Crédito Negativo (Notas de Crédito superan compras)
                           </span>
                         )}
                       </div>
@@ -2334,7 +2334,6 @@ export default function Formulario29View({
           <div className="bg-slate-900 text-white p-5 rounded-xl shadow-md space-y-4 mt-6">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2">
-                <span className="text-xl">🛡️</span>
                 <h4 className="text-sm font-black uppercase tracking-tight text-white">
                   Control de Registro y Declaración en el SII (Período {selectedPeriod})
                 </h4>
@@ -2357,10 +2356,10 @@ export default function Formulario29View({
                   onChange={e => setDeclarationStatus(e.target.value as any)}
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 font-bold text-white focus:ring-2 focus:ring-indigo-500"
                 >
-                  <option value="Borrador">⏳ Borrador / En Preparación</option>
+                  <option value="Borrador"> Borrador / En Preparación</option>
                   <option value="Validado">✓ Validado por Contador</option>
-                  <option value="Declarado">📑 Declarado en SII</option>
-                  <option value="Pagado">💰 Pagado en Banco / TGR</option>
+                  <option value="Declarado"> Declarado en SII</option>
+                  <option value="Pagado"> Pagado en Banco / TGR</option>
                 </select>
               </div>
 
@@ -2386,7 +2385,7 @@ export default function Formulario29View({
                     className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 font-mono text-slate-300 focus:ring-2 focus:ring-indigo-500"
                   />
                   <label className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-lg cursor-pointer text-xs whitespace-nowrap transition-colors">
-                    <span>📁 Adjuntar</span>
+                    <span> Adjuntar</span>
                     <input
                       type="file"
                       accept=".pdf,image/*"
@@ -2408,7 +2407,6 @@ export default function Formulario29View({
                 disabled={isSubmitting}
                 className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-lg shadow-md transition-colors flex items-center gap-2 text-xs"
               >
-                <span>💾</span>
                 <span>{isSubmitting ? 'Guardando Registro...' : 'Guardar y Registrar Declaración F.29'}</span>
               </button>
             </div>
@@ -2483,7 +2481,6 @@ export default function Formulario29View({
         <div className="bg-white rounded-b-xl border border-slate-200 shadow-xs p-5 space-y-6">
           <div className="border-b border-slate-200 pb-4">
             <h4 className="text-sm font-black uppercase text-slate-900 flex items-center gap-2">
-              <span>⚙️</span>
               <span>Configuración y Maestro de Códigos F.29 (Activación por Empresa)</span>
             </h4>
             <p className="text-xs text-slate-500 mt-1">
@@ -2496,7 +2493,6 @@ export default function Formulario29View({
             <div className="flex items-center justify-between">
               <div>
                 <h4 className="text-xs font-bold uppercase text-amber-950 flex items-center gap-1.5">
-                  <span>🏗️</span>
                   <span>Tratamiento Tributario Especial para Empresas Constructoras (CEEC Art. 21 D.L. 910)</span>
                 </h4>
                 <p className="text-[11px] text-amber-800 mt-0.5">
@@ -2516,7 +2512,7 @@ export default function Formulario29View({
 
             <div className="border-t border-amber-200 pt-3">
               <h4 className="text-xs font-bold uppercase text-slate-900 mb-1">
-                💰 Remanente de Crédito Fiscal Inicial / Apertura del Sistema
+                 Remanente de Crédito Fiscal Inicial / Apertura del Sistema
               </h4>
               <p className="text-[11px] text-slate-600 mb-2">
                 Si esta empresa viene con saldo remanente de IVA anterior al ingresar a este sistema, defina su valor de partida en UTM o Pesos ($):
@@ -2716,7 +2712,7 @@ export default function Formulario29View({
                 }}
                 className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-lg border border-indigo-200 text-xs flex items-center gap-1 transition-colors"
               >
-                <span>➕ Agregar Código Personalizado</span>
+                <span> Agregar Código Personalizado</span>
               </button>
             </div>
 
@@ -2762,7 +2758,6 @@ export default function Formulario29View({
               disabled={isSubmitting}
               className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-sm text-xs flex items-center gap-2 transition-colors"
             >
-              <span>💾</span>
               <span>{isSubmitting ? 'Guardando...' : 'Guardar Parámetros y Códigos de la Empresa'}</span>
             </button>
           </div>
@@ -2838,7 +2833,7 @@ export default function Formulario29View({
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-slate-900 to-indigo-950 text-white px-6 py-4 flex items-center justify-between">
+            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400">
                   <MessageSquare className="w-5 h-5" />
@@ -2860,7 +2855,7 @@ export default function Formulario29View({
             <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto bg-slate-100 text-xs font-sans">
               <div ref={summaryCardRef} className="bg-white rounded-xl border border-slate-300 p-6 shadow-sm space-y-5">
                 {/* Header Card */}
-                <div className="border-b pb-3 flex justify-between items-center bg-gradient-to-r from-slate-50 to-indigo-50/40 p-3 rounded-lg">
+                <div className="border-b pb-3 flex justify-between items-center bg-slate-50 p-3 rounded-lg">
                   <div>
                     <h5 className="font-black text-slate-900 uppercase text-sm tracking-wide">{company.name || company.razonSocial}</h5>
                     <p className="text-slate-600 text-[11px]">RUT: {company.rut}</p>
@@ -3033,7 +3028,7 @@ export default function Formulario29View({
             {/* Modal Footer Actions */}
             <div className="bg-slate-100 px-6 py-4 border-t border-slate-200 flex items-center justify-between gap-3">
               <span className="text-slate-500 text-[11px] font-sans">
-                💡 Descarga la tarjeta como imagen PNG de alta calidad para enviarla de forma ordenada por WhatsApp.
+                 Descarga la tarjeta como imagen PNG de alta calidad para enviarla de forma ordenada por WhatsApp.
               </span>
               <div className="flex items-center gap-2">
                 <button
@@ -3048,7 +3043,7 @@ export default function Formulario29View({
                   title="Copiar imagen al portapapeles para pegar con Ctrl+V en WhatsApp"
                 >
                   <Copy className="w-4 h-4 text-slate-300" />
-                  <span>📋 Copiar Imagen</span>
+                  <span> Copiar Imagen</span>
                 </button>
                 <button
                   onClick={handleDownloadImage}
@@ -3056,7 +3051,7 @@ export default function Formulario29View({
                   title="Descargar archivo PNG en alta resolución"
                 >
                   <Share2 className="w-4 h-4 text-emerald-200" />
-                  <span>📸 Descargar Imagen (PNG)</span>
+                  <span> Descargar Imagen (PNG)</span>
                 </button>
               </div>
             </div>

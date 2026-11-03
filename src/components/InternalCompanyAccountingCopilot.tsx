@@ -154,7 +154,7 @@ export default function InternalCompanyAccountingCopilot({
     {
       id: 'init-1',
       sender: 'ai',
-      text: `👋 ¡Hola! Soy **Junior**, tu Asistente y Copiloto Contable para **${company.name}** (RUT: ${company.rut}).\n\nEstoy especializado en **Conciliación Bancaria, Facturas Pendientes por RUT, Normativa Tributaria Chilena (LIR, IVA, F29)** e **IFRS (NIC 1, NIC 2, NIC 16, Partida Doble)**.\n\nPuedo ayudarte a **buscar facturas pendientes de un RUT**, auditar tus libros, guiarte para anular cartolas y conciliar tu banco. ¿En qué te ayudo hoy?`,
+      text: ` ¡Hola! Soy **Junior**, tu Asistente y Copiloto Contable para **${company.name}** (RUT: ${company.rut}).\n\nEstoy especializado en **Conciliación Bancaria, Facturas Pendientes por RUT, Normativa Tributaria Chilena (LIR, IVA, F29)** e **IFRS (NIC 1, NIC 2, NIC 16, Partida Doble)**.\n\nPuedo ayudarte a **buscar facturas pendientes de un RUT**, auditar tus libros, guiarte para anular cartolas y conciliar tu banco. ¿En qué te ayudo hoy?`,
       time: 'Ahora',
       suggestions: [
         'Buscar facturas pendientes por RUT',
@@ -194,16 +194,16 @@ export default function InternalCompanyAccountingCopilot({
     // Si hay una directiva específica para esta empresa, se le da máxima prioridad
     if (matchingCompanyRules.length > 0) {
       const topRule = matchingCompanyRules[0];
-      let ruleResponse = `🏢 **Criterio Contable Exclusivo para ${company.name}:**\n\n` +
+      let ruleResponse = ` **Criterio Contable Exclusivo para ${company.name}:**\n\n` +
         `• **${topRule.title}:**\n` +
         `${topRule.directiveContent}\n\n`;
 
       if (topRule.recommendedEntries) {
-        ruleResponse += `💡 **Asiento Contable Sugerido:**\n` +
+        ruleResponse += ` **Asiento Contable Sugerido:**\n` +
           `${topRule.recommendedEntries}\n\n`;
       }
 
-      ruleResponse += `🔒 *Nota: Esta regla está aprendida y aislada únicamente para ${company.name}.*`;
+      ruleResponse += ` *Nota: Esta regla está aprendida y aislada únicamente para ${company.name}.*`;
 
       return {
         response: ruleResponse,
@@ -215,21 +215,21 @@ export default function InternalCompanyAccountingCopilot({
     // 0. NUEZ MARIPOSA: MOTOR DE CRUCE INTELIGENTE DE CARTOLAS Y CONTABILIZACIÓN POR RUT
     if (q.includes('nuez') || q.includes('nuez mariposa') || q.includes('mariposa') || q.includes('regla de la nuez') || q.includes('cruce de cartola')) {
       return {
-        response: `🧠 **Motor Inteligente "Nuez Mariposa" (Aprendizaje de Conciliación por RUT):**\n\n` +
+        response: ` **Motor Inteligente "Nuez Mariposa" (Aprendizaje de Conciliación por RUT):**\n\n` +
           `Como tu copiloto **Junior**, aplico las siguientes reglas operativas automatizadas para conciliar y contabilizar la cartola bancaria:\n\n` +
-          `📥 **1. Abonos Bancarios (Ingresos):**\n` +
+          ` **1. Abonos Bancarios (Ingresos):**\n` +
           `   • Escaneo el RUT de quien deposita desde la glosa bancaria (ej. \`0105559089\` ➔ \`10.555.908-9\`).\n` +
           `   • Los comparo contra las **Facturas de Clientes pendientes de cobro en el RCV Ventas** y Auxiliar de Clientes.\n` +
           `   • Propongo el comprobante de **Ingreso** (\`Banco\` al Debe / \`Clientes Nacionales\` al Haber con RUT y Folio).\n\n` +
-          `📤 **2. Cargos Bancarios (Egresos - Proveedores y Honorarios):**\n` +
+          ` **2. Cargos Bancarios (Egresos - Proveedores y Honorarios):**\n` +
           `   • Si el RUT o glosa corresponde a servicios/boletas, cruzo con **Boletas de Honorarios por Pagar** (\`Honorarios por Pagar\` al Debe / \`Banco\` al Haber).\n` +
           `   • Si corresponde a compras, cruzo con **Facturas de Proveedores por Pagar** (\`Proveedores Nacionales\` al Debe / \`Banco\` al Haber).\n\n` +
-          `📅 **3. Regla Estricta de Fechas y Períodos Contables:**\n` +
+          ` **3. Regla Estricta de Fechas y Períodos Contables:**\n` +
           `   • Se contabiliza en la fecha original de la cartola.\n` +
           `   • Si el mes está **CERRADO**, la propuesta se traslada automáticamente al **día 01 del siguiente mes abierto** para resguardar los libros tributarios.\n\n` +
-          `⚖️ **4. Tolerancia y Diferencias Menores a $10:**\n` +
+          ` **4. Tolerancia y Diferencias Menores a $10:**\n` +
           `   • Si existe una diferencia menor o igual a **$10** (por redondeo de centavos o comisiones), el comprobante queda **pendiente de registro pero debidamente informado** con advertencia visual para tu aprobación.\n\n` +
-          `🧠 **5. Memoria de Aprendizaje:**\n` +
+          ` **5. Memoria de Aprendizaje:**\n` +
           `   • Cada vez que apruebas un cruce en La Nuez, **yo memorizo la contraparte y cuenta asignada** en la memoria aislada de **${company.name}** para que en la próxima cartola el match sea 100% automático.\n\n` +
           `¿Deseas que abramos el módulo de Conciliación Bancaria para ejecutar la Nuez Mariposa?`,
         suggestions: [
@@ -238,7 +238,7 @@ export default function InternalCompanyAccountingCopilot({
           'Ver Boletas de Honorarios Pendientes',
           'Revisar Períodos Contables'
         ],
-        actionLink: { tab: 'conciliacion', label: 'Ir a 🧠 Nuez Mariposa' }
+        actionLink: { tab: 'conciliacion', label: 'Ir a  Nuez Mariposa' }
       };
     }
 
@@ -289,18 +289,18 @@ export default function InternalCompanyAccountingCopilot({
         return searchRutClean && auxRutClean.includes(searchRutClean);
       });
 
-      let responseText = `🔍 **Asistente de Conciliación y Búsqueda de DTEs por Junior:**\n\n`;
+      let responseText = ` **Asistente de Conciliación y Búsqueda de DTEs por Junior:**\n\n`;
 
       if (searchRutClean) {
-        responseText += `🎯 **Criterio de Búsqueda de RUT:** \`${cleanRutMatch ? cleanRutMatch[0] : searchRutClean}\`\n\n`;
+        responseText += ` **Criterio de Búsqueda de RUT:** \`${cleanRutMatch ? cleanRutMatch[0] : searchRutClean}\`\n\n`;
       } else if (searchAmount) {
-        responseText += `💵 **Criterio de Búsqueda por Monto:** $ ${searchAmount.toLocaleString('es-CL')}\n\n`;
+        responseText += ` **Criterio de Búsqueda por Monto:** $ ${searchAmount.toLocaleString('es-CL')}\n\n`;
       } else {
-        responseText += `📋 **Análisis de Documentos Pendientes de Conciliación:**\n\n`;
+        responseText += ` **Análisis de Documentos Pendientes de Conciliación:**\n\n`;
       }
 
       if (matchingDocs.length > 0) {
-        responseText += `📄 **Facturas y DTEs Encontrados en RCV (${matchingDocs.length}):**\n`;
+        responseText += ` **Facturas y DTEs Encontrados en RCV (${matchingDocs.length}):**\n`;
         matchingDocs.slice(0, 8).forEach(d => {
           const codeStr = String(d.tipoDoc || d.tipoDocumento || '');
           const tipo = codeStr === '33' ? 'Factura Electrónica' : codeStr === '34' ? 'Factura Exenta' : codeStr === '61' ? 'Nota de Crédito' : `DTE ${codeStr}`;
@@ -311,17 +311,17 @@ export default function InternalCompanyAccountingCopilot({
         if (matchingDocs.length > 8) {
           responseText += `  *...y ${matchingDocs.length - 8} documentos adicionales encontrados en el RCV de ${company.name}.*\n`;
         }
-        responseText += `\n💡 **Recomendación de Junior para Conciliar:**\n`;
-        responseText += `Para vincularlos con la cartola bancaria, entra a **Conciliación Bancaria** y utiliza **⚡ Match Automático Multimes** o concilia manualmente seleccionando el movimiento.\n`;
+        responseText += `\n **Recomendación de Junior para Conciliar:**\n`;
+        responseText += `Para vincularlos con la cartola bancaria, entra a **Conciliación Bancaria** y utiliza ** Match Automático Multimes** o concilia manualmente seleccionando el movimiento.\n`;
       } else if (matchingAux.length > 0) {
-        responseText += `🏢 **Auxiliar Registrado:** ${matchingAux[0].name} (RUT: ${matchingAux[0].rut})\n\n`;
+        responseText += ` **Auxiliar Registrado:** ${matchingAux[0].name} (RUT: ${matchingAux[0].rut})\n\n`;
         responseText += `Se detectó la entidad en el maestro de auxiliares. Puedes revisar los movimientos en el Libro Diario o Libro Auxiliar de Proveedores/Clientes.\n`;
       } else {
-        responseText += `⚠️ No se encontraron DTEs en el RCV que coincidan con la búsqueda de RUT/monto en los registros actuales de **${company.name}**.\n\n`;
-        responseText += `💡 **Pasos recomendados por Junior:**\n`;
+        responseText += `No se encontraron DTEs en el RCV que coincidan con la búsqueda de RUT/monto en los registros actuales de **${company.name}**.\n\n`;
+        responseText += ` **Pasos recomendados por Junior:**\n`;
         responseText += `1️⃣ Confirma si las facturas del período fueron importadas en el **Registro de Compras y Ventas (RCV)**.\n`;
-        responseText += `2️⃣ Ve al módulo **Conciliación Bancaria** y utiliza **⚡ Match Automático Multimes** para cruzar la cartola del banco con las facturas pendientes.\n`;
-        responseText += `3️⃣ Si deseas borrar o volver a cargar una cartola sin movimientos conciliados, utiliza el botón **🗑️ Anular Cartola**.\n`;
+        responseText += `2️⃣ Ve al módulo **Conciliación Bancaria** y utiliza ** Match Automático Multimes** para cruzar la cartola del banco con las facturas pendientes.\n`;
+        responseText += `3️⃣ Si deseas borrar o volver a cargar una cartola sin movimientos conciliados, utiliza el botón ** Anular Cartola**.\n`;
       }
 
       return {
@@ -338,16 +338,16 @@ export default function InternalCompanyAccountingCopilot({
     // 1. GESTIÓN Y FINANZAS PARA CLIENTES: DE LA CONTABILIDAD A LA GESTIÓN (Estratégico)
     if (q.includes('gestion') || q.includes('gestión') || q.includes('informe') || q.includes('gerencia') || q.includes('directorio') || q.includes('centro de costo') || q.includes('centros de costo') || q.includes('rentabilidad') || q.includes('reporte gerencial') || q.includes('aperturar')) {
       return {
-        response: `📊 **De la Contabilidad Tradicional a la Gestión Estratégica (Valor para el Cliente):**\n\n` +
+        response: ` **De la Contabilidad Tradicional a la Gestión Estratégica (Valor para el Cliente):**\n\n` +
           `Para que el estudio contable entregue asesoría de alto impacto a la gerencia de **${company.name}**:\n\n` +
-          `💡 **1. Apertura de Cuentas de Costos en Centros de Costo e Ítems de Gasto:**\n` +
+          ` **1. Apertura de Cuentas de Costos en Centros de Costo e Ítems de Gasto:**\n` +
           `   • No acumules los desembolsos en una sola cuenta genérica de gasto o costo.\n` +
           `   • **Recomendación de Junior:** Al contabilizar, asocia obligatoriamente cada línea de costo a un **Centro de Costo** (ej. *Administración, Ventas, Sucursal 1, Obra Central*) y a un **Ítem de Gasto** (ej. *Arriendos, Combustibles, Mantención*).\n` +
           `   • *Resultado:* Podrás emitir el **Estado de Resultados por Centro de Costo**, revelando qué área genera ganancias y cuál está destruyendo margen.\n\n` +
-          `📜 **2. Respaldo Tributario Clave: Revisa la Circular N° 53 de 2020 del SII:**\n` +
+          ` **2. Respaldo Tributario Clave: Revisa la Circular N° 53 de 2020 del SII:**\n` +
           `   • En esta circular, el SII modernizó el concepto de **Gasto Deducible (Art. 31 LIR)**: ya no exige que el gasto sea 'estrictamente inevitable', sino que tenga **aptitud para generar renta** en el ejercicio o a futuro.\n` +
           `   • La imputación rigurosa por centro de costo sirve como **prueba fehaciente ante el SII** de la correlación económica y necesidad del gasto.\n\n` +
-          `📈 **3. Indicadores Financieros de Gestión que Debes Presentar a tu Cliente:**\n` +
+          ` **3. Indicadores Financieros de Gestión que Debes Presentar a tu Cliente:**\n` +
           `   • **Margen de Contribución:** (Ventas - Costos Variables) / Ventas.\n` +
           `   • **EBITDA:** Resultado Operativo antes de intereses, impuestos, depreciaciones y amortizaciones.\n` +
           `   • **Ciclo de Conversión de Efectivo:** Días Calle de Clientes (DSO) vs Días de Crédito de Proveedores (DPO).\n\n` +
@@ -360,15 +360,15 @@ export default function InternalCompanyAccountingCopilot({
     // 2. LEGISLACIÓN TRIBUTARIA CHILENA: CIRCULARES Y RESOLUCIONES SII (Art. 31, 21, 14A/D3/D8)
     if (q.includes('circular') || q.includes('circulares') || q.includes('art 31') || q.includes('art. 31') || q.includes('gasto aceptado') || q.includes('gasto rechazado') || q.includes('art 21') || q.includes('art. 21') || q.includes('sii') || q.includes('oficio')) {
       return {
-        response: `⚖️ **Jurisprudencia y Criterios Oficiales del SII para ${company.name}:**\n\n` +
-          `📘 **1. Circular N° 53 del SII (2020) - Gastos Aceptados (Art. 31 LIR):**\n` +
+        response: ` **Jurisprudencia y Criterios Oficiales del SII para ${company.name}:**\n\n` +
+          ` **1. Circular N° 53 del SII (2020) - Gastos Aceptados (Art. 31 LIR):**\n` +
           `   • Sustituye el criterio rígido de 'necesidad estricta' por el de **'aptitud para generar rentas'**.\n` +
           `   • **Gastos Admisibles:** Gastos de desarrollo de nuevos proyectos (incluso si no prosperan), asesorías legales/financieras/contables, indemnizaciones comerciales, fidelización y publicidad.\n` +
           `   • **Requisitos Copulativos:** 1) Aptitud generadora, 2) Pagado o adeudado en el ejercicio, 3) Documentación fehaciente (no basta la mera factura, se requiere orden de compra, informes o entregables), 4) Corresponder al giro.\n\n` +
-          `🚫 **2. Gastos Rechazados (Art. 21 LIR):**\n` +
+          ` **2. Gastos Rechazados (Art. 21 LIR):**\n` +
           `   • **Inciso 1° (40% de Tasa Única a Nivel de Empresa):** Gastos de la empresa que no califican como aceptados y no beneficien directamente a los socios (ej. multas fiscales, intereses penales, faltantes no acreditados).\n` +
           `   • **Inciso 3° (Atribuibles a Socios o Accionistas):** Tributan en el IGC del socio + un **recargo del 10%** (ej. automóviles de uso personal, retiros encubiertos, gastos familiares pagados por la empresa).\n\n` +
-          `📑 **Otras Circulares Fundamentales:**\n` +
+          ` **Otras Circulares Fundamentales:**\n` +
           `   • **Circular N° 62/2020:** Tributación ProPyme General (14 D3 - Base flujo de caja) y ProPyme Transparente (14 D8 - 0% IDPC).\n` +
           `   • **Circular N° 73/2020:** Régimen Semi-Integrado 14 A (Tasa 27% y restitución del 35% del crédito).\n` +
           `   • **Circular N° 48/2022:** IVA a todos los servicios (Ley 21.420) y exención estricta para Sociedades de Profesionales.\n` +
@@ -381,19 +381,19 @@ export default function InternalCompanyAccountingCopilot({
     // 3. TRIBUTACIÓN INTERNACIONAL, CONVENIOS DE DOBLE IMPOSICIÓN (CDI) & PRECIOS DE TRANSFERENCIA
     if (q.includes('internacional') || q.includes('exterior') || q.includes('cdi') || q.includes('convenio') || q.includes('doble imposicion') || q.includes('doble imposición') || q.includes('transferencia') || q.includes('transfer pricing') || q.includes('art 59') || q.includes('art. 59') || q.includes('art 41') || q.includes('art. 41') || q.includes('impuesto adicional') || q.includes('wht')) {
       return {
-        response: `🌍 **Tributación Internacional y Convenios (CDI) para ${company.name}:**\n\n` +
-          `📜 **1. Convenios para Evitar la Doble Imposición (Red CDI de Chile):**\n` +
+        response: ` **Tributación Internacional y Convenios (CDI) para ${company.name}:**\n\n` +
+          ` **1. Convenios para Evitar la Doble Imposición (Red CDI de Chile):**\n` +
           `   • Chile cuenta con más de **36 convenios bilaterales vigentes** bajo el modelo OCDE/ONU (incluyendo el nuevo tratado con **EE.UU. vigente desde 2024**, España, Canadá, Reino Unido, Brasil, etc.).\n` +
           `   • **Art. 7 (Beneficios Empresariales):** Las utilidades obtenidas por una empresa extranjera solo pueden gravarse en Chile si realiza su actividad a través de un **Establecimiento Permanente (EP)** en el país. Si no hay EP, la retención en Chile puede reducirse al **0%**, acreditando residencia con el correspondiente *Tax Residence Certificate*.\n\n` +
-          `💸 **2. Impuesto Adicional y Retenciones por Servicios del Exterior (Art. 59 LIR):**\n` +
+          ` **2. Impuesto Adicional y Retenciones por Servicios del Exterior (Art. 59 LIR):**\n` +
           `   • **Regla General:** Retención del **35%** sobre remesas o pagos al exterior por servicios prestados en Chile o en el extranjero.\n` +
           `   • **Asesorías Técnicas y Servicios Profesionales:** Tasa reducida del **15%** (o 20% si el prestador está constituido en una jurisdicción con régimen fiscal preferencial / paraíso fiscal según Art. 41 H).\n` +
           `   • **Licencias de Software y Soporte:** Tasa del 15% o exención según tratado CDI.\n\n` +
-          `📊 **3. Precios de Transferencia (Art. 41 E LIR):**\n` +
+          ` **3. Precios de Transferencia (Art. 41 E LIR):**\n` +
           `   • Toda transacción transfronteriza entre partes relacionadas debe respetar el **Principio de Plena Competencia (Arm's Length)**.\n` +
           `   • **Métodos OCDE Reconocidos:** Precio Comparable No Controlado (CUP), Costo Adicionado, Precio de Reventa, Margen Neto Transaccional (TNMM) y División de Utilidades.\n` +
           `   • **Declaraciones Juradas Obligatorias:** F1907 (Precios de Transferencia), F1937 (Reporte País por País) y Estudio Técnico Local / Master File.\n\n` +
-          `🔒 **4. Normas Anti-Elusión Internacional:** Art. 41 F (Exceso de Endeudamiento con deuda relacionada) y Art. 41 G (Régimen de Transparencia de Rentas Pasivas en el Exterior - CFC Rules).`,
+          ` **4. Normas Anti-Elusión Internacional:** Art. 41 F (Exceso de Endeudamiento con deuda relacionada) y Art. 41 G (Régimen de Transparencia de Rentas Pasivas en el Exterior - CFC Rules).`,
         suggestions: ['Consultar Circulares SII', 'De Contabilidad a Gestión', 'Ver Retenciones F29']
       };
     }
@@ -416,10 +416,10 @@ export default function InternalCompanyAccountingCopilot({
       const retDesdeLiquido = brutoDesdeLiquido - exampleBruto;
 
       return {
-        response: `📋 **Simulador y Normativa de Boletas de Honorarios (Segunda Categoría - Chile):**\n\n` +
+        response: ` **Simulador y Normativa de Boletas de Honorarios (Segunda Categoría - Chile):**\n\n` +
           `• **Tasa de Retención Vigente:** **14.5%** (Ley N° 21.133 para cobertura de seguridad social).\n` +
           `• **Código Formulario 29:** Línea 57, Código [151] (Retención Impuesto 2da Categoría).\n\n` +
-          `💰 **Simulación con $ ${exampleBruto.toLocaleString('es-CL')}:**\n` +
+          ` **Simulación con $ ${exampleBruto.toLocaleString('es-CL')}:**\n` +
           `  - **Si el valor ingresado es BRUTO:**\n` +
           `    • Honorario Bruto: $ ${exampleBruto.toLocaleString('es-CL')}\n` +
           `    • Retención 14.5% (a pagar en F29): **$ ${retencion.toLocaleString('es-CL')}**\n` +
@@ -428,7 +428,7 @@ export default function InternalCompanyAccountingCopilot({
           `    • Honorario Bruto Requerido: **$ ${brutoDesdeLiquido.toLocaleString('es-CL')}**\n` +
           `    • Retención 14.5%: $ ${retDesdeLiquido.toLocaleString('es-CL')}\n` +
           `    • Líquido Efectivo: $ ${exampleBruto.toLocaleString('es-CL')}\n\n` +
-          `💡 **Propuesta de Asiento Contable:**\n` +
+          ` **Propuesta de Asiento Contable:**\n` +
           `  - [4201002] Gastos por Honorarios Profesionales (Debe): $ ${exampleBruto.toLocaleString('es-CL')}\n` +
           `  - [2103003] Retenciones de Impuesto 2da Cat. F29 (Haber): $ ${retencion.toLocaleString('es-CL')}\n` +
           `  - [2101002] Honorarios por Pagar (Haber): $ ${liquido.toLocaleString('es-CL')}`,
@@ -466,16 +466,16 @@ export default function InternalCompanyAccountingCopilot({
       const ebitda = margenOperacionalBruto - totalGastosAdmin;
 
       return {
-        response: `🏛️ **Estructura Financiera IFRS / NIIF para ${company.name}:**\n\n` +
+        response: ` **Estructura Financiera IFRS / NIIF para ${company.name}:**\n\n` +
           `Conforme a la **NIC 1 (Presentación de Estados Financieros)** y **NIC 2 (Inventarios)**, el Estado de Resultados por Función se estructura en cascada:\n\n` +
           `1️⃣ **Ingresos de Actividades Ordinarias (Cuentas 31xxxxx):** $ ${totalVentasIngresos.toLocaleString('es-CL')}\n` +
           `2️⃣ **Menos Costo de Ventas / Explotación (Cuentas 41xxxxx):** $ ${totalCostosVenta.toLocaleString('es-CL')}\n` +
           `────────────────────────────────────────────\n` +
-          `💎 **MARGEN OPERACIONAL (Ganancia Bruta):** **$ ${margenOperacionalBruto.toLocaleString('es-CL')}** (${porcentajeMargen}% sobre ventas)\n` +
+          ` **MARGEN OPERACIONAL (Ganancia Bruta):** **$ ${margenOperacionalBruto.toLocaleString('es-CL')}** (${porcentajeMargen}% sobre ventas)\n` +
           `3️⃣ **Menos Gastos de Administración y Ventas (42xxxxx):** $ ${totalGastosAdmin.toLocaleString('es-CL')}\n` +
           `────────────────────────────────────────────\n` +
-          `📈 **Resultado Operacional (EBIT / Operativo):** **$ ${ebitda.toLocaleString('es-CL')}**\n\n` +
-          `📌 **Principio de Partida Doble:** En el Balance Clasificado IFRS, siempre se valida que:\n` +
+          ` **Resultado Operacional (EBIT / Operativo):** **$ ${ebitda.toLocaleString('es-CL')}**\n\n` +
+          ` **Principio de Partida Doble:** En el Balance Clasificado IFRS, siempre se valida que:\n` +
           `**ACTIVO (Corriente + No Corriente) = PASIVO (Corriente + No Corriente) + PATRIMONIO NETO**`,
         suggestions: ['Ver Estado de Resultados IFRS', 'Ver Balance Clasificado IFRS', 'Revisar Balance 8 Columnas'],
         actionLink: { tab: 'estadoResultados', label: 'Abrir Estado de Resultados IFRS' }
@@ -486,9 +486,9 @@ export default function InternalCompanyAccountingCopilot({
     if (q.includes('regimen') || q.includes('régimen') || q.includes('14a') || q.includes('14 d') || q.includes('14d') || q.includes('propyme') || q.includes('cpt') || q.includes('rli')) {
       const reg = company.regimenTributario || 'ProPyme General (Art. 14 D N° 3)';
       return {
-        response: `⚖️ **Normativa Tributaria Chilena - Regímenes Ley de la Renta (LIR):**\n\n` +
-          `🏢 **Régimen de ${company.name}:** **${reg}**\n\n` +
-          `📌 **Resumen de los Principales Regímenes en Chile:**\n\n` +
+        response: ` **Normativa Tributaria Chilena - Regímenes Ley de la Renta (LIR):**\n\n` +
+          ` **Régimen de ${company.name}:** **${reg}**\n\n` +
+          ` **Resumen de los Principales Regímenes en Chile:**\n\n` +
           `• **1. Régimen ProPyme General (Art. 14 D N° 3):**\n` +
           `  - Tasa Impuesto 1ra Categoría: 25% (o tasa reducida transitoria).\n` +
           `  - Base Imponible simplificada: Ingresos percibidos menos gastos pagados.\n` +
@@ -535,7 +535,7 @@ export default function InternalCompanyAccountingCopilot({
 
       const docsNcConRef = rcvDocuments.filter(d => (d.tipoDoc === '61' || String(d.tipoDoc).includes('61')) && d.refFolioOrig);
 
-      let text = `🏗️ **Tratamiento Contable y Tributario para Empresa Constructora (${company.name}):**\n\n`;
+      let text = ` **Tratamiento Contable y Tributario para Empresa Constructora (${company.name}):**\n\n`;
       text += `1️⃣ **Franquicia Crédito Especial Empresas Constructoras (CEEC Art. 21 D.L. 910):**\n`;
       text += `• **¿En qué consiste?:** Las empresas constructoras de inmuebles con destino habitacional tienen derecho a deducir de sus facturas de venta el crédito especial (hasta un 65% del débito fiscal IVA facturado).\n`;
       text += `• **Contabilización y Partida Doble:** En la factura de venta, el total a cobrar al cliente es menor porque se rebaja el crédito CEEC. Para cuadrar la partida doble al centavo sin descuadre, el sistema imputa esta rebaja a la cuenta de activo tributario:\n`;
@@ -543,7 +543,7 @@ export default function InternalCompanyAccountingCopilot({
       text += `   - **[1107001] Crédito Especial Constructora CEEC (Activo Tributario)** ── Debe $ Monto CEEC Rebajado\n`;
       text += `   - **[5101001] Ingresos por Ventas (Resultado Ganancia)** ── Haber $ Monto Neto Facturado\n`;
       text += `   - **[2104001] IVA Débito Fiscal (Pasivo)** ────── Haber $ Débito Fiscal IVA (19%)\n`;
-      text += `• **Estado en esta empresa:** ${isConstructora ? '✅ Empresa identificada como Constructora' : 'ℹ️ Franquicia disponible y parametrizable en RCV'}. Se detectaron **${docsVentasCeec.length} documentos** con deducción CEEC por un total de **$ ${totalCeecDeducido.toLocaleString('es-CL')}**.\n\n`;
+      text += `• **Estado en esta empresa:** ${isConstructora ? 'Empresa identificada como Constructora' : 'Franquicia disponible y parametrizable en RCV'}. Se detectaron **${docsVentasCeec.length} documentos** con deducción CEEC por un total de **$ ${totalCeecDeducido.toLocaleString('es-CL')}**.\n\n`;
 
       text += `2️⃣ **Trazabilidad y Referencia en Notas de Crédito (Tipo DTE 61):**\n`;
       text += `• **Folio Original de Referencia:** Cada Nota de Crédito captura y vincula el **Folio de la Factura que modifica, anula o rebaja** (\`refFolioOrig\`).\n`;
@@ -576,7 +576,7 @@ export default function InternalCompanyAccountingCopilot({
       const ppmTasa = company.tasaPpm || 0.25; // 0.25% default ProPyme
       const ppmEstimado = Math.round(sumNetoVentas * (ppmTasa / 100));
 
-      let analysisText = `📊 **Liquidación y Auditoría Tributaria F29 para ${company.name}:**\n\n`;
+      let analysisText = ` **Liquidación y Auditoría Tributaria F29 para ${company.name}:**\n\n`;
       analysisText += `• **Ventas Facturadas:** ${totalVentas.length} docs | Base Neta: $ ${sumNetoVentas.toLocaleString('es-CL')}\n`;
       analysisText += `• **Débito Fiscal IVA (19%):** $ ${sumDebito.toLocaleString('es-CL')} (Línea 14 / Cód. 142)\n`;
       analysisText += `• **Compras con Crédito:** ${totalCompras.length} docs | Base Neta: $ ${sumNetoCompras.toLocaleString('es-CL')}\n`;
@@ -588,7 +588,7 @@ export default function InternalCompanyAccountingCopilot({
 
       analysisText += `• **PPM Obligatorio Estimado (${ppmTasa}%):** $ ${ppmEstimado.toLocaleString('es-CL')} (Cód. 062/115)\n\n`;
 
-      analysisText += `📌 **Resultado Neto Estimado:** `;
+      analysisText += ` **Resultado Neto Estimado:** `;
       if (diffIva > 0) {
         const totalPagar = diffIva + retencionHonorarios + ppmEstimado;
         analysisText += `Impuesto Determinado IVA a Pagar de **$ ${diffIva.toLocaleString('es-CL')}**.\n` +
@@ -610,16 +610,16 @@ export default function InternalCompanyAccountingCopilot({
     // 5. Conciliación Bancaria y Partidas Pendientes
     if (q.includes('concilia') || q.includes('cartola') || q.includes('banco') || q.includes('partidas pendientes') || q.includes('cheque en transito') || q.includes('regulariza')) {
       return {
-        response: `🏦 **Asistencia para Conciliación Bancaria y Partidas Pendientes:**\n\n` +
+        response: ` **Asistencia para Conciliación Bancaria y Partidas Pendientes:**\n\n` +
           `Para asegurar la cuadratura perfecta entre la **Cartola Bancaria** y el **Libro Mayor de Banco**:\n\n` +
           `1️⃣ **Partidas Pendientes del Banco (Cartola no contabilizada):**\n` +
           `   • Cargos bancarios / comisiones (ej: Mantención de cuenta cta 4301001).\n` +
           `   • Abonos o transferencias directas de clientes sin comprobante de ingreso.\n` +
-          `   *Solución:* Puedes crear el voucher con un solo clic mediante el botón "⚡ Asiento Rápido".\n\n` +
+          `   *Solución:* Puedes crear el voucher con un solo clic mediante el botón "Asiento Rápido".\n\n` +
           `2️⃣ **Partidas Pendientes del Libro Mayor (Contabilidad en tránsito):**\n` +
           `   • Cheques girados y no cobrados por proveedores.\n` +
           `   • Depósitos contabilizados al cierre aún no acreditados en la cartola.\n\n` +
-          `📑 **Nuevo Reporte Disponible:** En la pestaña de Conciliación Bancaria puedes abrir el **Reporte Oficial de Partidas Pendientes** para imprimirlo o exportarlo a Excel.`,
+          ` **Nuevo Reporte Disponible:** En la pestaña de Conciliación Bancaria puedes abrir el **Reporte Oficial de Partidas Pendientes** para imprimirlo o exportarlo a Excel.`,
         suggestions: ['Ir a Conciliación Bancaria', 'Ver Libro Mayor de Banco', 'Revisar Vouchers'],
         actionLink: { tab: 'conciliacionBancaria', label: 'Abrir Conciliación Bancaria' }
       };
@@ -630,15 +630,15 @@ export default function InternalCompanyAccountingCopilot({
       return {
         response: `✍️ **Generador de Asientos Contables Sugeridos (Estructura Estándar 7 Dígitos):**\n\n` +
           `Ejemplos frecuentes según el Plan de Cuentas de **${company.name}**:\n\n` +
-          `🛒 **1. Compra de Mercadería / Existencias con Factura Afecta:**\n` +
+          ` **1. Compra de Mercadería / Existencias con Factura Afecta:**\n` +
           `   • [1103001] Mercaderías (Activo) ─────────── Debe $ 1.000.000\n` +
           `   • [1104001] IVA Crédito Fiscal (Activo) ──── Debe $ 190.000\n` +
           `   • [2101001] Proveedores Nacionales (Pasivo) ─ Haber $ 1.190.000\n\n` +
-          `💼 **2. Venta de Servicios / Mercaderías:**\n` +
+          ` **2. Venta de Servicios / Mercaderías:**\n` +
           `   • [1102001] Clientes Nacionales (Activo) ──── Debe $ 1.190.000\n` +
           `   • [3101001] Ventas de Bienes/Servicios (Ingreso) ── Haber $ 1.000.000\n` +
           `   • [2103001] IVA Débito Fiscal (Pasivo) ────── Haber $ 190.000\n\n` +
-          `🏢 **3. Pago de Arriendo / Servicios:**\n` +
+          ` **3. Pago de Arriendo / Servicios:**\n` +
           `   • [4202001] Gastos de Arriendo (Resultado Pérdida) ── Debe $ 500.000\n` +
           `   • [1101002] Banco Cta Cte (Activo) ──────────── Haber $ 500.000\n\n` +
           `¿Necesitas que te arme el asiento para una operación particular? Indícame el monto y el concepto.`,
@@ -701,13 +701,13 @@ export default function InternalCompanyAccountingCopilot({
       let reportText = '';
 
       if (descuadradosList.length > 0) {
-        reportText = `⚠️ **Auditoría de Partida Doble en ${company.name}:**\n\n`;
+        reportText = ` **Auditoría de Partida Doble en ${company.name}:**\n\n`;
         reportText += `• **Comprobantes Totales:** ${vouchers.length} asientos (${vouchers.filter(v => v.status !== 'Anulado').length} válidos).\n`;
         reportText += `• **Sumas del Libro Diario:**\n`;
         reportText += `  - Total Débitos (Debe): $ ${totalDebe.toLocaleString('es-CL')}\n`;
         reportText += `  - Total Créditos (Haber): $ ${totalHaber.toLocaleString('es-CL')}\n`;
         reportText += `  - **Diferencia Neta Acumulada:** $ ${diferenciaGlobal.toLocaleString('es-CL')}\n\n`;
-        reportText += `🚨 **Se detectaron exactamente ${descuadradosList.length} comprobante(s) con descuadre:**\n\n`;
+        reportText += ` **Se detectaron exactamente ${descuadradosList.length} comprobante(s) con descuadre:**\n\n`;
 
         descuadradosList.forEach((item, idx) => {
           const diffAbs = Math.abs(item.diff);
@@ -718,15 +718,15 @@ export default function InternalCompanyAccountingCopilot({
           reportText += `**${idx + 1}. Asiento N° ${item.voucherNumber}** (${item.type}) | Fecha: **${item.date}** (Período: ${item.period})\n`;
           reportText += `   • **Glosa:** "${item.gloss}"\n`;
           reportText += `   • **Debe:** $ ${item.vDebit.toLocaleString('es-CL')} | **Haber:** $ ${item.vCredit.toLocaleString('es-CL')}\n`;
-          reportText += `   • ⚠️ **Descuadre:** $ ${diffAbs.toLocaleString('es-CL')} ➔ *${explicacion}*\n`;
+          reportText += `   •  **Descuadre:** $ ${diffAbs.toLocaleString('es-CL')} ➔ *${explicacion}*\n`;
           if (item.accountsSummary.length > 0) {
             reportText += `   • **Cuentas en el asiento:** ${item.accountsSummary.join(', ')}\n`;
           }
           reportText += `\n`;
         });
 
-        reportText += `🛠️ **¿Cómo resolver estos descuadres?**\n`;
-        reportText += `1. Puedes ir directamente al **Libro Diario** y activar el filtro **"⚠️ Solo Descuadrados"** para revisarlos en pantalla.\n`;
+        reportText += ` **¿Cómo resolver estos descuadres?**\n`;
+        reportText += `1. Puedes ir directamente al **Libro Diario** y activar el filtro **"Solo Descuadrados"** para revisarlos en pantalla.\n`;
         reportText += `2. O entrar a la pestaña **Comprobantes Contables**, buscar el número de asiento correspondiente y hacer clic en **"Modificar"** para cuadrar los cargos y abonos.`;
 
         return {
@@ -739,12 +739,12 @@ export default function InternalCompanyAccountingCopilot({
           actionLink: { tab: 'libroDiario', label: 'Ver Descuadrados en Libro Diario' }
         };
       } else {
-        reportText = `📋 **Auditoría de Comprobantes y Partida Doble para ${company.name}:**\n\n`;
+        reportText = ` **Auditoría de Comprobantes y Partida Doble para ${company.name}:**\n\n`;
         reportText += `• **Comprobantes Totales:** ${vouchers.length} asientos ingresados.\n`;
         reportText += `• **Sumas Acumuladas del Libro Diario:**\n`;
         reportText += `  - Total Debe: $ ${totalDebe.toLocaleString('es-CL')}\n`;
         reportText += `  - Total Haber: $ ${totalHaber.toLocaleString('es-CL')}\n`;
-        reportText += `\n✅ **Estado:** ¡Cuadratura perfecta! Todos los asientos contables cumplen rigurosamente el principio de Partida Doble (Diferencia: $ 0).`;
+        reportText += `\n **Estado:** ¡Cuadratura perfecta! Todos los asientos contables cumplen rigurosamente el principio de Partida Doble (Diferencia: $ 0).`;
 
         return {
           response: reportText,
@@ -757,7 +757,7 @@ export default function InternalCompanyAccountingCopilot({
     // 8. Timbraje, Hojas Sueltas y Folios Oficiales SII
     if (q.includes('folio') || q.includes('timbraje') || q.includes('hojas sueltas') || q.includes('libro oficial') || q.includes('resolucion sii') || q.includes('crystal')) {
       return {
-        response: `🖨️ **Control de Folios Oficiales y Timbraje SII (Hojas Sueltas):**\n\n` +
+        response: ` **Control de Folios Oficiales y Timbraje SII (Hojas Sueltas):**\n\n` +
           `Bajo la normativa del Servicio de Impuestos Internos (Res. Ex. N° 80 / 85 del SII y Código Tributario Art. 17):\n\n` +
           `• **Autorizaciones de Hojas Sueltas:** Toda empresa que imprime libros contables mediante sistemas computacionales debe contar con una Resolución de Timbraje de Hojas Sueltas con rango de folios autorizados.\n` +
           `• **Correlatividad y Trazabilidad:** Al emitir el **Libro Diario**, **Libro Mayor** o **Balance de 8 Columnas**, el sistema numera correlativamente cada página (ej. Folio N° 000101 al 000120) e incluye el membrete legal con la Resolución SII.\n` +
@@ -813,7 +813,7 @@ export default function InternalCompanyAccountingCopilot({
               taskProposal: {
                 ...m.taskProposal,
                 executed: true,
-                resultMessage: `✅ ¡Listo! Se generaron ${res.createdVouchersCount} comprobantes contables por un total de $${res.totalAmount.toLocaleString('es-CL')}, las facturas quedaron pagadas ($0) y las cartolas quedaron conciliadas.`
+                resultMessage: ` ¡Listo! Se generaron ${res.createdVouchersCount} comprobantes contables por un total de $${res.totalAmount.toLocaleString('es-CL')}, las facturas quedaron pagadas ($0) y las cartolas quedaron conciliadas.`
               }
             };
           }
@@ -824,7 +824,7 @@ export default function InternalCompanyAccountingCopilot({
         const followUpMsg: ChatMessage = {
           id: `ai-success-${Date.now()}`,
           sender: 'ai',
-          text: `🎉 **¡Tarea completada con éxito por Junior!**\n\n` +
+          text: ` **¡Tarea completada con éxito por Junior!**\n\n` +
             `• Se generaron **${res.createdVouchersCount} comprobantes contables oficiales** (asientos de partida doble).\n` +
             `• Se actualizaron los documentos RCV correspondientes al estado **'Pagada' (saldo $0)**.\n` +
             `• Se conciliaron automáticamente las líneas correspondientes en las cartolas bancarias de **${company.name}**.\n\n` +
@@ -896,7 +896,7 @@ export default function InternalCompanyAccountingCopilot({
             const aiMsg: ChatMessage = {
               id: `ai-task-${Date.now()}`,
               sender: 'ai',
-              text: `🤖 **¡Entendido! Junior ha procesado tu instrucción de cartola y facturas.**\n\n` +
+              text: ` **¡Entendido! Junior ha procesado tu instrucción de cartola y facturas.**\n\n` +
                 `• **Glosa Cartola:** "${glossIntent.pattern}"\n` +
                 (entityName ? `• **Entidad / Proveedor:** ${entityName}${glossIntent.targetRut ? ` (RUT: ${glossIntent.targetRut})` : ''}\n` : '') +
                 `• **Cuenta de Contrapartida:** [${glossIntent.targetAccount.code}] ${glossIntent.targetAccount.name}\n` +
@@ -925,8 +925,8 @@ export default function InternalCompanyAccountingCopilot({
             const aiMsg: ChatMessage = {
               id: `ai-notfound-${Date.now()}`,
               sender: 'ai',
-              text: `🔍 Junior analizó todas las cartolas bancarias de **${company.name}**, pero no encontró movimientos pendientes con la glosa **"${glossIntent.pattern}"**${glossIntent.requireExactInvoiceMatch ? ' que coincidan exactamente con facturas pendientes' : ''}.\n\n` +
-                `💡 **Consejo:** Verifica si la cartola correspondiente ya fue importada en el módulo de Conciliación Bancaria o si los movimientos ya están conciliados.`,
+              text: `Junior analizó todas las cartolas bancarias de **${company.name}**, pero no encontró movimientos pendientes con la glosa **"${glossIntent.pattern}"**${glossIntent.requireExactInvoiceMatch ? 'que coincidan exactamente con facturas pendientes' : ''}.\n\n` +
+                ` **Consejo:** Verifica si la cartola correspondiente ya fue importada en el módulo de Conciliación Bancaria o si los movimientos ya están conciliados.`,
               time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
               suggestions: [
                 'Ver Conciliación Bancaria',
@@ -945,7 +945,7 @@ export default function InternalCompanyAccountingCopilot({
         const aiMsg: ChatMessage = {
           id: `ai-askacc-${Date.now()}`,
           sender: 'ai',
-          text: `🎯 **Junior detectó la glosa "${glossIntent.pattern}" para contabilizar la cartola bancaria.**\n\n` +
+          text: ` **Junior detectó la glosa "${glossIntent.pattern}"para contabilizar la cartola bancaria.**\n\n` +
             `Para poder generar los comprobantes contables con partida doble, por favor indícame contra qué **cuenta contable** deseas contabilizar (por ejemplo: *"contabiliza glosa '${glossIntent.pattern}' contra la cuenta 2101001 Proveedores Nacionales"* o *"pagando facturas del proveedor RUT 99.147.000-K"*).`,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           suggestions: [
@@ -1023,7 +1023,7 @@ export default function InternalCompanyAccountingCopilot({
 
               <button
                 onClick={() => setIsOpen(true)}
-                className="flex items-center gap-2.5 bg-gradient-to-r from-emerald-600 via-teal-700 to-indigo-800 text-white px-4 py-3 rounded-full shadow-xl shadow-emerald-950/40 hover:shadow-emerald-600/50 hover:scale-105 transition-all duration-200 border border-emerald-400/40 group cursor-pointer"
+                className="flex items-center gap-2.5 bg-emerald-600 text-white px-4 py-3 rounded-full shadow-xl shadow-emerald-950/40 hover:shadow-emerald-600/50 hover:scale-105 transition-all duration-200 border border-emerald-400/40 group cursor-pointer"
                 title={`Junior - Asistente Contable y de Gestión para ${company.name}`}
               >
                 <AnimatedOkLogo size="sm" />
@@ -1062,7 +1062,7 @@ export default function InternalCompanyAccountingCopilot({
             <div className="w-[380px] sm:w-[440px] h-[600px] max-h-[85vh] bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-200 font-sans z-50">
               
               {/* Header de Junior */}
-              <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-indigo-950 p-3.5 border-b border-slate-800 flex items-center justify-between">
+              <div className="bg-emerald-950 p-3.5 border-b border-slate-800 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <div className="relative">
                     <AnimatedOkLogo size="md" />
@@ -1076,7 +1076,7 @@ export default function InternalCompanyAccountingCopilot({
                       </span>
                     </div>
                     <p className="text-[11px] text-emerald-300/90 font-medium truncate max-w-[230px]">
-                      🏢 {company.name} ({company.rut})
+                       {company.name} ({company.rut})
                     </p>
                   </div>
                 </div>
@@ -1226,13 +1226,13 @@ export default function InternalCompanyAccountingCopilot({
                           <button
                             onClick={() => handleExecuteTaskProposal(msg.id, msg.taskProposal!)}
                             disabled={executingTaskId === msg.id}
-                            className="w-full py-2.5 px-3 bg-gradient-to-r from-indigo-600 to-emerald-600 hover:from-indigo-500 hover:to-emerald-500 disabled:opacity-50 text-white font-black text-xs rounded-xl flex items-center justify-center gap-2 shadow-md transition-all hover:scale-[1.01] cursor-pointer"
+                            className="w-full py-2.5 px-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-black text-xs rounded-xl flex items-center justify-center gap-2 shadow-md transition-all hover:scale-[1.01] cursor-pointer"
                           >
                             <Play className="w-4 h-4 fill-white" />
                             <span>
                               {executingTaskId === msg.id 
                                 ? 'Junior generando comprobantes...' 
-                                : `🚀 Ejecutar Contabilización (${msg.taskProposal.items.length} Asientos)`
+                                : `Ejecutar Contabilización (${msg.taskProposal.items.length} Asientos)`
                               }
                             </span>
                           </button>
@@ -1297,28 +1297,28 @@ export default function InternalCompanyAccountingCopilot({
                 onClick={() => handleSend('¿Cómo usar Centros de Costo para entregar informes de gestión a clientes según Circular 53 del SII?')}
                 className="whitespace-nowrap text-[10px] bg-slate-800 hover:bg-emerald-950 text-emerald-300 hover:text-emerald-100 border border-slate-700 hover:border-emerald-500/50 px-2 py-1 rounded-full transition flex items-center gap-1 shrink-0"
               >
-                📊 De Contabilidad a Gestión
+                 De Contabilidad a Gestión
               </button>
               <button
                 type="button"
                 onClick={() => handleSend('¿Cuáles son las Circulares clave del SII sobre gastos aceptados (Art. 31 y 21 LIR)?')}
                 className="whitespace-nowrap text-[10px] bg-slate-800 hover:bg-emerald-950 text-emerald-300 hover:text-emerald-100 border border-slate-700 hover:border-emerald-500/50 px-2 py-1 rounded-full transition flex items-center gap-1 shrink-0"
               >
-                📘 Circulares SII (Art. 31)
+                 Circulares SII (Art. 31)
               </button>
               <button
                 type="button"
                 onClick={() => handleSend('¿Cómo operan los Convenios de Doble Imposición (CDI) y Precios de Transferencia en Chile?')}
                 className="whitespace-nowrap text-[10px] bg-slate-800 hover:bg-emerald-950 text-emerald-300 hover:text-emerald-100 border border-slate-700 hover:border-emerald-500/50 px-2 py-1 rounded-full transition flex items-center gap-1 shrink-0"
               >
-                🌍 Tributación Internacional
+                 Tributación Internacional
               </button>
               <button
                 type="button"
                 onClick={() => handleSend('Analizar Margen Operacional IFRS')}
                 className="whitespace-nowrap text-[10px] bg-slate-800 hover:bg-emerald-950 text-emerald-300 hover:text-emerald-100 border border-slate-700 hover:border-emerald-500/50 px-2 py-1 rounded-full transition flex items-center gap-1 shrink-0"
               >
-                📐 Margen IFRS
+                 Margen IFRS
               </button>
             </div>
 
@@ -1400,7 +1400,7 @@ export default function InternalCompanyAccountingCopilot({
                   </p>
                   {item.recommendedEntries && (
                     <div className="p-2 bg-slate-950/60 rounded border border-slate-800 text-[10px] font-mono text-amber-300">
-                      👉 {item.recommendedEntries}
+                       {item.recommendedEntries}
                     </div>
                   )}
                 </div>

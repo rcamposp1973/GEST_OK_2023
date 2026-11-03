@@ -203,7 +203,7 @@ export default function CreateStudy({ onSuccess }: CreateStudyProps) {
 
       <form onSubmit={handleCreate} className="space-y-6">
         {/* SECCIÓN 0: FORMATO OFICIAL DEL SISTEMA (A, B, C1, C2) */}
-        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-5 rounded-xl border border-indigo-500/30 space-y-3">
+        <div className="bg-slate-900 text-white p-5 rounded-xl border border-indigo-500/30 space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-indigo-800/60 pb-2">
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-amber-300" />

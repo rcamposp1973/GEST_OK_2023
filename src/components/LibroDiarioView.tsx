@@ -286,7 +286,7 @@ export default function LibroDiarioView({
       });
 
       alert(
-        `✅ Libro Diario Oficial Emitido con Éxito\n\n` +
+        `Libro Diario Oficial Emitido con Éxito\n\n` +
         `• Folios SII Utilizados: N° ${result.startFolio} al N° ${result.endFolio} (${result.pagesCount} página${result.pagesCount > 1 ? 's' : ''})\n` +
         `• Resolución SII: N° ${result.resolutionNumber} del ${result.resolutionDate}\n` +
         `• Formato: Crystal Reports Oficial con Van / Vienen y Timbraje Autorizado.\n` +
@@ -338,7 +338,6 @@ export default function LibroDiarioView({
               className="p-2 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-md border border-amber-300 flex items-center justify-center transition-colors shadow-2xs cursor-pointer"
               title="Detectar y regularizar automáticamente comprobantes con Crédito Especial Constructora CEEC"
             >
-              <span className="text-sm">⚡</span>
             </button>
           )}
 
@@ -448,7 +447,7 @@ export default function LibroDiarioView({
               <option value="Todos">Todos (Inc. Anulados)</option>
               <option value="Anulado">Solo Anulados</option>
               <option value="Descuadrado">
-                ⚠️ Solo Descuadrados {totalDescuadradosPeriodo > 0 ? `(${totalDescuadradosPeriodo})` : ''}
+                 Solo Descuadrados {totalDescuadradosPeriodo > 0 ? `(${totalDescuadradosPeriodo})` : ''}
               </option>
             </select>
           </div>
@@ -625,7 +624,7 @@ export default function LibroDiarioView({
                         title="Abrir comprobante para consultar, modificar, anular o eliminar"
                       >
                         <ExternalLink className="w-3 h-3 text-slate-500" />
-                        <span>{!isBalanced && !isAnulado ? '⚠️ Corregir Descuadre' : 'Ver / Modificar'}</span>
+                        <span>{!isBalanced && !isAnulado ? 'Corregir Descuadre' : 'Ver / Modificar'}</span>
                       </button>
                     )}
                   </div>

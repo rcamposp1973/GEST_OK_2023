@@ -140,7 +140,7 @@ export function generateBalanceIFRSPDF(options: GenerateBalanceIFRSPDFOptions): 
     doc.text('✓ Ecuación IFRS Cuadrada: Activo = Pasivo + Patrimonio', rightX, yRight, { align: 'right' });
   } else {
     doc.setTextColor(225, 29, 72);
-    doc.text('⚠️ Descuadre Patrimonial Detectado', rightX, yRight, { align: 'right' });
+    doc.text('Descuadre Patrimonial Detectado', rightX, yRight, { align: 'right' });
   }
   yRight += 4;
 

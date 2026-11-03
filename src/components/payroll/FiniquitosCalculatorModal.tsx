@@ -210,7 +210,7 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
       <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-4xl overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-150">
         
         {/* Header */}
-        <div className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-slate-900 p-5 text-white flex items-center justify-between">
+        <div className="bg-indigo-900 p-5 text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-indigo-500/30 border border-indigo-400/40 flex items-center justify-center text-indigo-200 shadow-xs">
               <Calculator className="w-5 h-5" />

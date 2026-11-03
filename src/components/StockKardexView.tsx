@@ -528,7 +528,7 @@ export const StockKardexView: React.FC<StockKardexViewProps> = ({
       };
 
       await onCentralizeVoucher(voucher);
-      alert(`🎉 ¡Comprobante de Costo de Ventas ($${currentPeriodExitsCost.toLocaleString('es-CL')}) generado exitosamente en el Libro Diario!`);
+      alert(` ¡Comprobante de Costo de Ventas ($${currentPeriodExitsCost.toLocaleString('es-CL')}) generado exitosamente en el Libro Diario!`);
     } catch (err: any) {
       alert("Error al centralizar inventario: " + err.message);
     } finally {

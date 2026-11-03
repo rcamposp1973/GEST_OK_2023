@@ -612,7 +612,7 @@ export default function StudyDetails({ study: initialStudy, onBack, onCompanyCha
         </div>
 
         {/* SELECTOR OFICIAL DE FORMATO DEL SISTEMA (A, B, C1, C2) */}
-        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-4 rounded-2xl border border-indigo-500/30 space-y-3">
+        <div className="bg-slate-900 text-white p-4 rounded-2xl border border-indigo-500/30 space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-indigo-800/60 pb-2">
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-amber-300" />
@@ -663,7 +663,7 @@ export default function StudyDetails({ study: initialStudy, onBack, onCompanyCha
           </div>
           {isEditingStudy && (
             <p className="text-[10px] text-indigo-200 italic">
-              💡 Al seleccionar una versión agéntica (C1 o C2), el estudio dispondrá de agentes autónomos y copilotos 2040 en tiempo real.
+               Al seleccionar una versión agéntica (C1 o C2), el estudio dispondrá de agentes autónomos y copilotos 2040 en tiempo real.
             </p>
           )}
         </div>

@@ -66,7 +66,7 @@ export const SYSTEM_FORMATS: Record<SystemAppFormat, SystemFormatInfo> = {
     code: 'VERSION_C1',
     letter: 'C1',
     title: 'Versión C1: Estudio Contable Agéntico (2040)',
-    badgeTitle: 'Versión C1 · Estudio Agéntico 2040 ⚡',
+    badgeTitle: 'Versión C1 · Estudio Agéntico 2040 ',
     subtitle: 'ERP Contable Autónomo con Copiloto & Auditoría Continua',
     audience: 'Estudios Contables (Agéntico 2040)',
     isAgentic: true,
@@ -75,19 +75,19 @@ export const SYSTEM_FORMATS: Record<SystemAppFormat, SystemFormatInfo> = {
     bgGradient: 'from-slate-950 via-violet-950 to-slate-900',
     description: 'El sistema contable del futuro hoy. Potencia todas las herramientas de la Versión A con un conjunto de Agentes Autónomos que auditan la contabilidad 24/7, concilian bancos y anticipan inconsistencias ante el SII.',
     keyFeatures: [
-      '🤖 Agente Auditor Autónomo 2040: Detección continua en vivo de descuadres, cuentas huérfanas y errores en retenciones BHR',
-      '⚡ Agente Copiloto Tributario F29: Cruce automático RCV vs Asientos con advertencias previas a vencimientos SII',
-      '🔮 Conciliador Bancario Autónomo: Emparejamiento inteligente de cartolas contra comprobantes con 1 solo clic',
-      '📊 Asesor Ejecutivo de Balances: Generación de informes financieros en lenguaje humano para los clientes del estudio',
-      '🛡️ Control de Riesgos Fiscales: Verificación automática de causales de observaciones SII',
-      '🚀 Todas las herramientas contables, tributarias y normativas de la Versión A incluidas'
+      'Agente Auditor Autónomo 2040: Detección continua en vivo de descuadres, cuentas huérfanas y errores en retenciones BHR',
+      'Agente Copiloto Tributario F29: Cruce automático RCV vs Asientos con advertencias previas a vencimientos SII',
+      'Conciliador Bancario Autónomo: Emparejamiento inteligente de cartolas contra comprobantes con 1 solo clic',
+      'Asesor Ejecutivo de Balances: Generación de informes financieros en lenguaje humano para los clientes del estudio',
+      'Control de Riesgos Fiscales: Verificación automática de causales de observaciones SII',
+      'Todas las herramientas contables, tributarias y normativas de la Versión A incluidas'
     ]
   },
   VERSION_C2: {
     code: 'VERSION_C2',
     letter: 'C2',
     title: 'Versión C2: Pyme & Empresa Agéntica (2040)',
-    badgeTitle: 'Versión C2 · Pyme Agéntica 2040 ⚡',
+    badgeTitle: 'Versión C2 · Pyme Agéntica 2040 ',
     subtitle: 'Gestión Empresarial Autónoma, Cobranza Inteligente & CFO Virtual',
     audience: 'Pymes y Empresas (Agéntica 2040)',
     isAgentic: true,
@@ -96,12 +96,12 @@ export const SYSTEM_FORMATS: Record<SystemAppFormat, SystemFormatInfo> = {
     bgGradient: 'from-slate-950 via-cyan-950 to-slate-900',
     description: 'La gestión empresarial del futuro para Pymes de alto rendimiento. Automatiza la cobranza a clientes, detecta fugas de costos ocultos y entrega respuestas financieras en tiempo real.',
     keyFeatures: [
-      '🤖 Agente de Cobranza Inteligente 2040: Scoring de morosidad y generación automática de mensajes de cobro por WhatsApp/Email',
-      '🛡️ Agente Cazador de Fugas de Dinero: Alertas de incrementos de costos en proveedores y suscripciones duplicadas',
-      '💡 Agente Predictor de Liquidez: Proyección inteligente de caja cruzando DTE emitidos, recibidos y planillas de sueldos',
-      '💬 Asistente Financiero Ejecutivo en Vivo: Resuelve al instante dudas como "¿Cuánto IVA pagaré?", "¿Cuáles son mis 3 mayores deudores?"',
-      '⚡ Emisión de DTE acelerada y catálogo comercial inteligente con sugerencias de margen',
-      '🚀 Todas las herramientas comerciales, operativas y de tesorería de la Versión B incluidas'
+      'Agente de Cobranza Inteligente 2040: Scoring de morosidad y generación automática de mensajes de cobro por WhatsApp/Email',
+      'Agente Cazador de Fugas de Dinero: Alertas de incrementos de costos en proveedores y suscripciones duplicadas',
+      'Agente Predictor de Liquidez: Proyección inteligente de caja cruzando DTE emitidos, recibidos y planillas de sueldos',
+      'Asistente Financiero Ejecutivo en Vivo: Resuelve al instante dudas como "¿Cuánto IVA pagaré?", "¿Cuáles son mis 3 mayores deudores?"',
+      'Emisión de DTE acelerada y catálogo comercial inteligente con sugerencias de margen',
+      'Todas las herramientas comerciales, operativas y de tesorería de la Versión B incluidas'
     ]
   }
 };

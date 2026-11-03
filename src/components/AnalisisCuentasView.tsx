@@ -1140,7 +1140,7 @@ export default function AnalisisCuentasView({
             title="Ejecutar motor inteligente para compensar automáticamente por RUT, documento, montos exactos y F29"
           >
             <Sparkles className="w-4 h-4 text-emerald-200 animate-pulse" />
-            <span>Compensación Inteligente</span>
+            <span>Compensación</span>
           </button>
 
           <button
@@ -1270,7 +1270,7 @@ export default function AnalisisCuentasView({
 
       {/* --- BANNER DE AUTO-COMPENSACIÓN PARA COMPROBANTES DE TRASPASO / NC --- */}
       {pendingIntraVouchers.length > 0 && (
-        <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 text-white p-4 rounded-xl border border-emerald-500/40 shadow-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 animate-fadeIn">
+        <div className="bg-emerald-900 text-white p-4 rounded-xl border border-emerald-500/40 shadow-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 animate-fadeIn">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-emerald-500/20 rounded-xl text-emerald-300 border border-emerald-500/30">
               <Sparkles className="w-5 h-5 animate-pulse" />
@@ -1389,7 +1389,7 @@ export default function AnalisisCuentasView({
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-amber-300 animate-spin" />
               <h3 className="font-bold text-sm">
-                Sugerencias del Motor Inteligente ({suggestedMatches.length} compensaciones encontradas)
+                Sugerencias del Motor ({suggestedMatches.length} compensaciones encontradas)
               </h3>
             </div>
             <div className="flex items-center gap-2">
@@ -1683,7 +1683,7 @@ export default function AnalisisCuentasView({
                   onChange={(e) => setFilterOnlyMatchingAmounts(e.target.checked)}
                   className="rounded text-emerald-600 focus:ring-emerald-500"
                 />
-                <span>⚡ Mostrar sólo montos con contraparte idéntica</span>
+                <span> Mostrar sólo montos con contraparte idéntica</span>
               </label>
             </div>
 

@@ -821,7 +821,7 @@ export default function SuperAdminSystemMonitor({ onSelectStudy }: SuperAdminSys
                             </span>
                             {log.studyName && (
                               <span className="text-[10px] font-medium text-slate-500 bg-white px-1.5 py-0.5 rounded border border-slate-200">
-                                🏢 {log.studyName}
+                                 {log.studyName}
                               </span>
                             )}
                           </div>

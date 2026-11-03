@@ -726,7 +726,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
                   <tr key={emp.id} className="hover:bg-slate-50/70 transition-colors">
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 to-indigo-800 text-white flex items-center justify-center font-bold text-xs uppercase shadow-2xs">
+                        <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xs uppercase shadow-2xs">
                           {emp.name.slice(0, 2)}
                         </div>
                         <div>
@@ -1469,7 +1469,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
                 <button
                   type="button"
                   onClick={() => onOpenCertificadosSii('CERT_6_SUELDOS')}
-                  className="flex-1 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold text-xs rounded-lg shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
                   title="Emitir el Certificado N° 6 oficial del SII para Declaración Jurada 1887"
                 >
                   <Award className="w-4 h-4 text-amber-300" />
@@ -1728,7 +1728,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
                     3. Remuneraciones y Haberes Pactados
                   </h4>
                   <span className="text-[11px] text-slate-500 font-medium">
-                    💡 Las modificaciones aplicadas rigen a partir del mes en proceso, protegiendo períodos pasados.
+                     Las modificaciones aplicadas rigen a partir del mes en proceso, protegiendo períodos pasados.
                   </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">

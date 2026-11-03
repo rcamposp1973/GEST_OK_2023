@@ -594,7 +594,7 @@ export default function EstadoResultadosView({
         </div>
 
         {/* Margen Operacional (Ganancia Bruta) */}
-        <div className="bg-gradient-to-br from-indigo-50 to-emerald-50 p-3.5 rounded-xl border border-indigo-200 shadow-2xs">
+        <div className="bg-indigo-50 p-3.5 rounded-xl border border-indigo-200 shadow-2xs">
           <div className="flex justify-between items-center">
             <span className="text-[11px] font-black uppercase tracking-wider text-indigo-900">Margen Operacional (Bruto)</span>
             <span className="px-1.5 py-0.5 bg-indigo-200 text-indigo-900 rounded text-[10px] font-bold">{statementData.totals.grossMarginPercent}%</span>
@@ -641,7 +641,7 @@ export default function EstadoResultadosView({
           <div className={`text-[11px] mt-1 font-sans font-medium ${
             statementData.totals.isProfit ? 'text-emerald-800' : 'text-rose-800'
           }`}>
-            {statementData.totals.isProfit ? '✅ Ganancia Neta del Ejercicio' : '⚠️ Pérdida Neta del Ejercicio'}
+            {statementData.totals.isProfit ? 'Ganancia Neta del Ejercicio' : 'Pérdida Neta del Ejercicio'}
           </div>
         </div>
       </div>
@@ -685,7 +685,7 @@ export default function EstadoResultadosView({
             </div>
 
             {/* RESALTADO: MARGEN OPERACIONAL (GANANCIA BRUTA) */}
-            <div className="bg-gradient-to-r from-indigo-900 to-slate-900 text-white p-3.5 rounded-xl flex justify-between items-center shadow-sm">
+            <div className="bg-indigo-900 text-white p-3.5 rounded-xl flex justify-between items-center shadow-sm">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-amber-300" />
                 <div>

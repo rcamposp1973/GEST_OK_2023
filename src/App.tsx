@@ -710,7 +710,7 @@ function Dashboard() {
                 }}
                 className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl shadow transition-all flex items-center justify-center gap-2"
               >
-                🚀 Crear Mi Estudio Contable e Ingresar
+                 Crear Mi Estudio Contable e Ingresar
               </button>
 
               <button
@@ -734,7 +734,6 @@ function Dashboard() {
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-5xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-4">
             <div className="flex justify-between items-center border-b border-slate-200 pb-3">
               <h3 className="font-bold text-base text-slate-900 flex items-center gap-2">
-                <span className="text-xl">📊</span>
                 <span>Indicadores Económicos Oficiales (SII y Banco Central de Chile)</span>
               </h3>
               <button

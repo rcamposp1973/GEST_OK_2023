@@ -183,10 +183,10 @@ export default function ModuleAccessMatrix({
             onChange={(e) => onSubscriptionStatusChange && onSubscriptionStatusChange(e.target.value as StudySubscriptionStatus)}
             className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500/20"
           >
-            <option value="Vigente">🟢 Vigente (Acceso Completo)</option>
-            <option value="Solo_Lectura">🟡 Solo Lectura / Consulta (Período de Gracia)</option>
-            <option value="Suspendido_Pago">🔴 Suspendido / Bloqueado por Pago</option>
-            <option value="Sin_Vigencia">⚪ Sin Vigencia (Inactivo)</option>
+            <option value="Vigente"> Vigente (Acceso Completo)</option>
+            <option value="Solo_Lectura"> Solo Lectura / Consulta (Período de Gracia)</option>
+            <option value="Suspendido_Pago"> Suspendido / Bloqueado por Pago</option>
+            <option value="Sin_Vigencia"> Sin Vigencia (Inactivo)</option>
           </select>
           <p className="text-[10px] text-slate-500 mt-1">
             {subscriptionStatus === 'Vigente' && 'El cliente puede operar normalmente en todos sus módulos habilitados.'}
@@ -234,7 +234,6 @@ export default function ModuleAccessMatrix({
         <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
           <div>
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
-              <span>🎛️</span>
               <span>Grilla de Accesos a Módulos del Sistema (Feature Matrix)</span>
             </h4>
             <p className="text-[11px] text-slate-500">
@@ -311,7 +310,7 @@ export default function ModuleAccessMatrix({
                   {isEnabled ? (
                     isAddon ? (
                       <span className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 font-bold border border-amber-200">
-                        ⭐ Módulo Adicional (+ Cobro)
+                         Módulo Adicional (+ Cobro)
                       </span>
                     ) : (
                       <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
@@ -320,7 +319,7 @@ export default function ModuleAccessMatrix({
                     )
                   ) : (
                     <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-medium">
-                      🔒 No Habilitado
+                       No Habilitado
                     </span>
                   )}
                 </div>

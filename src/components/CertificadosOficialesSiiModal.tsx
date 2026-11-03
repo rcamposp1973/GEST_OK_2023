@@ -450,7 +450,7 @@ export const CertificadosOficialesSiiModal: React.FC<CertificadosOficialesSiiMod
 
       <div className="relative w-full max-w-6xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[95vh]">
         {/* CABECERA MODAL (NO PRINT) */}
-        <div className="no-print bg-gradient-to-r from-[#0D253D] via-[#1a385c] to-[#0D253D] px-6 py-4 text-white flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-slate-700 shadow-md">
+        <div className="no-print bg-[#0D253D] px-6 py-4 text-white flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-slate-700 shadow-md">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-amber-500/20 text-amber-300 rounded-xl border border-amber-400/30">
               <Award className="w-6 h-6" />

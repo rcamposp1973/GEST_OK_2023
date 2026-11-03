@@ -187,7 +187,7 @@ export default function HudKpiPanel({
       subtitle: `Margen Neto ${kpiMetrics.netMarginPct.toFixed(1)}%`,
       valueStr: formatCompactCLP(kpiMetrics.netIncome),
       fullValue: formatCLP(kpiMetrics.netIncome),
-      statusText: kpiMetrics.netIncome >= 0 ? 'Utilidad Neta ✓' : 'Pérdida Neta ⚠️',
+      statusText: kpiMetrics.netIncome >= 0 ? 'Utilidad Neta ✓' : 'Pérdida Neta ',
       isGood: kpiMetrics.netIncome >= 0,
       icon: kpiMetrics.netIncome >= 0 ? ArrowUpRight : ArrowDownRight,
       accentColor: kpiMetrics.netIncome >= 0 ? (isDark ? 'text-emerald-400' : 'text-emerald-700') : (isDark ? 'text-rose-400' : 'text-rose-700'),

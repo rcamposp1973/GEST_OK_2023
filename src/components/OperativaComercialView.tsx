@@ -315,11 +315,11 @@ export const OperativaComercialView: React.FC<OperativaComercialViewProps> = ({
 
       // Líneas de Ingreso por cada ítem
       lines.forEach((l, idx) => {
-        const incomeAcc = accounts.find(a => a.id === l.salesAccountId) || accounts.find(a => a.type === 'Ingreso' || a.code.startsWith('4')) || accounts[0];
+        const incomeAcc = accounts.find(a => a.id === l.salesAccountId) || accounts.find(a => a.type === 'Ingreso' || a.code.startsWith('3')) || accounts[0];
         voucherLines.push({
           id: `vl-inc-${idx}`,
           accountId: incomeAcc?.id || '',
-          accountCode: incomeAcc?.code || '410101',
+          accountCode: incomeAcc?.code || '310101',
           accountName: incomeAcc?.name || 'Ventas y Servicios',
           debit: 0,
           credit: l.subtotalNeto,
@@ -364,14 +364,14 @@ export const OperativaComercialView: React.FC<OperativaComercialViewProps> = ({
       const physicalLines = lines.filter(l => l.type === 'PRODUCT');
       if (physicalLines.length > 0 && formTotals.totalCostPmp > 0) {
         const voucherIdCost = `vouch-${Date.now()}-cost`;
-        const costAccount = accounts.find(a => a.code.startsWith('5101') || a.name.toLowerCase().includes('costo de venta')) || accounts.find(a => a.type === 'Gasto') || accounts[0];
+        const costAccount = accounts.find(a => a.code.startsWith('4101') || a.name.toLowerCase().includes('costo de venta')) || accounts.find(a => a.type === 'Gasto') || accounts[0];
         const mercaderiasAccount = accounts.find(a => a.code.startsWith('1106') || a.name.toLowerCase().includes('mercader') || a.name.toLowerCase().includes('existencia')) || accounts[0];
 
         const costLines: any[] = [
           {
             id: `cv-1`,
             accountId: costAccount?.id || '',
-            accountCode: costAccount?.code || '510101',
+            accountCode: costAccount?.code || '410101',
             accountName: costAccount?.name || 'Costo de Ventas (PMP)',
             debit: formTotals.totalCostPmp,
             credit: 0,

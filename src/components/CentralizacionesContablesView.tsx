@@ -359,10 +359,10 @@ export const CentralizacionesContablesView: React.FC<CentralizacionesContablesVi
 
     const customerAcc = resolveAccount(formData.defaultCustomerAccountId, ['1104001', '1.1.02.001', '1104', 'cliente'], 'Clientes Nacionales');
     const foreignCustAcc = resolveAccount(formData.foreignCustomerAccountId, ['1104002', '1104', 'exportacion', 'usd'], 'Clientes Extranjeros');
-    const salesAcc = resolveAccount(formData.defaultSalesIncomeAccountId, ['5101001', '5101', 'venta', 'ingreso'], 'Ventas');
+    const salesAcc = resolveAccount(formData.defaultSalesIncomeAccountId, ['3101001', '3101', '5101001', '5101', 'venta', 'ingreso'], 'Ventas');
     const ivaDebitoAcc = resolveAccount(formData.ivaDebitoAccountId, ['2104001', '2107001', '2104', 'debito', 'iva'], 'IVA Débito Fiscal');
-    const exentoAcc = resolveAccount(formData.exentoAccountId, ['5101002', '5101', 'exento'], 'Ventas Exentas');
-    const exportSalesAcc = resolveAccount(formData.exportSalesIncomeAccountId, ['5101003', '5101', 'exportacion'], 'Ventas Exportación');
+    const exentoAcc = resolveAccount(formData.exentoAccountId, ['3101002', '3101', '5101002', '5101', 'exento'], 'Ventas Exentas');
+    const exportSalesAcc = resolveAccount(formData.exportSalesIncomeAccountId, ['3101003', '3101', '5101003', '5101', 'exportacion'], 'Ventas Exportación');
 
     let totalNeto = 0;
     let totalIva = 0;

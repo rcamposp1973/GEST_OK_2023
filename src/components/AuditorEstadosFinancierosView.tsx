@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Company, Voucher, ChartOfAccount, FiscalPeriodYear, Auxiliary, BankReconciliation } from '../types';
+import { getNaturaleza, getRubroER } from '../utils/ifrsClassification';
 import { 
   ShieldCheck, 
   AlertTriangle, 
@@ -251,9 +252,10 @@ export default function AuditorEstadosFinancierosView({
       const typeLower = (acc.type || '').toLowerCase();
       const codeFirst = (acc.code || '').charAt(0);
       const blceCol = (acc.blce8Columnas || '').toUpperCase();
+      const nat = getNaturaleza(acc); // convención por código: 1 Activo · 2 Pasivo (23 Patrimonio) · 3 Ingresos · 4 Gastos
 
       // Clasificación Tributaria 8 Columnas
-      if (blceCol === 'ACTIVO' || typeLower === 'activo' || codeFirst === '1') {
+      if (nat === 'ACTIVO') {
         asset = debtorBal - creditorBal; // Saldo deudor va a activo
         if (asset < 0) {
           asset = 0;
@@ -261,7 +263,7 @@ export default function AuditorEstadosFinancierosView({
           isAnomalous = true;
           anomalyReason = `Cuenta de Activo con saldo acreedor anómalo ($${creditorBal.toLocaleString('es-CL')}). Posible sobregiro, error en imputación de abonos o cuenta complementaria no clasificada.`;
         }
-      } else if (blceCol === 'PASIVO' || typeLower === 'pasivo' || typeLower === 'patrimonio' || codeFirst === '2' || (codeFirst === '3' && !typeLower.includes('ingreso') && !typeLower.includes('ganancia'))) {
+      } else if (nat === 'PASIVO' || nat === 'PATRIMONIO') {
         liability = creditorBal - debtorBal; // Saldo acreedor va a pasivo
         if (liability < 0) {
           liability = 0;
@@ -269,7 +271,7 @@ export default function AuditorEstadosFinancierosView({
           isAnomalous = true;
           anomalyReason = `Cuenta de Pasivo/Patrimonio con saldo deudor anómalo ($${debtorBal.toLocaleString('es-CL')}). Posible pago duplicado, exceso de anticipo o error en cargo.`;
         }
-      } else if (blceCol === 'PERDIDA' || blceCol === 'PÉRDIDA' || typeLower === 'gasto' || typeLower === 'costo' || typeLower === 'perdida' || typeLower === 'pérdida' || codeFirst === '4') {
+      } else if (nat === 'GASTO') {
         loss = debtorBal - creditorBal;
         if (loss < 0) {
           loss = 0;
@@ -277,7 +279,7 @@ export default function AuditorEstadosFinancierosView({
           isAnomalous = true;
           anomalyReason = `Cuenta de Pérdida/Gasto con saldo acreedor ($${creditorBal.toLocaleString('es-CL')}). Gastos habitualmente no deben cerrar con saldo acreedor a menos que sea una reversión total.`;
         }
-      } else if (blceCol === 'GANANCIA' || typeLower === 'ingreso' || typeLower === 'ganancia' || codeFirst === '5' || (codeFirst === '3' && (typeLower.includes('ingreso') || typeLower.includes('ganancia')))) {
+      } else if (nat === 'INGRESO') {
         gain = creditorBal - debtorBal;
         if (gain < 0) {
           gain = 0;
@@ -340,20 +342,21 @@ export default function AuditorEstadosFinancierosView({
       const name = (row.account.name || '').toLowerCase();
       const netBalance = row.debtorBal - row.creditorBal; // Positivo = Deudor, Negativo = Acreedor
 
-      if (row.account.type === 'Activo' || code.startsWith('1')) {
+      const natRow = getNaturaleza(row.account);
+      if (natRow === 'ACTIVO') {
         // Corriente vs No Corriente
         if (code.startsWith('1.1') || rubro.includes('circulante') || rubro.includes('corriente') || name.includes('disponible') || name.includes('banco') || name.includes('caja') || name.includes('cliente') || name.includes('deudor')) {
           ifrsCurrentAssets += netBalance;
         } else {
           ifrsNonCurrentAssets += netBalance;
         }
-      } else if (row.account.type === 'Pasivo' || code.startsWith('2')) {
+      } else if (natRow === 'PASIVO') {
         if (code.startsWith('2.1') || rubro.includes('circulante') || rubro.includes('corriente') || name.includes('proveedor') || name.includes('acreedor') || name.includes('remuneraciones por pagar') || name.includes('impuestos por pagar') || name.includes('iva')) {
           ifrsCurrentLiabilities += Math.abs(netBalance);
         } else {
           ifrsNonCurrentLiabilities += Math.abs(netBalance);
         }
-      } else if (row.account.type === 'Patrimonio' || code.startsWith('3')) {
+      } else if (natRow === 'PATRIMONIO') {
         ifrsEquity += Math.abs(netBalance);
       }
     });
@@ -365,9 +368,9 @@ export default function AuditorEstadosFinancierosView({
     const ifrsEquationDiff = Math.abs(ifrsTotalAssets - ifrsTotalLiabilitiesAndEquity);
 
     // D. Estado de Resultados (EERR)
-    const revenueAccounts = auditedRows.filter(r => r.account.type === 'Ingreso' || r.account.code.startsWith('4'));
-    const costAccounts = auditedRows.filter(r => r.account.type === 'Gasto' && (r.account.name.toLowerCase().includes('costo') || r.account.code.startsWith('5.1')));
-    const expenseAccounts = auditedRows.filter(r => r.account.type === 'Gasto' && !costAccounts.some(c => c.account.id === r.account.id));
+    const revenueAccounts = auditedRows.filter(r => getNaturaleza(r.account) === 'INGRESO');
+    const costAccounts = auditedRows.filter(r => getNaturaleza(r.account) === 'GASTO' && getRubroER(r.account) === 'COSTO_VENTAS');
+    const expenseAccounts = auditedRows.filter(r => getNaturaleza(r.account) === 'GASTO' && !costAccounts.some(c => c.account.id === r.account.id));
 
     const totalRevenue = revenueAccounts.reduce((sum, r) => sum + r.gain, 0);
     const totalCostOfSales = costAccounts.reduce((sum, r) => sum + r.loss, 0);

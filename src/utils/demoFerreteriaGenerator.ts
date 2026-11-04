@@ -195,28 +195,28 @@ export async function generateOrResetDemoFerreteria(
       { code: '2.1.04.002', name: 'Sueldos Líquidos por Pagar', type: 'Pasivo', parentCode: '2.1.04', requiereCentroCosto: false, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: false, estado: 'Activo' },
 
       // 3. PATRIMONIO
-      { code: '3', name: 'PATRIMONIO', type: 'Patrimonio', requiereCentroCosto: false, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: false, estado: 'Activo' },
-      { code: '3.1.01.001', name: 'Capital Social Pagado', type: 'Patrimonio', parentCode: '3', requiereCentroCosto: false, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: false, estado: 'Activo' },
-      { code: '3.1.02.001', name: 'Resultados Acumulados / Ejercicios Anteriores', type: 'Patrimonio', parentCode: '3', requiereCentroCosto: false, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: false, estado: 'Activo' },
+      { code: '2.3', name: 'PATRIMONIO', type: 'Patrimonio', requiereCentroCosto: false, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: false, estado: 'Activo' },
+      { code: '2.3.01.001', name: 'Capital Social Pagado', type: 'Patrimonio', parentCode: '2.3', requiereCentroCosto: false, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: false, estado: 'Activo' },
+      { code: '2.3.02.001', name: 'Resultados Acumulados / Ejercicios Anteriores', type: 'Patrimonio', parentCode: '2.3', requiereCentroCosto: false, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: false, estado: 'Activo' },
 
       // 4. INGRESOS
-      { code: '4', name: 'INGRESOS OPERACIONALES', type: 'Ingreso', requiereCentroCosto: true, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' },
-      { code: '4.1.01.001', name: 'Ventas de Materiales y Ferretería Afectas', type: 'Ingreso', parentCode: '4', requiereCentroCosto: true, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' },
-      { code: '4.1.02.001', name: 'Ingresos por Servicios de Fletes y Dimensionado', type: 'Ingreso', parentCode: '4', requiereCentroCosto: true, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' },
+      { code: '3', name: 'INGRESOS OPERACIONALES', type: 'Ingreso', requiereCentroCosto: true, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' },
+      { code: '3.1.01.001', name: 'Ventas de Materiales y Ferretería Afectas', type: 'Ingreso', parentCode: '3', requiereCentroCosto: true, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' },
+      { code: '3.1.02.001', name: 'Ingresos por Servicios de Fletes y Dimensionado', type: 'Ingreso', parentCode: '3', requiereCentroCosto: true, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' },
 
       // 5. COSTOS Y GASTOS
-      { code: '5', name: 'COSTOS Y GASTOS DE OPERACIÓN', type: 'Gasto', requiereCentroCosto: true, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' },
-      { code: '5.1.01.001', name: 'Costo de Ventas Mercaderías Ferretería', type: 'Costo' as any, parentCode: '5', requiereCentroCosto: true, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: false, estado: 'Activo' },
-      { code: '5.2.01.001', name: 'Sueldos Base y Remuneraciones', type: 'Gasto', parentCode: '5', requiereCentroCosto: true, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: false, estado: 'Activo' },
-      { code: '5.2.01.002', name: 'Gratificaciones Legales', type: 'Gasto', parentCode: '5', requiereCentroCosto: true, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: false, estado: 'Activo' },
-      { code: '5.2.01.003', name: 'Leyes Sociales Patronales (SIS / Cesantía Empleador)', type: 'Gasto', parentCode: '5', requiereCentroCosto: true, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: false, estado: 'Activo' },
-      { code: '5.2.02.001', name: 'Arriendo Local Comercial y Bodegas', type: 'Gasto', parentCode: '5', requiereCentroCosto: true, requiereAuxiliarRUT: true, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' },
-      { code: '5.2.02.002', name: 'Servicios Básicos (Luz Trifásica, Agua, Internet)', type: 'Gasto', parentCode: '5', requiereCentroCosto: true, requiereAuxiliarRUT: true, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' },
-      { code: '5.2.02.003', name: 'Combustibles y Mantención Vehículos de Despacho', type: 'Gasto', parentCode: '5', requiereCentroCosto: true, requiereAuxiliarRUT: true, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' },
-      { code: '5.2.02.004', name: 'Publicidad, Marketing y Catálogos', type: 'Gasto', parentCode: '5', requiereCentroCosto: true, requiereAuxiliarRUT: true, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' },
-      { code: '5.2.02.005', name: 'Honorarios Profesionales Contables e Informáticos', type: 'Gasto', parentCode: '5', requiereCentroCosto: true, requiereAuxiliarRUT: true, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' },
-      { code: '5.2.02.006', name: 'Seguros Contra Incendio y Suministros Menores', type: 'Gasto', parentCode: '5', requiereCentroCosto: true, requiereAuxiliarRUT: true, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' },
-      { code: '5.2.02.007', name: 'Depreciación Activo Fijo del Ejercicio', type: 'Gasto', parentCode: '5', requiereCentroCosto: true, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: false, estado: 'Activo' }
+      { code: '4', name: 'COSTOS Y GASTOS DE OPERACIÓN', type: 'Gasto', requiereCentroCosto: true, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' },
+      { code: '4.1.01.001', name: 'Costo de Ventas Mercaderías Ferretería', type: 'Costo' as any, parentCode: '4', requiereCentroCosto: true, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: false, estado: 'Activo' },
+      { code: '4.2.01.001', name: 'Sueldos Base y Remuneraciones', type: 'Gasto', parentCode: '4', requiereCentroCosto: true, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: false, estado: 'Activo' },
+      { code: '4.2.01.002', name: 'Gratificaciones Legales', type: 'Gasto', parentCode: '4', requiereCentroCosto: true, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: false, estado: 'Activo' },
+      { code: '4.2.01.003', name: 'Leyes Sociales Patronales (SIS / Cesantía Empleador)', type: 'Gasto', parentCode: '4', requiereCentroCosto: true, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: false, estado: 'Activo' },
+      { code: '4.2.02.001', name: 'Arriendo Local Comercial y Bodegas', type: 'Gasto', parentCode: '4', requiereCentroCosto: true, requiereAuxiliarRUT: true, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' },
+      { code: '4.2.02.002', name: 'Servicios Básicos (Luz Trifásica, Agua, Internet)', type: 'Gasto', parentCode: '4', requiereCentroCosto: true, requiereAuxiliarRUT: true, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' },
+      { code: '4.2.02.003', name: 'Combustibles y Mantención Vehículos de Despacho', type: 'Gasto', parentCode: '4', requiereCentroCosto: true, requiereAuxiliarRUT: true, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' },
+      { code: '4.2.02.004', name: 'Publicidad, Marketing y Catálogos', type: 'Gasto', parentCode: '4', requiereCentroCosto: true, requiereAuxiliarRUT: true, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' },
+      { code: '4.2.02.005', name: 'Honorarios Profesionales Contables e Informáticos', type: 'Gasto', parentCode: '4', requiereCentroCosto: true, requiereAuxiliarRUT: true, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' },
+      { code: '4.2.02.006', name: 'Seguros Contra Incendio y Suministros Menores', type: 'Gasto', parentCode: '4', requiereCentroCosto: true, requiereAuxiliarRUT: true, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' },
+      { code: '4.2.02.007', name: 'Depreciación Activo Fijo del Ejercicio', type: 'Gasto', parentCode: '4', requiereCentroCosto: true, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: false, estado: 'Activo' }
     ];
 
     const accountMap = new Map<string, string>(); // code -> id
@@ -357,7 +357,7 @@ export async function generateOrResetDemoFerreteria(
         { id: 'line-op-6', accountId: accountMap.get('1.2.01.003') || 'acc-1_2_01_003', accountCode: '1.2.01.003', accountName: 'Racks y Grúa Horquilla Bodega', debit: 15000000, credit: 0, gloss: 'Grúa Horquilla Toyota 2.5T y Racks' },
         { id: 'line-op-7', accountId: accountMap.get('1.2.01.004') || 'acc-1_2_01_004', accountCode: '1.2.01.004', accountName: 'Servidor Central y Terminales POS Mesón Venta', debit: 4500000, credit: 0, gloss: 'Servidor y Estaciones POS' },
         { id: 'line-op-8', accountId: accountMap.get('1.2.01.005') || 'acc-1_2_01_005', accountCode: '1.2.01.005', accountName: 'Muebles, Estanterías y Mesones de Atención', debit: 3500000, credit: 0, gloss: 'Estanterías Metálicas y Mesones' },
-        { id: 'line-op-9', accountId: accountMap.get('3.1.01.001') || 'acc-3_1_01_001', accountCode: '3.1.01.001', accountName: 'Capital Social Pagado', debit: 0, credit: 208000000, gloss: 'Aporte de Capital de Socios' }
+        { id: 'line-op-9', accountId: accountMap.get('2.3.01.001') || 'acc-2_3_01_001', accountCode: '2.3.01.001', accountName: 'Capital Social Pagado', debit: 0, credit: 208000000, gloss: 'Aporte de Capital de Socios' }
       ],
       createdAt: `${targetYearStr}-01-01T08:00:00Z`
     };
@@ -381,7 +381,7 @@ export async function generateOrResetDemoFerreteria(
         usefulLifeIFRSMonths: 480,
         accountAssetId: accountMap.get('1.2.01.001') || 'acc-1_2_01_001',
         accountDepreciationId: accountMap.get('1.2.02.001') || 'acc-1_2_02_001',
-        accountExpenseId: accountMap.get('5.2.02.007') || 'acc-5_2_02_007',
+        accountExpenseId: accountMap.get('4.2.02.007') || 'acc-4_2_02_007',
         createdAt: `${targetYearStr}-01-01`
       },
       {
@@ -400,7 +400,7 @@ export async function generateOrResetDemoFerreteria(
         usefulLifeIFRSMonths: 120,
         accountAssetId: accountMap.get('1.2.01.002') || 'acc-1_2_01_002',
         accountDepreciationId: accountMap.get('1.2.02.001') || 'acc-1_2_02_001',
-        accountExpenseId: accountMap.get('5.2.02.007') || 'acc-5_2_02_007',
+        accountExpenseId: accountMap.get('4.2.02.007') || 'acc-4_2_02_007',
         createdAt: `${targetYearStr}-01-01`
       },
       {
@@ -419,7 +419,7 @@ export async function generateOrResetDemoFerreteria(
         usefulLifeIFRSMonths: 180,
         accountAssetId: accountMap.get('1.2.01.003') || 'acc-1_2_01_003',
         accountDepreciationId: accountMap.get('1.2.02.001') || 'acc-1_2_02_001',
-        accountExpenseId: accountMap.get('5.2.02.007') || 'acc-5_2_02_007',
+        accountExpenseId: accountMap.get('4.2.02.007') || 'acc-4_2_02_007',
         createdAt: `${targetYearStr}-01-01`
       },
       {
@@ -438,7 +438,7 @@ export async function generateOrResetDemoFerreteria(
         usefulLifeIFRSMonths: 48,
         accountAssetId: accountMap.get('1.2.01.004') || 'acc-1_2_01_004',
         accountDepreciationId: accountMap.get('1.2.02.001') || 'acc-1_2_02_001',
-        accountExpenseId: accountMap.get('5.2.02.007') || 'acc-5_2_02_007',
+        accountExpenseId: accountMap.get('4.2.02.007') || 'acc-4_2_02_007',
         createdAt: `${targetYearStr}-01-01`
       },
       {
@@ -457,7 +457,7 @@ export async function generateOrResetDemoFerreteria(
         usefulLifeIFRSMonths: 84,
         accountAssetId: accountMap.get('1.2.01.005') || 'acc-1_2_01_005',
         accountDepreciationId: accountMap.get('1.2.02.001') || 'acc-1_2_02_001',
-        accountExpenseId: accountMap.get('5.2.02.007') || 'acc-5_2_02_007',
+        accountExpenseId: accountMap.get('4.2.02.007') || 'acc-4_2_02_007',
         createdAt: `${targetYearStr}-01-01`
       }
     ];
@@ -603,10 +603,10 @@ export async function generateOrResetDemoFerreteria(
         totalDebit: monthTotalSueldoBase + monthTotalGratificacion + monthTotalAportePatronal + (employeesList.length * 95000),
         totalCredit: monthTotalSueldoBase + monthTotalGratificacion + monthTotalAportePatronal + (employeesList.length * 95000),
         lines: [
-          { id: `line-rem-1-${periodStr}`, accountId: accountMap.get('5.2.01.001') || 'acc-5_2_01_001', accountCode: '5.2.01.001', accountName: 'Sueldos Base y Remuneraciones', debit: monthTotalSueldoBase, credit: 0, gloss: `Sueldos Base ${periodStr}`, costCenter: 'CC-01' },
-          { id: `line-rem-2-${periodStr}`, accountId: accountMap.get('5.2.01.002') || 'acc-5_2_02_002', accountCode: '5.2.01.002', accountName: 'Gratificaciones Legales', debit: monthTotalGratificacion, credit: 0, gloss: `Gratificación Legal Art. 50 ${periodStr}`, costCenter: 'CC-01' },
-          { id: `line-rem-3-${periodStr}`, accountId: accountMap.get('5.2.01.003') || 'acc-5_2_01_003', accountCode: '5.2.01.003', accountName: 'Leyes Sociales Patronales (SIS / Cesantía Empleador)', debit: monthTotalAportePatronal, credit: 0, gloss: `SIS y AFC Aporte Patronal ${periodStr}`, costCenter: 'CC-01' },
-          { id: `line-rem-4-${periodStr}`, accountId: accountMap.get('5.2.02.006') || 'acc-5_2_02_006', accountCode: '5.2.02.006', accountName: 'Seguros Contra Incendio y Suministros Menores', debit: employeesList.length * 95000, credit: 0, gloss: `Asig. Colación y Movilización ${periodStr}`, costCenter: 'CC-01' },
+          { id: `line-rem-1-${periodStr}`, accountId: accountMap.get('4.2.01.001') || 'acc-4_2_01_001', accountCode: '4.2.01.001', accountName: 'Sueldos Base y Remuneraciones', debit: monthTotalSueldoBase, credit: 0, gloss: `Sueldos Base ${periodStr}`, costCenter: 'CC-01' },
+          { id: `line-rem-2-${periodStr}`, accountId: accountMap.get('4.2.01.002') || 'acc-4_2_02_002', accountCode: '4.2.01.002', accountName: 'Gratificaciones Legales', debit: monthTotalGratificacion, credit: 0, gloss: `Gratificación Legal Art. 50 ${periodStr}`, costCenter: 'CC-01' },
+          { id: `line-rem-3-${periodStr}`, accountId: accountMap.get('4.2.01.003') || 'acc-4_2_01_003', accountCode: '4.2.01.003', accountName: 'Leyes Sociales Patronales (SIS / Cesantía Empleador)', debit: monthTotalAportePatronal, credit: 0, gloss: `SIS y AFC Aporte Patronal ${periodStr}`, costCenter: 'CC-01' },
+          { id: `line-rem-4-${periodStr}`, accountId: accountMap.get('4.2.02.006') || 'acc-4_2_02_006', accountCode: '4.2.02.006', accountName: 'Seguros Contra Incendio y Suministros Menores', debit: employeesList.length * 95000, credit: 0, gloss: `Asig. Colación y Movilización ${periodStr}`, costCenter: 'CC-01' },
           { id: `line-rem-5-${periodStr}`, accountId: accountMap.get('2.1.04.002') || 'acc-2_1_04_002', accountCode: '2.1.04.002', accountName: 'Sueldos Líquidos por Pagar', debit: 0, credit: monthTotalLiquido, gloss: `Sueldos Líquidos por Pagar ${periodStr}` },
           { id: `line-rem-6-${periodStr}`, accountId: accountMap.get('2.1.04.001') || 'acc-2_1_04_001', accountCode: '2.1.04.001', accountName: 'Leyes Sociales e Imposiciones por Pagar (Previred)', debit: 0, credit: monthTotalPrevisional, gloss: `Previsión y Salud Previred por Pagar ${periodStr}` },
           { id: `line-rem-7-${periodStr}`, accountId: accountMap.get('2.1.03.001') || 'acc-2_1_03_001', accountCode: '2.1.03.001', accountName: 'Retención Impuesto Único 2da Categoría', debit: 0, credit: monthTotalImpuestoUnico, gloss: `IUSC Retenido F29 ${periodStr}` }
@@ -713,7 +713,7 @@ export async function generateOrResetDemoFerreteria(
         totalDebit: 2975000,
         totalCredit: 2975000,
         lines: [
-          { id: `line-rent-1-${periodStr}`, accountId: accountMap.get('5.2.02.001') || 'acc-5_2_02_001', accountCode: '5.2.02.001', accountName: 'Arriendo Local Comercial y Bodegas', debit: 2500000, credit: 0, gloss: `Gasto Arriendo ${periodStr}`, costCenter: 'CC-01', expenseItem: 'IG-01', auxiliaryRut: '76.432.109-8' },
+          { id: `line-rent-1-${periodStr}`, accountId: accountMap.get('4.2.02.001') || 'acc-4_2_02_001', accountCode: '4.2.02.001', accountName: 'Arriendo Local Comercial y Bodegas', debit: 2500000, credit: 0, gloss: `Gasto Arriendo ${periodStr}`, costCenter: 'CC-01', expenseItem: 'IG-01', auxiliaryRut: '76.432.109-8' },
           { id: `line-rent-2-${periodStr}`, accountId: accountMap.get('1.1.04.001') || 'acc-1_1_04_001', accountCode: '1.1.04.001', accountName: 'IVA Crédito Fiscal', debit: 475000, credit: 0, gloss: `IVA CF Fac ${rentDoc.folio}` },
           { id: `line-rent-3-${periodStr}`, accountId: accountMap.get('1.1.01.002') || 'acc-1_1_01_002', accountCode: '1.1.01.002', accountName: 'Banco Santander Cta Cte 88921-0', debit: 0, credit: 2975000, gloss: 'Transferencia Bancaria Inmobiliaria' }
         ],
@@ -771,7 +771,7 @@ export async function generateOrResetDemoFerreteria(
         totalDebit: 571200,
         totalCredit: 571200,
         lines: [
-          { id: `line-util-1-${periodStr}`, accountId: accountMap.get('5.2.02.002') || 'acc-5_2_02_002', accountCode: '5.2.02.002', accountName: 'Servicios Básicos (Luz Trifásica, Agua, Internet)', debit: 480000, credit: 0, gloss: `Electricidad Enel ${periodStr}`, costCenter: 'CC-03', expenseItem: 'IG-02', auxiliaryRut: '96.800.570-7' },
+          { id: `line-util-1-${periodStr}`, accountId: accountMap.get('4.2.02.002') || 'acc-4_2_02_002', accountCode: '4.2.02.002', accountName: 'Servicios Básicos (Luz Trifásica, Agua, Internet)', debit: 480000, credit: 0, gloss: `Electricidad Enel ${periodStr}`, costCenter: 'CC-03', expenseItem: 'IG-02', auxiliaryRut: '96.800.570-7' },
           { id: `line-util-2-${periodStr}`, accountId: accountMap.get('1.1.04.001') || 'acc-1_1_04_001', accountCode: '1.1.04.001', accountName: 'IVA Crédito Fiscal', debit: 91200, credit: 0, gloss: `IVA CF Fac ${enelDoc.folio}` },
           { id: `line-util-3-${periodStr}`, accountId: accountMap.get('1.1.01.002') || 'acc-1_1_01_002', accountCode: '1.1.01.002', accountName: 'Banco Santander Cta Cte 88921-0', debit: 0, credit: 571200, gloss: 'Pago PAC Enel Santander' }
         ],
@@ -835,7 +835,7 @@ export async function generateOrResetDemoFerreteria(
         totalDebit: honBruto,
         totalCredit: honBruto,
         lines: [
-          { id: `line-hon-1-${periodStr}`, accountId: accountMap.get('5.2.02.005') || 'acc-5_2_02_005', accountCode: '5.2.02.005', accountName: 'Honorarios Profesionales Contables e Informáticos', debit: honBruto, credit: 0, gloss: `Honorarios Legal BHE ${honDoc.folio}`, costCenter: 'CC-01', expenseItem: 'IG-06', auxiliaryRut: '13.987.654-3' },
+          { id: `line-hon-1-${periodStr}`, accountId: accountMap.get('4.2.02.005') || 'acc-4_2_02_005', accountCode: '4.2.02.005', accountName: 'Honorarios Profesionales Contables e Informáticos', debit: honBruto, credit: 0, gloss: `Honorarios Legal BHE ${honDoc.folio}`, costCenter: 'CC-01', expenseItem: 'IG-06', auxiliaryRut: '13.987.654-3' },
           { id: `line-hon-2-${periodStr}`, accountId: accountMap.get('2.1.03.002') || 'acc-2_1_03_002', accountCode: '2.1.03.002', accountName: 'Retención Boletas de Honorarios 13.75%', debit: 0, credit: honRet, gloss: `Retención 13.75% F29 ${periodStr}` },
           { id: `line-hon-3-${periodStr}`, accountId: accountMap.get('1.1.01.002') || 'acc-1_1_01_002', accountCode: '1.1.01.002', accountName: 'Banco Santander Cta Cte 88921-0', debit: 0, credit: honLiq, gloss: `TRF Líquido Honorarios BHE ${honDoc.folio}` }
         ],
@@ -1040,7 +1040,7 @@ export async function generateOrResetDemoFerreteria(
           totalCredit: vTot,
           lines: [
             { id: `lv1-${vFolio}`, accountId: accountMap.get('1.1.01.002') || 'acc-1_1_01_002', accountCode: '1.1.01.002', accountName: 'Banco Santander Cta Cte 88921-0', debit: vTot, credit: 0, gloss: `Abono Transferencia Cliente Doc ${vFolio}` },
-            { id: `lv2-${vFolio}`, accountId: accountMap.get('4.1.01.001') || 'acc-4_1_01_001', accountCode: '4.1.01.001', accountName: 'Ventas de Materiales y Ferretería Afectas', debit: 0, credit: vNet, gloss: `Venta Ferretería Doc ${vFolio}`, costCenter: cust.cc, project: cust.pry, auxiliaryRut: cust.rut },
+            { id: `lv2-${vFolio}`, accountId: accountMap.get('3.1.01.001') || 'acc-3_1_01_001', accountCode: '3.1.01.001', accountName: 'Ventas de Materiales y Ferretería Afectas', debit: 0, credit: vNet, gloss: `Venta Ferretería Doc ${vFolio}`, costCenter: cust.cc, project: cust.pry, auxiliaryRut: cust.rut },
             { id: `lv3-${vFolio}`, accountId: accountMap.get('2.1.02.001') || 'acc-2_1_02_001', accountCode: '2.1.02.001', accountName: 'IVA Débito Fiscal', debit: 0, credit: vIva, gloss: `IVA DF Doc ${vFolio}` }
           ],
           createdAt: `${txDate}T14:30:00Z`
@@ -1201,8 +1201,8 @@ export async function generateOrResetDemoFerreteria(
       lines: [
         {
           id: 'line-deprec-deb',
-          accountId: accountMap.get('5.2.02.007') || 'acc-5_2_02_007',
-          accountCode: '5.2.02.007',
+          accountId: accountMap.get('4.2.02.007') || 'acc-4_2_02_007',
+          accountCode: '4.2.02.007',
           accountName: 'Depreciación Activo Fijo del Ejercicio',
           debit: 10152381,
           credit: 0,

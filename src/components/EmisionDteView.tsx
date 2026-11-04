@@ -805,8 +805,8 @@ export default function EmisionDteView({
       const cuentaClientes = accounts.find(a => a.code.startsWith('1.1.02') || a.name.toLowerCase().includes('cliente')) ||
         accounts.find(a => a.type === 'Activo') || { id: 'default', code: '1.1.02.001', name: 'Clientes por Cobrar' };
 
-      const cuentaVentas = accounts.find(a => a.code.startsWith('4.1.01') || a.name.toLowerCase().includes('venta') || a.type === 'Ingreso') ||
-        { id: 'default', code: '4.1.01.001', name: 'Ingresos por Ventas' };
+      const cuentaVentas = accounts.find(a => a.code.startsWith('3.1.01') || a.name.toLowerCase().includes('venta') || a.type === 'Ingreso') ||
+        { id: 'default', code: '3.1.01.001', name: 'Ingresos por Ventas' };
 
       const cuentaIvaDebito = accounts.find(a => a.code.startsWith('2.1.01') || a.name.toLowerCase().includes('iva') || a.name.toLowerCase().includes('débito')) ||
         { id: 'default', code: '2.1.01.001', name: 'IVA Débito Fiscal 19%' };

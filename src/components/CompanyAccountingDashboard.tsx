@@ -3386,9 +3386,9 @@ export default function CompanyAccountingDashboard({
       // 2. Ingreso por Ventas -> PRIORIDAD: 1. Doc Override -> 2. Ficha Auxiliar (Cliente) -> 3. Config General RCV
       const salesAcc = resolveAccountDetails(
         docItem.cuentaGastoId || aux?.defaultExpenseOrIncomeAccountId || rcvParams?.defaultSalesIncomeAccountId,
-        ['5101001', '5101', '5.1.01.001', '5.1.01', '51', 'venta', 'ingreso'],
+        ['3101001', '3101', '3.1.01.001', '3.1.01', '5101001', '5101', 'venta', 'ingreso'],
         'Ingreso',
-        '5101001',
+        '3101001',
         'Ingresos por Ventas y Facturación'
       );
 
@@ -3404,9 +3404,9 @@ export default function CompanyAccountingDashboard({
       // 4. Exento
       const exentoAcc = resolveAccountDetails(
         rcvParams?.exentoAccountId,
-        ['5101001', '5101', '5.1.01', 'exenta', 'no afecta'],
+        ['3101002', '3101', '3.1.01', '5101001', '5101', 'exenta', 'no afecta'],
         'Ingreso',
-        '5101001',
+        '3101002',
         'Ventas Exentas o No Afectas'
       );
 
@@ -4521,7 +4521,7 @@ export default function CompanyAccountingDashboard({
       const isVentaVoucher = 
         (v.gloss && v.gloss.toLowerCase().includes('venta')) ||
         (v.createdFromRcvId && rcvDocuments.some(d => d.id === v.createdFromRcvId && d.tipoRegistro === 'Venta')) ||
-        v.lines?.some(l => l.accountCode === '5101001' || l.accountName?.toLowerCase().includes('venta') || l.accountCode === '2102001' || l.accountName?.toLowerCase().includes('iva debito'));
+        v.lines?.some(l => l.accountCode === '3101001' || l.accountCode === '5101001' || l.accountName?.toLowerCase().includes('venta') || l.accountCode === '2102001' || l.accountName?.toLowerCase().includes('iva debito'));
 
       if (!isVentaVoucher) return false;
 
@@ -4954,14 +4954,14 @@ export default function CompanyAccountingDashboard({
       { code: '2.1', name: 'PASIVO CIRCULANTE', type: 'Pasivo', parentCode: '2', requiereCentroCosto: false, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: false, estado: 'Activo' },
       { code: '2.1.01', name: 'Cuentas por Pagar Comerciales', type: 'Pasivo', parentCode: '2.1', requiereCentroCosto: false, requiereAuxiliarRUT: true, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' },
       { code: '2.1.01.001', name: 'Proveedores Nacionales', type: 'Pasivo', parentCode: '2.1.01', requiereCentroCosto: false, requiereAuxiliarRUT: true, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' },
-      { code: '3', name: 'PATRIMONIO', type: 'Patrimonio', requiereCentroCosto: false, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: false, estado: 'Activo' },
-      { code: '3.1.01', name: 'Capital Social', type: 'Patrimonio', parentCode: '3', requiereCentroCosto: false, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: false, estado: 'Activo' },
-      { code: '4', name: 'INGRESOS', type: 'Ingreso', requiereCentroCosto: true, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' },
-      { code: '4.1.01', name: 'Ventas Exentas o No Afectas', type: 'Ingreso', parentCode: '4', requiereCentroCosto: true, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' },
-      { code: '4.1.02', name: 'Ventas Afectas IVA', type: 'Ingreso', parentCode: '4', requiereCentroCosto: true, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' },
-      { code: '5', name: 'GASTOS', type: 'Gasto', requiereCentroCosto: true, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' },
-      { code: '5.1.01', name: 'Remuneraciones y Leyes Sociales', type: 'Gasto', parentCode: '5', requiereCentroCosto: true, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' },
-      { code: '5.1.02', name: 'Gastos Generales y Administrativos', type: 'Gasto', parentCode: '5', requiereCentroCosto: true, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' }
+      { code: '2.3', name: 'PATRIMONIO', type: 'Patrimonio', requiereCentroCosto: false, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: false, estado: 'Activo' },
+      { code: '2.3.01', name: 'Capital Social', type: 'Patrimonio', parentCode: '2.3', requiereCentroCosto: false, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: false, estado: 'Activo' },
+      { code: '3', name: 'INGRESOS', type: 'Ingreso', requiereCentroCosto: true, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' },
+      { code: '3.1.01', name: 'Ventas Exentas o No Afectas', type: 'Ingreso', parentCode: '3', requiereCentroCosto: true, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' },
+      { code: '3.1.02', name: 'Ventas Afectas IVA', type: 'Ingreso', parentCode: '3', requiereCentroCosto: true, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' },
+      { code: '4', name: 'GASTOS', type: 'Gasto', requiereCentroCosto: true, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' },
+      { code: '4.1.01', name: 'Remuneraciones y Leyes Sociales', type: 'Gasto', parentCode: '4', requiereCentroCosto: true, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' },
+      { code: '4.1.02', name: 'Gastos Generales y Administrativos', type: 'Gasto', parentCode: '4', requiereCentroCosto: true, requiereAuxiliarRUT: false, requiereConciliacionBancaria: false, requiereDocumento: true, estado: 'Activo' }
     ];
 
     try {

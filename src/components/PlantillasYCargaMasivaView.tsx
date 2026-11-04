@@ -62,10 +62,10 @@ export default function PlantillasYCargaMasivaView({
       ['2.1.01.001', 'Proveedores por Pagar Nacionales', 'Pasivo', '2.1.01', 'NO', 'SI', 'NO', 'SI', 'SI', 'NO', 'NO', 'NO', ...customCols.map(() => 'NO')],
       ['2.1.03.001', 'IVA Debito Fiscal 19%', 'Pasivo', '2.1.03', 'NO', 'NO', 'NO', 'SI', 'NO', 'NO', 'NO', 'NO', ...customCols.map(() => 'NO')],
       ['2.1.03.003', 'Retencion Honorarios 2da Categoria', 'Pasivo', '2.1.03', 'NO', 'SI', 'NO', 'SI', 'NO', 'NO', 'NO', 'NO', ...customCols.map(() => 'NO')],
-      ['3.1.01.001', 'Capital Social Aportado', 'Patrimonio', '3.1.01', 'NO', 'NO', 'NO', 'NO', 'NO', 'NO', 'NO', 'NO', ...customCols.map(() => 'NO')],
-      ['4.1.01.001', 'Ingresos por Ventas del Giro', 'Ingreso', '4.1.01', 'SI', 'NO', 'NO', 'SI', 'NO', 'NO', 'SI', 'SI', ...customCols.map(() => 'NO')],
-      ['5.1.01.001', 'Costo de Ventas y Mercaderias', 'Gasto', '5.1.01', 'SI', 'NO', 'NO', 'SI', 'NO', 'SI', 'SI', 'SI', ...customCols.map(() => 'NO')],
-      ['5.2.01.001', 'Gastos Generales y Arriendos', 'Gasto', '5.2.01', 'SI', 'SI', 'NO', 'SI', 'SI', 'SI', 'SI', 'NO', ...customCols.map(() => 'NO')]
+      ['2.3.01.001', 'Capital Social Aportado', 'Patrimonio', '2.3.01', 'NO', 'NO', 'NO', 'NO', 'NO', 'NO', 'NO', 'NO', ...customCols.map(() => 'NO')],
+      ['3.1.01.001', 'Ingresos por Ventas del Giro', 'Ingreso', '3.1.01', 'SI', 'NO', 'NO', 'SI', 'NO', 'NO', 'SI', 'SI', ...customCols.map(() => 'NO')],
+      ['4.1.01.001', 'Costo de Ventas y Mercaderias', 'Gasto', '4.1.01', 'SI', 'NO', 'NO', 'SI', 'NO', 'SI', 'SI', 'SI', ...customCols.map(() => 'NO')],
+      ['4.2.01.001', 'Gastos Generales y Arriendos', 'Gasto', '4.2.01', 'SI', 'SI', 'NO', 'SI', 'SI', 'SI', 'SI', 'NO', ...customCols.map(() => 'NO')]
     ];
 
     const csvContent = '\uFEFF' + [headers.join(';'), ...sampleRows.map(r => r.join(';'))].join('\n');
@@ -249,7 +249,7 @@ export default function PlantillasYCargaMasivaView({
         Periodo: '2026-01',
         TipoComprobante: 'Traspaso',
         GlosaComprobante: 'Asiento de Apertura Ejercicio 2026',
-        CodigoCuenta: accounts[3]?.code || '3.1.01.001',
+        CodigoCuenta: accounts[3]?.code || '2.3.01.001',
         NombreCuenta: accounts[3]?.name || 'Capital Social Aportado',
         Debe: 0,
         Haber: 16000000,
@@ -329,7 +329,7 @@ export default function PlantillasYCargaMasivaView({
       ['1', '2026-01-02', '2026-01', 'Traspaso', 'Asiento de Apertura Ejercicio 2026', accounts[0]?.code || '1.1.02.001', accounts[0]?.name || 'Banco de Chile Cta Cte', '15000000', '0', 'Saldo inicial banco', '', '', '', '', '', '', '', '', '', 'Cartola 001', ...customCols.map(() => '')],
       ['1', '2026-01-02', '2026-01', 'Traspaso', 'Asiento de Apertura Ejercicio 2026', accounts[1]?.code || '1.1.03.001', accounts[1]?.name || 'Clientes por Cobrar', '5000000', '0', 'Facturas pendientes', '76.123.456-7', 'Comercial Sur', 'Factura', '450', '2026-02-15', '', '', '', '', '', ...customCols.map(() => '')],
       ['1', '2026-01-02', '2026-01', 'Traspaso', 'Asiento de Apertura Ejercicio 2026', accounts[2]?.code || '2.1.01.001', accounts[2]?.name || 'Proveedores por Pagar', '0', '4000000', 'Deuda inicial compras', '77.987.654-3', 'Industrial SpA', 'Factura', '9812', '2026-02-28', '', '', '', '', '', ...customCols.map(() => '')],
-      ['1', '2026-01-02', '2026-01', 'Traspaso', 'Asiento de Apertura Ejercicio 2026', accounts[3]?.code || '3.1.01.001', accounts[3]?.name || 'Capital Social Aportado', '0', '16000000', 'Aporte de socios', '', '', '', '', '', '', '', '', '', '', ...customCols.map(() => '')],
+      ['1', '2026-01-02', '2026-01', 'Traspaso', 'Asiento de Apertura Ejercicio 2026', accounts[3]?.code || '2.3.01.001', accounts[3]?.name || 'Capital Social Aportado', '0', '16000000', 'Aporte de socios', '', '', '', '', '', '', '', '', '', '', ...customCols.map(() => '')],
       ['2', '2026-02-28', '2026-02', 'Traspaso', 'Centralización de Remuneraciones Febrero 2026', '4202002', 'Sueldo Base', '1500000', '0', 'SUELDO BASE | RECURSOS HUMANOS', '15.432.109-8', 'GONZALEZ PEREZ JUAN PABLO', 'Liquidacion', '202602', '2026-02-28', 'RRHH', 'SUELDOS', '', '', '', ...customCols.map(() => '')]
     ];
 

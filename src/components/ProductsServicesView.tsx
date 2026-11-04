@@ -178,7 +178,7 @@ export const ProductsServicesView: React.FC<ProductsServicesViewProps> = ({
       unitOfMeasure: 'UN',
       salesPrice: 0,
       purchaseCost: 0,
-      salesAccountId: accounts.find(a => a.type === 'Ingreso' || a.code.startsWith('4'))?.id || '',
+      salesAccountId: accounts.find(a => a.type === 'Ingreso' || a.code.startsWith('3'))?.id || '',
       purchaseAccountId: accounts.find(a => a.type === 'Gasto' || a.code.startsWith('1106') || a.code.startsWith('5'))?.id || '',
       defaultCostCenterId: '',
       defaultItemGastoId: '',

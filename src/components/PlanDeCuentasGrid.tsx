@@ -75,10 +75,10 @@ export const STANDARD_CHILEAN_ACCOUNTS_PRESET: Partial<ChartOfAccount>[] = [
   { code: '2102002', name: 'RETENCIONES DE IMPUESTO (HONORARIOS/UNICA)', type: 'Pasivo', isImputable: true, moneda: 'CLP', requiereAuxiliarRUT: true, blce8Columnas: 'PASIVO', codigoIFRS: '2102' },
   { code: '2103001', name: 'REMUNERACIONES POR PAGAR', type: 'Pasivo', isImputable: true, moneda: 'CLP', requiereAuxiliarRUT: true, blce8Columnas: 'PASIVO', codigoIFRS: '2103' },
   { code: '2103002', name: 'IMPOSICIONES POR PAGAR (PREVIRED)', type: 'Pasivo', isImputable: true, moneda: 'CLP', requiereAuxiliarRUT: true, blce8Columnas: 'PASIVO', codigoIFRS: '2103' },
-  // Patrimonio
-  { code: '3101001', name: 'CAPITAL PAGADO', type: 'Patrimonio', isImputable: true, moneda: 'CLP', requiereCMonetaria: true, blce8Columnas: 'PASIVO', codigoIFRS: '3101' },
-  { code: '3102001', name: 'RESULTADOS ACUMULADOS', type: 'Patrimonio', isImputable: true, moneda: 'CLP', requiereCMonetaria: true, blce8Columnas: 'PASIVO', codigoIFRS: '3102' },
-  // Pérdidas / Gastos
+  // Patrimonio (23)
+  { code: '2301001', name: 'CAPITAL PAGADO', type: 'Patrimonio', isImputable: true, moneda: 'CLP', requiereCMonetaria: true, blce8Columnas: 'PASIVO', codigoIFRS: '2301' },
+  { code: '2303001', name: 'RESULTADOS ACUMULADOS', type: 'Patrimonio', isImputable: true, moneda: 'CLP', requiereCMonetaria: true, blce8Columnas: 'PASIVO', codigoIFRS: '2303' },
+  // Pérdidas / Gastos (4)
   { code: '4101001', name: 'COSTO DE VENTAS / MERCADERIAS', type: 'Gasto', isImputable: true, moneda: 'CLP', requiereCentroCosto: true, blce8Columnas: 'PERDIDA', codigoIFRS: '4101' },
   { code: '4201001', name: 'SUELDOS Y SALARIOS', type: 'Gasto', isImputable: true, moneda: 'CLP', requiereAuxiliarRUT: true, requiereCentroCosto: true, blce8Columnas: 'PERDIDA', codigoIFRS: '4201' },
   { code: '4201002', name: 'LEYES SOCIALES', type: 'Gasto', isImputable: true, moneda: 'CLP', requiereCentroCosto: true, blce8Columnas: 'PERDIDA', codigoIFRS: '4201' },
@@ -86,11 +86,11 @@ export const STANDARD_CHILEAN_ACCOUNTS_PRESET: Partial<ChartOfAccount>[] = [
   { code: '4202001', name: 'ARRIENDOS Y GASTOS COMUNES', type: 'Gasto', isImputable: true, moneda: 'CLP', requiereAuxiliarRUT: true, requiereDocumento: true, requiereCentroCosto: true, blce8Columnas: 'PERDIDA', codigoIFRS: '4202' },
   { code: '4202002', name: 'SERVICIOS BASICOS (LUZ, AGUA, INTERNET)', type: 'Gasto', isImputable: true, moneda: 'CLP', requiereAuxiliarRUT: true, requiereDocumento: true, requiereCentroCosto: true, blce8Columnas: 'PERDIDA', codigoIFRS: '4202' },
   { code: '4202003', name: 'GASTOS DE PUBLICIDAD Y MARKETING', type: 'Gasto', isImputable: true, moneda: 'CLP', requiereAuxiliarRUT: true, requiereDocumento: true, requiereCentroCosto: true, blce8Columnas: 'PERDIDA', codigoIFRS: '4202' },
-  { code: '4203001', name: 'GASTOS BANCARIOS E INTERESES', type: 'Gasto', isImputable: true, moneda: 'CLP', requiereCentroCosto: true, blce8Columnas: 'PERDIDA', codigoIFRS: '4203' },
-  // Ganancias / Ingresos
-  { code: '5101001', name: 'INGRESOS POR VENTAS Y FACTURACION', type: 'Ingreso', isImputable: true, moneda: 'CLP', requiereAuxiliarRUT: true, requiereDocumento: true, requiereCentroCosto: true, blce8Columnas: 'GANANCIA', codigoIFRS: '5101' },
-  { code: '5101002', name: 'INGRESOS POR EXPORTACIONES', type: 'Ingreso', isImputable: true, moneda: 'USD', requiereAuxiliarRUT: true, requiereDocumento: true, requiereDifCambio: true, blce8Columnas: 'GANANCIA', codigoIFRS: '5101' },
-  { code: '5201001', name: 'OTROS INGRESOS FUERA DE EXPLOTACION', type: 'Ingreso', isImputable: true, moneda: 'CLP', blce8Columnas: 'GANANCIA', codigoIFRS: '5201' }
+  { code: '4301001', name: 'GASTOS BANCARIOS E INTERESES', type: 'Gasto', isImputable: true, moneda: 'CLP', requiereCentroCosto: true, blce8Columnas: 'PERDIDA', codigoIFRS: '4301' },
+  // Ganancias / Ingresos (3)
+  { code: '3101001', name: 'INGRESOS POR VENTAS Y FACTURACION', type: 'Ingreso', isImputable: true, moneda: 'CLP', requiereAuxiliarRUT: true, requiereDocumento: true, requiereCentroCosto: true, blce8Columnas: 'GANANCIA', codigoIFRS: '3101' },
+  { code: '3101002', name: 'INGRESOS POR EXPORTACIONES', type: 'Ingreso', isImputable: true, moneda: 'USD', requiereAuxiliarRUT: true, requiereDocumento: true, requiereDifCambio: true, blce8Columnas: 'GANANCIA', codigoIFRS: '3101' },
+  { code: '3201001', name: 'OTROS INGRESOS FUERA DE EXPLOTACION', type: 'Ingreso', isImputable: true, moneda: 'CLP', blce8Columnas: 'GANANCIA', codigoIFRS: '3201' }
 ];
 
 export default function PlanDeCuentasGrid({ studyId, company, onRefreshCompany }: PlanDeCuentasGridProps) {
@@ -145,12 +145,13 @@ export default function PlanDeCuentasGrid({ studyId, company, onRefreshCompany }
 
   // Determinar Tipo Contable automáticamente por dígito o Balance 8 Columnas
   const inferTypeFromBalance = (blce: string, code: string): 'Activo' | 'Pasivo' | 'Patrimonio' | 'Ingreso' | 'Gasto' => {
-    const firstDigit = (code || '').charAt(0);
+    // Convención: 1 Activo · 2 Pasivo (23 = Patrimonio) · 3 Ingresos · 4 Gastos
+    const digitos = (code || '').replace(/\D/g, '');
+    const firstDigit = digitos.charAt(0);
     if (firstDigit === '1') return 'Activo';
-    if (firstDigit === '2') return 'Pasivo';
-    if (firstDigit === '3') return 'Patrimonio';
+    if (firstDigit === '2') return digitos.startsWith('23') ? 'Patrimonio' : 'Pasivo';
+    if (firstDigit === '3') return 'Ingreso';
     if (firstDigit === '4') return 'Gasto';
-    if (firstDigit === '5') return 'Ingreso';
 
     const upper = (blce || '').toUpperCase();
     if (upper === 'ACTIVO') return 'Activo';

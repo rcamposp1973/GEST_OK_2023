@@ -9,6 +9,13 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## [Pruebas] Plantillas de plan de cuentas alineadas a la convención
+- Plan de cuentas por defecto, plan inicial del tablero, plantilla Excel y empresa demo: 1 Activo · 2 Pasivo · 23 Patrimonio · 3 Ingresos · 4 Gastos (antes: 3 Patrimonio, 4 Ingresos, 5 Gastos / 5 Ingresos).
+- Búsquedas de cuentas de ventas, costo y gastos (centralizaciones, DTE, productos, operativa comercial) usan los códigos nuevos y siguen reconociendo los antiguos.
+- Al crear una cuenta, el Tipo se asigna por la convención (23 = Patrimonio, 3 = Ingreso, 4 = Gasto).
+- El Auditor de Estados Financieros usa el mismo motor de clasificación que el Balance IFRS y el Estado de Resultados.
+- Las empresas ya creadas no se renumeran.
+
 ## [Pruebas] Corrección: la naturaleza de la cuenta la define el código
 - Balance IFRS y Estado de Resultados clasifican por el primer dígito del código: 1 Activo · 2 Pasivo (23 = Patrimonio) · 3 Ingresos · 4 Gastos. El "Tipo" de la cuenta solo se usa si el código no entra en la convención (p. ej. planes antiguos con 5).
 - Corregido: cuentas de Patrimonio (23…) con Tipo "Pasivo" aparecían dentro de los pasivos.

@@ -1,5 +1,5 @@
 /** Versión de la plataforma (versionado semántico MAYOR.MENOR.PARCHE). El detalle de cada versión está en CHANGELOG.md. */
-export const APP_VERSION = 'v1.1.0';
+export const APP_VERSION = 'v1.2.0';
 export const APP_BUILD_NAME = 'Gest_OK Corporate';
 
 declare const __BUILD_ID__: string | undefined;

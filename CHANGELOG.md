@@ -9,42 +9,44 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
-## [Pruebas] Plantillas de plan de cuentas alineadas a la convención
+## 1.2.0 — 4 de noviembre de 2026
+
+### Plantillas de plan de cuentas alineadas a la convención
 - Plan de cuentas por defecto, plan inicial del tablero, plantilla Excel y empresa demo: 1 Activo · 2 Pasivo · 23 Patrimonio · 3 Ingresos · 4 Gastos (antes: 3 Patrimonio, 4 Ingresos, 5 Gastos / 5 Ingresos).
 - Búsquedas de cuentas de ventas, costo y gastos (centralizaciones, DTE, productos, operativa comercial) usan los códigos nuevos y siguen reconociendo los antiguos.
 - Al crear una cuenta, el Tipo se asigna por la convención (23 = Patrimonio, 3 = Ingreso, 4 = Gasto).
 - El Auditor de Estados Financieros usa el mismo motor de clasificación que el Balance IFRS y el Estado de Resultados.
 - Las empresas ya creadas no se renumeran.
 
-## [Pruebas] Corrección: la naturaleza de la cuenta la define el código
+### Corrección: la naturaleza de la cuenta la define el código
 - Balance IFRS y Estado de Resultados clasifican por el primer dígito del código: 1 Activo · 2 Pasivo (23 = Patrimonio) · 3 Ingresos · 4 Gastos. El "Tipo" de la cuenta solo se usa si el código no entra en la convención (p. ej. planes antiguos con 5).
 - Corregido: cuentas de Patrimonio (23…) con Tipo "Pasivo" aparecían dentro de los pasivos.
 - El rubro dentro de cada sección se toma del nombre de la cuenta (o del rubro escrito en ella), no de subcódigos, porque cada plan de cuentas es distinto.
 - El resultado del ejercicio (Ingresos − Gastos) se mantiene dentro del Patrimonio.
 
-## [Pruebas] Estado de Resultados: vista NIIF 18
+### Estado de Resultados: vista NIIF 18
 - Selector "NIC 1 (vigente) / NIIF 18 (desde 2027)" en el Estado de Resultados.
 - Vista NIIF 18: categorías Operación, Inversión y Financiamiento, con los subtotales "Resultado Operacional" y "Resultado antes de Financiamiento e Impuestos", impuestos y resultado del ejercicio, más nota de gastos por naturaleza (personal, depreciación).
 - Es una vista preliminar: el cierre 2025 se presenta en NIC 1. La matriz de 12 meses, la exportación y la impresión siguen en NIC 1.
 
-## [Pruebas] Estados financieros IFRS: una sola clasificación
+### Estados financieros IFRS: una sola clasificación
 - Nuevo motor único de clasificación para Balance IFRS y Estado de Resultados (antes cada uno tenía reglas propias y se contradecían: el código 5 era gasto en uno e ingreso en el otro).
 - Naturaleza de la cuenta: primero su Tipo; luego la convención 1 Activo · 2 Pasivo · 23 Patrimonio · 3 Ingresos · 4 Gastos.
 - Rubros con denominaciones NIC 1 / CMF (Efectivo, Deudores comerciales, Activos por impuestos corrientes, Otros pasivos financieros, Ganancias acumuladas, Costo de ventas, Costos financieros, etc.).
 - Corregido: "Gastos bancarios e intereses" de la plantilla caía como depreciación; ahora va a Costos financieros. IVA y retenciones, remuneraciones y préstamos se ordenan por nombre y estructura.
 - Nuevo panel "Revisión de clasificación" en el Balance IFRS con las cuentas que no calzan con la convención o no tienen Tipo.
 
-## [Pruebas] Cartola: sin duplicados al cargar provisoria + definitiva
+### Cartola: sin duplicados al cargar provisoria + definitiva
 - Al importar una cartola, un movimiento se considera ya existente si coincide fecha y monto (la glosa puede cambiar entre provisoria y definitiva), o mismo N° de documento y monto, o mismo monto y glosa con pocos días de diferencia.
 - Movimientos legítimos idénticos dentro de una misma cartola ya no se descartan.
 - Nuevo botón "Limpiar duplicados" para eliminar movimientos pendientes repetidos ya cargados (no toca los conciliados).
 
-## [Pruebas] Períodos ordenados
+### Períodos ordenados
 - Al entrar a una empresa, todas las pantallas (Centralizaciones, Conciliación, F29, etc.) parten en el último período abierto, nunca uno futuro.
 - Ya no se recuerda un período antiguo de otra sesión/empresa: el usuario puede ir a uno anterior, pero al volver a entrar parte en el último abierto.
 - Los selectores de mes no permiten elegir períodos futuros.
 
-## [Pruebas] Indicadores económicos oficiales (sin valores inventados)
+### Indicadores económicos oficiales (sin valores inventados)
 - El servidor copia UF, Dólar, Euro y UTM desde la fuente oficial (mindicador.cl, que replica Banco Central y SII) y los publica en un solo lugar (`globalExchangeRates`). Todas las pantallas leen de ahí.
 - La UF se toma completa según se publica (un mes por adelantado junto con el IPC); no se proyecta ni se estima.
 - Eliminados todos los valores de respaldo inventados (UF 38.250, dólar 955, yen, UTM proyectada) y el generador de valores aleatorios por empresa.

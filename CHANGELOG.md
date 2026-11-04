@@ -9,6 +9,12 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## [Pruebas] Corrección: la naturaleza de la cuenta la define el código
+- Balance IFRS y Estado de Resultados clasifican por el primer dígito del código: 1 Activo · 2 Pasivo (23 = Patrimonio) · 3 Ingresos · 4 Gastos. El "Tipo" de la cuenta solo se usa si el código no entra en la convención (p. ej. planes antiguos con 5).
+- Corregido: cuentas de Patrimonio (23…) con Tipo "Pasivo" aparecían dentro de los pasivos.
+- El rubro dentro de cada sección se toma del nombre de la cuenta (o del rubro escrito en ella), no de subcódigos, porque cada plan de cuentas es distinto.
+- El resultado del ejercicio (Ingresos − Gastos) se mantiene dentro del Patrimonio.
+
 ## [Pruebas] Estado de Resultados: vista NIIF 18
 - Selector "NIC 1 (vigente) / NIIF 18 (desde 2027)" en el Estado de Resultados.
 - Vista NIIF 18: categorías Operación, Inversión y Financiamiento, con los subtotales "Resultado Operacional" y "Resultado antes de Financiamiento e Impuestos", impuestos y resultado del ejercicio, más nota de gastos por naturaleza (personal, depreciación).

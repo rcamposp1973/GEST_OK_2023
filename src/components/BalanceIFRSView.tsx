@@ -550,14 +550,14 @@ export default function BalanceIFRSView({
           >
             <span className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4" />
-              Revisión de clasificación: {hallazgos.length} {hallazgos.length === 1 ? 'cuenta' : 'cuentas'} con criterio a confirmar
+              Revisión de clasificación: {hallazgos.length} {hallazgos.length === 1 ? 'cuenta' : 'cuentas'} con Tipo distinto al código
             </span>
             <span className="text-[11px] font-semibold">{showRevision ? 'Ocultar' : 'Ver detalle'}</span>
           </button>
           {showRevision && (
             <div className="px-3.5 pb-3 overflow-x-auto">
               <p className="text-[11px] text-amber-800 mb-2">
-                Convención: 1 Activo · 2 Pasivo · 23 Patrimonio · 3 Ingresos · 4 Gastos. El informe respeta el <strong>Tipo</strong> de cada cuenta; estas cuentas no calzan exactamente con la convención o no tienen Tipo.
+                Convención por el código: 1 Activo · 2 Pasivo (23 = Patrimonio) · 3 Ingresos · 4 Gastos. El informe clasifica por el código; estas cuentas tienen un Tipo distinto al del código o un código fuera de la convención.
               </p>
               <table className="w-full text-left">
                 <thead>

@@ -3,13 +3,16 @@
 // (p. ej. el Balance trataba el código "5" como gasto y el Estado de Resultados como ingreso).
 //
 // Criterio de naturaleza (en este orden):
-//   1. El "Tipo" configurado en la cuenta (Activo / Pasivo / Patrimonio / Ingreso / Gasto)
-//   2. La convención de códigos:  1 Activo · 2 Pasivo · 23 Patrimonio · 3 Ingresos · 4 Gastos
+//   1. Convención por el PRIMER DÍGITO del código (cada contador tiene su propio plan, pero esto es común):
+//        1 Activo · 2 Pasivo (23 = Patrimonio) · 3 Ingresos · 4 Gastos
+//   2. Si el código no entra en la convención (p. ej. empieza con 5, 6… o no es numérico): el "Tipo" de la cuenta
 //   3. Columna del Balance de 8 columnas (Activo/Pasivo/Pérdida/Ganancia)
-//   4. Compatibilidad con planes antiguos (5 = gasto/ingreso según el nombre)
+//   4. Por el nombre
 //
-// Rubro IFRS (en este orden): rubro escrito en la cuenta → palabras clave fuertes del nombre
-// → código IFRS de la plantilla → estructura del código → nombre.
+// El rubro IFRS dentro de cada sección NO depende de subcódigos (cada plan es distinto): se toma del rubro
+// escrito en la cuenta, o del nombre de la cuenta. Los subcódigos solo se usan como último recurso.
+//
+// El resultado del ejercicio (Ingresos − Gastos) se presenta DENTRO del Patrimonio.
 
 import type { ChartOfAccount } from '../types';
 
@@ -50,16 +53,15 @@ export function naturalezaPorCodigo(code?: string): Naturaleza | null {
 }
 
 export function getNaturaleza(account: Pick<ChartOfAccount, 'code' | 'type' | 'name'> & { blce8Columnas?: string }): Naturaleza {
-  const porTipo = naturalezaPorTipo(account.type);
-  if (porTipo) return porTipo;
   const porCodigo = naturalezaPorCodigo(account.code);
   if (porCodigo) return porCodigo;
+  const porTipo = naturalezaPorTipo(account.type);
+  if (porTipo) return porTipo;
   const b = norm(account.blce8Columnas);
   if (b === 'activo') return 'ACTIVO';
   if (b === 'pasivo') return 'PASIVO';
   if (b === 'ganancia') return 'INGRESO';
   if (b === 'perdida') return 'GASTO';
-  // Planes antiguos: el código 5 era ingreso o gasto según el nombre
   const n = norm(account.name);
   if (/ingreso|venta|ganancia/.test(n)) return 'INGRESO';
   return 'GASTO';
@@ -154,11 +156,11 @@ export function getRubroESF(account: ChartOfAccount): string {
     if (/depreciacion acumulada|amortizacion acumulada|terreno|vehiculo|maquinaria|edificio|construccion|mobiliario|equipos?\b|instalacion|activo fijo|propiedad|planta/.test(n) && !/por cobrar|clientes/.test(n)) return '1201';
     if (/intangible|software|marca|licencia|plusvalia|derecho de llave/.test(n)) return '1202';
     if (/inversion|asociada|propiedad de inversion|garantia.*largo|largo plazo|no corriente/.test(n)) return '1203';
-    if (p2 === '12') return '1201';
     if (/\bcaja\b|banco|efectivo|tesoreria|fondo fijo|fondos por rendir|deposito a plazo|inversion.*(liquida|corto)/.test(n)) return '1101';
     if (esIVA(n) || /impuesto/.test(n)) return '1104';
     if (/inventario|mercaderia|existencia|materia prima|producto terminado/.test(n)) return '1103';
     if (/cliente|deudor|por cobrar|documentos? por cobrar|factura|anticipo|prestamo.*(trabajador|empleado)|cheque/.test(n)) return '1102';
+    if (p2 === '12') return '1201';
     // estructura del código (plantilla: 1101 efectivo, 1102 deudores, 1103 docs/inventarios, 1104 impuestos)
     const p4 = d.slice(0, 4);
     if (p4 === '1101') return '1101';
@@ -266,7 +268,7 @@ export interface HallazgoClasificacion {
   detalle: string;
 }
 
-/** Lista cuentas cuya naturaleza no calza con la convención 1/2/23/3/4, o que dependen de supuestos. */
+/** Lista cuentas cuyo "Tipo" contradice la convención del código (el informe usa el código) o que no entran en la convención. */
 export function revisarClasificacion(accounts: ChartOfAccount[]): HallazgoClasificacion[] {
   const out: HallazgoClasificacion[] = [];
   accounts.forEach(a => {
@@ -274,12 +276,13 @@ export function revisarClasificacion(accounts: ChartOfAccount[]): HallazgoClasif
     const nat = getNaturaleza(a);
     const rubro = nat === 'INGRESO' || nat === 'GASTO' ? getRubroER(a) : getRubroESF(a);
     const conv = naturalezaPorCodigo(a.code);
-    if (!naturalezaPorTipo(a.type)) {
-      out.push({ account: a, naturaleza: nat, rubro, tipo: 'SIN_TIPO', detalle: 'La cuenta no tiene "Tipo" definido; se clasificó por su código.' });
-    } else if (conv && conv !== nat) {
-      out.push({ account: a, naturaleza: nat, rubro, tipo: 'CONVENCION', detalle: `Por su código (${a.code}) sería ${conv.toLowerCase()}, pero su Tipo es ${nat.toLowerCase()}. Se respetó el Tipo.` });
+    const tipo = naturalezaPorTipo(a.type);
+    if (conv && tipo && conv !== tipo) {
+      out.push({ account: a, naturaleza: nat, rubro, tipo: 'CONVENCION', detalle: `Su Tipo dice ${tipo.toLowerCase()}, pero por el código (${a.code}) es ${conv.toLowerCase()}. El informe usó el código.` });
     } else if (!conv && digits(a.code)[0] === '5') {
-      out.push({ account: a, naturaleza: nat, rubro, tipo: 'ANTIGUO_5', detalle: 'Código iniciado en 5 (plan antiguo). Se respetó el Tipo de la cuenta.' });
+      out.push({ account: a, naturaleza: nat, rubro, tipo: 'ANTIGUO_5', detalle: tipo ? 'Código fuera de la convención (empieza con 5). Se usó el Tipo de la cuenta.' : 'Código fuera de la convención y sin Tipo; se clasificó por su nombre.' });
+    } else if (!conv && !tipo) {
+      out.push({ account: a, naturaleza: nat, rubro, tipo: 'SIN_TIPO', detalle: 'Código fuera de la convención y sin Tipo; se clasificó por su nombre.' });
     }
   });
   return out;

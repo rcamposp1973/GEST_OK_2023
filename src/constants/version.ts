@@ -1,7 +1,7 @@
 /** Versión de la plataforma (versionado semántico MAYOR.MENOR.PARCHE). El detalle de cada versión está en CHANGELOG.md. */
 declare const __APP_VERSION__: string | undefined;
 /** Sale de package.json (campo "version"); para cambiar la versión se edita solo ese archivo. */
-export const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' && __APP_VERSION__ ? `v${__APP_VERSION__}` : 'v1.2.0';
+export const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' && __APP_VERSION__ ? `v${__APP_VERSION__}` : 'v1.2.1';
 export const APP_BUILD_NAME = 'Gest_OK Corporate';
 
 declare const __BUILD_ID__: string | undefined;

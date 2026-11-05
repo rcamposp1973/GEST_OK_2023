@@ -9,6 +9,12 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.2.1 — 4 de noviembre de 2026
+
+### Corrección
+- "Contabilizar y Conciliar en 1 Clic" (Libro Banco) fallaba con "addDoc() called with invalid data. Unsupported field value: undefined" cuando el RUT auxiliar o la referencia iban vacíos. Ahora los campos vacíos se omiten al guardar (en toda la aplicación).
+- El número de comprobante de ese flujo usa el correlativo atómico, para evitar repetidos si se crean comprobantes en paralelo.
+
 ## 1.2.0 — 4 de noviembre de 2026
 
 ### Plantillas de plan de cuentas alineadas a la convención

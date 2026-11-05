@@ -1,3 +1,4 @@
+import { getNextVoucherNumber } from '../utils/voucherCounter';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { db, auth } from '../lib/firebase';
 import { collection, getDocs, doc, setDoc, addDoc } from 'firebase/firestore';
@@ -603,7 +604,9 @@ export default function LibroBancoColaborativoView({
       setSaveLoading(true);
 
       const existingNumbers = vouchers.map(v => v.voucherNumber || 0);
-      const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
+      const maxExistente = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
+      // Correlativo atómico: evita números repetidos si hay otro usuario o pestaña creando comprobantes
+      const nextNumber = await getNextVoucherNumber(studyId || company.studyId || 'default-study', company.id, 0, maxExistente);
 
       let lines: VoucherLine[] = [];
       if (isCargo) {

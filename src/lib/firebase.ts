@@ -9,6 +9,8 @@ export const db = initializeFirestore(
   app,
   {
     experimentalAutoDetectLongPolling: true,
+    // Campos vacíos (undefined) se omiten en vez de provocar error al guardar (p. ej. RUT auxiliar opcional)
+    ignoreUndefinedProperties: true,
   },
   firebaseConfig.firestoreDatabaseId
 );

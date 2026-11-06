@@ -70,7 +70,6 @@ import { isDemoFerreteriaCompany, DEMO_COMPANY_NAME } from '../utils/demoFerrete
 import { WorkspaceTab, DockPosition, COCKPIT_MODULE_CATALOG } from './cockpit/cockpitTypes';
 import { CockpitTabBar } from './cockpit/CockpitTabBar';
 import { CockpitDock } from './cockpit/CockpitDock';
-import { NewTabModal } from './cockpit/NewTabModal';
 import { FloatingAccountingCalculator } from './cockpit/FloatingAccountingCalculator';
 import { KeyboardShortcutsModal } from './KeyboardShortcutsModal';
 import { 
@@ -224,7 +223,6 @@ export default function CompanyAccountingDashboard({
   };
 
   const [isZenMode, setIsZenMode] = useState<boolean>(false);
-  const [showNewTabModal, setShowNewTabModal] = useState<boolean>(false);
   const [showCalculator, setShowCalculator] = useState<boolean>(false);
 
   const [openTabs, setOpenTabs] = useState<WorkspaceTab[]>(() => {
@@ -3996,7 +3994,7 @@ export default function CompanyAccountingDashboard({
         });
         break;
       case 'NEW_TAB':
-        setShowNewTabModal(true);
+        handleOpenModuleInTab('home');
         break;
       case 'CLOSE_TAB':
         handleCloseTab(activeTabId);
@@ -4071,7 +4069,7 @@ export default function CompanyAccountingDashboard({
       if (e.altKey && e.key.toLowerCase() === 't') {
         e.preventDefault();
         e.stopPropagation();
-        setShowNewTabModal(true);
+        handleOpenModuleInTab('home');
         return;
       }
 
@@ -5450,7 +5448,7 @@ export default function CompanyAccountingDashboard({
         activeTabId={activeTabId}
         onSelectTab={handleSelectTab}
         onCloseTab={handleCloseTab}
-        onOpenNewTabModal={() => setShowNewTabModal(true)}
+        onOpenNewTabModal={() => handleOpenModuleInTab('home')}
         onBackToCompanies={onBack}
         selectedYear={selectedYear}
         onChangeYear={(yr) => {
@@ -9783,14 +9781,6 @@ export default function CompanyAccountingDashboard({
           pinnedModuleIds={pinnedQuickAccessIds}
         />
       )}
-
-      {/* CATÁLOGO DE MÓDULOS EN MODAL (+) */}
-      <NewTabModal
-        isOpen={showNewTabModal}
-        onClose={() => setShowNewTabModal(false)}
-        onSelectModule={handleOpenModuleInTab}
-        activeModuleIds={openTabs.map(t => t.moduleId)}
-      />
 
       {/* CALCULADORA TÁCTICA FLOTANTE & CINTA DE MEMORIA */}
       <FloatingAccountingCalculator

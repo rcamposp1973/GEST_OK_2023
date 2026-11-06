@@ -9,6 +9,18 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.4.1 — 6 de noviembre de 2026
+**Módulo Personal: parámetros legales y cálculos corregidos.**
+- Tasa SIS según Previred de cada mes (1,54 % ene-mar, 1,62 % abr-jun, 2,00 % jul; desde agosto integrada en la cotización del empleador, Ley 21.735).
+- UF del último día del mes (Previred) para los topes imponibles; tope de enero 89,9 UF.
+- Sueldo mínimo $553.553 y asignación familiar nueva ($22.601 / $13.870 / $4.382) desde mayo 2026.
+- Horas extras con la fórmula de la Dirección del Trabajo y jornada legal de 42 horas.
+- Finiquito: indemnización por años de servicio solo con 1 año o más, tope de 90 UF con la UF real y base de cálculo según Art. 172.
+- Centralización de sueldos: cuadra con todos los descuentos (APV, anticipos, préstamos, judiciales) y ya no usa cuentas al azar.
+- Sin valores de UF/UTM inventados: si falta el dato oficial, el sistema lo avisa.
+
+---
+
 ## 1.4.0 — 6 de noviembre de 2026
 
 ### Nuevo

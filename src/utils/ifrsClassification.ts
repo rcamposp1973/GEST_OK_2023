@@ -147,6 +147,15 @@ export function getRubroESF(account: ChartOfAccount): string {
     }
   }
 
+  // 1b. Pasivos: palabras clave claras del nombre prevalecen sobre códigos de plantilla
+  //     (cada contador numera distinto: no se puede inferir el rubro desde el código)
+  if (nat === 'PASIVO') {
+    if (/diferido/.test(n)) return '2202';
+    if (/honorarios? por pagar|facturas? por pagar|proveedor/.test(n)) return '2101';
+    if (/prestamo|linea de credito|tarjeta (de )?credito|credito (bancario|itau|santander|bci|estado|chile)|sobregiro|leasing|obligacion.*banco/.test(n)) return p2 === '22' ? '2201' : '2102';
+    if (/remuneracion|sueldo|\bafp\b|isapre|fonasa|ccaf|caja de compensacion|seguro.*vida|cuotas? sindical|colecta|mutual|leyes sociales|imposicion|previred|feriado|vacacion|gratificacion|finiquito/.test(n)) return '2104';
+  }
+
   // 2. Código IFRS de la plantilla
   const ifrs = (account.codigoIFRS || '').trim();
   const mapa = CODIGO_IFRS_ESF[nat];

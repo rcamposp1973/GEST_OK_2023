@@ -11,6 +11,7 @@ import {
   ExpenseItemMaster
 } from '../types';
 import { triggerIframePrint } from '../utils/printUtils';
+import KpiPanel from './KpiPanel';
 import {
   BarChart3,
   Landmark,
@@ -65,6 +66,8 @@ interface IndicadoresFinancierosViewProps {
   auxiliaries?: Auxiliary[];
   costCenters?: CostCenterMaster[];
   expenseItems?: ExpenseItemMaster[];
+  /** Contador / administrador: puede elegir qué KPIs ve la empresa */
+  canConfigureKpis?: boolean;
 }
 
 const MONTH_SHORT = [
@@ -87,11 +90,12 @@ export default function IndicadoresFinancierosView({
   rcvDocuments = [],
   auxiliaries = [],
   costCenters = [],
-  expenseItems = []
+  expenseItems = [],
+  canConfigureKpis = false
 }: IndicadoresFinancierosViewProps) {
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [cutoffMonth, setCutoffMonth] = useState<number>(10);
-  const [activeTab, setActiveTab] = useState<'overview' | 'pareto' | 'expenses' | 'unitEconomics' | 'margins'>('overview');
+  const [activeTab, setActiveTab] = useState<'kpis' | 'overview' | 'pareto' | 'expenses' | 'unitEconomics' | 'margins'>('kpis');
   const [expenseGrouping, setExpenseGrouping] = useState<'byAccount' | 'byCostCenter' | 'byExpenseItem'>('byAccount');
   const [paretoType, setParetoType] = useState<'clients' | 'suppliers'>('clients');
 
@@ -832,6 +836,15 @@ export default function IndicadoresFinancierosView({
       {/* NAVEGACIÓN POR PESTAÑAS / SECCIONES */}
       <div className="flex items-center gap-1 bg-slate-200/80 p-1 rounded-xl overflow-x-auto text-xs font-bold text-slate-600">
         <button
+          onClick={() => setActiveTab('kpis')}
+          className={`px-3.5 py-2 rounded-lg transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+            activeTab === 'kpis' ? 'bg-white text-indigo-900 shadow-xs' : 'hover:bg-slate-100/60 text-slate-600'
+          }`}
+        >
+          <Target className="w-4 h-4 text-emerald-600" />
+          <span>Mis KPIs</span>
+        </button>
+        <button
           onClick={() => setActiveTab('overview')}
           className={`px-3.5 py-2 rounded-lg transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
             activeTab === 'overview' ? 'bg-white text-indigo-900 shadow-xs' : 'hover:bg-slate-100/60 text-slate-600'
@@ -881,6 +894,10 @@ export default function IndicadoresFinancierosView({
           <span>Márgenes & Punto de Equilibrio</span>
         </button>
       </div>
+
+      {activeTab === 'kpis' && (
+        <KpiPanel company={company} vouchers={vouchers} accounts={accounts} year={selectedYear} cutoffMonth={cutoffMonth} canConfigure={canConfigureKpis} />
+      )}
 
       {/* CONTENIDO TAB 1: RESUMEN OVERVIEW */}
       {activeTab === 'overview' && (

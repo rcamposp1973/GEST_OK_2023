@@ -234,6 +234,8 @@ export interface Company {
   f29CodeSettings?: { [key: string]: boolean };
   /** Opciones de conciliación bancaria de la empresa */
   bankReconConfig?: { tolerancia?: number; autoAprobar?: boolean };
+  /** KPIs que ve esta empresa (configurados por el contador) */
+  kpiConfig?: { pack: string; enabled: string[] };
   f29AccountParams?: F29AccountingParams;
   customF29Codes?: CustomF29Code[];
   dteModuleEnabled?: boolean;

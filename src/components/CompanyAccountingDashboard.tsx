@@ -9129,6 +9129,7 @@ export default function CompanyAccountingDashboard({
             auxiliaries={auxiliaries}
             costCenters={costCenters}
             expenseItems={expenseItems}
+            canConfigureKpis={currentUserRole === UserRole.SUPER_USER || currentUserRole === UserRole.STUDY_ADMIN || currentUserRole === UserRole.ACCOUNTANT}
           />
         )
       )}

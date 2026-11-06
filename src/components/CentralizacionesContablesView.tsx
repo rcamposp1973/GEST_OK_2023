@@ -46,6 +46,7 @@ import { notify } from '../context/ToastContext';
 import { logAuditEvent } from '../utils/auditLogger';
 import { db, auth } from '../lib/firebase';
 import { doc, updateDoc, writeBatch } from 'firebase/firestore';
+import { getNextVoucherNumber } from '../utils/voucherCounter';
 
 interface CentralizacionesContablesViewProps {
   studyId: string;
@@ -248,21 +249,20 @@ export const CentralizacionesContablesView: React.FC<CentralizacionesContablesVi
     const totalNoImponible = slips.reduce((acc, s) => acc + (s.totalHaberesNoImponibles || 0), 0);
     const totalLiquido = slips.reduce((acc, s) => acc + (s.liquidoAPagar || 0), 0);
     const totalImpuestoUnico = slips.reduce((acc, s) => acc + (s.impuestoUnicoSegundaCategoria || 0), 0);
-    const totalAportesPatronales = slips.reduce((acc, s) => {
-      const sis = s.sisMonto || 0;
-      const mutual = s.mutualMonto || 0;
-      const afc = s.afcEmpleadorMonto || 0;
-      return acc + sis + mutual + afc;
-    }, 0);
-    const totalLeyesSociales = slips.reduce((acc, s) => {
-      const afp = s.afpMonto || 0;
-      const salud = s.saludMontoTotal || 0;
-      const afcTrab = s.afcTrabajadorMonto || 0;
-      const sis = s.sisMonto || 0;
-      const mutual = s.mutualMonto || 0;
-      const afcEmp = s.afcEmpleadorMonto || 0;
-      return acc + afp + salud + afcTrab + sis + mutual + afcEmp;
-    }, 0);
+    // Aportes del empleador: SIS, AFC, mutual y cotización adicional Ley 21.735 (el total ya viene en la liquidación)
+    const aporteDe = (s: any) => (typeof s.totalAportesPatronales === 'number' && s.totalAportesPatronales > 0)
+      ? s.totalAportesPatronales
+      : (s.sisMonto || 0) + (s.mutualMonto || 0) + (s.afcEmpleadorMonto || 0) + (s.cotizacionEmpleadorLey21735 || 0);
+    const totalAportesPatronales = slips.reduce((acc, s) => acc + aporteDe(s), 0);
+    // Cotizaciones del trabajador (se enteran en Previred junto con las del empleador)
+    const totalCotizTrabajador = slips.reduce((acc, s) => acc + (s.afpMonto || 0) + (s.saludMontoTotal || 0) + (s.afcTrabajadorMonto || 0), 0);
+    const totalLeyesSociales = totalCotizTrabajador + totalAportesPatronales;
+    // Otros descuentos al personal (cada uno va a su propia cuenta para que el asiento cuadre)
+    const totalApv = slips.reduce((acc, s) => acc + (s.apvMonto || 0), 0);
+    const totalAnticipos = slips.reduce((acc, s) => acc + (s.anticipos || 0), 0);
+    const totalPrestamos = slips.reduce((acc, s) => acc + (s.prestamosEmpresa || 0), 0);
+    const totalJudicial = slips.reduce((acc, s) => acc + (s.descuentoJudicialPensionAlimentos || 0), 0);
+    const totalOtrosDesc = slips.reduce((acc, s) => acc + (s.otrosDescuentos || 0), 0);
 
     // Buscar si ya existe voucher de centralización de sueldos para este período
     const existingVoucher = vouchers.find(v =>
@@ -280,6 +280,7 @@ export const CentralizacionesContablesView: React.FC<CentralizacionesContablesVi
       totalImpuestoUnico,
       totalAportesPatronales,
       totalLeyesSociales,
+      totalApv, totalAnticipos, totalPrestamos, totalJudicial, totalOtrosDesc,
       existingVoucher,
       isCentralized: Boolean(existingVoucher && slips.length > 0),
       slips
@@ -550,88 +551,77 @@ export const CentralizacionesContablesView: React.FC<CentralizacionesContablesVi
   };
 
   // Generar Previsualización Asiento de Sueldos y Remuneraciones
+  // Resolución estricta de cuentas para remuneraciones: cuenta configurada, o búsqueda por nombre y tipo.
+  // Nunca se usa una cuenta cualquiera del plan: si falta, se avisa cuál configurar.
+  const buscarCuentaPersonal = (configuredId: string | undefined, pats: RegExp[], tipos: ChartOfAccount['type'][]): ChartOfAccount | undefined => {
+    if (configuredId) {
+      const f = accounts.find(a => a.id === configuredId);
+      if (f) return f;
+    }
+    const nrm = (x: string) => (x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const imp = accounts.filter(a => a.isImputable !== false && a.estado !== 'Inactivo' && tipos.includes(a.type));
+    for (const p of pats) {
+      const hit = imp.find(a => p.test(nrm(a.name)));
+      if (hit) return hit;
+    }
+    return undefined;
+  };
+
   const handlePreviewSueldos = () => {
     if (payrollAnalysis.slipsCount === 0) {
       notify.warning('No hay liquidaciones calculadas para este período.');
       return;
     }
 
-    const expenseSueldos = resolveAccount(formData.salariesExpenseAccountId, ['4201001', '4.2.01', 'sueldo', 'remuneracion'], 'Gasto Sueldos Base y Gratificaciones');
-    const expenseNoImponible = resolveAccount(formData.nonTaxableExpenseAccountId, ['4201002', 'colacion', 'movilizacion', 'no imponible'], 'Gasto Asignaciones No Imponibles');
-    const expenseAportes = resolveAccount(formData.patronalContributionsExpenseAccountId, ['4201003', 'sis', 'mutual', 'afc empleador', 'aporte patronal'], 'Gasto Aportes Patronales');
-    const pasivoSueldos = resolveAccount(formData.salariesPayableAccountId, ['2103001', '2103', 'sueldos por pagar', 'remuneraciones por pagar'], 'Sueldos por Pagar');
-    const pasivoLeyesSociales = resolveAccount(formData.socialLawsPayableAccountId, ['2103002', 'previred', 'leyes sociales', 'imposiciones'], 'Leyes Sociales por Pagar (Previred)');
-    const pasivoImpuestoUnico = resolveAccount(formData.uniqueTaxPayableAccountId, ['2104003', 'impuesto unico', 'segunda categoria'], 'Retención Impuesto Único 2da Cat.');
+    const A = payrollAnalysis;
+    const expenseSueldos = buscarCuentaPersonal(formData.salariesExpenseAccountId, [/sueldos?.*(gratific)?/, /remuneracion/], ['Gasto']);
+    const expenseNoImponible = buscarCuentaPersonal(formData.nonTaxableExpenseAccountId, [/colacion|movilizacion|no imponible|asignacion/], ['Gasto']) || expenseSueldos;
+    const expenseAportes = buscarCuentaPersonal(formData.patronalContributionsExpenseAccountId, [/aporte.*patronal|leyes sociales|seguro.*(cesantia|invalidez)|\bsis\b|mutual|seguridad social|cotizaciones? empleador/], ['Gasto']) || expenseSueldos;
+    const pasivoSueldos = buscarCuentaPersonal(formData.salariesPayableAccountId, [/(sueldo|remuneracion).*pagar/, /pagar.*(sueldo|remuneracion)/], ['Pasivo']);
+    const pasivoLeyesSociales = buscarCuentaPersonal(formData.socialLawsPayableAccountId, [/previred/, /leyes sociales/, /imposicion/, /\bafp\b/], ['Pasivo']);
+    const pasivoImpuestoUnico = buscarCuentaPersonal(formData.uniqueTaxPayableAccountId, [/impuesto unico/, /segunda categoria/, /retencion.*(impuesto|trabajador)/], ['Pasivo']);
+    const ctaApv = buscarCuentaPersonal(undefined, [/apv/, /ahorro previsional/], ['Pasivo']);
+    const ctaAnticipos = buscarCuentaPersonal((formData as any).anticiposPersonalAccountId, [/anticipo.*(trabajador|sueldo|personal)/], ['Activo']);
+    const ctaPrestamos = buscarCuentaPersonal(undefined, [/prestamo.*(trabajador|personal|empleado)/], ['Activo']);
+    const ctaJudicial = buscarCuentaPersonal(undefined, [/judicial/, /pension.*alimento/, /retencion.*judicial/], ['Pasivo']);
+    const ctaOtrosDesc = buscarCuentaPersonal(undefined, [/otros descuentos/, /descuentos? (al )?personal/, /cuotas? sindical/, /colecta/], ['Pasivo']);
+
+    // Cuentas obligatorias según lo que realmente hay que contabilizar
+    const faltantes: string[] = [];
+    if (!expenseSueldos) faltantes.push('Gasto de sueldos');
+    if (!pasivoSueldos) faltantes.push('Sueldos por pagar');
+    if (!pasivoLeyesSociales && A.totalLeyesSociales > 0) faltantes.push('Leyes sociales por pagar (Previred)');
+    if (!pasivoImpuestoUnico && A.totalImpuestoUnico > 0) faltantes.push('Retención impuesto único');
+    if (!ctaApv && A.totalApv > 0) faltantes.push('APV por pagar');
+    if (!ctaAnticipos && A.totalAnticipos > 0) faltantes.push('Anticipos a trabajadores');
+    if (!ctaPrestamos && A.totalPrestamos > 0) faltantes.push('Préstamos a trabajadores');
+    if (!ctaJudicial && A.totalJudicial > 0) faltantes.push('Retención judicial por pagar');
+    if (!ctaOtrosDesc && A.totalOtrosDesc > 0) faltantes.push('Otros descuentos al personal por pagar');
+    if (faltantes.length > 0) {
+      notify.error(`Faltan cuentas en el plan para centralizar sueldos: ${faltantes.join(', ')}. Créalas o configúralas en Parámetros.`);
+      return;
+    }
 
     const lines: VoucherLine[] = [];
+    const add = (acc: ChartOfAccount, debit: number, credit: number, gloss: string) => {
+      if (Math.round(debit) === 0 && Math.round(credit) === 0) return;
+      lines.push({ accountId: acc.id, accountCode: acc.code, accountName: acc.name, debit: Math.round(debit), credit: Math.round(credit), gloss });
+    };
 
-    // Debe: Gastos
-    if (payrollAnalysis.totalImponible > 0) {
-      lines.push({
-        accountId: expenseSueldos.id,
-        accountCode: expenseSueldos.code,
-        accountName: expenseSueldos.name,
-        debit: payrollAnalysis.totalImponible,
-        credit: 0,
-        gloss: `Gasto Sueldos Imponibles ${selectedPeriod} (${payrollAnalysis.slipsCount} trabajadores)`
-      });
-    }
+    // Debe: gastos
+    add(expenseSueldos!, A.totalImponible, 0, `Gasto Sueldos Imponibles ${selectedPeriod} (${A.slipsCount} trabajadores)`);
+    add(expenseNoImponible!, A.totalNoImponible, 0, `Gasto Asignaciones Colación/Movilización/Familiar ${selectedPeriod}`);
+    add(expenseAportes!, A.totalAportesPatronales, 0, `Aportes del empleador (SIS, AFC, Mutual, Ley 21.735) ${selectedPeriod}`);
 
-    if (payrollAnalysis.totalNoImponible > 0) {
-      lines.push({
-        accountId: expenseNoImponible.id,
-        accountCode: expenseNoImponible.code,
-        accountName: expenseNoImponible.name,
-        debit: payrollAnalysis.totalNoImponible,
-        credit: 0,
-        gloss: `Gasto Asignaciones Colación/Movilización ${selectedPeriod}`
-      });
-    }
-
-    if (payrollAnalysis.totalAportesPatronales > 0) {
-      lines.push({
-        accountId: expenseAportes.id,
-        accountCode: expenseAportes.code,
-        accountName: expenseAportes.name,
-        debit: payrollAnalysis.totalAportesPatronales,
-        credit: 0,
-        gloss: `Gasto Aportes SIS, Mutual y AFC Empleador ${selectedPeriod}`
-      });
-    }
-
-    // Haber: Pasivos por Pagar
-    if (payrollAnalysis.totalLiquido > 0) {
-      lines.push({
-        accountId: pasivoSueldos.id,
-        accountCode: pasivoSueldos.code,
-        accountName: pasivoSueldos.name,
-        debit: 0,
-        credit: payrollAnalysis.totalLiquido,
-        gloss: `Sueldos Líquidos por Pagar Nómina ${selectedPeriod}`
-      });
-    }
-
-    if (payrollAnalysis.totalLeyesSociales > 0) {
-      lines.push({
-        accountId: pasivoLeyesSociales.id,
-        accountCode: pasivoLeyesSociales.code,
-        accountName: pasivoLeyesSociales.name,
-        debit: 0,
-        credit: payrollAnalysis.totalLeyesSociales,
-        gloss: `Leyes Sociales por Pagar Previred ${selectedPeriod} (AFP, Salud, AFC, Mutual)`
-      });
-    }
-
-    if (payrollAnalysis.totalImpuestoUnico > 0) {
-      lines.push({
-        accountId: pasivoImpuestoUnico.id,
-        accountCode: pasivoImpuestoUnico.code,
-        accountName: pasivoImpuestoUnico.name,
-        debit: 0,
-        credit: payrollAnalysis.totalImpuestoUnico,
-        gloss: `Impuesto Único 2da Categoría por Enterar en F29 ${selectedPeriod}`
-      });
-    }
+    // Haber: obligaciones y cuentas del personal
+    add(pasivoSueldos!, 0, A.totalLiquido, `Sueldos Líquidos por Pagar Nómina ${selectedPeriod}`);
+    add(pasivoLeyesSociales!, 0, A.totalLeyesSociales, `Leyes Sociales por Pagar Previred ${selectedPeriod} (AFP, Salud, AFC, Mutual, aportes empleador)`);
+    add(pasivoImpuestoUnico!, 0, A.totalImpuestoUnico, `Impuesto Único 2da Categoría por Enterar en F29 ${selectedPeriod}`);
+    if (A.totalApv > 0) add(ctaApv!, 0, A.totalApv, `APV por pagar ${selectedPeriod}`);
+    if (A.totalAnticipos > 0) add(ctaAnticipos!, 0, A.totalAnticipos, `Descuento anticipos al personal ${selectedPeriod}`);
+    if (A.totalPrestamos > 0) add(ctaPrestamos!, 0, A.totalPrestamos, `Descuento cuotas de préstamos al personal ${selectedPeriod}`);
+    if (A.totalJudicial > 0) add(ctaJudicial!, 0, A.totalJudicial, `Retención judicial por pagar ${selectedPeriod}`);
+    if (A.totalOtrosDesc > 0) add(ctaOtrosDesc!, 0, A.totalOtrosDesc, `Otros descuentos al personal ${selectedPeriod}`);
 
     setPreviewVoucher({
       title: `Centralización de Remuneraciones del Período ${selectedPeriod}`,
@@ -666,10 +656,10 @@ export const CentralizacionesContablesView: React.FC<CentralizacionesContablesVi
       return;
     }
 
-    const nextVoucherNum = (vouchers.reduce((max, v) => Math.max(max, v.voucherNumber || 0), 0)) + 1;
-
     try {
       setIsExecutingCentralization(true);
+      const maxExistente = vouchers.reduce((max, v) => Math.max(max, v.voucherNumber || 0), 0);
+      const nextVoucherNum = await getNextVoucherNumber(studyId || company.studyId || 'default-study', company.id, 0, maxExistente);
 
       const newVoucherData = {
         voucherNumber: nextVoucherNum,

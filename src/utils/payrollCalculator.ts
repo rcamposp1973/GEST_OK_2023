@@ -704,6 +704,8 @@ export function calculatePayrollSlip(
     afcEmpleadorTasa,
     afcEmpleadorMonto,
     mutualMonto,
+    cotizacionEmpleadorLey21735: reformaProteccionMonto,
+    porcentajeLey21735: tasaReformaAplicada,
     totalAportesPatronales,
     costoTotalEmpresa,
 

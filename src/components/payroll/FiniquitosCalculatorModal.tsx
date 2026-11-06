@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { Employee, FiniquitoRecord, ChartOfAccount } from '../../types';
 import { formatRut } from '../../utils/rutMatcher';
+import { getPrevisionalParametersForPeriod } from '../../utils/payrollCalculator';
 import jsPDF from 'jspdf';
 
 interface FiniquitosCalculatorModalProps {
@@ -62,25 +63,31 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
     const fIngreso = new Date(selectedEmployee.hireDate || '2025-01-01');
     const fCese = new Date(fechaCese || new Date());
 
-    // Antigüedad en días
+    // Antigüedad en días (referencia) y en años/meses de calendario
     const diffTime = Math.max(0, fCese.getTime() - fIngreso.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    // Antigüedad en Años y Meses
-    const anosCompletos = Math.floor(diffDays / 365);
-    const mesesRestantes = Math.floor((diffDays % 365) / 30);
-    
-    // Regla Art. 161: Se otorga 1 año de indemnización por cada año completo o fracción superior a 6 meses. Máximo 11 años.
-    let anosParaIAS = anosCompletos;
-    if (mesesRestantes >= 6) {
-      anosParaIAS += 1;
+    let totalMeses = (fCese.getUTCFullYear() - fIngreso.getUTCFullYear()) * 12 + (fCese.getUTCMonth() - fIngreso.getUTCMonth());
+    if (fCese.getUTCDate() < fIngreso.getUTCDate()) totalMeses -= 1;
+    totalMeses = Math.max(0, totalMeses);
+    const anosCompletos = Math.floor(totalMeses / 12);
+    const mesesRestantes = totalMeses % 12;
+
+    // Art. 163: la indemnización por años de servicio exige 1 año o más de servicio.
+    // Se paga 1 mes por año de servicio y fracción superior a 6 meses, con máximo de 11 años.
+    let anosParaIAS = 0;
+    if (anosCompletos >= 1) {
+      anosParaIAS = anosCompletos + ((mesesRestantes > 6 || (mesesRestantes === 6 && fCese.getUTCDate() !== fIngreso.getUTCDate())) ? 1 : 0);
     }
     anosParaIAS = Math.min(11, anosParaIAS);
 
-    const baseSueldo = selectedEmployee.baseSalary || 500000;
-    // Tope de 90 UF legal (aprox $3.450.000)
-    const topeUF = 3450000;
-    const baseSueldoTopado = Math.min(baseSueldo, topeUF);
+    // Última remuneración mensual (Art. 172): sueldo base, bonos y haberes mensuales pactados y asignaciones permanentes
+    // (colación, movilización). Se excluyen horas extra, gratificación anual, aguinaldos y pagos esporádicos.
+    const baseSueldo = (selectedEmployee.baseSalary || 0) + (selectedEmployee.bonosPactados || 0) + (selectedEmployee.otrosImponiblesPactados || 0)
+      + (selectedEmployee.colacionPactada || 0) + (selectedEmployee.movilizacionPactada || 0);
+    // Tope legal: 90 UF, con la UF del mes del cese (valor oficial; 0 si el mes aún no está cargado)
+    const ufCese = getPrevisionalParametersForPeriod((fechaCese || '').slice(0, 7)).uf || 0;
+    const topeLegal = ufCese > 0 ? Math.round(90 * ufCese) : Number.POSITIVE_INFINITY;
+    const baseSueldoTopado = Math.min(baseSueldo, topeLegal);
 
     // 1. IAS (Indemnización por Años de Servicio)
     const montoIAS = causalConfig.requiereIAS ? anosParaIAS * baseSueldoTopado : 0;
@@ -95,6 +102,7 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
     
     // Factor de conversión días hábiles a corridos (1.4 aproximado)
     const valorDiaTrabajador = baseSueldo / 30;
+    const sinIAS = causalConfig.requiereIAS && anosParaIAS === 0;
     const montoVacaciones = Math.round(diasPendientesReal * 1.4 * valorDiaTrabajador);
 
     const totalBruto = montoIAS + montoAvisoPrevio + montoVacaciones + otrosHaberes;
@@ -107,6 +115,9 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
       mesesRestantes,
       anosParaIAS,
       baseSueldo,
+      topeLegal,
+      ufCese,
+      sinIAS,
       montoIAS,
       montoAvisoPrevio,
       diasPendientesReal: Math.round(diasPendientesReal * 10) / 10,
@@ -327,6 +338,16 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
                   </span>
                 </div>
 
+                {finiquitoCalculated.sinIAS && (
+                  <div className="text-[11px] text-amber-300 bg-amber-900/30 border border-amber-700/50 rounded-lg px-3 py-2">
+                    No corresponde indemnización por años de servicio: el trabajador tiene menos de 1 año de antigüedad (Art. 163).
+                  </div>
+                )}
+                {!Number.isFinite(finiquitoCalculated.topeLegal) && (
+                  <div className="text-[11px] text-amber-300 bg-amber-900/30 border border-amber-700/50 rounded-lg px-3 py-2">
+                    La UF del mes del cese no está cargada: no se pudo aplicar el tope de 90 UF. Revisa el monto.
+                  </div>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
                   <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700">
                     <span className="text-slate-400 text-[10px] uppercase block font-bold">Años de Servicio (Art. 161)</span>

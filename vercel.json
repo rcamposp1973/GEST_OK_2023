@@ -6,6 +6,7 @@
     { "source": "/api/companies/:companyId/secrets", "destination": "/api/index" },
     { "source": "/api/auth/set-user-claims", "destination": "/api/index" },
     { "source": "/api/auth/create-user", "destination": "/api/index" },
+    { "source": "/api/auth/sync-my-claims", "destination": "/api/index" },
     { "source": "/api/sii/test-connection", "destination": "/api/index" },
     { "source": "/api/notebook-ai", "destination": "/api/index" },
     { "source": "/api/agents/conciliador", "destination": "/api/index" },

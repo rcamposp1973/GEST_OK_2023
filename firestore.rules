@@ -1,9 +1,118 @@
 rules_version = '2';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Reglas de seguridad Gest_OK / Pulso Contable
+// Principios:
+//  1) Sin sesión iniciada no se lee ni escribe nada, salvo lo público de la página de inicio.
+//  2) Cada estudio contable solo accede a SUS datos: studies/{studyId}/** (aislamiento por claim studyId).
+//  3) El rol viene de la sesión (claims asignados por el servidor), no de un campo editable.
+//  4) Super usuario: acceso total. Observador: solo lectura.
+//  5) Todo lo no listado queda bloqueado (los secretos los maneja solo el servidor).
+// ─────────────────────────────────────────────────────────────────────────────
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if true;
+
+    function signedIn() { return request.auth != null; }
+    function userRole() { return request.auth.token.get('role', ''); }
+    function isSuper() {
+      return signedIn() && (userRole() == 'SUPER_USER' || request.auth.token.get('isSuperUser', false) == true);
     }
+    function myStudy() { return request.auth.token.get('studyId', null); }
+    function inStudy(studyId) { return signedIn() && myStudy() != null && myStudy() == studyId; }
+    function isStudyAdmin() { return userRole() == 'STUDY_ADMIN'; }
+    function canWriteData() { return userRole() in ['STUDY_ADMIN', 'ACCOUNTANT', 'ANALYST']; }
+
+    // ── Datos de cada estudio (todo lo que cuelga de studies/{studyId}) ──
+    match /studies/{studyId} {
+      allow read: if isSuper() || inStudy(studyId);
+      allow create, delete: if isSuper();
+      // El administrador del estudio edita el estudio; cualquier usuario del estudio solo puede marcar su sesión activa
+      allow update: if isSuper() || (inStudy(studyId) && (isStudyAdmin()
+        || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['activeSessionId'])));
+
+      // Usuarios y asignaciones: solo el administrador del estudio (o el super usuario) los modifica
+      match /users/{userId} {
+        allow read: if isSuper() || inStudy(studyId);
+        allow write: if isSuper() || (inStudy(studyId) && isStudyAdmin());
+      }
+      match /assignments/{assignmentId} {
+        allow read: if isSuper() || inStudy(studyId);
+        allow write: if isSuper() || (inStudy(studyId) && isStudyAdmin());
+      }
+
+      // Empresas y todo lo que cuelga de ellas (comprobantes, auxiliares, RCV, bancos, remuneraciones, etc.)
+      match /companies/{companyId} {
+        allow read: if isSuper() || inStudy(studyId);
+        allow write: if isSuper() || (inStudy(studyId) && canWriteData());
+      }
+      match /companies/{companyId}/{path=**} {
+        allow read: if isSuper() || inStudy(studyId);
+        allow write: if isSuper() || (inStudy(studyId) && canWriteData());
+      }
+    }
+
+    // ── Inicio de sesión: cada usuario puede encontrar SU propio registro por email ──
+    // (consulta collectionGroup('users') filtrada por el email de la sesión)
+    match /{path=**}/users/{userId} {
+      allow read: if isSuper()
+        || (signedIn() && resource.data.email == request.auth.token.email.lower());
+    }
+
+    // ── Listado global de empresas: solo super usuario (monitor y entrenamiento) ──
+    match /{path=**}/companies/{companyId} {
+      allow read: if isSuper();
+    }
+
+    // ── Datos de empresa guardados fuera del estudio (nóminas mensuales, indicadores previsionales por empresa) ──
+    // Solo si la empresa pertenece al estudio del usuario.
+    match /companies/{companyId}/{path=**} {
+      allow read: if isSuper() || (signedIn() && myStudy() != null
+        && exists(/databases/$(database)/documents/studies/$(myStudy())/companies/$(companyId)));
+      allow write: if isSuper() || (signedIn() && myStudy() != null && canWriteData()
+        && exists(/databases/$(database)/documents/studies/$(myStudy())/companies/$(companyId)));
+    }
+
+    // ── Super usuarios ──
+    match /superUsers/{id} {
+      allow read: if isSuper() || (signedIn() && resource.data.email == request.auth.token.email.lower());
+      allow write: if isSuper();
+    }
+
+    // ── Parámetros globales: leen los usuarios con sesión; escribe el super usuario ──
+    match /plans/{id} { allow read: if signedIn(); allow write: if isSuper(); }
+    match /previsionalIndicators/{id} { allow read: if signedIn(); allow write: if isSuper(); }
+    match /globalExchangeRates/{id} { allow read: if signedIn(); allow write: if isSuper(); }
+    match /system_junior_knowledge/{id} { allow read: if signedIn(); allow write: if isSuper(); }
+
+    // ── Auditoría: cualquier usuario con sesión registra; solo el super usuario lee; nadie modifica ──
+    match /auditLogs/{id} {
+      allow create: if signedIn();
+      allow read: if isSuper();
+      allow update, delete: if false;
+    }
+    match /audit_logs/{id} {
+      allow create: if signedIn();
+      allow read: if isSuper();
+      allow update, delete: if false;
+    }
+
+    // ── Preferencias de cada usuario ──
+    match /userPreferences/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
+    // ── Público: página de inicio ──
+    match /landing_pricing/{id} { allow read: if true; allow write: if isSuper(); }
+    match /landing_testimonials/{id} { allow read: if true; allow write: if isSuper(); }
+    match /system_config/marketing_promo { allow read: if true; allow write: if isSuper(); }
+    match /system_config/{id} { allow read, write: if isSuper(); }
+
+    // Formulario de contacto: cualquiera puede enviar (con límites de tamaño); solo el super usuario lee
+    match /leads_contact/{id} {
+      allow create: if request.resource.data.keys().size() <= 20;
+      allow read, update, delete: if isSuper();
+    }
+
+    // Todo lo demás (p. ej. companySecrets) queda bloqueado para el navegador; el servidor usa acceso de administrador.
   }
 }
-

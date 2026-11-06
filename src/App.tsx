@@ -92,7 +92,17 @@ function Dashboard() {
       const userEmail = currentUser.email?.toLowerCase();
 
       // 1. Obtener Custom Claims del token criptográfico de Firebase Auth
-      const tokenResult = await currentUser.getIdTokenResult(true);
+      let tokenResult = await currentUser.getIdTokenResult(true);
+      // Usuarios antiguos sin permisos en la sesión: el servidor los repara (estudio y rol) y se renueva el token.
+      if (!tokenResult.claims.role) {
+        try {
+          const idToken = await currentUser.getIdToken();
+          const r = await fetch('/api/auth/sync-my-claims', { method: 'POST', headers: { Authorization: `Bearer ${idToken}`, 'Content-Type': 'application/json' }, body: '{}' });
+          if (r.ok) tokenResult = await currentUser.getIdTokenResult(true);
+        } catch (syncErr) {
+          console.warn('No se pudieron sincronizar los permisos:', syncErr);
+        }
+      }
       const claimRole = tokenResult.claims.role as string | undefined;
       const claimStudyId = tokenResult.claims.studyId as string | undefined;
 

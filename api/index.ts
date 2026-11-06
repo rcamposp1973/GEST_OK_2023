@@ -471,6 +471,57 @@ app.post("/api/companies/:companyId/secrets", verifyFirebaseAuth, async (req: Au
 });
 
 // Endpoint: Asignación de Custom Claims para administración de usuarios
+// Autorreparación de permisos (claims) para usuarios antiguos que aún no los tienen.
+// Seguridad: solo actúa si el token NO trae rol; el email sale del token verificado; el estudio sale de la RUTA del
+// documento de usuario (no de un campo editable); jamás concede SUPER_USER desde un usuario de estudio.
+app.post("/api/auth/sync-my-claims", verifyFirebaseAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const uid = req.user?.uid;
+    const email = String(req.user?.email || '').toLowerCase();
+    if (!uid || !email) return res.status(400).json({ success: false, error: "Sesión sin email." });
+
+    if (req.user?.role) {
+      return res.json({ success: true, updated: false, role: req.user.role, studyId: req.user.studyId || null });
+    }
+
+    // 1) Super usuario: solo si existe en la colección superUsers con ese email
+    const su = await adminDb.collection('superUsers').where('email', '==', email).limit(1).get();
+    if (!su.empty) {
+      await admin.auth().setCustomUserClaims(uid, { role: 'SUPER_USER', studyId: null, isSuperUser: true });
+      return res.json({ success: true, updated: true, role: 'SUPER_USER', studyId: null });
+    }
+
+    // 2) Usuario de estudio: documento studies/{studyId}/users/{id} con ese email
+    const us = await adminDb.collectionGroup('users').where('email', '==', email).limit(2).get();
+    if (us.empty) {
+      return res.status(404).json({ success: false, error: "No existe un usuario con este email en ningún estudio." });
+    }
+    const docSnap = us.docs[0];
+    const parts = docSnap.ref.path.split('/'); // studies/{studyId}/users/{id}
+    if (parts[0] !== 'studies' || parts.length < 4) {
+      return res.status(409).json({ success: false, error: "Ubicación de usuario no reconocida." });
+    }
+    const studyId = parts[1];
+    const data: any = docSnap.data() || {};
+    const VALID = ['STUDY_ADMIN', 'ACCOUNTANT', 'ANALYST', 'OBSERVER']; // nunca SUPER_USER por esta vía
+    const role = VALID.includes(data.role) ? data.role : 'ACCOUNTANT';
+    if (data.estado === 'Inactivo' || data.estado === 'Sin Vigencia') {
+      return res.status(403).json({ success: false, error: "Usuario inactivo o sin vigencia." });
+    }
+    await admin.auth().setCustomUserClaims(uid, { role, studyId, isSuperUser: false });
+    try {
+      await adminDb.collection('auditLogs').add({
+        timestamp: new Date().toISOString(), userId: uid, userEmail: email, studyId,
+        action: "ASIGNAR_ROL", module: "SEGURIDAD", details: `Permisos reparados automáticamente al ingresar (rol ${role})`
+      });
+    } catch {}
+    return res.json({ success: true, updated: true, role, studyId });
+  } catch (e: any) {
+    console.error("sync-my-claims error:", e);
+    return res.status(500).json({ success: false, error: "No se pudieron sincronizar los permisos." });
+  }
+});
+
 app.post("/api/auth/set-user-claims", verifyFirebaseAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { targetUid, role, studyId } = req.body;

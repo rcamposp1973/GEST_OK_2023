@@ -9,6 +9,17 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.4.0 — 6 de noviembre de 2026
+
+### Nuevo
+- KPIs de clientes para Startup: clientes activos, churn, ingreso por cliente, CAC, LTV, LTV/CAC y recuperación del CAC, a partir de "Datos del negocio" que ingresa el contador por año.
+- Catálogo de módulos único: "Todas las Aplicaciones", "+ Nueva Pestaña" y Alt+T abren Inicio. Se elimina el catálogo oscuro duplicado.
+
+### Mejora
+- Las pestañas de Indicadores Financieros usan la misma clasificación que los informes.
+
+---
+
 ## 1.3.0 — 5 de noviembre de 2026
 
 ### Nuevo

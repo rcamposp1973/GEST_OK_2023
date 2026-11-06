@@ -9,6 +9,12 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## Próxima (en Pruebas) — Importaciones
+- El grupo "CARGA (SII)" pasa a llamarse **Importaciones** y reúne RCV, parámetros, carga masiva y plantillas.
+- **Importación inteligente** (nuevo): subes el libro de remuneraciones, el agente revisa que cuadre, te pregunta lo que no sabe (centros de costo, cuenta de gasto, ítems) y entrega el comprobante cuadrado en formato de carga masiva. Las respuestas quedan guardadas por empresa.
+
+---
+
 ## 1.5.1 — 6 de noviembre de 2026
 - Página de inicio: la sección de testimonios queda inactiva hasta contar con opiniones reales de clientes (se reactiva cambiando un interruptor en `LandingHome.tsx`). Ya no aparecen testimonios de ejemplo.
 

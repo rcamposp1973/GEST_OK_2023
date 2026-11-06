@@ -26,6 +26,7 @@ import LibroBancoColaborativoView from './LibroBancoColaborativoView';
 import CargaMasivaComprobantesView from './CargaMasivaComprobantesView';
 import Formulario29View from './Formulario29View';
 import PlantillasYCargaMasivaView from './PlantillasYCargaMasivaView';
+import ImportacionInteligenteView from './ImportacionInteligenteView';
 import ExcelImportCenterModal from './ExcelImportCenterModal';
 import IndicadoresEconomicosView from './IndicadoresEconomicosView';
 import EmisionDteView from './EmisionDteView';
@@ -98,10 +99,11 @@ const QUICK_ACCESS_ITEMS = [
   { id: 'reportesAnaliticos', label: 'Reportes Analíticos', group: 'FINANZAS', icon: TableIcon, tab: 'reportesAnaliticos' },
   { id: 'activoFijo', label: 'Activo Fijo & Depreciación', group: 'FINANZAS', icon: Building2, tab: 'activoFijo' },
   { id: 'auditorEstadosFinancieros', label: 'Auditor Estados Financieros', group: 'FINANZAS', icon: ShieldCheck, tab: 'auditorEstadosFinancieros' },
-  { id: 'rcv', label: 'Carga RCV Compra/Venta', group: 'CARGA (SII)', icon: Download, tab: 'rcv' },
-  { id: 'rcvParams', label: 'Parámetros Contables RCV', group: 'CARGA (SII)', icon: Settings, tab: 'rcvParams' },
-  { id: 'cargaMasiva', label: 'Carga Masiva Comprobantes', group: 'CARGA (SII)', icon: FileSpreadsheet, tab: 'cargaMasiva' },
-  { id: 'plantillasCarga', label: 'Plantillas de Carga', group: 'CARGA (SII)', icon: FileSpreadsheet, tab: 'plantillasCarga' },
+  { id: 'rcv', label: 'Carga RCV Compra/Venta', group: 'IMPORTACIONES', icon: Download, tab: 'rcv' },
+  { id: 'rcvParams', label: 'Parámetros Contables RCV', group: 'IMPORTACIONES', icon: Settings, tab: 'rcvParams' },
+  { id: 'cargaMasiva', label: 'Carga Masiva Comprobantes', group: 'IMPORTACIONES', icon: FileSpreadsheet, tab: 'cargaMasiva' },
+  { id: 'plantillasCarga', label: 'Plantillas de Carga', group: 'IMPORTACIONES', icon: FileSpreadsheet, tab: 'plantillasCarga' },
+  { id: 'importacionInteligente', label: 'Importación inteligente', group: 'IMPORTACIONES', icon: Sparkles, tab: 'importacionInteligente' },
   { id: 'formulario29', label: 'Impuestos F29', group: 'IMPUESTOS', icon: Receipt, tab: 'formulario29' },
   { id: 'f29Codes', label: 'Parámetros y Códigos F.29', group: 'IMPUESTOS', icon: Sliders, tab: 'f29Codes' },
   { id: 'ddjj', label: 'Declaraciones Juradas SII', group: 'IMPUESTOS', icon: ShieldCheck, tab: 'ddjj' },
@@ -168,9 +170,9 @@ export default function CompanyAccountingDashboard({
   const { currentFormat, formatInfo, isAgentic, isPymeFormat, isStudyFormat } = useSystemFormat();
 
   const { withProcess } = useProcess();
-  type RibbonGroup = 'FINANZAS' | 'OPERACIONES' | 'TESORERIA' | 'PERSONAL' | 'CARGA (SII)' | 'IMPUESTOS' | 'INDICADORES' | 'CONFIGURACIONES' | 'FAVORITOS';
+  type RibbonGroup = 'FINANZAS' | 'OPERACIONES' | 'TESORERIA' | 'PERSONAL' | 'IMPORTACIONES' | 'IMPUESTOS' | 'INDICADORES' | 'CONFIGURACIONES' | 'FAVORITOS';
   const [activeRibbonGroup, setActiveRibbonGroup] = useState<RibbonGroup>('FINANZAS');
-  const [activeTab, setActiveTab] = useState<'accounts' | 'auxiliaries' | 'periods' | 'rcv' | 'exchange' | 'rcvParams' | 'centralizaciones' | 'f29Codes' | 'vouchers' | 'libroDiario' | 'libroMayor' | 'balance8' | 'balanceIFRS' | 'analisisAuxiliares' | 'analisisCuentas' | 'planillaConsultas' | 'analyticsHud' | 'reportesAnaliticos' | 'estadoResultados' | 'indicadoresFinancieros' | 'auditorEstadosFinancieros' | 'smartNotebooks' | 'flujoDeCaja' | 'agingDeudas' | 'nominasPago' | 'cobranza' | 'conciliacionBancaria' | 'libroBancoColaborativo' | 'cargaMasiva' | 'formulario29' | 'plantillasCarga' | 'rendicionGastos' | 'emisionDte' | 'tablasAnalisis' | 'controlFolios' | 'productsServices' | 'operativaComercial' | 'stockKardex' | 'warehouses' | 'employees' | 'liquidaciones' | 'activoFijo' | 'ddjj' | 'agenticStudy2040' | 'agenticPyme2040' | 'home' | 'buscadorComprobantes'>('home');
+  const [activeTab, setActiveTab] = useState<'accounts' | 'auxiliaries' | 'periods' | 'rcv' | 'exchange' | 'rcvParams' | 'centralizaciones' | 'f29Codes' | 'vouchers' | 'libroDiario' | 'libroMayor' | 'balance8' | 'balanceIFRS' | 'analisisAuxiliares' | 'analisisCuentas' | 'planillaConsultas' | 'analyticsHud' | 'reportesAnaliticos' | 'estadoResultados' | 'indicadoresFinancieros' | 'auditorEstadosFinancieros' | 'smartNotebooks' | 'flujoDeCaja' | 'agingDeudas' | 'nominasPago' | 'cobranza' | 'conciliacionBancaria' | 'libroBancoColaborativo' | 'cargaMasiva' | 'formulario29' | 'plantillasCarga' | 'importacionInteligente' | 'rendicionGastos' | 'emisionDte' | 'tablasAnalisis' | 'controlFolios' | 'productsServices' | 'operativaComercial' | 'stockKardex' | 'warehouses' | 'employees' | 'liquidaciones' | 'activoFijo' | 'ddjj' | 'agenticStudy2040' | 'agenticPyme2040' | 'home' | 'buscadorComprobantes'>('home');
   const [auxSubTab, setAuxSubTab] = useState<'deudores' | 'acreedores'>('deudores');
   const [employeeSubTab, setEmployeeSubTab] = useState<'employees' | 'contracts' | 'attendance' | 'advances' | 'severance' | 'certificates'>('employees');
   const [payrollTab, setPayrollTab] = useState<'NOMINA' | 'LIQUIDACION_INDIVIDUAL' | 'LRD_DT' | 'PREVIRED' | 'PARAMETROS' | 'CONCEPTOS' | 'RELIQUIDACIONES'>('NOMINA');
@@ -6222,7 +6224,7 @@ export default function CompanyAccountingDashboard({
             if (t === 'vouchers' || t === 'libroDiario' || t === 'libroMayor' || t === 'balance8') {
               setActiveRibbonGroup('FINANZAS');
             } else if (t === 'rcv') {
-              setActiveRibbonGroup('CARGA (SII)');
+              setActiveRibbonGroup('IMPORTACIONES');
             } else if (t === 'formulario29') {
               setActiveRibbonGroup('IMPUESTOS');
             } else if (t === 'conciliacionBancaria') {
@@ -9300,6 +9302,10 @@ export default function CompanyAccountingDashboard({
           auxiliaries={auxiliaries}
           onRefreshData={fetchData}
         />
+      )}
+
+      {activeTab === 'importacionInteligente' && (
+        <ImportacionInteligenteView studyId={studyId} company={company} accounts={accounts} />
       )}
 
       {/* TAB: EMISIÓN DIRECTA DTE (FACTURADOR SII) */}

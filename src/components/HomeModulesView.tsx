@@ -17,7 +17,7 @@ const AREAS: { cat: ModuleCategory; titulo: string; desc: string; icon: any; ton
   { cat: 'OPERACIONES', titulo: 'Operaciones', desc: 'Ventas, compras e inventario', icon: Boxes, tono: '#059669' },
   { cat: 'PERSONAL', titulo: 'Personal', desc: 'Empleados y remuneraciones', icon: Users, tono: '#2563eb' },
   { cat: 'IMPUESTOS', titulo: 'Impuestos', desc: 'F29, DDJJ y folios', icon: Receipt, tono: '#e11d48' },
-  { cat: 'CARGA (SII)', titulo: 'Carga SII', desc: 'RCV e importaciones', icon: Download, tono: '#d97706' },
+  { cat: 'IMPORTACIONES', titulo: 'Importaciones', desc: 'RCV, planillas y carga inteligente', icon: Download, tono: '#d97706' },
   { cat: 'INDICADORES', titulo: 'Indicadores', desc: 'KPIs y valores oficiales', icon: BarChart3, tono: '#0d9488' },
   { cat: 'CONFIGURACIONES', titulo: 'Configuración', desc: 'Plan de cuentas y maestros', icon: Settings, tono: '#475569' },
 ];

@@ -13,7 +13,7 @@ export type ModuleCategory =
   | 'OPERACIONES' 
   | 'TESORERIA' 
   | 'PERSONAL' 
-  | 'CARGA (SII)' 
+  | 'IMPORTACIONES' 
   | 'IMPUESTOS' 
   | 'INDICADORES' 
   | 'CONFIGURACIONES';
@@ -306,12 +306,12 @@ export const COCKPIT_MODULE_CATALOG: CockpitModuleItem[] = [
     description: 'Maestro de ítems, precios y codificación comercial'
   },
 
-  // --- CARGA (SII) ---
+  // --- IMPORTACIONES ---
   {
     id: 'rcv',
     label: 'Carga RCV Compra/Venta',
     shortLabel: 'RCV SII',
-    category: 'CARGA (SII)',
+    category: 'IMPORTACIONES',
     icon: Download,
     colorScheme: 'amber',
     shortcut: 'Alt+R',
@@ -321,7 +321,7 @@ export const COCKPIT_MODULE_CATALOG: CockpitModuleItem[] = [
     id: 'rcvParams',
     label: 'Parámetros Contables RCV',
     shortLabel: 'Parám. RCV',
-    category: 'CARGA (SII)',
+    category: 'IMPORTACIONES',
     icon: Settings,
     colorScheme: 'amber',
     description: 'Configuración de cuentas e imputaciones por defecto para compras, ventas y honorarios'
@@ -330,7 +330,7 @@ export const COCKPIT_MODULE_CATALOG: CockpitModuleItem[] = [
     id: 'cargaMasiva',
     label: 'Carga Masiva Comprobantes',
     shortLabel: 'Carga Masiva',
-    category: 'CARGA (SII)',
+    category: 'IMPORTACIONES',
     icon: FileSpreadsheet,
     colorScheme: 'amber',
     description: 'Importación masiva de asientos desde plantillas Excel'
@@ -339,10 +339,19 @@ export const COCKPIT_MODULE_CATALOG: CockpitModuleItem[] = [
     id: 'plantillasCarga',
     label: 'Plantillas de Carga',
     shortLabel: 'Plantillas',
-    category: 'CARGA (SII)',
+    category: 'IMPORTACIONES',
     icon: FileSpreadsheet,
     colorScheme: 'amber',
     description: 'Estructuras y modelos descargables para importaciones'
+  },
+  {
+    id: 'importacionInteligente',
+    label: 'Importación inteligente',
+    shortLabel: 'Inteligente',
+    category: 'IMPORTACIONES',
+    icon: Sparkles,
+    colorScheme: 'amber',
+    description: 'Sube cualquier planilla y el agente arma el comprobante'
   },
 
   // --- IMPUESTOS ---
@@ -486,7 +495,7 @@ export const CATEGORY_COLORS: Record<ModuleCategory, { bg: string; text: string;
   OPERACIONES: { bg: 'bg-emerald-500/15', text: 'text-emerald-400', border: 'border-emerald-500/30', glow: 'shadow-emerald-500/20' },
   TESORERIA: { bg: 'bg-cyan-500/15', text: 'text-cyan-400', border: 'border-cyan-500/30', glow: 'shadow-cyan-500/20' },
   PERSONAL: { bg: 'bg-blue-500/15', text: 'text-blue-400', border: 'border-slate-500/30', glow: 'shadow-blue-500/20' },
-  'CARGA (SII)': { bg: 'bg-amber-500/15', text: 'text-amber-400', border: 'border-amber-500/30', glow: 'shadow-amber-500/20' },
+  'IMPORTACIONES': { bg: 'bg-amber-500/15', text: 'text-amber-400', border: 'border-amber-500/30', glow: 'shadow-amber-500/20' },
   IMPUESTOS: { bg: 'bg-rose-500/15', text: 'text-rose-400', border: 'border-rose-500/30', glow: 'shadow-rose-500/20' },
   INDICADORES: { bg: 'bg-teal-500/15', text: 'text-teal-400', border: 'border-teal-500/30', glow: 'shadow-teal-500/20' },
   CONFIGURACIONES: { bg: 'bg-slate-500/15', text: 'text-slate-400', border: 'border-slate-500/30', glow: 'shadow-slate-500/20' },

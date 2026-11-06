@@ -71,7 +71,7 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
     { type: 'NAV', key: 'WAREHOUSES', title: 'Bodegas y Almacenes', subtitle: 'Gestión multi-bodega y control de existencias', icon: WarehouseIcon },
     { type: 'NAV', key: 'PRODUCTS_SERVICES', title: 'Catálogo de Productos & Servicios', subtitle: 'Catálogo comercial, listas de precio y códigos de barra', icon: Boxes },
 
-    // CARGA SII
+    // IMPORTACIONES
     { type: 'NAV', key: 'RCV_SII', title: 'Carga RCV Compra/Venta SII', subtitle: 'Sincronización oficial de compras y ventas SII', icon: Download },
     { type: 'NAV', key: 'RCV_PARAMS', title: 'Parámetros Contables RCV', subtitle: 'Reglas de contabilización automática de compras y ventas', icon: Settings },
     { type: 'NAV', key: 'CARGA_MASIVA', title: 'Carga Masiva de Comprobantes', subtitle: 'Importación por lote de vouchers desde Excel / CSV', icon: FileSpreadsheet },

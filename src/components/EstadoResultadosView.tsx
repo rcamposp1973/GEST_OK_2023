@@ -89,7 +89,11 @@ export default function EstadoResultadosView({
     const validVouchers = vouchers.filter(v => {
       if (v.status === 'Anulado') return false;
       const vYear = v.date ? parseInt(v.date.slice(0, 4)) : selectedYear;
-      return vYear === selectedYear;
+      if (vYear !== selectedYear) return false;
+      // Mismo criterio que Balance de 8 columnas y Balance IFRS: solo comprobantes cuadrados
+      const vDeb = (v.lines || []).reduce((a, l) => a + (Number(l.debit) || 0), 0);
+      const vCred = (v.lines || []).reduce((a, l) => a + (Number(l.credit) || 0), 0);
+      return Math.abs(vDeb - vCred) <= 0.01;
     });
 
     validVouchers.forEach(v => {

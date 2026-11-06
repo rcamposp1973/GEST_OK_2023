@@ -29,7 +29,6 @@ import { APP_VERSION } from '../constants/version';
 import { db } from '../lib/firebase';
 import { collection, addDoc, onSnapshot } from 'firebase/firestore';
 import { LandingTestimonial, LandingPricingPlan } from '../types';
-import { DEFAULT_INITIAL_TESTIMONIALS } from './TestimonialManager';
 import { DEFAULT_INITIAL_PRICING_PLANS } from './PricingManager';
 
 interface LandingHomeProps {
@@ -53,10 +52,10 @@ export default function LandingHome({ onGoToLogin }: LandingHomeProps) {
   const [isSendingLead, setIsSendingLead] = useState(false);
   const [leadSentSuccess, setLeadSentSuccess] = useState(false);
 
-  // Testimonios profesionales
-  const [testimonials, setTestimonials] = useState<LandingTestimonial[]>(() => {
-    return DEFAULT_INITIAL_TESTIMONIALS.map((t, idx) => ({ ...t, id: `seed-t-${idx}` }));
-  });
+  // Testimonios: INACTIVOS hasta contar con opiniones reales de clientes.
+  // Para activarlos, cambiar MOSTRAR_TESTIMONIOS a true (se muestran solo los marcados "activos" en el panel de super usuario).
+  const MOSTRAR_TESTIMONIOS = false;
+  const [testimonials, setTestimonials] = useState<LandingTestimonial[]>([]);
   const [activeSlide, setActiveSlide] = useState(0);
   const [isSlidePaused, setIsSlidePaused] = useState(false);
 
@@ -639,6 +638,7 @@ export default function LandingHome({ onGoToLogin }: LandingHomeProps) {
       {/* ========================================================= */}
       {/* 6. TESTIMONIOS PROFESIONALES                              */}
       {/* ========================================================= */}
+      {MOSTRAR_TESTIMONIOS && testimonials.length > 0 && (
       <section 
         id="testimonios" 
         className="py-16 bg-slate-50/60 border-b border-slate-200"
@@ -701,6 +701,7 @@ export default function LandingHome({ onGoToLogin }: LandingHomeProps) {
 
         </div>
       </section>
+      )}
 
       {/* ========================================================= */}
       {/* 7. QUIÉNES SOMOS & RESPALDO INSTITUCIONAL                 */}

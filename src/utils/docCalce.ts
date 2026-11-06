@@ -134,10 +134,22 @@ export function calzarFacturas(
       const s = Math.round(d.openBalance);
       if (acum + s <= monto) { elegidos.push(d); acum += s; }
     }
-    if (elegidos.length > 0) {
-      const r = armar(elegidos,
-        `No hay una combinación que sume exacto ${fmt(monto)}. Marqué las ${elegidos.length} facturas más antiguas de ${elegidos[0].auxiliaryName || 'esa contraparte'} (${fmt(acum)}); quedan ${fmt(monto - acum)} sin asignar. Ajusta si hubo descuento, retención o pago parcial.`,
+    // 4) Abono parcial: el saldo que queda se aplica a la factura más antigua que lo supere
+    const restante = monto - acum;
+    const parcial = restante > tolerancia
+      ? ordenados.find(d => !elegidos.includes(d) && Math.round(d.openBalance) > restante)
+      : undefined;
+    if (elegidos.length > 0 || parcial) {
+      const lista = parcial ? [...elegidos, parcial] : elegidos;
+      const r = armar(lista,
+        elegidos.length > 0 && !parcial
+          ? `No hay una combinación que sume exacto ${fmt(monto)}. Marqué las ${elegidos.length} facturas más antiguas de ${elegidos[0].auxiliaryName || 'esa contraparte'} (${fmt(acum)}); quedan ${fmt(monto - acum)} sin asignar. Ajusta si hubo descuento, retención o pago parcial.`
+          : `Posible abono parcial: ${elegidos.length > 0 ? `${elegidos.length} factura(s) completa(s) (${fmt(acum)}) y ` : ''}${fmt(restante)} a cuenta del documento ${parcial!.docNumber} de ${parcial!.auxiliaryName || 'esa contraparte'} (saldo ${fmt(parcial!.openBalance)}); le quedarán ${fmt(Math.round(parcial!.openBalance) - restante)} pendientes. Revisa que sea un pago parcial y no un descuento.`,
         'AMARILLO');
+      if (parcial) {
+        r.amounts[parcial.id] = restante;
+        r.ajuste = 0;
+      }
       return r;
     }
     return aviso(`Encontré documentos de ${candidatos[0].auxiliaryName || 'esa contraparte'}, pero ninguno cabe en ${fmt(monto)}. Revisa descuentos, retenciones o pagos parciales.`);

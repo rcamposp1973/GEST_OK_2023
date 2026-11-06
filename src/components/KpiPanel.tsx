@@ -5,7 +5,7 @@ import { db } from '../lib/firebase';
 import type { Company, Voucher, ChartOfAccount } from '../types';
 import {
   calcularFiguras, KPI_CATALOGO, KPI_PAQUETES, KPI_POR_ID, KpiConfig, KpiGrupo,
-  configPorDefecto, formatKpi, semaforo
+  configPorDefecto, formatKpi, semaforo, KpiInputs
 } from '../utils/kpiEngine';
 
 interface Props {
@@ -17,6 +17,8 @@ interface Props {
   canConfigure: boolean;
 }
 
+function visiblesIds(c: KpiConfig) { return c.enabled; }
+
 export default function KpiPanel({ company, vouchers, accounts, year, cutoffMonth, canConfigure }: Props) {
   const inicial: KpiConfig = (company as any).kpiConfig?.enabled?.length ? (company as any).kpiConfig : configPorDefecto();
   const [config, setConfig] = useState<KpiConfig>(inicial);
@@ -25,7 +27,34 @@ export default function KpiPanel({ company, vouchers, accounts, year, cutoffMont
   const [guardando, setGuardando] = useState(false);
   const [msg, setMsg] = useState('');
 
-  const figuras = useMemo(() => calcularFiguras(vouchers, accounts, year, cutoffMonth), [vouchers, accounts, year, cutoffMonth]);
+  const [inputs, setInputs] = useState<KpiInputs>(((company as any).kpiInputs || {})[String(year)] || {});
+  const [inputsTodos, setInputsTodos] = useState<Record<string, KpiInputs>>((company as any).kpiInputs || {});
+  const [editInputs, setEditInputs] = useState(false);
+  React.useEffect(() => { setInputs(inputsTodos[String(year)] || {}); }, [year]);
+  const figuras = useMemo(() => calcularFiguras(vouchers, accounts, year, cutoffMonth, inputs), [vouchers, accounts, year, cutoffMonth, inputs]);
+
+  const campo = (k: keyof KpiInputs, v: string) => {
+    const n = v.trim() === '' ? undefined : Math.max(0, Number(v.replace(/\./g, '').replace(',', '.')));
+    setInputs(prev => ({ ...prev, [k]: n === undefined || isNaN(n as number) ? undefined : n }));
+  };
+  const guardarInputs = async () => {
+    setGuardando(true);
+    try {
+      const limpio: KpiInputs = {};
+      (Object.keys(inputs) as (keyof KpiInputs)[]).forEach(k => { if (inputs[k] !== undefined) limpio[k] = inputs[k]; });
+      const todos = { ...inputsTodos, [String(year)]: limpio };
+      await updateDoc(doc(db, 'studies', company.studyId, 'companies', company.id), { kpiInputs: todos });
+      setInputsTodos(todos);
+      setEditInputs(false);
+      setMsg('Datos del negocio guardados');
+    } catch (e: any) {
+      setMsg('No se pudo guardar: ' + (e?.message || 'error'));
+    } finally {
+      setGuardando(false);
+      setTimeout(() => setMsg(''), 4000);
+    }
+  };
+  const usaClientes = visiblesIds(config).some(id => ['clientes_activos', 'churn', 'arpa', 'cac', 'ltv', 'ltv_cac', 'payback_cac'].includes(id));
 
   const visibles = config.enabled.map(id => KPI_POR_ID.get(id)).filter(Boolean) as typeof KPI_CATALOGO;
   const grupos = Array.from(new Set(KPI_CATALOGO.map(k => k.grupo))) as KpiGrupo[];
@@ -110,6 +139,34 @@ export default function KpiPanel({ company, vouchers, accounts, year, cutoffMont
               <Save className="w-3.5 h-3.5" /> {guardando ? 'Guardando…' : 'Guardar para esta empresa'}
             </button>
           </div>
+        </div>
+      )}
+
+      {usaClientes && canConfigure && (
+        <div className="bg-white border border-slate-200 rounded-xl p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-xs font-bold text-slate-800">Datos del negocio {year} (acumulado al corte)</h4>
+              <p className="text-[11px] text-slate-500">La contabilidad no tiene estos datos. Ingrésalos para calcular churn, CAC y LTV.</p>
+            </div>
+            <button onClick={() => setEditInputs(e => !e)} className="text-xs font-bold text-indigo-700 hover:underline cursor-pointer">{editInputs ? 'Cerrar' : 'Editar'}</button>
+          </div>
+          {editInputs && (
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {([['clientesInicio', 'Clientes al inicio del año'], ['clientesNuevos', 'Clientes nuevos'], ['clientesPerdidos', 'Clientes perdidos'], ['gastoMarketingVentas', 'Gasto marketing y ventas ($)']] as [keyof KpiInputs, string][]).map(([k, label]) => (
+                <label key={k} className="text-[11px] font-semibold text-slate-600">
+                  {label}
+                  <input type="text" inputMode="decimal" defaultValue={inputs[k] ?? ''} onBlur={e => campo(k, e.target.value)}
+                    className="mt-1 w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm font-normal" />
+                </label>
+              ))}
+              <div className="sm:col-span-2 lg:col-span-4 flex justify-end">
+                <button onClick={guardarInputs} disabled={guardando} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50 cursor-pointer">
+                  <Save className="w-3.5 h-3.5" /> Guardar datos
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

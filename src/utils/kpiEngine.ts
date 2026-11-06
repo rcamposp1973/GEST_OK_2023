@@ -3,7 +3,16 @@
 import type { ChartOfAccount, Voucher } from '../types';
 import { getNaturaleza, getRubroER, getRubroESF, RUBROS_ESF } from './ifrsClassification';
 
+/** Datos del negocio que NO salen de la contabilidad (acumulados del año al corte). */
+export interface KpiInputs {
+  clientesInicio?: number;      // clientes activos al comienzo del año
+  clientesNuevos?: number;      // clientes ganados en el período
+  clientesPerdidos?: number;    // clientes perdidos en el período
+  gastoMarketingVentas?: number; // gasto en marketing y ventas del período (CLP)
+}
+
 export interface KpiFigures {
+  inputs: KpiInputs;
   meses: number;
   // Balance (a la fecha de corte)
   efectivo: number; cxc: number; inventarios: number; cxp: number;
@@ -18,7 +27,7 @@ export interface KpiFigures {
   ingresosMes: number[]; gastosMes: number[];
 }
 
-export function calcularFiguras(vouchers: Voucher[], accounts: ChartOfAccount[], year: number, cutoffMonth: number): KpiFigures {
+export function calcularFiguras(vouchers: Voucher[], accounts: ChartOfAccount[], year: number, cutoffMonth: number, inputs: KpiInputs = {}): KpiFigures {
   const byKey = new Map<string, ChartOfAccount>();
   accounts.forEach(a => { byKey.set(a.id, a); byKey.set(a.code, a); });
   const corte = cutoffMonth > 0 ? cutoffMonth : 12;
@@ -49,7 +58,7 @@ export function calcularFiguras(vouchers: Voucher[], accounts: ChartOfAccount[],
   });
 
   const f: KpiFigures = {
-    meses: corte, efectivo: 0, cxc: 0, inventarios: 0, cxp: 0, activoCorriente: 0, activoNoCorriente: 0, activoTotal: 0,
+    inputs, meses: corte, efectivo: 0, cxc: 0, inventarios: 0, cxp: 0, activoCorriente: 0, activoNoCorriente: 0, activoTotal: 0,
     pasivoCorriente: 0, pasivoNoCorriente: 0, pasivoTotal: 0, deudaFinanciera: 0, patrimonio: 0,
     ingresos: 0, costoVentas: 0, gastoPersonal: 0, gastoAdm: 0, depreciacion: 0, ingFin: 0, costoFin: 0,
     otrosIng: 0, otrosGastos: 0, impuesto: 0, margenBruto: 0, ebit: 0, ebitda: 0, resultado: 0, ingresosMes, gastosMes
@@ -105,7 +114,7 @@ export function calcularFiguras(vouchers: Voucher[], accounts: ChartOfAccount[],
 
 // ───────────────────────── Catálogo ─────────────────────────
 export type KpiUnit = 'x' | 'pct' | 'clp' | 'dias' | 'meses';
-export type KpiGrupo = 'Liquidez' | 'Endeudamiento' | 'Rentabilidad' | 'Márgenes' | 'Actividad' | 'Crecimiento' | 'Caja (Startup)';
+export type KpiGrupo = 'Liquidez' | 'Endeudamiento' | 'Rentabilidad' | 'Márgenes' | 'Actividad' | 'Crecimiento' | 'Caja (Startup)' | 'Clientes (Startup)';
 
 export interface KpiDef {
   id: string;
@@ -122,6 +131,12 @@ export interface KpiDef {
 
 const div = (a: number, b: number): number | null => (b > 0 || b < 0 ? a / b : null);
 const dias = (f: KpiFigures) => f.meses * 30;
+function ltv(f: KpiFigures): number | null {
+  const a = (f.inputs.clientesInicio || 0) + (f.inputs.clientesNuevos || 0) - (f.inputs.clientesPerdidos || 0);
+  const churn = f.inputs.clientesInicio && f.inputs.clientesPerdidos !== undefined ? f.inputs.clientesPerdidos / f.inputs.clientesInicio / f.meses : 0;
+  const mb = f.ingresos > 0 ? f.margenBruto / f.ingresos : 0;
+  return a > 0 && churn > 0 && mb > 0 ? ((f.ingresos / f.meses / a) * mb) / churn : null;
+}
 const prom = (arr: number[], n: number) => (n > 0 ? arr.slice(0, n).reduce((s, x) => s + x, 0) / n : 0);
 
 export const KPI_CATALOGO: KpiDef[] = [
@@ -205,7 +220,26 @@ export const KPI_CATALOGO: KpiDef[] = [
     calcular: f => { if (f.meses < 4) return null; const a = prom(f.ingresosMes.slice(f.meses - 3, f.meses), 3), b = prom(f.ingresosMes.slice(f.meses - 6 < 0 ? 0 : f.meses - 6, f.meses - 3), 3); return b > 0 && a > 0 ? (Math.pow(a / b, 1 / 3) - 1) * 100 : null; } },
   { id: 'eficiencia_burn', nombre: 'Eficiencia del burn (burn multiple)', grupo: 'Caja (Startup)', unidad: 'x', mayorEsMejor: false, max: 2,
     descripcion: 'Burn mensual / Ingreso nuevo mensual. Menor es mejor. Requiere ingresos crecientes.',
-    calcular: f => { const a = f.ingresosMes[f.meses - 1], b = f.ingresosMes[f.meses - 2]; const nuevo = a - b; const burn = Math.max(0, -f.resultado / f.meses); return f.meses > 1 && nuevo > 0 && burn > 0 ? burn / nuevo : null; } }
+    calcular: f => { const a = f.ingresosMes[f.meses - 1], b = f.ingresosMes[f.meses - 2]; const nuevo = a - b; const burn = Math.max(0, -f.resultado / f.meses); return f.meses > 1 && nuevo > 0 && burn > 0 ? burn / nuevo : null; } },
+  { id: 'clientes_activos', nombre: 'Clientes activos', grupo: 'Clientes (Startup)', unidad: 'x', mayorEsMejor: true,
+    descripcion: 'Clientes al inicio + nuevos − perdidos. Requiere "Datos del negocio".',
+    calcular: f => (f.inputs.clientesInicio === undefined && f.inputs.clientesNuevos === undefined ? null : (f.inputs.clientesInicio || 0) + (f.inputs.clientesNuevos || 0) - (f.inputs.clientesPerdidos || 0)) },
+  { id: 'churn', nombre: 'Churn mensual', grupo: 'Clientes (Startup)', unidad: 'pct', mayorEsMejor: false, max: 5,
+    descripcion: 'Clientes perdidos / clientes al inicio, promedio mensual.',
+    calcular: f => (f.inputs.clientesInicio && f.inputs.clientesPerdidos !== undefined ? (f.inputs.clientesPerdidos / f.inputs.clientesInicio / f.meses) * 100 : null) },
+  { id: 'arpa', nombre: 'Ingreso por cliente (ARPA mensual)', grupo: 'Clientes (Startup)', unidad: 'clp', mayorEsMejor: true,
+    descripcion: 'Ingresos mensuales promedio / clientes activos.',
+    calcular: f => { const a = (f.inputs.clientesInicio || 0) + (f.inputs.clientesNuevos || 0) - (f.inputs.clientesPerdidos || 0); return a > 0 ? f.ingresos / f.meses / a : null; } },
+  { id: 'cac', nombre: 'CAC (costo de adquirir un cliente)', grupo: 'Clientes (Startup)', unidad: 'clp', mayorEsMejor: false,
+    descripcion: 'Gasto en marketing y ventas / clientes nuevos.',
+    calcular: f => (f.inputs.clientesNuevos && f.inputs.gastoMarketingVentas !== undefined ? f.inputs.gastoMarketingVentas / f.inputs.clientesNuevos : null) },
+  { id: 'ltv', nombre: 'LTV (valor de vida del cliente)', grupo: 'Clientes (Startup)', unidad: 'clp', mayorEsMejor: true,
+    descripcion: 'ARPA × margen bruto % / churn mensual.', calcular: f => ltv(f) },
+  { id: 'ltv_cac', nombre: 'LTV / CAC', grupo: 'Clientes (Startup)', unidad: 'x', mayorEsMejor: true, min: 3,
+    descripcion: 'Regla general: sobre 3x es saludable.', calcular: f => { const l = ltv(f); const c = f.inputs.clientesNuevos && f.inputs.gastoMarketingVentas !== undefined ? f.inputs.gastoMarketingVentas / f.inputs.clientesNuevos : null; return l !== null && c ? l / c : null; } },
+  { id: 'payback_cac', nombre: 'Recuperación del CAC (meses)', grupo: 'Clientes (Startup)', unidad: 'meses', mayorEsMejor: false, max: 12,
+    descripcion: 'CAC / (ARPA × margen bruto %). Meses para recuperar lo gastado en captar un cliente.',
+    calcular: f => { const a = (f.inputs.clientesInicio || 0) + (f.inputs.clientesNuevos || 0) - (f.inputs.clientesPerdidos || 0); const mb = f.ingresos > 0 ? f.margenBruto / f.ingresos : 0; const c = f.inputs.clientesNuevos && f.inputs.gastoMarketingVentas !== undefined ? f.inputs.gastoMarketingVentas / f.inputs.clientesNuevos : null; const m = a > 0 ? (f.ingresos / f.meses / a) * mb : 0; return c !== null && m > 0 ? c / m : null; } },
 ];
 
 export const KPI_POR_ID = new Map(KPI_CATALOGO.map(k => [k.id, k]));
@@ -224,8 +258,8 @@ export const KPI_PAQUETES: KpiPack[] = [
     kpis: ['razon_corriente', 'capital_trabajo', 'deuda_patrimonio', 'deuda_fin_ebitda', 'cobertura_intereses', 'margen_bruto', 'margen_operacional', 'dias_cobro', 'dias_pago', 'resultado'] },
   { id: 'restaurantes', nombre: 'Restaurantes / Gastronomía', descripcion: 'Foco en costo de ventas, personal y rotación de inventario.',
     kpis: ['margen_bruto', 'personal_ingresos', 'gasto_adm_ingresos', 'margen_operacional', 'rotacion_inventario', 'dias_pago', 'punto_equilibrio', 'efectivo', 'resultado'] },
-  { id: 'startup', nombre: 'Startup', descripcion: 'Caja, burn, runway y crecimiento. MRR/ARR son aproximados; CAC, LTV y churn requieren datos de clientes (próxima etapa).',
-    kpis: ['efectivo', 'burn_rate', 'runway', 'mrr', 'arr', 'crecimiento_mensual', 'crecimiento_3m', 'eficiencia_burn', 'margen_bruto', 'resultado'] }
+  { id: 'startup', nombre: 'Startup', descripcion: 'Caja, burn, runway y crecimiento. MRR/ARR son aproximados; CAC, LTV y churn usan los "Datos del negocio" que ingresa el contador.',
+    kpis: ['efectivo', 'burn_rate', 'runway', 'mrr', 'arr', 'crecimiento_mensual', 'crecimiento_3m', 'eficiencia_burn', 'clientes_activos', 'churn', 'cac', 'ltv', 'ltv_cac', 'payback_cac', 'margen_bruto', 'resultado'] }
 ];
 
 export const KPI_PAQUETE_DEFECTO = 'base';

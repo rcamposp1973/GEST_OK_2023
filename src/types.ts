@@ -236,6 +236,8 @@ export interface Company {
   bankReconConfig?: { tolerancia?: number; autoAprobar?: boolean };
   /** KPIs que ve esta empresa (configurados por el contador) */
   kpiConfig?: { pack: string; enabled: string[] };
+  /** Datos de negocio para KPIs de clientes, por año (churn, CAC, LTV) */
+  kpiInputs?: Record<string, { clientesInicio?: number; clientesNuevos?: number; clientesPerdidos?: number; gastoMarketingVentas?: number }>;
   f29AccountParams?: F29AccountingParams;
   customF29Codes?: CustomF29Code[];
   dteModuleEnabled?: boolean;

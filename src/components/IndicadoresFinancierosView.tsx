@@ -12,6 +12,7 @@ import {
 } from '../types';
 import { triggerIframePrint } from '../utils/printUtils';
 import KpiPanel from './KpiPanel';
+import { calcularFiguras } from '../utils/kpiEngine';
 import {
   BarChart3,
   Landmark,
@@ -198,101 +199,23 @@ export default function IndicadoresFinancierosView({
     let otrosIngresos = 0;
     let otrosGastos = 0;
 
-    accSums.forEach(({ debit, credit, account }) => {
-      const code = (account.code || '').trim();
-      const codePrefix = code.charAt(0);
-      const name = (account.name || '').toLowerCase();
-      const normType = (account.type || '').toLowerCase();
-
-      const blceCol = (account.blce8Columnas || '').toUpperCase();
-      const isPatrimonio = 
-        code.startsWith('23') || 
-        code.startsWith('2.3') || 
-        code.startsWith('2-3') || 
-        (codePrefix === '3' && !normType.includes('ingreso') && (normType.includes('patrimonio') || normType.includes('capital') || normType.includes('reserva'))) ||
-        normType.includes('patrimonio') || 
-        normType.includes('capital');
-
-      const isActivo = 
-        blceCol === 'ACTIVO' ||
-        codePrefix === '1' || 
-        (!['2', '3', '4', '5'].includes(codePrefix) && normType.includes('activo'));
-
-      const isPasivo = 
-        !isPatrimonio && 
-        (blceCol === 'PASIVO' || codePrefix === '2' || (!['1', '3', '4', '5'].includes(codePrefix) && normType.includes('pasivo')));
-
-      const isIngreso = 
-        blceCol === 'GANANCIA' ||
-        codePrefix === '5' || 
-        (codePrefix === '3' && (normType.includes('ingreso') || normType.includes('ganancia') || code.startsWith('31') || code.startsWith('32') || code.startsWith('33'))) ||
-        (!['1', '2', '4'].includes(codePrefix) && (normType.includes('ingreso') || normType.includes('ganancia') || normType.includes('venta')));
-
-      const isGasto = 
-        blceCol === 'PERDIDA' ||
-        blceCol === 'PÉRDIDA' ||
-        codePrefix === '4' || 
-        (!['1', '2', '3', '5'].includes(codePrefix) && (normType.includes('gasto') || normType.includes('costo') || normType.includes('perdida') || normType.includes('pérdida')));
-
-      if (isActivo) {
-        const balance = debit - credit;
-        const isNoCorriente = 
-          code.startsWith('1.2') || code.startsWith('1-2') || code.startsWith('12') ||
-          name.includes('fijo') || name.includes('propiedad') || name.includes('intangible') || name.includes('depreciaci');
-
-        if (isNoCorriente) {
-          activoNoCorriente += balance;
-        } else {
-          activoCorriente += balance;
-          if (name.includes('mercader') || name.includes('inventario') || name.includes('existencia') || code.startsWith('1-1-03') || code.startsWith('1.1.03')) {
-            inventarios += balance;
-          }
-          if (name.includes('banco') || name.includes('caja') || name.includes('cuenta corriente') || name.includes('tesoreria') || code.startsWith('1-1-01') || code.startsWith('1.1.01')) {
-            disponibleLibros += balance;
-          }
-          if (name.includes('cliente') || name.includes('deudor') || name.includes('cuenta por cobrar') || code.startsWith('1-1-02') || code.startsWith('1.1.02')) {
-            cuentasPorCobrar += balance;
-          }
-        }
-      }
-      else if (isPasivo) {
-        const balance = credit - debit;
-        const isNoCorriente = 
-          code.startsWith('2.2') || code.startsWith('2-2') || code.startsWith('22') ||
-          name.includes('largo plazo') || name.includes('hipotecario');
-
-        if (isNoCorriente) {
-          pasivoNoCorriente += balance;
-        } else {
-          pasivoCorriente += balance;
-        }
-      }
-      else if (isPatrimonio) {
-        patrimonio += (credit - debit);
-      }
-      else if (isIngreso) {
-        const balance = credit - debit;
-        if (code.startsWith('52') || code.startsWith('5.2') || code.startsWith('53') || code.startsWith('5.3') || code.startsWith('32') || code.startsWith('3.2') || code.startsWith('33') || code.startsWith('3.3') || name.includes('no operacional') || name.includes('financiero') || name.includes('fuera de explotacion') || name.includes('otro ingreso')) {
-          otrosIngresos += balance;
-        } else {
-          ventasTotales += balance;
-        }
-      }
-      else if (isGasto) {
-        const balance = debit - credit;
-        if (name.includes('costo de venta') || name.includes('costo directo') || name.includes('costo explotacion') || code.startsWith('4.1') || code.startsWith('41')) {
-          costoVentas += balance;
-        } else if (name.includes('depreciaci') || name.includes('amortizaci') || code.startsWith('4203') || code.startsWith('4.2.03') || code.startsWith('4.2.02') || code.startsWith('4202003')) {
-          depreciacionAmortizacion += balance;
-          gastosOperacionales += balance;
-        } else if (code.startsWith('43') || code.startsWith('4.3') || code.startsWith('44') || code.startsWith('4.4') || name.includes('interes') || name.includes('financiero') || name.includes('gasto bancario') || name.includes('fuera de explotacion') || name.includes('otro gasto')) {
-          gastosFinancieros += balance;
-          otrosGastos += balance;
-        } else {
-          gastosOperacionales += balance;
-        }
-      }
-    });
+    // Clasificación única (misma que Balance IFRS, Estado de Resultados y Mis KPIs)
+    const fig = calcularFiguras(vouchers, accounts, selectedYear, cutoffMonth);
+    activoCorriente = fig.activoCorriente;
+    activoNoCorriente = fig.activoNoCorriente;
+    inventarios = fig.inventarios;
+    disponibleLibros = fig.efectivo;
+    cuentasPorCobrar = fig.cxc;
+    pasivoCorriente = fig.pasivoCorriente;
+    pasivoNoCorriente = fig.pasivoNoCorriente;
+    patrimonio = fig.patrimonio - fig.resultado;
+    ventasTotales = fig.ingresos;
+    costoVentas = fig.costoVentas;
+    gastosOperacionales = fig.gastoPersonal + fig.gastoAdm + fig.depreciacion;
+    depreciacionAmortizacion = fig.depreciacion;
+    gastosFinancieros = fig.costoFin;
+    otrosIngresos = fig.ingFin + fig.otrosIng;
+    otrosGastos = fig.costoFin + fig.otrosGastos + fig.impuesto;
 
     const margenBruto = ventasTotales - costoVentas;
     const ebit = margenBruto - gastosOperacionales;

@@ -9,6 +9,13 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.5.0 — 6 de noviembre de 2026
+**Conciliación bancaria: propuestas más inteligentes.**
+- Abono parcial: si el pago del banco no calza con facturas completas, propone aplicarlo como abono a la factura más antigua (queda en amarillo para revisión).
+- Propuestas según el tipo de RUT del auxiliar: proveedor, cliente, trabajador u honorarios (por ejemplo, pago a proveedor sin documento sugiere anticipo a proveedores; a trabajador, anticipo o préstamo).
+
+---
+
 ## 1.4.1 — 6 de noviembre de 2026
 **Módulo Personal: parámetros legales y cálculos corregidos.**
 - Tasa SIS según Previred de cada mes (1,54 % ene-mar, 1,62 % abr-jun, 2,00 % jul; desde agosto integrada en la cotización del empleador, Ley 21.735).

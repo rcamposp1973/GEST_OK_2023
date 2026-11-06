@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Employee, PayrollParameters } from '../../types';
-import { MonthPayrollInput } from '../../utils/payrollCalculator';
+import { MonthPayrollInput, getLegalWeeklyHours } from '../../utils/payrollCalculator';
 import { 
   X, Save, Calendar, DollarSign, Clock, ShieldAlert, 
   Briefcase, AlertCircle, CheckCircle2, UserCheck, HeartPulse
@@ -155,9 +155,9 @@ export const WorkerMonthlyNovedadesModal: React.FC<WorkerMonthlyNovedadesModalPr
                   Jornada Pactada
                 </label>
                 <div className="p-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 flex items-center justify-between">
-                  <span>{employee.workHoursPerWeek || 44} hrs semanales</span>
+                  <span>{employee.workHoursPerWeek || getLegalWeeklyHours()} hrs semanales</span>
                   <span className="text-[11px] text-slate-400">
-                    {(employee.workHoursPerWeek || 45) < 40 ? 'Medio Tiempo / Parcial' : 'Jornada Ordinaria'}
+                    {(employee.workHoursPerWeek || getLegalWeeklyHours()) < 40 ? 'Medio Tiempo / Parcial' : 'Jornada Ordinaria'}
                   </span>
                 </div>
               </div>

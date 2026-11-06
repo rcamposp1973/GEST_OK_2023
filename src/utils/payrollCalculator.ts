@@ -49,7 +49,7 @@ export const DEFAULT_PAYROLL_PARAMS_2026: PayrollParameters = {
   period: '2026-05',
   uf: 40610.69,
   utm: 70588,
-  imm: 539000, // Ingreso Mínimo Mensual Reajustado 2026
+  imm: 553553, // Ingreso Mínimo Mensual desde 1-may-2026 (Ley 21.830)
   topeImponibleAfpUf: 90.0, // Tope AFP / Salud en UF oficial 2026 (90 UF = $3.654.962)
   topeImponibleAfcUf: 135.2, // Tope AFC en UF oficial 2026 (135,2 UF = $5.490.565)
   tasaSisPercent: 1.62, // SIS Empleador oficial Previred 2026 (1,62%)
@@ -100,13 +100,15 @@ export function getPrevisionalParametersForPeriod(periodStr: string): PayrollPar
   const year = parseInt(parts[0], 10) || 2026;
   const month = parseInt(parts[1], 10) || 1;
 
-  // Valor UF oficial para el período (primer día del mes)
-  const uf = (OFFICIAL_UF_MONTHLY_START as Record<string, number>)[periodStr] || 
-    (year >= 2026 ? 39710 + (month - 1) * 40 : 38000);
-
-  // Valor UTM oficial para el mes
-  const utm = (OFFICIAL_MONTHLY_UTM as Record<string, number>)[periodStr] || 
-    (year >= 2026 ? 69751 + (month - 1) * 140 : 65000);
+  // UF y UTM oficiales del período. Si el mes aún no está publicado/cargado se usa el último valor oficial
+  // conocido anterior (nunca un valor inventado). Si no hay ninguno, queda en 0 y el cálculo lo avisa.
+  const ultimoConocido = (tabla: { [p: string]: number }): number => {
+    if (tabla[periodStr]) return tabla[periodStr];
+    const previos = Object.keys(tabla).filter(k => k < periodStr && tabla[k] > 0).sort();
+    return previos.length ? tabla[previos[previos.length - 1]] : 0;
+  };
+  const uf = ultimoConocido(OFFICIAL_UF_MONTHLY_START as Record<string, number>);
+  const utm = ultimoConocido(OFFICIAL_MONTHLY_UTM as Record<string, number>);
 
   // Ingreso Mínimo Mensual (IMM) según fecha y ley de reajuste vigente (Leyes N° 21.456, 21.578, etc.)
   const imm = (OFFICIAL_MONTHLY_IMM as Record<string, number>)[periodStr] || getOfficialIMM(periodStr);
@@ -140,15 +142,19 @@ export function getPrevisionalParametersForPeriod(periodStr: string): PayrollPar
     tasaLeySannaPercent: 0.03,
     tasaMutualAdicionalPercent: 0.00,
     afpCommissions: DEFAULT_AFP_COMMISSIONS,
-    tramosAsignacionFamiliar: {
-      tramoA: year >= 2026 ? 22007 : year >= 2024 ? 20328 : 17316,
-      tramoB: year >= 2026 ? 13505 : year >= 2024 ? 12475 : 10627,
-      tramoC: year >= 2026 ? 4267 : year >= 2024 ? 3943 : 3360,
-      tramoD: 0,
-      limiteA: year >= 2026 ? 631976 : year >= 2024 ? 539328 : 429899,
-      limiteB: year >= 2026 ? 923067 : year >= 2024 ? 787746 : 627913,
-      limiteC: year >= 2026 ? 1439668 : year >= 2024 ? 1228614 : 979203
-    }
+    // Asignación familiar: tramos por período. Desde 1-jul-2026 rigen los valores de SUSESO
+    // (renta de referencia ene-jun 2026): $22.601 / $13.870 / $4.382, con límites $649.039 / $947.990 / $1.478.539.
+    tramosAsignacionFamiliar: periodStr >= '2026-07'
+      ? { tramoA: 22601, tramoB: 13870, tramoC: 4382, tramoD: 0, limiteA: 649039, limiteB: 947990, limiteC: 1478539 }
+      : {
+          tramoA: year >= 2026 ? 22007 : year >= 2024 ? 20328 : 17316,
+          tramoB: year >= 2026 ? 13505 : year >= 2024 ? 12475 : 10627,
+          tramoC: year >= 2026 ? 4267 : year >= 2024 ? 3943 : 3360,
+          tramoD: 0,
+          limiteA: year >= 2026 ? 631976 : year >= 2024 ? 539328 : 429899,
+          limiteB: year >= 2026 ? 923067 : year >= 2024 ? 787746 : 627913,
+          limiteC: year >= 2026 ? 1439668 : year >= 2024 ? 1228614 : 979203
+        }
   };
 }
 
@@ -280,12 +286,27 @@ export const DEFAULT_PAYROLL_CONCEPTS: PayrollConcept[] = [
 ];
 
 /**
- * Calcula el valor hora ordinaria y extra al 50%
+ * Jornada ordinaria máxima semanal vigente en el período (Ley 21.561, "40 horas"):
+ * 45 h hasta el 25-abr-2024 · 44 h desde el 26-abr-2024 · 42 h desde el 26-abr-2026 · 40 h desde el 26-abr-2028.
+ * Se aplica por mes completo: el mes del cambio (abril) conserva la jornada anterior.
  */
-export function calculateOvertimeRate(baseSalary: number, workHoursPerWeek: number = 45): { hourlyRate: number; overtimeRate50: number } {
-  const hours = workHoursPerWeek > 0 ? workHoursPerWeek : 45;
-  // Factor legal: (Sueldo Base / 30) * (28 / horas semanales)
-  const hourlyRate = (baseSalary / 30) * (28 / hours);
+export function getLegalWeeklyHours(periodStr: string = ''): number {
+  const p = periodStr || new Date().toISOString().slice(0, 7);
+  if (p >= '2028-05') return 40;
+  if (p >= '2026-05') return 42;
+  if (p >= '2024-05') return 44;
+  return 45;
+}
+
+/**
+ * Calcula el valor hora ordinaria y extra al 50%.
+ * Fórmula de la Dirección del Trabajo: (sueldo mensual / 30 × 28) / (horas semanales × 4)
+ * es decir, sueldo × 7 / (30 × horas semanales). La jornada efectiva no puede superar el máximo legal del período.
+ */
+export function calculateOvertimeRate(baseSalary: number, workHoursPerWeek: number = 45, periodStr: string = ''): { hourlyRate: number; overtimeRate50: number } {
+  const contractual = workHoursPerWeek > 0 ? workHoursPerWeek : getLegalWeeklyHours(periodStr);
+  const hours = Math.min(contractual, getLegalWeeklyHours(periodStr));
+  const hourlyRate = ((baseSalary / 30) * 28) / (hours * 4);
   const overtimeRate50 = hourlyRate * 1.5;
   return { hourlyRate, overtimeRate50 };
 }
@@ -396,7 +417,7 @@ export function calculatePayrollSlip(
 
   // 2. Horas Extras
   const horasExtras50Qty = input.horasExtras50Qty || 0;
-  const { overtimeRate50 } = calculateOvertimeRate(sueldoBasePactado, employee.workHoursPerWeek || 45);
+  const { overtimeRate50 } = calculateOvertimeRate(sueldoBasePactado, employee.workHoursPerWeek || 0, params.period);
   const montoHorasExtras50 = horasExtras50Qty > 0 ? Math.round(horasExtras50Qty * overtimeRate50) : 0;
 
   // 3. Bonos y Otros Imponibles (incluye haberes dinámicos del Excel tabulado)

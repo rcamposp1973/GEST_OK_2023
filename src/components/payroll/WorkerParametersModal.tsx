@@ -6,7 +6,7 @@ import {
   X, Save, UserCheck, DollarSign, Shield, HeartPulse, Building2, 
   Briefcase, CheckCircle2, AlertCircle, FileText, Calendar 
 } from 'lucide-react';
-import { DEFAULT_AFP_COMMISSIONS } from '../../utils/payrollCalculator';
+import { DEFAULT_AFP_COMMISSIONS, getLegalWeeklyHours } from '../../utils/payrollCalculator';
 
 interface WorkerParametersModalProps {
   employee: Employee;
@@ -224,7 +224,7 @@ export const WorkerParametersModal: React.FC<WorkerParametersModalProps> = ({
                     type="number"
                     min={1}
                     max={45}
-                    value={formData.workHoursPerWeek || 44}
+                    value={formData.workHoursPerWeek || getLegalWeeklyHours()}
                     onChange={(e) => setFormData({ ...formData, workHoursPerWeek: Number(e.target.value) })}
                     className="w-full px-3 py-2 text-xs font-semibold text-slate-800 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500"
                   />

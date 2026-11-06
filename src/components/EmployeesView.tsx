@@ -7,7 +7,7 @@ import {
   Award
 } from 'lucide-react';
 import { Employee, ContractType, PensionSystem, HealthSystem, HealthPlanType, ApvType, TramoCargaFamiliar, CostCenterMaster } from '../types';
-import { DEFAULT_AFP_COMMISSIONS } from '../utils/payrollCalculator';
+import { DEFAULT_AFP_COMMISSIONS, getLegalWeeklyHours } from '../utils/payrollCalculator';
 import { formatRut } from '../utils/rutMatcher';
 import { triggerIframePrint } from '../utils/printUtils';
 
@@ -32,7 +32,7 @@ export function generateChileanEmploymentContract(
   const bonos = (emp.bonosPactados || 0).toLocaleString('es-CL');
   const viaticos = (emp.viaticosPactados || 0).toLocaleString('es-CL');
   const otrosImponibles = (emp.otrosImponiblesPactados || 0).toLocaleString('es-CL');
-  const horasSemanales = emp.workHoursPerWeek || 45;
+  const horasSemanales = emp.workHoursPerWeek || getLegalWeeklyHours();
   const hoyStr = new Date().toLocaleDateString('es-CL', { year: 'numeric', month: 'long', day: 'numeric' });
 
   const gratifClausula = emp.hasGratificacionLegal || emp.gratificacionType === 'ART_50'
@@ -261,7 +261,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
     department: 'Operaciones',
     costCenterId: '',
     contractType: 'INDEFINIDO',
-    workHoursPerWeek: 45,
+    workHoursPerWeek: getLegalWeeklyHours(),
     baseSalary: 650000,
     isSueldoEmpresarial: false,
     hasGratificacionLegal: true,
@@ -349,7 +349,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
       department: emp.department || 'Administración',
       costCenterId: emp.costCenterId || '',
       contractType: emp.contractType,
-      workHoursPerWeek: emp.workHoursPerWeek || 45,
+      workHoursPerWeek: emp.workHoursPerWeek || getLegalWeeklyHours(),
       baseSalary: emp.baseSalary,
       isSueldoEmpresarial: emp.isSueldoEmpresarial || false,
       hasGratificacionLegal: emp.hasGratificacionLegal ?? true,

@@ -69,38 +69,9 @@ export const SuperAdminIndicatorsCenter: React.FC<SuperAdminIndicatorsCenterProp
   };
 
   const handleLoadOfficialPreviredMayo2026 = () => {
-    setPayrollParams({
-      period,
-      uf: 40610.69,
-      utm: 70588,
-      imm: 539000,
-      topeImponibleAfpUf: 90.0,
-      topeImponibleAfcUf: 135.2,
-      tasaSisPercent: 1.62,
-      tasaMutualPercent: 0.93,
-      afpCommissions: {
-        CAPITAL: 11.44,
-        CUPRUM: 11.44,
-        HABITAT: 11.27,
-        MODELO: 10.58,
-        PLANVITAL: 11.16,
-        PROVIDA: 11.45,
-        UNO: 10.46,
-        INP: 18.84,
-        JUBILADO_COTIZA: 1.44,
-        JUBILADO_NO_COTIZA: 0.0
-      },
-      tramosAsignacionFamiliar: {
-        tramoA: 22007,
-        tramoB: 13505,
-        tramoC: 4267,
-        tramoD: 0,
-        limiteA: 631976,
-        limiteB: 923067,
-        limiteC: 1439668
-      }
-    });
-    setPreviredStatusMsg('Cargados los valores oficiales certificados de la Circular Previred Mayo 2026.');
+    // Una sola fuente de valores oficiales: el motor de remuneraciones (por período)
+    setPayrollParams({ ...getPrevisionalParametersForPeriod(period) });
+    setPreviredStatusMsg('Cargados los valores oficiales del sistema para el período ' + period + '. Revísalos contra la circular de Previred antes de guardar.');
   };
 
   const handleSavePrevired = async () => {
@@ -409,7 +380,7 @@ export const SuperAdminIndicatorsCenter: React.FC<SuperAdminIndicatorsCenterProp
                       onChange={e => setPayrollParams(prev => ({ ...prev, imm: parseFloat(e.target.value) || 0 }))}
                       className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-emerald-400 font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                     />
-                    <span className="text-[10px] text-slate-500 mt-0.5 block">Oficial Previred 2026: $539.000</span>
+                    <span className="text-[10px] text-slate-500 mt-0.5 block">Ley 21.830 (desde mayo 2026): $553.553</span>
                   </div>
                 </div>
               </div>

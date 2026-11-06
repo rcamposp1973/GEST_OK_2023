@@ -16,7 +16,7 @@ import {
 import { triggerIframePrint } from '../utils/printUtils';
 import { 
   DEFAULT_PAYROLL_PARAMS_2026, DEFAULT_AFP_COMMISSIONS, PREVIRED_AFP_CODES,
-  DEFAULT_PAYROLL_CONCEPTS, getPrevisionalParametersForPeriod,
+  DEFAULT_PAYROLL_CONCEPTS, getPrevisionalParametersForPeriod, getLegalWeeklyHours,
   calculatePayrollSlip, generatePreviredTxt, generateLrdCsv, MonthPayrollInput 
 } from '../utils/payrollCalculator';
 import { OFFICIAL_UF_MONTHLY_START, OFFICIAL_MONTHLY_UTM, syncOnlineChileanIndicators } from '../utils/chileanEconomicIndicators';
@@ -1607,7 +1607,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
                                   S. Empresarial
                                 </span>
                               )}
-                              {(emp?.workHoursPerWeek || 45) < 40 && (
+                              {(emp?.workHoursPerWeek || getLegalWeeklyHours(periodStr)) < 40 && (
                                 <span className="text-[9px] bg-sky-100 text-sky-900 font-bold px-1 rounded border border-sky-300" title="Jornada Parcial / Medio Tiempo">
                                   {emp?.workHoursPerWeek} hrs
                                 </span>

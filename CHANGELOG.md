@@ -9,6 +9,11 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.5.1 — 6 de noviembre de 2026
+- Página de inicio: la sección de testimonios queda inactiva hasta contar con opiniones reales de clientes (se reactiva cambiando un interruptor en `LandingHome.tsx`). Ya no aparecen testimonios de ejemplo.
+
+---
+
 ## 1.5.0 — 6 de noviembre de 2026
 **Conciliación bancaria: propuestas más inteligentes.**
 - Abono parcial: si el pago del banco no calza con facturas completas, propone aplicarlo como abono a la factura más antigua (queda en amarillo para revisión).

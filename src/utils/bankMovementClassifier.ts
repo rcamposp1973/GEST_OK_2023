@@ -1,5 +1,5 @@
 import { BankStatementLine, ChartOfAccount, Voucher, JuniorGlossRule } from '../types';
-import { proponerPorRut } from './rutLedger';
+import { proponerPorRut, proponerPorRol } from './rutLedger';
 
 /**
  * Clasificador por capas de movimientos de cartola.
@@ -241,6 +241,8 @@ export interface ClassifierContext {
   vouchers: Voucher[];
   rules: JuniorGlossRule[];
   bankAccountId: string;
+  /** Auxiliares de la empresa: el tipo (proveedor, cliente, trabajador, honorarios) orienta la propuesta */
+  auxiliaries?: { rut: string; name: string; role?: string; category?: string; defaultPersonalAccountId?: string }[];
 }
 
 function ruleMatches(rule: JuniorGlossRule, glosa: string, lineKey: string, isCharge: boolean): boolean {
@@ -335,6 +337,8 @@ export function classifyMovement(
   try {
     const porRut = proponerPorRut(line, isCharge, ctx, findDocSubset);
     if (porRut) return porRut;
+    const porRol = proponerPorRol(line, isCharge, ctx);
+    if (porRol) return porRol;
   } catch (e) {
     console.warn('Clasificación por RUT no disponible:', e);
   }

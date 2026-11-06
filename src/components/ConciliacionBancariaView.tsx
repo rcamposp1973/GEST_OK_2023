@@ -1650,7 +1650,8 @@ export default function ConciliacionBancariaView({
         accounts,
         vouchers,
         rules: juniorRulesCacheRef.current || [],
-        bankAccountId: selectedBankAccount?.id || ''
+        bankAccountId: selectedBankAccount?.id || '',
+        auxiliaries
       });
       setQuickProposal(proposal);
       if (proposal && proposal.accountId) {
@@ -1679,9 +1680,10 @@ export default function ConciliacionBancariaView({
         accounts,
         vouchers,
         rules: juniorRulesCacheRef.current || [],
-        bankAccountId: selectedBankAccount?.id || ''
+        bankAccountId: selectedBankAccount?.id || '',
+        auxiliaries
       }),
-    [accounts, vouchers, selectedBankAccount, showBandeja]
+    [accounts, vouchers, selectedBankAccount, showBandeja, auxiliaries]
   );
   // Misma fuente que la tabla de la cartola: todos los meses, solo los pendientes
   // Calce con facturas pendientes para la bandeja (los documentos abiertos se calculan una vez por cuenta)

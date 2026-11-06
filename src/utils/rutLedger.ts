@@ -1,6 +1,6 @@
 import type { BankStatementLine, ChartOfAccount, Voucher } from '../types';
 import type { MovementProposal } from './bankMovementClassifier';
-import { extractRutFromGloss } from './rutMatcher';
+import { extractRutFromGloss, areRutsEqual } from './rutMatcher';
 
 /**
  * Clasificación por RUT de la glosa (típico del Santander, que escribe el RUT de la contraparte).
@@ -176,4 +176,123 @@ export function proponerPorRut(
       'Confirma que corresponde (por ejemplo, un nuevo anticipo o préstamo) y la regla quedará aprendida.');
   }
   return null;
+}
+
+
+// ───────────────────────── Propuesta según el tipo de RUT ─────────────────────────
+// Cuando el RUT no tiene movimientos previos que permitan proponer, se usa el tipo de auxiliar
+// (proveedor, cliente, trabajador, honorarios) para sugerir el anticipo o préstamo correspondiente.
+// Nunca inventa cuentas: si la empresa no tiene la cuenta, lo dice y deja la elección al contador.
+
+export type RolRut = 'PROVEEDOR' | 'CLIENTE' | 'TRABAJADOR' | 'HONORARIOS';
+
+const nrm = (x: any) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+export function rolDelAuxiliar(aux?: { role?: string; category?: string; name?: string } | null): RolRut | null {
+  if (!aux) return null;
+  const t = nrm(`${aux.role || ''} ${aux.category || ''}`);
+  if (/honorar|profesional/.test(t)) return 'HONORARIOS';
+  if (/personal|trabajador|empleado/.test(t)) return 'TRABAJADOR';
+  if (/acreedor|proveedor/.test(t) && !/varios/.test(t)) return 'PROVEEDOR';
+  if (/deudor|cliente/.test(t) && !/varios/.test(t)) return 'CLIENTE';
+  return null;
+}
+
+export function proponerPorRol(
+  line: BankStatementLine,
+  isCharge: boolean,
+  ctx: { accounts: ChartOfAccount[]; auxiliaries?: { rut: string; name: string; role?: string; category?: string; defaultPersonalAccountId?: string }[] }
+): MovementProposal | null {
+  const rutInfo = extractRutFromGloss(line.description || '');
+  if (!rutInfo || !rutInfo.isValidModulo11 || !ctx.auxiliaries?.length) return null;
+  const aux = ctx.auxiliaries.find(a => areRutsEqual(a.rut, rutInfo.rutFormatted));
+  const rol = rolDelAuxiliar(aux);
+  if (!aux || !rol) return null;
+
+  const glosa = nrm(line.description);
+  const imp = ctx.accounts.filter(a => a.isImputable !== false && a.estado !== 'Inactivo');
+  const buscar = (pats: RegExp[], tipos: ChartOfAccount['type'][]) => {
+    for (const p of pats) {
+      const hit = imp.find(a => tipos.includes(a.type) && p.test(nrm(a.name)));
+      if (hit) return hit;
+    }
+    return undefined;
+  };
+  const quien = `${(aux.name || '').toUpperCase()} (${rutInfo.rutFormatted})`;
+  const base = {
+    voucherType: (isCharge ? 'Egreso' : 'Ingreso') as 'Egreso' | 'Ingreso',
+    source: 'RUT' as const,
+    auxiliaryRut: rutInfo.rutFormatted,
+    auxiliaryName: (aux.name || '').toUpperCase() || undefined
+  };
+  const conCuenta = (acc: ChartOfAccount, confidence: number, category: string, reason: string): MovementProposal => ({
+    ...base, accountId: acc.id, accountCode: acc.code, accountName: acc.name, confidence,
+    level: confidence >= 0.9 ? 'VERDE' : confidence >= 0.6 ? 'AMARILLO' : 'ROJO', category, reason
+  });
+  const sinCuenta = (category: string, reason: string, sugerida: string): MovementProposal => ({
+    ...base, accountId: '', accountCode: '', accountName: '', confidence: 0.3, level: 'ROJO', category,
+    reason: `${reason} No encontré en el plan de cuentas una cuenta "${sugerida}". Créala o elige otra manualmente.`
+  });
+
+  if (rol === 'PROVEEDOR') {
+    if (isCharge) {
+      const a = buscar([/anticipo.*proveedor/, /anticipo.*acreedor/, /proveedores?.*anticipo/], ['Activo']);
+      const why = `${quien} está registrado como proveedor y no tiene documentos pendientes: este pago se propone como anticipo a proveedores. Si corresponde a una factura aún no cargada, cámbialo.`;
+      return a ? conCuenta(a, 0.7, 'Anticipo a proveedor', why) : sinCuenta('Anticipo a proveedor', why, 'Anticipo a proveedores');
+    }
+    const a = buscar([/anticipo.*proveedor/, /proveedores?.*anticipo/, /devolucion.*proveedor/], ['Activo']);
+    const why = `${quien} es proveedor y el banco recibe un abono suyo sin documentos: puede ser devolución de un anticipo.`;
+    return a ? conCuenta(a, 0.6, 'Devolución de proveedor', why) : null;
+  }
+
+  if (rol === 'CLIENTE') {
+    if (!isCharge) {
+      const a = buscar([/anticipo.*cliente/, /cliente.*anticipo/], ['Pasivo']);
+      const why = `${quien} está registrado como cliente y no tiene facturas pendientes: este cobro se propone como anticipo de clientes. Si corresponde a una factura aún no emitida, cámbialo.`;
+      return a ? conCuenta(a, 0.7, 'Anticipo de cliente', why) : sinCuenta('Anticipo de cliente', why, 'Anticipo de clientes');
+    }
+    const a = buscar([/anticipo.*cliente/, /cliente.*anticipo/, /devolucion.*cliente/], ['Pasivo']);
+    const why = `${quien} es cliente y el banco paga a esta persona sin documentos: puede ser devolución de un anticipo.`;
+    return a ? conCuenta(a, 0.6, 'Devolución a cliente', why) : null;
+  }
+
+  if (rol === 'HONORARIOS') {
+    if (isCharge) {
+      const pagar = buscar([/honorarios?.*pagar/], ['Pasivo']);
+      const why = `${quien} es profesional de honorarios: el pago se propone contra "Honorarios por pagar". Si no hay boleta cargada aún, cárgala antes de conciliar.`;
+      return pagar ? conCuenta(pagar, 0.65, 'Pago de honorarios', why) : sinCuenta('Pago de honorarios', why, 'Honorarios por pagar');
+    }
+    return null;
+  }
+
+  // TRABAJADOR: anticipo, préstamo, fondo por rendir o rendición según la glosa y la cuenta de personal del auxiliar
+  const cuentas = {
+    anticipo: buscar([/anticipo.*(trabajador|sueldo|personal|remuneracion)/], ['Activo']),
+    prestamo: buscar([/prestamo.*(trabajador|personal|empleado)/], ['Activo']),
+    fondo: buscar([/fondos? por rendir/, /fondo fijo/], ['Activo']),
+    rendicion: buscar([/rendicion/, /reembolso/], ['Activo', 'Pasivo'])
+  };
+  const porDefecto = aux.defaultPersonalAccountId ? imp.find(a => a.id === aux.defaultPersonalAccountId) : undefined;
+  const alternativas = [cuentas.anticipo && 'anticipo', cuentas.prestamo && 'préstamo', cuentas.fondo && 'fondo por rendir', cuentas.rendicion && 'rendición'].filter(Boolean).join(', ');
+
+  const eleccion: [keyof typeof cuentas, string, ChartOfAccount | undefined, number] | null =
+    /prestamo/.test(glosa) && cuentas.prestamo ? ['prestamo', 'préstamo', cuentas.prestamo, 0.8]
+    : /anticipo/.test(glosa) && cuentas.anticipo ? ['anticipo', 'anticipo', cuentas.anticipo, 0.8]
+    : /rendicion|reembolso|gastos/.test(glosa) && cuentas.rendicion ? ['rendicion', 'rendición de gastos', cuentas.rendicion, 0.75]
+    : /fondo/.test(glosa) && cuentas.fondo ? ['fondo', 'fondo por rendir', cuentas.fondo, 0.75]
+    : null;
+  if (eleccion) {
+    return conCuenta(eleccion[2]!, eleccion[3], `Trabajador: ${eleccion[1]}`,
+      `${quien} es trabajador y la glosa indica ${eleccion[1]}. Confirma el concepto.`);
+  }
+  if (porDefecto) {
+    return conCuenta(porDefecto, 0.65, 'Trabajador: cuenta de personal',
+      `${quien} es trabajador. Se usa su cuenta de personal por defecto "${porDefecto.name}"` + (alternativas ? `; otras opciones: ${alternativas}.` : '.') + ' Confirma si es anticipo, préstamo, rendición o fondo por rendir.');
+  }
+  const primera = cuentas.anticipo || cuentas.prestamo || cuentas.fondo || cuentas.rendicion;
+  if (primera) {
+    return conCuenta(primera, 0.55, 'Trabajador: elige el concepto',
+      `${quien} es trabajador y no tiene historial. Propongo "${primera.name}"` + (alternativas ? ` (opciones: ${alternativas})` : '') + '. Elige si es anticipo, préstamo, rendición o fondo por rendir; quedará aprendido.');
+  }
+  return sinCuenta('Trabajador: anticipo o préstamo', `${quien} es trabajador y el movimiento podría ser anticipo, préstamo, rendición o fondo por rendir.`, 'Anticipo trabajadores');
 }

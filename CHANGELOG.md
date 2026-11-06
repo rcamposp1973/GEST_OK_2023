@@ -9,6 +9,18 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.3.0 — 5 de noviembre de 2026
+
+### Nuevo
+- **Mis KPIs** (Indicadores Financieros): 34 indicadores (liquidez, endeudamiento, rentabilidad, márgenes, actividad, crecimiento y caja para Startup), calculados con la misma clasificación y comprobantes que los informes.
+- Paquetes listos por industria (Básico, Comercio, Servicios, Construcción, Restaurantes) y Startup. El contador puede elegir paquete o marcar los KPIs que ve cada empresa.
+
+### Corrección
+- El Estado de Resultados ahora excluye los comprobantes descuadrados, igual que el Balance de 8 columnas y el Balance IFRS, para que el resultado coincida en los tres informes.
+- Balance IFRS: préstamos bancarios y tarjetas de crédito se clasifican como pasivos financieros, y AFP, salud, remuneraciones y similares como provisiones laborales, según el nombre de la cuenta.
+
+---
+
 ## 1.2.1 — 4 de noviembre de 2026
 
 ### Corrección

@@ -5,7 +5,7 @@ import {
   Employee, PayrollParameters, PayrollSlip, PensionSystem, HealthSystem, 
   HealthPlanType, ContractType, PayrollConcept, AnnualReliquidation, ReliquidationMonthDetail 
 } from '../types';
-import { OFFICIAL_UF_MONTHLY_START, OFFICIAL_MONTHLY_UTM, OFFICIAL_MONTHLY_IMM, getOfficialIMM } from './chileanEconomicIndicators';
+import { OFFICIAL_UF_MONTHLY_START, OFFICIAL_UF_MONTH_END_PREVIRED, OFFICIAL_MONTHLY_UTM, OFFICIAL_MONTHLY_IMM, getOfficialIMM } from './chileanEconomicIndicators';
 
 export const DEFAULT_AFP_COMMISSIONS: Record<PensionSystem, number> = {
   CAPITAL: 11.44, // 10% Fondo + 1.44% Comisión
@@ -52,7 +52,7 @@ export const DEFAULT_PAYROLL_PARAMS_2026: PayrollParameters = {
   imm: 553553, // Ingreso Mínimo Mensual desde 1-may-2026 (Ley 21.830)
   topeImponibleAfpUf: 90.0, // Tope AFP / Salud en UF oficial 2026 (90 UF = $3.654.962)
   topeImponibleAfcUf: 135.2, // Tope AFC en UF oficial 2026 (135,2 UF = $5.490.565)
-  tasaSisPercent: 1.62, // SIS Empleador oficial Previred 2026 (1,62%)
+  tasaSisPercent: 1.62, // SIS abr-jun 2026 (Previred); ver getPrevisionalParametersForPeriod para cada mes
   tasaMutualPercent: 0.93, // Mutual de Seguridad Básica + Ley SANNA
   afpCommissions: DEFAULT_AFP_COMMISSIONS,
   tramosAsignacionFamiliar: {
@@ -107,7 +107,10 @@ export function getPrevisionalParametersForPeriod(periodStr: string): PayrollPar
     const previos = Object.keys(tabla).filter(k => k < periodStr && tabla[k] > 0).sort();
     return previos.length ? tabla[previos[previos.length - 1]] : 0;
   };
-  const uf = ultimoConocido(OFFICIAL_UF_MONTHLY_START as Record<string, number>);
+  // Desde 2026 se usa la UF del último día del mes publicada por Previred (base de los topes imponibles).
+  const uf = periodStr >= '2025-12'
+    ? ultimoConocido(OFFICIAL_UF_MONTH_END_PREVIRED as Record<string, number>)
+    : ultimoConocido(OFFICIAL_UF_MONTHLY_START as Record<string, number>);
   const utm = ultimoConocido(OFFICIAL_MONTHLY_UTM as Record<string, number>);
 
   // Ingreso Mínimo Mensual (IMM) según fecha y ley de reajuste vigente (Leyes N° 21.456, 21.578, etc.)
@@ -116,7 +119,10 @@ export function getPrevisionalParametersForPeriod(periodStr: string): PayrollPar
   // Topes Imponibles Previsionales (UF) oficiales según Previred y Superintendencia de Pensiones
   let topeImponibleAfpUf = 90.0; // Vigente 2026 según Previred
   let topeImponibleAfcUf = 135.2; // Vigente 2026 según Previred
-  if (year <= 2023) {
+  if (periodStr === '2026-01') {
+    topeImponibleAfpUf = 89.9; // Previred enero 2026
+    topeImponibleAfcUf = 135.1;
+  } else if (year <= 2023) {
     topeImponibleAfpUf = 81.6;
     topeImponibleAfcUf = 122.6;
   } else if (year <= 2025) {
@@ -124,10 +130,15 @@ export function getPrevisionalParametersForPeriod(periodStr: string): PayrollPar
     topeImponibleAfcUf = 126.6;
   }
 
-  // Tasa SIS Empleador (1.62% oficial 2026)
-  let tasaSisPercent = 1.62;
+  // Tasa SIS Empleador por período, según los Indicadores Previsionales de Previred:
+  // ene-mar 2026: 1,54% | abr-jun 2026: 1,62% | jul 2026: 2,00% |
+  // desde ago-2026 (Oficio SP N° 15.295): 1,78%, pero integrada en la cotización del empleador (Ley 21.735).
+  let tasaSisPercent = 1.78;
   if (year <= 2023) tasaSisPercent = 1.53;
   else if (year <= 2025) tasaSisPercent = 1.49;
+  else if (periodStr < '2026-04') tasaSisPercent = 1.54;
+  else if (periodStr < '2026-07') tasaSisPercent = 1.62;
+  else if (periodStr < '2026-08') tasaSisPercent = 2.00;
 
   return {
     period: periodStr,
@@ -142,9 +153,9 @@ export function getPrevisionalParametersForPeriod(periodStr: string): PayrollPar
     tasaLeySannaPercent: 0.03,
     tasaMutualAdicionalPercent: 0.00,
     afpCommissions: DEFAULT_AFP_COMMISSIONS,
-    // Asignación familiar: tramos por período. Desde 1-jul-2026 rigen los valores de SUSESO
-    // (renta de referencia ene-jun 2026): $22.601 / $13.870 / $4.382, con límites $649.039 / $947.990 / $1.478.539.
-    tramosAsignacionFamiliar: periodStr >= '2026-07'
+    // Asignación familiar: tramos por período. Según Previred, los valores publicados el 22-jun-2026
+    // rigen desde las remuneraciones de MAYO 2026: $22.601 / $13.870 / $4.382, límites $649.039 / $947.990 / $1.478.539.
+    tramosAsignacionFamiliar: periodStr >= '2026-05'
       ? { tramoA: 22601, tramoB: 13870, tramoC: 4382, tramoD: 0, limiteA: 649039, limiteB: 947990, limiteC: 1478539 }
       : {
           tramoA: year >= 2026 ? 22007 : year >= 2024 ? 20328 : 17316,

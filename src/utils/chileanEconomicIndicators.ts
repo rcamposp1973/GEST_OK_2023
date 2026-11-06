@@ -65,6 +65,14 @@ export const OFFICIAL_MONTHLY_UTM: { [period: string]: number } = {
 };
 
 // 2. TABLA OFICIAL CERTIFICADA DE UF (INICIO DE MES - SII / BANCO CENTRAL)
+// UF del ÚLTIMO día de cada mes, tal como la publica Previred en sus Indicadores Previsionales
+// (base para topes imponibles: 90 UF x UF del último día del mes). Fuente: PDFs Previred ene-oct 2026.
+export const OFFICIAL_UF_MONTH_END_PREVIRED: { [period: string]: number } = {
+  '2025-12': 39727.96, '2026-01': 39706.07, '2026-02': 39790.63, '2026-03': 39841.72,
+  '2026-04': 40120.20, '2026-05': 40610.69, '2026-06': 40820.31, '2026-07': 40844.79,
+  '2026-08': 40873.77, '2026-09': 41057.20, '2026-10': 41247.63,
+};
+
 export const OFFICIAL_UF_MONTHLY_START: { [period: string]: number } = {
   // 2020
   '2020-01': 28309.94, '2020-02': 28339.75, '2020-03': 28509.61, '2020-04': 28648.22,

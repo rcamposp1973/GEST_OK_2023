@@ -473,7 +473,7 @@ export const SuperAdminIndicatorsCenter: React.FC<SuperAdminIndicatorsCenterProp
                     onChange={e => setPayrollParams(prev => ({ ...prev, tasaSisPercent: parseFloat(e.target.value) || 0 }))}
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-white font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   />
-                  <span className="text-[10px] text-slate-500 mt-0.5 block">Oficial Previred 2026: 1,62%</span>
+                  <span className="text-[10px] text-slate-500 mt-0.5 block">Previred 2026: ene-mar 1,54% / abr-jun 1,62% / jul 2,00% / desde ago 1,78% (integrado)</span>
                 </div>
 
                 <div>

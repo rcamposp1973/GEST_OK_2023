@@ -1,6 +1,6 @@
 // Motor de cierre de ejercicio y apertura del año siguiente.
 // Funciones puras: calculan los comprobantes propuestos; no escriben nada.
-import type { ChartOfAccount, Voucher, VoucherLine } from '../types';
+import type { ChartOfAccount, Voucher, VoucherLine, AccountMatch } from '../types';
 import { getNaturaleza } from './ifrsClassification';
 
 export const ORIGEN_CIERRE = 'CIERRE_ANIO';
@@ -51,7 +51,14 @@ export function sugerirCuentas(accounts: ChartOfAccount[]): { resultadoId: strin
   return { resultadoId: res?.id || '', utilidadesId: util?.id || res?.id || '' };
 }
 
-export function generarPropuesta(accounts: ChartOfAccount[], vouchers: Voucher[], op: OpcionesCierre): PropuestaCierre {
+/** Primer día del ejercicio desde el cual se acumulan saldos cuando se pide "todo": la última apertura generada. */
+export function inicioAcumuladoVigente(vouchers: Voucher[]): string {
+  let inicio = '';
+  vouchers.forEach(v => { if (v.origin === ORIGEN_APERTURA && v.status !== 'Anulado' && v.date && v.date > inicio) inicio = v.date; });
+  return inicio;
+}
+
+export function generarPropuesta(accounts: ChartOfAccount[], vouchers: Voucher[], op: OpcionesCierre, matches: AccountMatch[] = []): PropuestaCierre {
   const anio = op.anio;
   const ctaRes = accounts.find(a => a.id === op.cuentaResultadoId);
   const ctaUtil = accounts.find(a => a.id === op.cuentaUtilidadesId);
@@ -68,11 +75,23 @@ export function generarPropuesta(accounts: ChartOfAccount[], vouchers: Voucher[]
   const hasta = `${anio}-12-31`;
 
   // Saldos por cuenta: resultados solo del año; balance acumulado hasta el cierre
+  // Pareos vigentes al 31-12 (análisis de cuentas): las líneas pareadas no se arrastran a la apertura
+  const hastaStr = `${anio}-12-31`;
+  const pareadas = new Set<string>();
+  const cuentasConPareo = new Set<string>();
+  matches.forEach(m => {
+    if (m.status === 'DESCALZADO') return;
+    const fp = m.fechaPareo || m.matchedLines.reduce((mx, l) => ((l.voucherDate || '') > mx ? (l.voucherDate || '') : mx), '');
+    if (fp > hastaStr) return;
+    cuentasConPareo.add(m.accountId);
+    m.matchedLines.forEach(l => pareadas.add(`${l.voucherId}_${l.lineIndex}`));
+  });
+  const abiertasSinAux = new Map<string, VoucherLine[]>();  // cuenta con pareos -> líneas aún abiertas
   const saldo = new Map<string, number>();                 // cuenta -> debe - haber
   const partidas = new Map<string, Map<string, VoucherLine>>(); // cuenta -> clave aux -> línea neta
   base.forEach(v => {
     if (!v.date || v.date > hasta) return;
-    v.lines.forEach(l => {
+    v.lines.forEach((l, idx) => {
       const cta = cuentaDe(l);
       if (!cta) return;
       const nat = getNaturaleza(cta);
@@ -80,6 +99,11 @@ export function generarPropuesta(accounts: ChartOfAccount[], vouchers: Voucher[]
       if (esResultado && !v.date.startsWith(String(anio))) return;
       const neto = (l.debit || 0) - (l.credit || 0);
       saldo.set(cta.id, (saldo.get(cta.id) || 0) + neto);
+      if (!esResultado && !(cta.requiereAuxiliarRUT || cta.requiereDocumento) && cuentasConPareo.has(cta.id) && !pareadas.has(`${v.id}_${idx}`) && neto !== 0) {
+        const arr = abiertasSinAux.get(cta.id) || [];
+        arr.push({ ...l, gloss: `${v.date} Vch #${v.voucherNumber} ${l.gloss || v.gloss || ''}`.trim() });
+        abiertasSinAux.set(cta.id, arr);
+      }
       if (!esResultado && (cta.requiereAuxiliarRUT || cta.requiereDocumento)) {
         const mapa = partidas.get(cta.id) || new Map<string, VoucherLine>();
         const k = claveAux(l);
@@ -150,7 +174,14 @@ export function generarPropuesta(accounts: ChartOfAccount[], vouchers: Voucher[]
       const resto = s - acumulado; // saldo sin detalle de auxiliar (si lo hubiera)
       if (resto !== 0) lineasApertura.push(lineaDe(cta, resto > 0 ? resto : 0, resto < 0 ? -resto : 0, glosaApertura));
     } else {
-      lineasApertura.push(lineaDe(cta, s > 0 ? s : 0, s < 0 ? -s : 0, glosaApertura));
+      const abiertas = abiertasSinAux.get(cta.id);
+      const sumaAbiertas = abiertas ? abiertas.reduce((a, l) => a + (l.debit || 0) - (l.credit || 0), 0) : 0;
+      if (abiertas && abiertas.length > 0 && r(sumaAbiertas) === s) {
+        // Cuenta analizada con pareos: se arrastran solo las partidas que siguen abiertas
+        abiertas.forEach(l => lineasApertura.push(lineaDe(cta, l.debit || 0, l.credit || 0, l.gloss || glosaApertura)));
+      } else {
+        lineasApertura.push(lineaDe(cta, s > 0 ? s : 0, s < 0 ? -s : 0, glosaApertura));
+      }
     }
   });
   const apertura: ComprobanteProp = {

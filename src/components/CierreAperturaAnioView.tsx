@@ -1,8 +1,8 @@
-import React, { useMemo, useState } from 'react';
-import { collection, doc, writeBatch } from 'firebase/firestore';
-import { CalendarCheck, CheckCircle2, AlertCircle, Undo2, FilePlus2 } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { collection, doc, getDocs, setDoc, writeBatch } from 'firebase/firestore';
+import { CalendarCheck, CheckCircle2, AlertCircle, Undo2, FilePlus2, Lock } from 'lucide-react';
 import { db, auth } from '../lib/firebase';
-import type { Company, ChartOfAccount, Voucher } from '../types';
+import type { Company, ChartOfAccount, Voucher, AccountMatch, FiscalPeriodYear } from '../types';
 import { logAuditEvent } from '../utils/auditLogger';
 import { generarPropuesta, sugerirCuentas, ComprobanteProp, ORIGEN_CIERRE, ORIGEN_APERTURA } from '../utils/cierreAnio';
 
@@ -11,12 +11,20 @@ interface Props {
   company: Company;
   accounts: ChartOfAccount[];
   vouchers: Voucher[];
+  fiscalYears?: FiscalPeriodYear[];
   onVouchersUpdated?: () => void;
 }
 
 const fmt = (n: number) => Math.round(n).toLocaleString('es-CL');
 
-export default function CierreAperturaAnioView({ studyId, company, accounts, vouchers, onVouchersUpdated }: Props) {
+export default function CierreAperturaAnioView({ studyId, company, accounts, vouchers, fiscalYears = [], onVouchersUpdated }: Props) {
+  const [matches, setMatches] = useState<AccountMatch[]>([]);
+  useEffect(() => {
+    getDocs(collection(db, 'studies', studyId, 'companies', company.id, 'accountMatches'))
+      .then(snap => setMatches(snap.docs.map(d => ({ ...d.data(), id: d.id } as AccountMatch))))
+      .catch(() => setMatches([]));
+  }, [studyId, company.id]);
+
   const anios = useMemo(() => {
     const set = new Set<number>();
     vouchers.forEach(v => { const y = parseInt((v.date || '').slice(0, 4), 10); if (y) set.add(y); });
@@ -37,8 +45,8 @@ export default function CierreAperturaAnioView({ studyId, company, accounts, vou
   );
 
   const prop = useMemo(
-    () => generarPropuesta(accounts, vouchers, { anio, cuentaResultadoId: resultadoId, cuentaUtilidadesId: utilidadesId }),
-    [accounts, vouchers, anio, resultadoId, utilidadesId]
+    () => generarPropuesta(accounts, vouchers, { anio, cuentaResultadoId: resultadoId, cuentaUtilidadesId: utilidadesId }, matches),
+    [accounts, vouchers, anio, resultadoId, utilidadesId, matches]
   );
   const graves = prop.chequeos.filter(c => !c.ok && c.grave);
   const yaGenerado = prop.yaGenerados.cierre.length > 0 || prop.yaGenerados.apertura.length > 0;
@@ -78,6 +86,31 @@ export default function CierreAperturaAnioView({ studyId, company, accounts, vou
       onVouchersUpdated?.();
     } catch (e: any) {
       setMsg('No pude guardar: ' + (e?.message || 'error'));
+    } finally { setTrabajando(false); }
+  };
+
+  const fyDe = (y: number) => fiscalYears.find(f => f.id === String(y) || Number(f.year) === y);
+  const mesesAbiertos = Object.values(fyDe(anio)?.months || {}).filter(s => s === 'Abierto').length;
+
+  const bloquearAnio = async () => {
+    if (!window.confirm(`Se cerrarán los 12 meses de ${anio} (no se podrán registrar movimientos) y se dejará abierto enero de ${anio + 1}. Podrás reabrir meses desde Períodos. ¿Continuar?`)) return;
+    setTrabajando(true); setMsg('');
+    try {
+      const cerrados: Record<number, 'Cerrado'> = {};
+      for (let m = 1; m <= 12; m++) cerrados[m] = 'Cerrado';
+      await setDoc(doc(companyRef, 'fiscalPeriods', String(anio)), { id: String(anio), year: anio, months: cerrados }, { merge: true });
+      if (!fyDe(anio + 1)) {
+        const siguiente: Record<number, 'Abierto' | 'Cerrado'> = {};
+        for (let m = 1; m <= 12; m++) siguiente[m] = m === 1 ? 'Abierto' : 'Cerrado';
+        await setDoc(doc(companyRef, 'fiscalPeriods', String(anio + 1)), { id: String(anio + 1), year: anio + 1, months: siguiente }, { merge: true });
+      }
+      logAuditEvent({
+        userId: auth.currentUser?.uid || 'sistema', userEmail: auth.currentUser?.email || '', studyId, companyId: company.id,
+        action: 'MODIFICAR', module: 'PERIODOS_FISCALES', details: `Bloqueo de los 12 meses de ${anio} tras el cierre`,
+      } as any);
+      setMsg(`Año ${anio} cerrado.`);
+    } catch (e: any) {
+      setMsg('No pude cerrar los meses: ' + (e?.message || 'error'));
     } finally { setTrabajando(false); }
   };
 
@@ -201,9 +234,15 @@ export default function CierreAperturaAnioView({ studyId, company, accounts, vou
             <Undo2 size={14} /> Revertir cierre y apertura (#{[...prop.yaGenerados.cierre, ...prop.yaGenerados.apertura].map(v => v.voucherNumber).join(', #')})
           </button>
         )}
+        {yaGenerado && mesesAbiertos > 0 && (
+          <button onClick={bloquearAnio} disabled={trabajando}
+            className="inline-flex items-center gap-1.5 border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg px-3 py-1.5 text-xs font-semibold">
+            <Lock size={14} /> Cerrar los 12 meses de {anio} ({mesesAbiertos} abiertos)
+          </button>
+        )}
         {msg && <span className="text-xs text-slate-600">{msg}</span>}
       </div>
-      <p className="text-[11px] text-slate-400">Las cuentas con auxiliar o documento se abren partida por partida (solo lo que sigue pendiente). Al revertir, los comprobantes quedan anulados y el año se puede volver a cerrar.</p>
+      <p className="text-[11px] text-slate-400">Las cuentas con auxiliar o documento, y las que tienes analizadas con pareos, se abren partida por partida (solo lo que sigue pendiente). Al revertir, los comprobantes quedan anulados y el año se puede volver a cerrar.</p>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { periodosParaSelector } from '../utils/periodUtils';
+import { inicioAcumuladoVigente } from '../utils/cierreAnio';
 import { Company, Voucher, ChartOfAccount, FiscalPeriodYear } from '../types';
 import { 
   Scale, 
@@ -165,8 +166,10 @@ export default function BalanceIFRSView({
     const validVouchers: Voucher[] = [];
     const descuadradosVouchers: Voucher[] = [];
 
+    const inicioAcumulado = periodFilter === 'Todos' ? inicioAcumuladoVigente(vouchers) : '';
     vouchers.forEach(v => {
       if (v.status === 'Anulado') return;
+      if (inicioAcumulado && (v.date || '') < inicioAcumulado) return; // ya incluidos en la apertura
       if (v.origin === 'CIERRE_ANIO') return; // el resultado se calcula desde las cuentas; el comprobante de cierre no se suma de nuevo
 
       const vDate = v.date || '';

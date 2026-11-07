@@ -12,6 +12,9 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 ## Próxima (en Pruebas) — Cierre y apertura de año
 - Nuevo módulo **Cierre y apertura de año** (Finanzas): revisión previa, comprobante de cierre de resultados (31-12) y comprobante de apertura del año siguiente (01-01) con los saldos; las cuentas con auxiliar o documento se abren partida por partida (solo lo pendiente). Se puede revertir.
 - Balance IFRS, Balance de 8 columnas y Estado de Resultados ignoran el comprobante de cierre para no vaciar el resultado del año.
+- Las cuentas sin auxiliar que se analizan con pareos se abren partida por partida (solo lo no pareado al 31-12).
+- Botón para cerrar los 12 meses del año tras el cierre (deja abierto enero del año siguiente).
+- "Todo el ejercicio" en los balances no suma años anteriores a la última apertura generada (evita duplicar saldos).
 
 ---
 

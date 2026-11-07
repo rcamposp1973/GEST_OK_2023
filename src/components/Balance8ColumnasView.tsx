@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { periodosParaSelector } from '../utils/periodUtils';
+import { inicioAcumuladoVigente } from '../utils/cierreAnio';
 import { Company, Voucher, ChartOfAccount, FiscalPeriodYear } from '../types';
 import { printAndLogOfficialBook } from '../utils/folioService';
 import { ShieldCheck, Scale, Printer, Download } from 'lucide-react';
@@ -124,8 +125,10 @@ export default function Balance8ColumnasView({
     });
 
     // Helper to check cumulative period and date filter
+    const inicioAcumulado = periodFilter === 'Todos' ? inicioAcumuladoVigente(vouchers) : '';
     const isValidVoucherForBalance = (v: Voucher) => {
       if (v.status === 'Anulado') return false;
+      if (inicioAcumulado && (v.date || '') < inicioAcumulado) return false; // ya incluidos en la apertura
       if (v.origin === 'CIERRE_ANIO') return false; // el cierre de resultados no altera los informes del ejercicio
       if (periodFilter !== 'Todos') {
         const year = periodFilter.slice(0, 4);

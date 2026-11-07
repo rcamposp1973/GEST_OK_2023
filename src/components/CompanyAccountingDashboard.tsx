@@ -9321,7 +9321,7 @@ export default function CompanyAccountingDashboard({
       )}
 
       {activeTab === 'cierreAnio' && (
-        <CierreAperturaAnioView studyId={studyId} company={company} accounts={accounts} vouchers={vouchers} onVouchersUpdated={fetchData} />
+        <CierreAperturaAnioView studyId={studyId} company={company} accounts={accounts} vouchers={vouchers} fiscalYears={fiscalYears} onVouchersUpdated={fetchData} />
       )}
 
       {activeTab === 'importacionInteligente' && (

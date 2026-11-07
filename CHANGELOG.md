@@ -9,6 +9,11 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.5.2 — 7 de noviembre de 2026
+- **Corrección**: cuentas con código propio (ej: 5101001) ahora se clasifican en Balance y Estado de Resultados según su clasificación IFRS (ej: 3101 = ingreso).
+
+---
+
 ## 1.5.1 — 6 de noviembre de 2026
 - Página de inicio: la sección de testimonios queda inactiva hasta contar con opiniones reales de clientes (se reactiva cambiando un interruptor en `LandingHome.tsx`). Ya no aparecen testimonios de ejemplo.
 

@@ -52,9 +52,19 @@ export function naturalezaPorCodigo(code?: string): Naturaleza | null {
   return null; // 5, 6… no tienen significado en la convención
 }
 
-export function getNaturaleza(account: Pick<ChartOfAccount, 'code' | 'type' | 'name'> & { blce8Columnas?: string }): Naturaleza {
+/** Clasificación IFRS escrita en la cuenta (1xxx Activo · 2xxx Pasivo, 23xx Patrimonio · 3xxx Ingresos · 4xxx Gastos). */
+export function naturalezaPorIFRS(ifrs?: string): Naturaleza | null {
+  const d = digits(ifrs);
+  if (d.length < 4) return null;
+  return naturalezaPorCodigo(d);
+}
+
+export function getNaturaleza(account: Pick<ChartOfAccount, 'code' | 'type' | 'name'> & { blce8Columnas?: string; codigoIFRS?: string }): Naturaleza {
   const porCodigo = naturalezaPorCodigo(account.code);
   if (porCodigo) return porCodigo;
+  // Código propio fuera de la convención (ej: 5101001): manda la clasificación IFRS de la cuenta
+  const porIFRS = naturalezaPorIFRS(account.codigoIFRS);
+  if (porIFRS) return porIFRS;
   const porTipo = naturalezaPorTipo(account.type);
   if (porTipo) return porTipo;
   const b = norm(account.blce8Columnas);
@@ -289,7 +299,7 @@ export function revisarClasificacion(accounts: ChartOfAccount[]): HallazgoClasif
     if (conv && tipo && conv !== tipo) {
       out.push({ account: a, naturaleza: nat, rubro, tipo: 'CONVENCION', detalle: `Su Tipo dice ${tipo.toLowerCase()}, pero por el código (${a.code}) es ${conv.toLowerCase()}. El informe usó el código.` });
     } else if (!conv && digits(a.code)[0] === '5') {
-      out.push({ account: a, naturaleza: nat, rubro, tipo: 'ANTIGUO_5', detalle: tipo ? 'Código fuera de la convención (empieza con 5). Se usó el Tipo de la cuenta.' : 'Código fuera de la convención y sin Tipo; se clasificó por su nombre.' });
+      out.push({ account: a, naturaleza: nat, rubro, tipo: 'ANTIGUO_5', detalle: naturalezaPorIFRS(a.codigoIFRS) ? `Código fuera de la convención (empieza con 5). Se usó su clasificación IFRS (${a.codigoIFRS}).` : tipo ? 'Código fuera de la convención (empieza con 5). Se usó el Tipo de la cuenta.' : 'Código fuera de la convención y sin Tipo; se clasificó por su nombre.' });
     } else if (!conv && !tipo) {
       out.push({ account: a, naturaleza: nat, rubro, tipo: 'SIN_TIPO', detalle: 'Código fuera de la convención y sin Tipo; se clasificó por su nombre.' });
     }

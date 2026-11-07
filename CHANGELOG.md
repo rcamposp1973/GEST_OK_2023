@@ -13,6 +13,8 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 - El grupo "CARGA (SII)" pasa a llamarse **Importaciones** y reúne RCV, parámetros, carga masiva y plantillas.
 - **Importación inteligente** (nuevo): subes el libro de remuneraciones, el agente revisa que cuadre, te pregunta lo que no sabe (centros de costo, cuenta de gasto, ítems) y entrega el comprobante cuadrado en formato de carga masiva. Las respuestas quedan guardadas por empresa.
 
+- **Corrección**: cuentas con código propio (ej: 5101001) ahora se clasifican en Balance y Estado de Resultados según su clasificación IFRS (ej: 3101 = ingreso).
+
 ---
 
 ## 1.5.1 — 6 de noviembre de 2026

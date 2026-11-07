@@ -9,11 +9,21 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
-## Próxima (en Pruebas) — Importaciones y vistas compactas
+## 1.6.0 — 7 de noviembre de 2026
+**Importaciones, Importación inteligente y vistas compactas.**
+- El aviso de clasificación del Balance IFRS aparece solo cuando hay cuentas realmente dudosas; ya no queda pegado cuando todo está bien resuelto.
 - Balance IFRS y Estado de Resultados más compactos: más información visible sin desplazarse.
 - El grupo "CARGA (SII)" pasa a llamarse **Importaciones** y reúne RCV, parámetros, carga masiva y plantillas.
 - **Importación inteligente** (nuevo): subes el libro de remuneraciones, el agente revisa que cuadre, te pregunta lo que no sabe (centros de costo, cuenta de gasto, ítems) y entrega el comprobante cuadrado en formato de carga masiva. Las respuestas quedan guardadas por empresa.
 
+---
+
+## 1.5.3 — 7 de noviembre de 2026
+- **Corrección**: en el Estado de Resultados, cada cuenta ahora respeta el mes de corte elegido (antes mostraba el año completo y no coincidía con el total del rubro).
+
+---
+
+## 1.5.2 — 7 de noviembre de 2026
 - **Corrección**: cuentas con código propio (ej: 5101001) ahora se clasifican en Balance y Estado de Resultados según su clasificación IFRS (ej: 3101 = ingreso).
 
 ---

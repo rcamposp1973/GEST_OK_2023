@@ -16,7 +16,7 @@ import {
   TrendingUp
 } from 'lucide-react';
 import { BalanceIFRSPrintModal } from './BalanceIFRSPrintModal';
-import { getNaturaleza, getRubroESF, RUBROS_ESF, revisarClasificacion } from '../utils/ifrsClassification';
+import { getNaturaleza, getRubroESF, RUBROS_ESF, problemasClasificacion } from '../utils/ifrsClassification';
 
 interface BalanceIFRSViewProps {
   company: Company;
@@ -57,7 +57,7 @@ export default function BalanceIFRSView({
   const [dateTo, setDateTo] = useState<string>('');
   const [showZeroBalances, setShowZeroBalances] = useState<boolean>(false);
   const [showRevision, setShowRevision] = useState<boolean>(false);
-  const hallazgos = useMemo(() => revisarClasificacion(accounts), [accounts]);
+  const hallazgos = useMemo(() => problemasClasificacion(accounts), [accounts]);
   const [showAccountDetails, setShowAccountDetails] = useState<boolean>(true);
   const [showPrintModal, setShowPrintModal] = useState<boolean>(false);
   const [expandedRubros, setExpandedRubros] = useState<Record<string, boolean>>({
@@ -550,7 +550,7 @@ export default function BalanceIFRSView({
           >
             <span className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4" />
-              Revisión de clasificación: {hallazgos.length} {hallazgos.length === 1 ? 'cuenta' : 'cuentas'} con Tipo distinto al código
+              Revisión de clasificación: {hallazgos.length} {hallazgos.length === 1 ? 'cuenta' : 'cuentas'} sin clasificación segura (revísalas en el Plan de Cuentas)
             </span>
             <span className="text-[11px] font-semibold">{showRevision ? 'Ocultar' : 'Ver detalle'}</span>
           </button>

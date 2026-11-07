@@ -288,6 +288,18 @@ export interface HallazgoClasificacion {
 }
 
 /** Lista cuentas cuyo "Tipo" contradice la convención del código (el informe usa el código) o que no entran en la convención. */
+/** Solo las cuentas que de verdad quedaron con clasificación dudosa (sin Tipo, sin IFRS válido y fuera de la convención).
+ *  Las que el sistema resolvió bien por código, IFRS o Tipo no son un problema y no deben generar alerta. */
+export function problemasClasificacion(accounts: ChartOfAccount[]): HallazgoClasificacion[] {
+  return revisarClasificacion(accounts).filter(h => {
+    const a = h.account;
+    if (naturalezaPorCodigo(a.code)) return false;           // el código manda: resuelto
+    if (naturalezaPorIFRS(a.codigoIFRS)) return false;       // el IFRS manda: resuelto
+    if (naturalezaPorTipo(a.type)) return false;             // el Tipo manda: resuelto
+    return true;                                             // solo quedó el nombre: dudosa
+  });
+}
+
 export function revisarClasificacion(accounts: ChartOfAccount[]): HallazgoClasificacion[] {
   const out: HallazgoClasificacion[] = [];
   accounts.forEach(a => {

@@ -240,3 +240,15 @@ export function getPeriodFormattedName(periodStr: string): string {
 
 
 
+
+
+/**
+ * Períodos que deben ofrecer los selectores de los informes: los abiertos en Configuraciones
+ * más los que tienen movimientos. Así, al abrir un mes nuevo aparece solo en todas partes.
+ */
+export function periodosParaSelector(fiscalYears: FiscalPeriodYear[] = [], periodosConMovimientos: Iterable<string> = []): string[] {
+  const set = new Set<string>();
+  getAllOpenPeriods(fiscalYears).forEach(o => set.add(o.period));
+  for (const p of periodosConMovimientos) if (p && p.length === 7) set.add(p);
+  return Array.from(set).sort().reverse();
+}

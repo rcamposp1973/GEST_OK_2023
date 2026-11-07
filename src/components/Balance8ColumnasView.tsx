@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { periodosParaSelector } from '../utils/periodUtils';
 import { Company, Voucher, ChartOfAccount, FiscalPeriodYear } from '../types';
 import { printAndLogOfficialBook } from '../utils/folioService';
 import { ShieldCheck, Scale, Printer, Download } from 'lucide-react';
@@ -85,8 +86,8 @@ export default function Balance8ColumnasView({
     vouchers.forEach(v => {
       if (v.period) set.add(v.period);
     });
-    return Array.from(set).sort().reverse();
-  }, [vouchers]);
+    return periodosParaSelector(fiscalYears, set);
+  }, [vouchers, fiscalYears]);
 
   // Período compartido entre pestañas: al volver a esta pantalla queda en el mes elegido
   useEffect(() => {

@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { periodosParaSelector } from '../utils/periodUtils';
 import { Company, Voucher, ChartOfAccount, FiscalPeriodYear } from '../types';
 import { 
   Scale, 
@@ -116,8 +117,8 @@ export default function BalanceIFRSView({
         periodsSet.add(p);
       }
     });
-    return Array.from(periodsSet).sort().reverse();
-  }, [vouchers]);
+    return periodosParaSelector(fiscalYears, periodsSet);
+  }, [vouchers, fiscalYears]);
 
   // Período compartido entre pestañas: al volver a esta pantalla queda en el mes elegido
   useEffect(() => {

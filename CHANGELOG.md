@@ -11,6 +11,7 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ## Próxima (en Pruebas) — Período por pestaña
 - Cada pestaña recuerda su propio mes: Balance de 8 columnas, Balance IFRS, Estado de Resultados y Conciliación bancaria ya no vuelven al último mes al cambiar de pestaña. El mes elegido en una no cambia las otras, y se olvida al cerrar la pestaña. Al abrir una pestaña parte en el período de arriba (último abierto).
+- Los selectores de mes del Balance IFRS y del Balance de 8 columnas ofrecen también los períodos recién abiertos en Configuraciones (antes solo los meses con movimientos).
 
 ---
 

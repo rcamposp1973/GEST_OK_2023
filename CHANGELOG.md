@@ -9,7 +9,8 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
-## Próxima (en Pruebas) — Importaciones
+## Próxima (en Pruebas) — Importaciones y vistas compactas
+- Balance IFRS y Estado de Resultados más compactos: más información visible sin desplazarse.
 - El grupo "CARGA (SII)" pasa a llamarse **Importaciones** y reúne RCV, parámetros, carga masiva y plantillas.
 - **Importación inteligente** (nuevo): subes el libro de remuneraciones, el agente revisa que cuadre, te pregunta lo que no sabe (centros de costo, cuenta de gasto, ítems) y entrega el comprobante cuadrado en formato de carga masiva. Las respuestas quedan guardadas por empresa.
 

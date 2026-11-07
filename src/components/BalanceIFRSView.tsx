@@ -362,11 +362,11 @@ export default function BalanceIFRSView({
     const tagCls = colorTheme === 'indigo' ? 'bg-indigo-100 text-indigo-800' : colorTheme === 'rose' ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800';
 
     return (
-      <div key={rubro.id} className={`border rounded-lg overflow-hidden transition-all ${borderCls} mb-2 bg-white shadow-2xs`}>
+      <div key={rubro.id} className={`border rounded-lg overflow-hidden transition-all ${borderCls} mb-1 bg-white shadow-2xs`}>
         {/* Cabecera del Rubro Padre */}
         <div 
           onClick={() => toggleRubro(rubro.id)}
-          className={`px-3 py-2 flex items-center justify-between cursor-pointer select-none transition-colors ${bgHeaderCls}`}
+          className={`px-3 py-1 flex items-center justify-between cursor-pointer select-none transition-colors ${bgHeaderCls}`}
         >
           <div className="flex items-center gap-2">
             <button className="text-slate-500 hover:text-slate-800 p-0.5">
@@ -392,7 +392,7 @@ export default function BalanceIFRSView({
         {isExpanded && showAccountDetails && rubro.accounts.length > 0 && (
           <div className="divide-y divide-slate-100 bg-slate-50/40 text-[11px] font-mono">
             {rubro.accounts.map(acc => (
-              <div key={acc.id} className="px-3 py-1.5 flex justify-between items-center hover:bg-slate-100/80 transition-colors pl-8">
+              <div key={acc.id} className="px-3 py-0.5 flex justify-between items-center hover:bg-slate-100/80 transition-colors pl-8">
                 <div className="flex items-center gap-2 truncate max-w-[320px]">
                   <span className="text-slate-500 font-semibold">{acc.code}</span>
                   <span className="font-sans text-slate-800 truncate">{acc.name}</span>
@@ -409,9 +409,9 @@ export default function BalanceIFRSView({
   };
 
   return (
-    <div className="space-y-4 font-sans">
+    <div className="space-y-2 font-sans">
       {/* Header */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
         <div>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-700">
@@ -546,7 +546,7 @@ export default function BalanceIFRSView({
           <button
             type="button"
             onClick={() => setShowRevision(v => !v)}
-            className="w-full flex items-center justify-between px-3.5 py-2.5 font-bold text-amber-900 cursor-pointer"
+            className="w-full flex items-center justify-between px-3 py-1.5 font-bold text-amber-900 cursor-pointer"
           >
             <span className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4" />
@@ -586,36 +586,36 @@ export default function BalanceIFRSView({
 
       {/* KPI Cards de Resumen */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="bg-white p-3.5 rounded-xl border border-indigo-200 shadow-2xs">
+        <div className="bg-white px-3 py-2 rounded-xl border border-indigo-200 shadow-2xs">
           <div className="flex justify-between items-center text-[11px] font-bold uppercase tracking-wider text-indigo-700">
             <span>1. Total Activos</span>
             <span className="px-1.5 py-0.5 bg-indigo-50 rounded text-indigo-900 font-mono">1000000</span>
           </div>
-          <p className="text-xl font-black text-indigo-950 mt-1 font-mono">${totalActivos.toLocaleString('es-CL')}</p>
+          <p className="text-lg font-black leading-tight text-indigo-950 mt-1 font-mono">${totalActivos.toLocaleString('es-CL')}</p>
           <div className="flex justify-between text-[11px] text-slate-500 mt-2 pt-2 border-t border-slate-100 font-mono">
             <span>Corr: ${totalActivosCorrientes.toLocaleString('es-CL')}</span>
             <span>No Corr: ${totalActivosNoCorrientes.toLocaleString('es-CL')}</span>
           </div>
         </div>
 
-        <div className="bg-white p-3.5 rounded-xl border border-rose-200 shadow-2xs">
+        <div className="bg-white px-3 py-2 rounded-xl border border-rose-200 shadow-2xs">
           <div className="flex justify-between items-center text-[11px] font-bold uppercase tracking-wider text-rose-700">
             <span>2. Total Pasivos</span>
             <span className="px-1.5 py-0.5 bg-rose-50 rounded text-rose-900 font-mono">2000000</span>
           </div>
-          <p className="text-xl font-black text-rose-950 mt-1 font-mono">${totalPasivos.toLocaleString('es-CL')}</p>
+          <p className="text-lg font-black leading-tight text-rose-950 mt-1 font-mono">${totalPasivos.toLocaleString('es-CL')}</p>
           <div className="flex justify-between text-[11px] text-slate-500 mt-2 pt-2 border-t border-slate-100 font-mono">
             <span>Corr: ${totalPasivosCorrientes.toLocaleString('es-CL')}</span>
             <span>No Corr: ${totalPasivosNoCorrientes.toLocaleString('es-CL')}</span>
           </div>
         </div>
 
-        <div className="bg-white p-3.5 rounded-xl border border-emerald-200 shadow-2xs">
+        <div className="bg-white px-3 py-2 rounded-xl border border-emerald-200 shadow-2xs">
           <div className="flex justify-between items-center text-[11px] font-bold uppercase tracking-wider text-emerald-700">
             <span>3. Patrimonio Neto</span>
             <span className="px-1.5 py-0.5 bg-emerald-50 rounded text-emerald-900 font-mono">2300000</span>
           </div>
-          <p className="text-xl font-black text-emerald-950 mt-1 font-mono">${totalPatrimonioNeto.toLocaleString('es-CL')}</p>
+          <p className="text-lg font-black leading-tight text-emerald-950 mt-1 font-mono">${totalPatrimonioNeto.toLocaleString('es-CL')}</p>
           <div className="flex justify-between text-[11px] text-slate-500 mt-2 pt-2 border-t border-slate-100 font-mono">
             <span>Res. Ejercicio: ${resultadoEjercicio.toLocaleString('es-CL')}</span>
             <span>Base: ${(totalPatrimonioNeto - resultadoEjercicio).toLocaleString('es-CL')}</span>
@@ -624,7 +624,7 @@ export default function BalanceIFRSView({
       </div>
 
       {/* Main 2-Column IFRS Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
         {/* COLUMNA 1: ACTIVOS */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden flex flex-col justify-between">
           <div className="divide-y divide-slate-200 text-xs">
@@ -637,8 +637,8 @@ export default function BalanceIFRSView({
             </div>
 
             {/* 1.1 Activos Corrientes */}
-            <div className="p-3 bg-slate-50/50">
-              <div className="flex justify-between items-center font-bold text-slate-900 mb-2 border-b border-indigo-200 pb-1.5">
+            <div className="p-2 bg-slate-50/50">
+              <div className="flex justify-between items-center font-bold text-slate-900 mb-1 border-b border-indigo-200 pb-1.5">
                 <span className="text-indigo-900 uppercase font-black tracking-wide text-xs">1.1. ACTIVOS CORRIENTES (CIRCULANTES)</span>
                 <span className="font-mono text-indigo-900 font-bold text-xs">${totalActivosCorrientes.toLocaleString('es-CL')}</span>
               </div>
@@ -653,8 +653,8 @@ export default function BalanceIFRSView({
             </div>
 
             {/* 1.2 Activos No Corrientes */}
-            <div className="p-3 bg-slate-50/50">
-              <div className="flex justify-between items-center font-bold text-slate-900 mb-2 border-b border-slate-300 pb-1.5">
+            <div className="p-2 bg-slate-50/50">
+              <div className="flex justify-between items-center font-bold text-slate-900 mb-1 border-b border-slate-300 pb-1.5">
                 <span className="text-slate-800 uppercase font-black tracking-wide text-xs">1.2. ACTIVOS NO CORRIENTES (FIJOS E INTANGIBLES)</span>
                 <span className="font-mono text-slate-800 font-bold text-xs">${totalActivosNoCorrientes.toLocaleString('es-CL')}</span>
               </div>
@@ -687,8 +687,8 @@ export default function BalanceIFRSView({
             </div>
 
             {/* 2.1 Pasivos Corrientes */}
-            <div className="p-3 bg-slate-50/50">
-              <div className="flex justify-between items-center font-bold text-slate-900 mb-2 border-b border-rose-200 pb-1.5">
+            <div className="p-2 bg-slate-50/50">
+              <div className="flex justify-between items-center font-bold text-slate-900 mb-1 border-b border-rose-200 pb-1.5">
                 <span className="text-rose-900 uppercase font-black tracking-wide text-xs">2.1. PASIVOS CORRIENTES (CORTO PLAZO)</span>
                 <span className="font-mono text-rose-900 font-bold text-xs">${totalPasivosCorrientes.toLocaleString('es-CL')}</span>
               </div>
@@ -703,8 +703,8 @@ export default function BalanceIFRSView({
             </div>
 
             {/* 2.2 Pasivos No Corrientes */}
-            <div className="p-3 bg-slate-50/50">
-              <div className="flex justify-between items-center font-bold text-slate-900 mb-2 border-b border-slate-300 pb-1.5">
+            <div className="p-2 bg-slate-50/50">
+              <div className="flex justify-between items-center font-bold text-slate-900 mb-1 border-b border-slate-300 pb-1.5">
                 <span className="text-slate-800 uppercase font-black tracking-wide text-xs">2.2. PASIVOS NO CORRIENTES (LARGO PLAZO)</span>
                 <span className="font-mono text-slate-800 font-bold text-xs">${totalPasivosNoCorrientes.toLocaleString('es-CL')}</span>
               </div>
@@ -720,7 +720,7 @@ export default function BalanceIFRSView({
 
             {/* 3. Patrimonio Neto */}
             <div className="p-3 bg-emerald-50/30">
-              <div className="flex justify-between items-center font-bold text-slate-900 mb-2 border-b border-emerald-300 pb-1.5">
+              <div className="flex justify-between items-center font-bold text-slate-900 mb-1 border-b border-emerald-300 pb-1.5">
                 <span className="text-emerald-950 uppercase font-black tracking-wide text-xs">3. PATRIMONIO NETO</span>
                 <span className="font-mono text-emerald-950 font-bold text-xs">${totalPatrimonioNeto.toLocaleString('es-CL')}</span>
               </div>

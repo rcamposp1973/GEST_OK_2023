@@ -182,7 +182,8 @@ export default function EstadoResultadosView({
       const months = nat === 'INGRESO'
         ? monthlyCredit.map((c, i) => c - monthlyDebit[i])
         : monthlyDebit.map((d, i) => d - monthlyCredit[i]);
-      const total = months.reduce((s, v) => s + v, 0);
+      // El total de cada cuenta respeta el mes de corte (igual que los rubros)
+      const total = months.slice(0, cutoffMonth > 0 ? cutoffMonth : 12).reduce((s, v) => s + v, 0);
       if (!showZeroBalances && total === 0) return;
 
       const rubro = rubroPorId[getRubroER(account)];
@@ -366,8 +367,8 @@ export default function EstadoResultadosView({
     if (!showZeroBalances && rubro.total === 0 && rubro.accounts.length === 0) return null;
 
     return (
-      <div key={rubro.id} className="border border-slate-200 rounded-lg overflow-hidden bg-white mb-2 shadow-2xs">
-        <div className="px-3.5 py-2.5 bg-slate-50/80 flex justify-between items-center text-xs">
+      <div key={rubro.id} className="border border-slate-200 rounded-lg overflow-hidden bg-white mb-1 shadow-2xs">
+        <div className="px-3 py-1.5 bg-slate-50/80 flex justify-between items-center text-xs">
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-200 text-slate-800">
               {rubro.code}
@@ -386,7 +387,7 @@ export default function EstadoResultadosView({
         {showAccountDetails && rubro.accounts.length > 0 && (
           <div className="divide-y divide-slate-100 bg-white text-[11px] font-mono">
             {rubro.accounts.map(acc => (
-              <div key={acc.account.id} className="px-4 py-1.5 flex justify-between items-center hover:bg-slate-50 pl-8">
+              <div key={acc.account.id} className="px-4 py-0.5 flex justify-between items-center hover:bg-slate-50 pl-8">
                 <div className="flex items-center gap-2 truncate max-w-[380px]">
                   <span className="text-slate-500 font-semibold">{acc.account.code}</span>
                   <span className="font-sans text-slate-700 truncate">{acc.account.name}</span>
@@ -403,9 +404,9 @@ export default function EstadoResultadosView({
   };
 
   return (
-    <div className="space-y-4 font-sans">
+    <div className="space-y-2 font-sans">
       {/* Header */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
         <div>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700">
@@ -507,7 +508,7 @@ export default function EstadoResultadosView({
       </div>
 
       {/* Barra de Filtros */}
-      <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 shadow-xs flex flex-wrap gap-3 items-center justify-between">
+      <div className="bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 shadow-xs flex flex-wrap gap-2 items-center justify-between">
         <div className="flex items-center gap-3 flex-wrap text-xs">
           <div className="flex items-center gap-1.5">
             <label className="font-semibold text-slate-700">Año Comercial:</label>
@@ -564,42 +565,33 @@ export default function EstadoResultadosView({
       </div>
 
       {/* KPI Cards de Margen y Resultados */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
         {/* Ingresos Operacionales */}
-        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
+        <div className="bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-2xs">
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">1. Ventas / Ingresos Operacionales</span>
-          <p className="text-xl font-black text-slate-900 mt-1 font-mono">${statementData.totals.opRevenues.toLocaleString('es-CL')}</p>
-          <div className="text-[11px] text-slate-500 mt-1 font-sans">
-            Base de actividades ordinarias
-          </div>
+          <p className="text-lg font-black leading-tight text-slate-900 mt-1 font-mono">${statementData.totals.opRevenues.toLocaleString('es-CL')}</p>
         </div>
 
         {/* Margen Operacional (Ganancia Bruta) */}
-        <div className="bg-indigo-50 p-3.5 rounded-xl border border-indigo-200 shadow-2xs">
+        <div className="bg-indigo-50 px-3 py-2 rounded-xl border border-indigo-200 shadow-2xs">
           <div className="flex justify-between items-center">
             <span className="text-[11px] font-black uppercase tracking-wider text-indigo-900">Margen Operacional (Bruto)</span>
             <span className="px-1.5 py-0.5 bg-indigo-200 text-indigo-900 rounded text-[10px] font-bold">{statementData.totals.grossMarginPercent}%</span>
           </div>
-          <p className="text-xl font-black text-indigo-950 mt-1 font-mono">${statementData.totals.grossMargin.toLocaleString('es-CL')}</p>
-          <div className="text-[11px] text-indigo-800/80 mt-1 font-sans">
-            Ingresos Operacionales - Costo de Ventas
-          </div>
+          <p className="text-lg font-black leading-tight text-indigo-950 mt-1 font-mono">${statementData.totals.grossMargin.toLocaleString('es-CL')}</p>
         </div>
 
         {/* Resultado Operacional (EBIT) */}
-        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
+        <div className="bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-2xs">
           <div className="flex justify-between items-center">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">Resultado Operacional (EBIT)</span>
             <span className="px-1.5 py-0.5 bg-slate-100 text-slate-800 rounded text-[10px] font-bold">{statementData.totals.operatingMarginPercent}%</span>
           </div>
-          <p className="text-xl font-black text-slate-900 mt-1 font-mono">${statementData.totals.operatingResult.toLocaleString('es-CL')}</p>
-          <div className="text-[11px] text-slate-500 mt-1 font-sans">
-            Margen Bruto - Gastos de Adm. y Ventas
-          </div>
+          <p className="text-lg font-black leading-tight text-slate-900 mt-1 font-mono">${statementData.totals.operatingResult.toLocaleString('es-CL')}</p>
         </div>
 
         {/* Resultado Neto del Ejercicio */}
-        <div className={`p-3.5 rounded-xl border shadow-2xs ${
+        <div className={`px-3 py-2 rounded-xl border shadow-2xs ${
           statementData.totals.isProfit ? 'bg-emerald-50/80 border-emerald-300' : 'bg-rose-50/80 border-rose-300'
         }`}>
           <div className="flex justify-between items-center">
@@ -614,7 +606,7 @@ export default function EstadoResultadosView({
               {statementData.totals.netMarginPercent}%
             </span>
           </div>
-          <p className={`text-xl font-black mt-1 font-mono ${
+          <p className={`text-lg font-black leading-tight mt-1 font-mono ${
             statementData.totals.isProfit ? 'text-emerald-950' : 'text-rose-950'
           }`}>
             ${statementData.totals.netIncome.toLocaleString('es-CL')}
@@ -630,7 +622,7 @@ export default function EstadoResultadosView({
       {/* VISTA 1: CASCADA NIC 1 */}
       {viewFormat === 'ifrs_cascada' && norma === 'NIC1' && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-          <div className="p-4 bg-slate-900 text-white flex justify-between items-center">
+          <div className="px-3 py-2 bg-slate-900 text-white flex justify-between items-center">
             <div className="flex items-center gap-2">
               <FolderTree className="w-5 h-5 text-emerald-400" />
               <div>
@@ -646,7 +638,7 @@ export default function EstadoResultadosView({
             </div>
           </div>
 
-          <div className="p-4 space-y-4">
+          <div className="p-2.5 space-y-1.5">
             {/* BLOQUE 1: INGRESOS OPERACIONALES */}
             <div>
               <div className="flex justify-between items-center text-xs font-bold text-slate-800 uppercase tracking-wide border-b border-slate-200 pb-1 mb-2">
@@ -666,7 +658,7 @@ export default function EstadoResultadosView({
             </div>
 
             {/* RESALTADO: MARGEN OPERACIONAL (GANANCIA BRUTA) */}
-            <div className="bg-indigo-900 text-white p-3.5 rounded-xl flex justify-between items-center shadow-sm">
+            <div className="bg-indigo-900 text-white px-3 py-2 rounded-xl flex justify-between items-center shadow-sm">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-amber-300" />
                 <div>
@@ -782,7 +774,7 @@ export default function EstadoResultadosView({
         );
         return (
           <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-            <div className="p-4 bg-slate-900 text-white flex justify-between items-center">
+            <div className="px-3 py-2 bg-slate-900 text-white flex justify-between items-center">
               <div className="flex items-center gap-2">
                 <FolderTree className="w-5 h-5 text-emerald-400" />
                 <div>
@@ -796,7 +788,7 @@ export default function EstadoResultadosView({
               </div>
             </div>
 
-            <div className="p-4 space-y-4">
+            <div className="p-2.5 space-y-1.5">
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-[11px] text-amber-900">
                 <strong>Vista preliminar.</strong> La NIIF 18 es obligatoria para ejercicios que comienzan desde el 1 de enero de 2027 (con comparativo reexpresado). El cierre 2025 se presenta en NIC 1.
                 Clasificación usada: <em>Operación</em> es la categoría residual (incluye otras ganancias y pérdidas); <em>Inversión</em> recoge ingresos financieros y reajustes; <em>Financiamiento</em> recoge intereses y gastos bancarios.

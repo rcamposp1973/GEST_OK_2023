@@ -9,8 +9,8 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
-## Próxima (en Pruebas) — Período compartido
-- Un solo período para todas las pestañas: Balance de 8 columnas, Balance IFRS, Estado de Resultados y Conciliación bancaria siguen el mes elegido (arriba o en cualquiera de ellas) y no vuelven al último mes al cambiar de pestaña. Al entrar parten en el último período abierto.
+## Próxima (en Pruebas) — Período por pestaña
+- Cada pestaña recuerda su propio mes: Balance de 8 columnas, Balance IFRS, Estado de Resultados y Conciliación bancaria ya no vuelven al último mes al cambiar de pestaña. El mes elegido en una no cambia las otras, y se olvida al cerrar la pestaña. Al abrir una pestaña parte en el período de arriba (último abierto).
 
 ---
 

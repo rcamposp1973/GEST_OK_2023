@@ -283,7 +283,12 @@ export default function CompanyAccountingDashboard({
     }
   };
 
+  // Período propio de cada pestaña: se recuerda al cambiar de pestaña y se olvida al cerrarla
+  const [periodosPorPestana, setPeriodosPorPestana] = useState<Record<string, string>>({});
+
   const handleCloseTab = (tabId: string) => {
+    const cerrada = openTabs.find(t => t.id === tabId);
+    if (cerrada) setPeriodosPorPestana(prev => { const { [cerrada.moduleId]: _omit, ...resto } = prev; return resto; });
     setOpenTabs(prev => {
       if (prev.length <= 1) return prev;
       const filtered = prev.filter(t => t.id !== tabId);
@@ -8951,8 +8956,8 @@ export default function CompanyAccountingDashboard({
       {/* TAB: BALANCE DE 8 COLUMNAS */}
       {activeTab === 'balance8' && (
         <Balance8ColumnasView
-          periodoGlobal={selectedRcvPeriod}
-          onCambiarPeriodoGlobal={(p: string) => { setSelectedRcvPeriod(p); setSelectedYear(parseInt(p.slice(0, 4), 10)); }}
+          periodoGlobal={periodosPorPestana['balance8'] ?? selectedRcvPeriod}
+          onCambiarPeriodoGlobal={(p: string) => setPeriodosPorPestana(prev => ({ ...prev, balance8: p }))}
           studyId={studyId}
           company={company}
           vouchers={vouchers}
@@ -8973,8 +8978,8 @@ export default function CompanyAccountingDashboard({
       {/* TAB: BALANCE CLASIFICADO IFRS */}
       {activeTab === 'balanceIFRS' && (
         <BalanceIFRSView
-          periodoGlobal={selectedRcvPeriod}
-          onCambiarPeriodoGlobal={(p: string) => { setSelectedRcvPeriod(p); setSelectedYear(parseInt(p.slice(0, 4), 10)); }}
+          periodoGlobal={periodosPorPestana['balanceIFRS'] ?? selectedRcvPeriod}
+          onCambiarPeriodoGlobal={(p: string) => setPeriodosPorPestana(prev => ({ ...prev, balanceIFRS: p }))}
           company={company}
           vouchers={vouchers}
           accounts={accounts}
@@ -9075,8 +9080,8 @@ export default function CompanyAccountingDashboard({
       {/* TAB: ESTADO DE RESULTADOS */}
       {activeTab === 'estadoResultados' && (
         <EstadoResultadosView
-          periodoGlobal={selectedRcvPeriod}
-          onCambiarPeriodoGlobal={(p: string) => { setSelectedRcvPeriod(p); setSelectedYear(parseInt(p.slice(0, 4), 10)); }}
+          periodoGlobal={periodosPorPestana['estadoResultados'] ?? selectedRcvPeriod}
+          onCambiarPeriodoGlobal={(p: string) => setPeriodosPorPestana(prev => ({ ...prev, estadoResultados: p }))}
           company={company}
           vouchers={vouchers}
           accounts={accounts}
@@ -9235,8 +9240,8 @@ export default function CompanyAccountingDashboard({
       {/* TAB: CONCILIACIÓN BANCARIA (Se mantiene montado para preservar el trabajo en progreso al navegar por las pestañas) */}
       <div className={activeTab === 'conciliacionBancaria' ? 'block' : 'hidden'}>
         <ConciliacionBancariaView
-          periodoGlobal={selectedRcvPeriod}
-          onCambiarPeriodoGlobal={(p: string) => { setSelectedRcvPeriod(p); setSelectedYear(parseInt(p.slice(0, 4), 10)); }}
+          periodoGlobal={periodosPorPestana['conciliacionBancaria'] ?? selectedRcvPeriod}
+          onCambiarPeriodoGlobal={(p: string) => setPeriodosPorPestana(prev => ({ ...prev, conciliacionBancaria: p }))}
            isEmbedded={true}
           studyId={studyId}
           company={company}

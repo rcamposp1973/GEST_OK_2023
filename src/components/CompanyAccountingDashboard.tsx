@@ -27,6 +27,7 @@ import CargaMasivaComprobantesView from './CargaMasivaComprobantesView';
 import Formulario29View from './Formulario29View';
 import PlantillasYCargaMasivaView from './PlantillasYCargaMasivaView';
 import ImportacionInteligenteView from './ImportacionInteligenteView';
+import CierreAperturaAnioView from './CierreAperturaAnioView';
 import ExcelImportCenterModal from './ExcelImportCenterModal';
 import IndicadoresEconomicosView from './IndicadoresEconomicosView';
 import EmisionDteView from './EmisionDteView';
@@ -81,6 +82,7 @@ import {
   ShieldCheck, Boxes, Package, ArrowRightLeft, ShoppingBag, Calculator, Briefcase, Sparkles, ArrowRight,
   Warehouse as WarehouseIcon, Table as TableIcon, Pin, Plus, X, Check, Activity,
   Search, Filter, Clock, Trash2
+  , CalendarCheck
 } from 'lucide-react';
 
 const QUICK_ACCESS_ITEMS = [
@@ -94,6 +96,7 @@ const QUICK_ACCESS_ITEMS = [
   { id: 'estadoResultados', label: 'Estado de Resultados IFRS', group: 'FINANZAS', icon: TrendingUp, tab: 'estadoResultados' },
   { id: 'analisisAuxiliares', label: 'Auxiliares Cuentas Corrientes', group: 'FINANZAS', icon: Users, tab: 'analisisAuxiliares' },
   { id: 'analisisCuentas', label: 'Análisis de Cuentas', group: 'FINANZAS', icon: Sliders, tab: 'analisisCuentas' },
+  { id: 'cierreAnio', label: 'Cierre y apertura de año', group: 'FINANZAS', icon: CalendarCheck, tab: 'cierreAnio' },
   { id: 'planillaConsultas', label: 'Planilla Dinámica (Consultas & Calce)', group: 'FINANZAS', icon: FileSpreadsheet, tab: 'planillaConsultas' },
   { id: 'analyticsHud', label: 'Tablero Analítico HUD (Power Pivot)', group: 'FINANZAS', icon: Activity, tab: 'analyticsHud' },
   { id: 'reportesAnaliticos', label: 'Reportes Analíticos', group: 'FINANZAS', icon: TableIcon, tab: 'reportesAnaliticos' },
@@ -172,7 +175,7 @@ export default function CompanyAccountingDashboard({
   const { withProcess } = useProcess();
   type RibbonGroup = 'FINANZAS' | 'OPERACIONES' | 'TESORERIA' | 'PERSONAL' | 'IMPORTACIONES' | 'IMPUESTOS' | 'INDICADORES' | 'CONFIGURACIONES' | 'FAVORITOS';
   const [activeRibbonGroup, setActiveRibbonGroup] = useState<RibbonGroup>('FINANZAS');
-  const [activeTab, setActiveTab] = useState<'accounts' | 'auxiliaries' | 'periods' | 'rcv' | 'exchange' | 'rcvParams' | 'centralizaciones' | 'f29Codes' | 'vouchers' | 'libroDiario' | 'libroMayor' | 'balance8' | 'balanceIFRS' | 'analisisAuxiliares' | 'analisisCuentas' | 'planillaConsultas' | 'analyticsHud' | 'reportesAnaliticos' | 'estadoResultados' | 'indicadoresFinancieros' | 'auditorEstadosFinancieros' | 'smartNotebooks' | 'flujoDeCaja' | 'agingDeudas' | 'nominasPago' | 'cobranza' | 'conciliacionBancaria' | 'libroBancoColaborativo' | 'cargaMasiva' | 'formulario29' | 'plantillasCarga' | 'importacionInteligente' | 'rendicionGastos' | 'emisionDte' | 'tablasAnalisis' | 'controlFolios' | 'productsServices' | 'operativaComercial' | 'stockKardex' | 'warehouses' | 'employees' | 'liquidaciones' | 'activoFijo' | 'ddjj' | 'agenticStudy2040' | 'agenticPyme2040' | 'home' | 'buscadorComprobantes'>('home');
+  const [activeTab, setActiveTab] = useState<'accounts' | 'auxiliaries' | 'periods' | 'rcv' | 'exchange' | 'rcvParams' | 'centralizaciones' | 'f29Codes' | 'vouchers' | 'libroDiario' | 'libroMayor' | 'balance8' | 'balanceIFRS' | 'analisisAuxiliares' | 'analisisCuentas' | 'planillaConsultas' | 'analyticsHud' | 'reportesAnaliticos' | 'estadoResultados' | 'indicadoresFinancieros' | 'auditorEstadosFinancieros' | 'smartNotebooks' | 'flujoDeCaja' | 'agingDeudas' | 'nominasPago' | 'cobranza' | 'conciliacionBancaria' | 'libroBancoColaborativo' | 'cargaMasiva' | 'formulario29' | 'plantillasCarga' | 'importacionInteligente' | 'cierreAnio' | 'rendicionGastos' | 'emisionDte' | 'tablasAnalisis' | 'controlFolios' | 'productsServices' | 'operativaComercial' | 'stockKardex' | 'warehouses' | 'employees' | 'liquidaciones' | 'activoFijo' | 'ddjj' | 'agenticStudy2040' | 'agenticPyme2040' | 'home' | 'buscadorComprobantes'>('home');
   const [auxSubTab, setAuxSubTab] = useState<'deudores' | 'acreedores'>('deudores');
   const [employeeSubTab, setEmployeeSubTab] = useState<'employees' | 'contracts' | 'attendance' | 'advances' | 'severance' | 'certificates'>('employees');
   const [payrollTab, setPayrollTab] = useState<'NOMINA' | 'LIQUIDACION_INDIVIDUAL' | 'LRD_DT' | 'PREVIRED' | 'PARAMETROS' | 'CONCEPTOS' | 'RELIQUIDACIONES'>('NOMINA');
@@ -9315,6 +9318,10 @@ export default function CompanyAccountingDashboard({
           auxiliaries={auxiliaries}
           onRefreshData={fetchData}
         />
+      )}
+
+      {activeTab === 'cierreAnio' && (
+        <CierreAperturaAnioView studyId={studyId} company={company} accounts={accounts} vouchers={vouchers} onVouchersUpdated={fetchData} />
       )}
 
       {activeTab === 'importacionInteligente' && (

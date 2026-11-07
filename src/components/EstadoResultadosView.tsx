@@ -107,6 +107,7 @@ export default function EstadoResultadosView({
 
     const validVouchers = vouchers.filter(v => {
       if (v.status === 'Anulado') return false;
+      if (v.origin === 'CIERRE_ANIO') return false; // el cierre de resultados no vacía el Estado de Resultados
       const vYear = v.date ? parseInt(v.date.slice(0, 4)) : selectedYear;
       if (vYear !== selectedYear) return false;
       // Mismo criterio que Balance de 8 columnas y Balance IFRS: solo comprobantes cuadrados

@@ -9,6 +9,12 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## Próxima (en Pruebas) — Cierre y apertura de año
+- Nuevo módulo **Cierre y apertura de año** (Finanzas): revisión previa, comprobante de cierre de resultados (31-12) y comprobante de apertura del año siguiente (01-01) con los saldos; las cuentas con auxiliar o documento se abren partida por partida (solo lo pendiente). Se puede revertir.
+- Balance IFRS, Balance de 8 columnas y Estado de Resultados ignoran el comprobante de cierre para no vaciar el resultado del año.
+
+---
+
 ## 1.7.0 — 7 de noviembre de 2026
 **Análisis de cuentas a fecha de corte y pantalla Cuentas más compacta.**
 - Análisis de Cuentas: campo **Analizar a la fecha**. Una partida cuenta como compensada solo si su pareo ya existía a esa fecha (fecha de pareo = la del movimiento más nuevo del grupo). Muestra el control: saldo de la cuenta a la fecha vs partidas abiertas.

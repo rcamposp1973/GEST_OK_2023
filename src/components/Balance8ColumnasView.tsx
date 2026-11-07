@@ -126,6 +126,7 @@ export default function Balance8ColumnasView({
     // Helper to check cumulative period and date filter
     const isValidVoucherForBalance = (v: Voucher) => {
       if (v.status === 'Anulado') return false;
+      if (v.origin === 'CIERRE_ANIO') return false; // el cierre de resultados no altera los informes del ejercicio
       if (periodFilter !== 'Todos') {
         const year = periodFilter.slice(0, 4);
         const vPeriod = v.period || (v.date ? v.date.slice(0, 7) : '');

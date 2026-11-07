@@ -167,6 +167,7 @@ export default function BalanceIFRSView({
 
     vouchers.forEach(v => {
       if (v.status === 'Anulado') return;
+      if (v.origin === 'CIERRE_ANIO') return; // el resultado se calcula desde las cuentas; el comprobante de cierre no se suma de nuevo
 
       const vDate = v.date || '';
       const vPeriod = v.period || (vDate ? vDate.slice(0, 7) : '');

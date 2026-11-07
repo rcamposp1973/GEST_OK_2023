@@ -4,6 +4,7 @@ import {
   BarChart3, Settings, Calendar, Download, FileSpreadsheet, 
   ShieldCheck, Boxes, Package, Briefcase, Calculator, Building2, 
   Sparkles, Search, Table as TableIcon, Warehouse as WarehouseIcon, Activity, Clock
+  , CalendarCheck
 } from 'lucide-react';
 
 export type DockPosition = 'left' | 'right' | 'bottom' | 'hidden';
@@ -117,6 +118,15 @@ export const COCKPIT_MODULE_CATALOG: CockpitModuleItem[] = [
     icon: Sliders,
     colorScheme: 'indigo',
     description: 'Control de partidas pendientes y calces de cuentas'
+  },
+  {
+    id: 'cierreAnio',
+    label: 'Cierre y Apertura de Año',
+    shortLabel: 'Cierre año',
+    category: 'FINANZAS',
+    icon: CalendarCheck,
+    colorScheme: 'indigo',
+    description: 'Cierra resultados del ejercicio y abre el año siguiente con saldos'
   },
   {
     id: 'balance8',

@@ -113,7 +113,7 @@ export default function AnalisisCuentasView({
   const [filterDateFrom, setFilterDateFrom] = useState<string>('');
   const [filterDateTo, setFilterDateTo] = useState<string>('');
   const [filterOnlyMatchingAmounts, setFilterOnlyMatchingAmounts] = useState<boolean>(false);
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState<boolean>(true);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState<boolean>(false);
 
   // Búsqueda específica e instantánea por tabla
   const [debitSearchQuery, setDebitSearchQuery] = useState<string>('');
@@ -1465,7 +1465,7 @@ export default function AnalisisCuentasView({
       )}
 
       {/* --- BARRA COMPLETA DE FILTROS AVANZADOS DE PARTIDAS --- */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs space-y-3">
+      <div className="bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-2xs space-y-2">
         {/* Fila 1: Pestañas de Vista (Pendientes, Calzadas, Todas) + Toggle de Filtros + Limpiar */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           
@@ -1889,7 +1889,7 @@ export default function AnalisisCuentasView({
               </div>
             </div>
 
-            <div className="overflow-x-auto overflow-y-auto max-h-[520px] flex-1">
+            <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-300px)] min-h-[260px] flex-1">
               <table className="w-full text-xs text-left border-collapse">
                 <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px] sticky top-0 z-10 border-b border-slate-200">
                   <tr>
@@ -1933,7 +1933,7 @@ export default function AnalisisCuentasView({
                               : 'hover:bg-slate-50'
                           }`}
                         >
-                          <td className="p-2 text-center" onClick={(e) => e.stopPropagation()}>
+                          <td className="px-2 py-0.5 text-center" onClick={(e) => e.stopPropagation()}>
                             <input
                               type="checkbox"
                               disabled={!!l.matchId}
@@ -1948,8 +1948,8 @@ export default function AnalisisCuentasView({
                               className="rounded border-slate-300 text-amber-600 focus:ring-amber-500"
                             />
                           </td>
-                          <td className="p-2 font-mono text-[11px] whitespace-nowrap">{l.voucherDate}</td>
-                          <td className="p-2 font-semibold">
+                          <td className="px-2 py-0.5 font-mono text-[11px] whitespace-nowrap">{l.voucherDate}</td>
+                          <td className="px-2 py-0.5 font-semibold">
                             <button
                               type="button"
                               onClick={(e) => {
@@ -1963,7 +1963,7 @@ export default function AnalisisCuentasView({
                               <ExternalLink className="w-2.5 h-2.5 text-indigo-500 group-hover:text-indigo-800" />
                             </button>
                           </td>
-                          <td className="p-2 text-[11px]">
+                          <td className="px-2 py-0.5 text-[11px]">
                             {l.auxiliaryRut ? (
                               <button
                                 type="button"
@@ -1980,20 +1980,20 @@ export default function AnalisisCuentasView({
                               <span className="text-slate-400">-</span>
                             )}
                           </td>
-                          <td className="p-2 text-[11px]">
+                          <td className="px-2 py-0.5 text-[11px]">
                             {l.documentRef ? (
                               <span className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-700 font-mono text-[10px]">
                                 #{l.documentRef}
                               </span>
                             ) : '-'}
                           </td>
-                          <td className="p-2 max-w-[160px] truncate text-[11px] text-slate-700" title={l.gloss}>
+                          <td className="px-2 py-0.5 max-w-[160px] truncate text-[11px] text-slate-700" title={l.gloss}>
                             {l.gloss}
                           </td>
-                          <td className="p-2 text-right font-mono font-bold text-slate-900">
+                          <td className="px-2 py-0.5 text-right font-mono font-bold text-slate-900">
                             ${l.debit.toLocaleString('es-CL')}
                           </td>
-                          <td className="p-2 text-center" onClick={(e) => e.stopPropagation()}>
+                          <td className="px-2 py-0.5 text-center" onClick={(e) => e.stopPropagation()}>
                             <button
                               type="button"
                               onClick={() => handleQuickMatchLine(l)}
@@ -2071,7 +2071,7 @@ export default function AnalisisCuentasView({
               </div>
             </div>
 
-            <div className="overflow-x-auto overflow-y-auto max-h-[520px] flex-1">
+            <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-300px)] min-h-[260px] flex-1">
               <table className="w-full text-xs text-left border-collapse">
                 <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px] sticky top-0 z-10 border-b border-slate-200">
                   <tr>
@@ -2115,7 +2115,7 @@ export default function AnalisisCuentasView({
                               : 'hover:bg-slate-50'
                           }`}
                         >
-                          <td className="p-2 text-center" onClick={(e) => e.stopPropagation()}>
+                          <td className="px-2 py-0.5 text-center" onClick={(e) => e.stopPropagation()}>
                             <input
                               type="checkbox"
                               disabled={!!l.matchId}
@@ -2130,8 +2130,8 @@ export default function AnalisisCuentasView({
                               className="rounded border-slate-300 text-amber-600 focus:ring-amber-500"
                             />
                           </td>
-                          <td className="p-2 font-mono text-[11px] whitespace-nowrap">{l.voucherDate}</td>
-                          <td className="p-2 font-semibold">
+                          <td className="px-2 py-0.5 font-mono text-[11px] whitespace-nowrap">{l.voucherDate}</td>
+                          <td className="px-2 py-0.5 font-semibold">
                             <button
                               type="button"
                               onClick={(e) => {
@@ -2145,7 +2145,7 @@ export default function AnalisisCuentasView({
                               <ExternalLink className="w-2.5 h-2.5 text-indigo-500 group-hover:text-indigo-800" />
                             </button>
                           </td>
-                          <td className="p-2 text-[11px]">
+                          <td className="px-2 py-0.5 text-[11px]">
                             {l.auxiliaryRut ? (
                               <button
                                 type="button"
@@ -2162,20 +2162,20 @@ export default function AnalisisCuentasView({
                               <span className="text-slate-400">-</span>
                             )}
                           </td>
-                          <td className="p-2 text-[11px]">
+                          <td className="px-2 py-0.5 text-[11px]">
                             {l.documentRef ? (
                               <span className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-700 font-mono text-[10px]">
                                 #{l.documentRef}
                               </span>
                             ) : '-'}
                           </td>
-                          <td className="p-2 max-w-[160px] truncate text-[11px] text-slate-700" title={l.gloss}>
+                          <td className="px-2 py-0.5 max-w-[160px] truncate text-[11px] text-slate-700" title={l.gloss}>
                             {l.gloss}
                           </td>
-                          <td className="p-2 text-right font-mono font-bold text-slate-900">
+                          <td className="px-2 py-0.5 text-right font-mono font-bold text-slate-900">
                             ${l.credit.toLocaleString('es-CL')}
                           </td>
-                          <td className="p-2 text-center" onClick={(e) => e.stopPropagation()}>
+                          <td className="px-2 py-0.5 text-center" onClick={(e) => e.stopPropagation()}>
                             <button
                               type="button"
                               onClick={() => handleQuickMatchLine(l)}
@@ -2203,7 +2203,10 @@ export default function AnalisisCuentasView({
 
       {/* --- PANEL FLOTANTE INFERIOR DE CONFIRMACIÓN DE COMPENSACIÓN --- */}
       {(selectedDebitKeys.length > 0 || selectedCreditKeys.length > 0) && (
-        <div className="fixed bottom-4 right-4 left-4 md:left-64 z-40 bg-slate-900 text-white p-4 rounded-2xl shadow-2xl border border-slate-700 animate-slideUp">
+        <>
+        {/* Espacio para que la banda flotante no tape las últimas filas */}
+        <div className="h-40" aria-hidden="true" />
+        <div className="fixed bottom-4 right-4 left-4 md:left-64 z-40 bg-slate-900 text-white p-3 rounded-2xl shadow-2xl border border-slate-700 animate-slideUp">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             
             {/* Resumen matemático de la selección */}
@@ -2264,6 +2267,7 @@ export default function AnalisisCuentasView({
 
           </div>
         </div>
+        </>
       )}
 
     </div>

@@ -182,7 +182,8 @@ export default function EstadoResultadosView({
       const months = nat === 'INGRESO'
         ? monthlyCredit.map((c, i) => c - monthlyDebit[i])
         : monthlyDebit.map((d, i) => d - monthlyCredit[i]);
-      const total = months.reduce((s, v) => s + v, 0);
+      // El total de cada cuenta respeta el mes de corte (igual que los rubros)
+      const total = months.slice(0, cutoffMonth > 0 ? cutoffMonth : 12).reduce((s, v) => s + v, 0);
       if (!showZeroBalances && total === 0) return;
 
       const rubro = rubroPorId[getRubroER(account)];

@@ -9,6 +9,11 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.5.3 — 7 de noviembre de 2026
+- **Corrección**: en el Estado de Resultados, cada cuenta ahora respeta el mes de corte elegido (antes mostraba el año completo y no coincidía con el total del rubro).
+
+---
+
 ## 1.5.2 — 7 de noviembre de 2026
 - **Corrección**: cuentas con código propio (ej: 5101001) ahora se clasifican en Balance y Estado de Resultados según su clasificación IFRS (ej: 3101 = ingreso).
 

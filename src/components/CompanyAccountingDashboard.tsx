@@ -5458,7 +5458,7 @@ export default function CompanyAccountingDashboard({
           handleEnsureFiscalYear(yr);
         }}
         selectedPeriod={selectedRcvPeriod}
-        onChangePeriod={(p) => setSelectedRcvPeriod(p)}
+        onChangePeriod={(p) => { setSelectedRcvPeriod(p); setSelectedYear(parseInt(p.slice(0, 4), 10)); }}
         fiscalYears={fiscalYears}
         checkIsPeriodClosed={checkIsPeriodClosed}
         onOpenExcelImport={() => setShowExcelImportModal(true)}
@@ -8951,6 +8951,8 @@ export default function CompanyAccountingDashboard({
       {/* TAB: BALANCE DE 8 COLUMNAS */}
       {activeTab === 'balance8' && (
         <Balance8ColumnasView
+          periodoGlobal={selectedRcvPeriod}
+          onCambiarPeriodoGlobal={(p: string) => { setSelectedRcvPeriod(p); setSelectedYear(parseInt(p.slice(0, 4), 10)); }}
           studyId={studyId}
           company={company}
           vouchers={vouchers}
@@ -8971,6 +8973,8 @@ export default function CompanyAccountingDashboard({
       {/* TAB: BALANCE CLASIFICADO IFRS */}
       {activeTab === 'balanceIFRS' && (
         <BalanceIFRSView
+          periodoGlobal={selectedRcvPeriod}
+          onCambiarPeriodoGlobal={(p: string) => { setSelectedRcvPeriod(p); setSelectedYear(parseInt(p.slice(0, 4), 10)); }}
           company={company}
           vouchers={vouchers}
           accounts={accounts}
@@ -9071,6 +9075,8 @@ export default function CompanyAccountingDashboard({
       {/* TAB: ESTADO DE RESULTADOS */}
       {activeTab === 'estadoResultados' && (
         <EstadoResultadosView
+          periodoGlobal={selectedRcvPeriod}
+          onCambiarPeriodoGlobal={(p: string) => { setSelectedRcvPeriod(p); setSelectedYear(parseInt(p.slice(0, 4), 10)); }}
           company={company}
           vouchers={vouchers}
           accounts={accounts}
@@ -9229,6 +9235,8 @@ export default function CompanyAccountingDashboard({
       {/* TAB: CONCILIACIÓN BANCARIA (Se mantiene montado para preservar el trabajo en progreso al navegar por las pestañas) */}
       <div className={activeTab === 'conciliacionBancaria' ? 'block' : 'hidden'}>
         <ConciliacionBancariaView
+          periodoGlobal={selectedRcvPeriod}
+          onCambiarPeriodoGlobal={(p: string) => { setSelectedRcvPeriod(p); setSelectedYear(parseInt(p.slice(0, 4), 10)); }}
            isEmbedded={true}
           studyId={studyId}
           company={company}

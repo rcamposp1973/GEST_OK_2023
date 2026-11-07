@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Company, Voucher, ChartOfAccount, FiscalPeriodYear } from '../types';
 import { EstadoResultadosPrintModal } from './EstadoResultadosPrintModal';
 import { getNaturaleza, getRubroER, RubroERId } from '../utils/ifrsClassification';
@@ -22,6 +22,8 @@ import {
 } from 'lucide-react';
 
 interface EstadoResultadosViewProps {
+  periodoGlobal?: string;
+  onCambiarPeriodoGlobal?: (periodo: string) => void;
   company: Company;
   vouchers: Voucher[];
   accounts: ChartOfAccount[];
@@ -50,11 +52,28 @@ export default function EstadoResultadosView({
   vouchers,
   accounts,
   fiscalYears,
+  periodoGlobal,
+  onCambiarPeriodoGlobal,
   onOpenAuditor,
   onOpenBalanceIFRS
 }: EstadoResultadosViewProps) {
-  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
-  const [cutoffMonth, setCutoffMonth] = useState<number>(10);
+  const [selectedYear, setSelectedYear] = useState<number>(() => periodoGlobal ? parseInt(periodoGlobal.slice(0, 4), 10) : new Date().getFullYear());
+  const [cutoffMonth, setCutoffMonth] = useState<number>(() => periodoGlobal ? parseInt(periodoGlobal.slice(5, 7), 10) : 10);
+
+  // Período compartido entre pestañas
+  useEffect(() => {
+    if (!periodoGlobal) return;
+    setSelectedYear(parseInt(periodoGlobal.slice(0, 4), 10));
+    setCutoffMonth(parseInt(periodoGlobal.slice(5, 7), 10));
+  }, [periodoGlobal]);
+  const elegirAnio = (y: number) => {
+    setSelectedYear(y);
+    onCambiarPeriodoGlobal?.(`${y}-${String(cutoffMonth > 0 ? Math.min(cutoffMonth, 12) : 12).padStart(2, '0')}`);
+  };
+  const elegirMes = (m: number) => {
+    setCutoffMonth(m);
+    if (m > 0) onCambiarPeriodoGlobal?.(`${selectedYear}-${String(m).padStart(2, '0')}`);
+  };
   const [showZeroBalances, setShowZeroBalances] = useState<boolean>(false);
   const [showAccountDetails, setShowAccountDetails] = useState<boolean>(true);
   const [viewFormat, setViewFormat] = useState<'ifrs_cascada' | 'mensual_matriz'>('ifrs_cascada');
@@ -514,7 +533,7 @@ export default function EstadoResultadosView({
             <label className="font-semibold text-slate-700">Año Comercial:</label>
             <select
               value={selectedYear}
-              onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+              onChange={(e) => elegirAnio(parseInt(e.target.value))}
               className="bg-white border border-slate-300 rounded-md px-2.5 py-1 text-xs font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
             >
               {[2025, 2026, 2027].map(y => (
@@ -527,7 +546,7 @@ export default function EstadoResultadosView({
             <label className="font-semibold text-slate-700">Mostrar hasta:</label>
             <select
               value={cutoffMonth}
-              onChange={(e) => setCutoffMonth(parseInt(e.target.value, 10))}
+              onChange={(e) => elegirMes(parseInt(e.target.value, 10))}
               className="bg-white border border-slate-300 rounded-md px-2.5 py-1 text-xs font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer"
             >
               <option value={10}>Hasta Octubre (Ene - Oct)</option>

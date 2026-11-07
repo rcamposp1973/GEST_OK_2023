@@ -94,6 +94,8 @@ const MONTH_NAMES: { [key: string]: string } = {
 const ALL_MONTHS = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
 
 interface ConciliacionBancariaViewProps {
+  periodoGlobal?: string;
+  onCambiarPeriodoGlobal?: (periodo: string) => void;
   studyId: string;
   company: Company;
   accounts: ChartOfAccount[];
@@ -120,6 +122,8 @@ export default function ConciliacionBancariaView({
   accounts,
   vouchers,
   fiscalYears,
+  periodoGlobal,
+  onCambiarPeriodoGlobal,
   auxiliaries = [],
   rcvDocuments = [],
   costCenters = [],
@@ -133,14 +137,17 @@ export default function ConciliacionBancariaView({
   isEmbedded = true
 }: ConciliacionBancariaViewProps) {
   const [selectedBankAccountId, setSelectedBankAccountId] = useState<string>('');
-  const [selectedPeriod, setSelectedPeriod] = useState<string>(() => getLatestOpenPeriod(fiscalYears));
+  const [selectedPeriod, setSelectedPeriodLocal] = useState<string>(() => periodoGlobal || getLatestOpenPeriod(fiscalYears));
+  // Período compartido entre pestañas: lo elegido aquí se recuerda en las demás pantallas
+  const setSelectedPeriod = (p: string) => { setSelectedPeriodLocal(p); if (p) onCambiarPeriodoGlobal?.(p); };
+  useEffect(() => { if (periodoGlobal) setSelectedPeriodLocal(periodoGlobal); }, [periodoGlobal]);
 
   // Período por defecto: último período abierto (nunca futuro); se aplica una vez al cargar los períodos
   const periodoInicialAplicado = useRef(false);
   useEffect(() => {
     if (!periodoInicialAplicado.current && fiscalYears && fiscalYears.length > 0) {
       periodoInicialAplicado.current = true;
-      setSelectedPeriod(getLatestOpenPeriod(fiscalYears));
+      if (!periodoGlobal) setSelectedPeriodLocal(getLatestOpenPeriod(fiscalYears));
     }
   }, [fiscalYears]);
   const [statementLines, setStatementLines] = useState<BankStatementLine[]>([]);

@@ -9,6 +9,11 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## Próxima (en Pruebas) — Período compartido
+- Un solo período para todas las pestañas: Balance de 8 columnas, Balance IFRS, Estado de Resultados y Conciliación bancaria siguen el mes elegido (arriba o en cualquiera de ellas) y no vuelven al último mes al cambiar de pestaña. Al entrar parten en el último período abierto.
+
+---
+
 ## 1.6.0 — 7 de noviembre de 2026
 **Importaciones, Importación inteligente y vistas compactas.**
 - El aviso de clasificación del Balance IFRS aparece solo cuando hay cuentas realmente dudosas; ya no queda pegado cuando todo está bien resuelto.

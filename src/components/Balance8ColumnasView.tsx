@@ -1,10 +1,12 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Company, Voucher, ChartOfAccount, FiscalPeriodYear } from '../types';
 import { printAndLogOfficialBook } from '../utils/folioService';
 import { ShieldCheck, Scale, Printer, Download } from 'lucide-react';
 import { BalancePrintModal } from './BalancePrintModal';
 
 interface Balance8ColumnasViewProps {
+  periodoGlobal?: string;
+  onCambiarPeriodoGlobal?: (periodo: string) => void;
   studyId?: string;
   company: Company;
   vouchers: Voucher[];
@@ -35,6 +37,8 @@ export default function Balance8ColumnasView({
   vouchers,
   accounts,
   fiscalYears,
+  periodoGlobal,
+  onCambiarPeriodoGlobal,
   onOpenAuditor,
   onNavigateToLibroDiario,
   onFixCeecVouchers
@@ -83,6 +87,17 @@ export default function Balance8ColumnasView({
     });
     return Array.from(set).sort().reverse();
   }, [vouchers]);
+
+  // Período compartido entre pestañas: al volver a esta pantalla queda en el mes elegido
+  useEffect(() => {
+    if (!periodoGlobal) return;
+    if (availablePeriods.includes(periodoGlobal)) {
+      if (periodFilter !== periodoGlobal) handlePeriodChange(periodoGlobal);
+    } else if (periodFilter !== 'Todos') {
+      handlePeriodChange('Todos');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [periodoGlobal, availablePeriods.length]);
 
   // Account map
   const accountMap = useMemo(() => {
@@ -619,7 +634,7 @@ export default function Balance8ColumnasView({
             <label className="font-semibold text-slate-700">Período:</label>
             <select
               value={periodFilter}
-              onChange={(e) => handlePeriodChange(e.target.value)}
+              onChange={(e) => { handlePeriodChange(e.target.value); if (e.target.value !== 'Todos') onCambiarPeriodoGlobal?.(e.target.value); }}
               className="bg-white border border-slate-300 rounded-md px-2.5 py-1 text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
             >
               <option value="Todos">Todo el Ejercicio</option>

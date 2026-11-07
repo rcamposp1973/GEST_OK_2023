@@ -9,12 +9,9 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
-## Próxima (en Pruebas) — Análisis de cuentas a fecha de corte
+## 1.7.0 — 7 de noviembre de 2026
+**Análisis de cuentas a fecha de corte y pantalla Cuentas más compacta.**
 - Análisis de Cuentas: campo **Analizar a la fecha**. Una partida cuenta como compensada solo si su pareo ya existía a esa fecha (fecha de pareo = la del movimiento más nuevo del grupo). Muestra el control: saldo de la cuenta a la fecha vs partidas abiertas.
-
----
-
-## Próxima (en Pruebas) — Cuentas más compacta
 - Cuentas: la banda flotante de compensación ya no tapa las últimas partidas; filas más bajas, tablas que usan la altura de la ventana y filtros avanzados plegados por defecto.
 
 ---

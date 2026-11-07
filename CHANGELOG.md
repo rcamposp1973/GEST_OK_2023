@@ -9,6 +9,11 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## Próxima (en Pruebas) — Análisis de cuentas a fecha de corte
+- Análisis de Cuentas: campo **Analizar a la fecha**. Una partida cuenta como compensada solo si su pareo ya existía a esa fecha (fecha de pareo = la del movimiento más nuevo del grupo). Muestra el control: saldo de la cuenta a la fecha vs partidas abiertas.
+
+---
+
 ## 1.6.1 — 7 de noviembre de 2026
 **Período por pestaña.**
 - Cada pestaña recuerda su propio mes: Balance de 8 columnas, Balance IFRS, Estado de Resultados y Conciliación bancaria ya no vuelven al último mes al cambiar de pestaña. El mes elegido en una no cambia las otras, y se olvida al cerrar la pestaña. Al abrir una pestaña parte en el período de arriba (último abierto).

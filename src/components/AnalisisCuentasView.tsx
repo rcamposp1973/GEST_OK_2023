@@ -96,6 +96,8 @@ export default function AnalisisCuentasView({
   const [accountTypeFilter, setAccountTypeFilter] = useState<'TODAS' | 'Activo' | 'Pasivo' | 'Patrimonio' | 'Ingreso' | 'Gasto'>('TODAS');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [periodFilter, setPeriodFilter] = useState<string>('TODOS');
+  // Análisis a una fecha de corte ('' = sin corte): una partida cuenta como compensada solo si su pareo ya existía a esa fecha
+  const [fechaCorte, setFechaCorte] = useState<string>('');
   const [viewMode, setViewMode] = useState<'PENDIENTES' | 'CALZADAS' | 'TODAS'>('PENDIENTES');
   const [viewModeType, setViewModeType] = useState<'TRADITIONAL' | 'DYNAMIC_SPREADSHEET'>('TRADITIONAL');
   
@@ -208,6 +210,9 @@ export default function AnalisisCuentasView({
     const matchedMap = new Map<string, AccountMatch>();
     matches.forEach(m => {
       if (m.status !== 'DESCALZADO') {
+        // Fecha de pareo = fecha del movimiento más nuevo del grupo (sin importar cuándo se hizo el pareo)
+        const fechaPareo = m.matchedLines.reduce((mx, l) => ((l.voucherDate || '') > mx ? (l.voucherDate || '') : mx), '');
+        if (fechaCorte && fechaPareo > fechaCorte) return; // a la fecha de corte aún estaba abierta
         m.matchedLines.forEach(l => {
           const key = `${l.voucherId}_${l.lineIndex}`;
           matchedMap.set(key, m);
@@ -220,6 +225,7 @@ export default function AnalisisCuentasView({
     vouchers.forEach(voucher => {
       if (voucher.status === 'Anulado') return;
       if (periodFilter !== 'TODOS' && voucher.period !== periodFilter) return;
+      if (fechaCorte && (voucher.date || '') > fechaCorte) return; // movimientos posteriores al corte no existen aún
 
       voucher.lines.forEach((line, index) => {
         if (line.accountId === selectedAccountId || line.accountCode === selectedAccount?.code) {
@@ -256,7 +262,7 @@ export default function AnalisisCuentasView({
       if (dateComp !== 0) return dateComp;
       return a.voucherNumber - b.voucherNumber;
     });
-  }, [selectedAccountId, selectedAccount, vouchers, periodFilter, matches]);
+  }, [selectedAccountId, selectedAccount, vouchers, periodFilter, matches, fechaCorte]);
 
   // --- LISTA DE RUTS / AUXILIARES PRESENTES EN ESTA CUENTA ---
   const accountRutsList = useMemo(() => {
@@ -664,6 +670,15 @@ export default function AnalisisCuentasView({
   const handleCreateManualMatch = async () => {
     if (!selectionMath.isMatchedPair || !selectedAccount) return;
 
+    // Con fecha de corte activa hay partidas que se ven abiertas pero ya fueron compensadas después: no se pueden parear dos veces
+    const yaPareadas = new Set<string>();
+    matches.forEach(m => { if (m.status !== 'DESCALZADO') m.matchedLines.forEach(l => yaPareadas.add(`${l.voucherId}_${l.lineIndex}`)); });
+    const repetida = [...selectionMath.selectedDebitsList, ...selectionMath.selectedCreditsList].find(l => yaPareadas.has(l.key));
+    if (repetida) {
+      window.alert(`La partida del comprobante #${repetida.voucherNumber} ya fue compensada con una fecha posterior. Quita la fecha de corte y deshaz ese pareo si quieres rehacerlo.`);
+      return;
+    }
+
     setSaveStatus('SAVING');
     try {
       const matchId = `match_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
@@ -708,6 +723,7 @@ export default function AnalisisCuentasView({
         matchedLines: matchedLinesRef,
         totalAmount: selectionMath.sumDebits,
         matchDate: new Date().toISOString(),
+        fechaPareo: matchedLinesRef.reduce((mx, l) => ((l.voucherDate || '') > mx ? (l.voucherDate || '') : mx), ''),
         matchedBy: auth.currentUser?.email || 'Usuario Contable',
         notes: matchNotes.trim() || 'Compensación de partidas',
         creationMode: 'MANUAL',
@@ -1494,6 +1510,27 @@ export default function AnalisisCuentasView({
 
           {/* Acciones de Selección y Reset */}
           <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto justify-end">
+            <label className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700 bg-indigo-50 border border-indigo-200 rounded-md px-2 py-1">
+              Analizar a la fecha
+              <input
+                type="date"
+                value={fechaCorte}
+                onChange={(e) => setFechaCorte(e.target.value)}
+                className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[11px] font-semibold"
+              />
+              {fechaCorte && (
+                <button onClick={() => setFechaCorte('')} className="text-rose-600 hover:text-rose-800" title="Quitar fecha de corte">✕</button>
+              )}
+            </label>
+            {fechaCorte && (
+              <span
+                className={`text-[11px] font-bold px-2 py-1 rounded-md border ${Math.round(accountStats.netPendingBalance) === Math.round(accountStats.netLedgerBalance) ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-rose-50 text-rose-800 border-rose-200'}`}
+                title="Las partidas abiertas deben sumar el saldo de la cuenta a la fecha"
+              >
+                Saldo a la fecha ${Math.round(accountStats.netLedgerBalance).toLocaleString('es-CL')} · Partidas abiertas ${Math.round(accountStats.netPendingBalance).toLocaleString('es-CL')}
+                {Math.round(accountStats.netPendingBalance) === Math.round(accountStats.netLedgerBalance) ? ' ✓' : ` · Dif. ${Math.round(accountStats.netLedgerBalance - accountStats.netPendingBalance).toLocaleString('es-CL')}`}
+              </span>
+            )}
             {activeFiltersCount > 0 && (
               <button
                 onClick={resetAllFilters}

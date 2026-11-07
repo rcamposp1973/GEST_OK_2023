@@ -475,7 +475,8 @@ export interface AccountMatch {
   accountName: string;
   matchedLines: MatchedLineRef[];
   totalAmount: number; // Monto total debitos/creditos pareados
-  matchDate: string; // Fecha o Timestamp ISO
+  matchDate: string; // Fecha o Timestamp ISO (cuándo se hizo el pareo)
+  fechaPareo?: string; // Fecha contable del pareo: la del movimiento más nuevo del grupo (YYYY-MM-DD)
   matchedBy?: string;
   notes?: string;
   creationMode?: 'MANUAL' | 'AUTOMATICO' | 'SUGERENCIA';

@@ -9,7 +9,7 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
-## Próxima (en Pruebas) — Reportes alineados con la contabilidad
+## 1.9.0 — 8 de noviembre de 2026 — Reportes alineados con la contabilidad, pareo parcial e informe mensual
 
 - **Informe mensual (foto fija)**: nuevo módulo en Indicadores. Congela las cifras de un mes (resultados, situación financiera e indicadores) junto con los comentarios del contador. Si después la contabilidad cambia, avisa qué cifras difieren de la foto; la foto no se modifica sola. Se imprime a PDF y en modo presentación los comentarios se muestran como texto.
 - Reportes Analíticos y panel Analytics HUD: ahora clasifican las cuentas con la clasificación IFRS del plan (no con el primer dígito del código), excluyen comprobantes anulados, descuadrados y el de cierre de año. Se corrigió que la fuente "Contabilidad" del análisis de ventas tomaba las cuentas que parten en 4 (gastos) como ventas; ahora usa los ingresos de actividades ordinarias.

@@ -54,6 +54,11 @@ export default function DetallePivotModal({ cuentas, naturaleza, vouchers, anio,
     const ids = new Set(cuentas.map(c => c.id));
     const codigos = new Map(cuentas.map(c => [c.code, c]));
     const out: Linea[] = [];
+    const nombreAux = new Map<string, string>(); // un solo nombre por RUT, aunque venga escrito distinto
+    vouchers.forEach(v => (v.lines || []).forEach(l => {
+      const r = (l.auxiliaryRut || '').trim();
+      if (r && !nombreAux.get(r) && (l.auxiliaryName || '').trim()) nombreAux.set(r, (l.auxiliaryName || '').trim());
+    }));
     vouchers.forEach(v => {
       if (v.status === 'Anulado' || v.origin === 'CIERRE_ANIO') return;
       const f = v.date || '';
@@ -75,7 +80,7 @@ export default function DetallePivotModal({ cuentas, naturaleza, vouchers, anio,
           cuenta: `${cta.code} ${cta.name}`,
           cc: etiquetaMaestro(l.costCenter, costCenters),
           item: etiquetaMaestro(l.expenseItem, expenseItems),
-          aux: rut ? `${rut} ${(l.auxiliaryName || '').trim()}` : SIN,
+          aux: rut ? `${rut} ${nombreAux.get(rut) || ''}`.trim() : SIN,
           proyecto: (l.project || '').trim() || SIN,
           producto: (l.product || '').trim() || SIN,
           doc: [l.documentType, l.documentRef].filter(Boolean).join(' ').trim(),
@@ -105,11 +110,15 @@ export default function DetallePivotModal({ cuentas, naturaleza, vouchers, anio,
     return restantes[0] || 'mov';
   };
 
-  const [filtros, setFiltros] = useState<{ dim: Dim; valor: string }[]>(() => (filtroInicial ? [filtroInicial] : []));
+  // Para auxiliares el filtro inicial puede venir solo con el RUT
+  const filtroResuelto = filtroInicial && filtroInicial.dim === 'aux'
+    ? { dim: filtroInicial.dim, valor: lineas.find(l => l.aux === filtroInicial.valor || l.aux.startsWith(filtroInicial.valor + ' '))?.aux ?? filtroInicial.valor }
+    : filtroInicial;
+  const [filtros, setFiltros] = useState<{ dim: Dim; valor: string }[]>(() => (filtroResuelto ? [filtroResuelto] : []));
   const [mesSel, setMesSel] = useState<number | null>(null);
   const [vista, setVista] = useState<Vista>(() => {
-    if (vistaInicial && dimsDisponibles.includes(vistaInicial) && vistaInicial !== filtroInicial?.dim) return vistaInicial;
-    return filtroInicial ? siguienteVista([filtroInicial]) : (dimsDisponibles[0] || 'mov');
+    if (vistaInicial && dimsDisponibles.includes(vistaInicial) && vistaInicial !== filtroResuelto?.dim) return vistaInicial;
+    return filtroResuelto ? siguienteVista([filtroResuelto]) : (dimsDisponibles[0] || 'mov');
   });
 
   const usadas = filtros.map(f => f.dim);

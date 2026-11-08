@@ -365,103 +365,82 @@ export default function IndicadoresFinancierosView({
   }, [vouchers, selectedYear, cutoffMonth]);
 
   // Pareto 80/20 Analysis (Clientes / Proveedores)
+  // Pareto: la CONTABILIDAD manda. Todo sale de los comprobantes (misma regla que Resultados);
+  // lo contabilizado sin auxiliar se muestra como "(Sin auxiliar)" para que el total calce con la contabilidad.
+  // El RCV solo se entrega como referencia para explicar diferencias, nunca reemplaza la cifra contable.
   const paretoData = useMemo(() => {
-    const clientMap = new Map<string, { rut: string; name: string; total: number }>();
-    const supplierMap = new Map<string, { rut: string; name: string; total: number }>();
+    type Item = { rut: string; name: string; total: number };
+    const byKey = new Map<string, ChartOfAccount>();
+    accounts.forEach(a => { byKey.set(a.id, a); byKey.set(a.code, a); });
+    const clientMap = new Map<string, Item>();
+    const supplierMap = new Map<string, Item>();
+    let ventasSinAux = 0, gastosSinAux = 0;
 
-    const validVouchers = vouchers.filter(v => {
-      if (v.status === 'Anulado') return false;
-      const vYear = v.date ? parseInt(v.date.slice(0, 4)) : selectedYear;
-      if (vYear !== selectedYear) return false;
-      if (cutoffMonth > 0 && v.date && v.date.length >= 7) {
-        const vMonth = parseInt(v.date.slice(5, 7), 10);
-        if (vMonth > cutoffMonth) return false;
-      }
-      return true;
-    });
-
-    validVouchers.forEach(v => {
-      if (!v.lines) return;
-      v.lines.forEach(l => {
+    vouchers.forEach(v => {
+      if (v.status === 'Anulado' || v.origin === 'CIERRE_ANIO' || !v.date) return;
+      if (parseInt(v.date.slice(0, 4), 10) !== selectedYear) return;
+      if (cutoffMonth > 0 && parseInt(v.date.slice(5, 7), 10) > cutoffMonth) return;
+      const lines = v.lines || [];
+      const deb = lines.reduce((a, l) => a + (Number(l.debit) || 0), 0);
+      const cre = lines.reduce((a, l) => a + (Number(l.credit) || 0), 0);
+      if (Math.abs(deb - cre) > 0.01) return;
+      lines.forEach(l => {
+        const acc = byKey.get(l.accountId) || byKey.get(l.accountCode);
+        if (!acc) return;
+        const nat = getNaturaleza(acc);
+        if (nat !== 'INGRESO' && nat !== 'GASTO') return;
+        const val = nat === 'INGRESO' ? (Number(l.credit) || 0) - (Number(l.debit) || 0) : (Number(l.debit) || 0) - (Number(l.credit) || 0);
+        if (!val) return;
         const rut = (l.auxiliaryRut || '').trim();
-        if (!rut) return;
-
+        if (!rut) { if (nat === 'INGRESO') ventasSinAux += val; else gastosSinAux += val; return; }
         const name = l.auxiliaryName || auxiliaryMap.get(rut)?.name || `Aux. RUT ${rut}`;
-        const debit = Number(l.debit) || 0;
-        const credit = Number(l.credit) || 0;
-        const codeStr = (l.accountCode || '').trim();
-        const prefix = codeStr.charAt(0);
-
-        if (prefix === '5' || prefix === '3') {
-          const val = credit - debit;
-          if (val > 0) {
-            const curr = clientMap.get(rut) || { rut, name, total: 0 };
-            curr.total += val;
-            clientMap.set(rut, curr);
-          }
-        } else if (prefix === '4') {
-          const val = debit - credit;
-          if (val > 0) {
-            const curr = supplierMap.get(rut) || { rut, name, total: 0 };
-            curr.total += val;
-            supplierMap.set(rut, curr);
-          }
-        }
+        const map = nat === 'INGRESO' ? clientMap : supplierMap;
+        const curr = map.get(rut) || { rut, name, total: 0 };
+        curr.total += val;
+        map.set(rut, curr);
       });
     });
 
-    // Also parse RCV Documents for supplementary completeness
+    // Referencia RCV (solo informativa)
+    let rcvVentas = 0, rcvCompras = 0;
     rcvDocuments.forEach(doc => {
       const docDate = doc.fechaEmision || doc.date || (doc.period ? `${doc.period}-01` : '');
-      if (cutoffMonth > 0 && docDate && docDate.length >= 7) {
-        const rMonth = parseInt(docDate.slice(5, 7), 10);
-        if (rMonth > cutoffMonth) return;
+      if (docDate && docDate.length >= 7) {
+        if (parseInt(docDate.slice(0, 4), 10) !== selectedYear) return;
+        if (cutoffMonth > 0 && parseInt(docDate.slice(5, 7), 10) > cutoffMonth) return;
       }
-      const rut = doc.tipoRegistro === 'Venta' ? doc.rutReceptor : doc.rutEmisor;
-      if (!rut) return;
-
-      const name = (doc.tipoRegistro === 'Venta' ? doc.razonSocialReceptor : doc.razonSocialEmisor) || `Aux. RUT ${rut}`;
       const amount = doc.montoNeto || doc.montoTotal || 0;
-
-      if (doc.tipoRegistro === 'Venta') {
-        const curr = clientMap.get(rut) || { rut, name, total: 0 };
-        if (curr.total === 0) curr.total = amount;
-        clientMap.set(rut, curr);
-      } else if (doc.tipoRegistro === 'Compra') {
-        const curr = supplierMap.get(rut) || { rut, name, total: 0 };
-        if (curr.total === 0) curr.total = amount;
-        supplierMap.set(rut, curr);
-      }
+      if (doc.tipoRegistro === 'Venta') rcvVentas += amount; else if (doc.tipoRegistro === 'Compra') rcvCompras += amount;
     });
 
-    const buildParetoTable = (items: { rut: string; name: string; total: number }[]) => {
-      const sorted = [...items].sort((a, b) => b.total - a.total);
-      const grandTotal = sorted.reduce((acc, curr) => acc + curr.total, 0);
-
+    const buildParetoTable = (items: Item[], sinAux: number) => {
+      const sorted = items.filter(x => Math.round(x.total) !== 0).sort((a, b) => b.total - a.total);
+      const conAux = sorted.reduce((acc, curr) => acc + curr.total, 0);
+      const grandTotal = conAux + sinAux; // = total contable de la cuenta de resultado
       let runningSum = 0;
-      return sorted.map((item, idx) => {
+      const filas = sorted.map((item, idx) => {
         runningSum += item.total;
         const pctIndividual = grandTotal > 0 ? (item.total / grandTotal) * 100 : 0;
         const pctAcumulado = grandTotal > 0 ? (runningSum / grandTotal) * 100 : 0;
         const isCore80 = pctAcumulado <= 80 || (idx > 0 && grandTotal > 0 && ((runningSum - item.total) / grandTotal) * 100 < 80);
-
-        return {
-          rank: idx + 1,
-          rut: item.rut,
-          name: item.name,
-          total: item.total,
-          pctIndividual,
-          pctAcumulado,
-          isCore80
-        };
+        return { rank: idx + 1, rut: item.rut, name: item.name, total: item.total, pctIndividual, pctAcumulado, isCore80 };
       });
+      return { filas, conAux, sinAux, totalContable: grandTotal };
     };
 
-    const clientsList = buildParetoTable(Array.from(clientMap.values()));
-    const suppliersList = buildParetoTable(Array.from(supplierMap.values()));
+    const c = buildParetoTable(Array.from(clientMap.values()), ventasSinAux);
+    const sp = buildParetoTable(Array.from(supplierMap.values()), gastosSinAux);
+    return {
+      clients: c.filas, suppliers: sp.filas,
+      resumen: {
+        clients: { totalContable: c.totalContable, sinAux: c.sinAux, rcv: rcvVentas },
+        suppliers: { totalContable: sp.totalContable, sinAux: sp.sinAux, rcv: rcvCompras },
+      },
+    };
+  }, [vouchers, accounts, rcvDocuments, auxiliaryMap, selectedYear, cutoffMonth]);
 
-    return { clients: clientsList, suppliers: suppliersList };
-  }, [vouchers, rcvDocuments, auxiliaryMap, selectedYear, cutoffMonth]);
+  const [pivotAux, setPivotAux] = useState<{ rut: string; name: string; tipo: 'clients' | 'suppliers' } | null>(null);
+  const cuentasIngreso = useMemo(() => accounts.filter(a => getNaturaleza(a) === 'INGRESO'), [accounts]);
 
   // Informe de gastos: misma base que el Estado de Resultados (cuentas de naturaleza GASTO, neto debe-haber,
   // sin anulados, solo comprobantes cuadrados), para que las cifras coincidan y se puedan abrir al detalle.
@@ -1038,6 +1017,23 @@ export default function IndicadoresFinancierosView({
               </ResponsiveContainer>
             </div>
 
+            {/* CUADRATURA CON LA CONTABILIDAD */}
+            {(() => {
+              const r = paretoType === 'clients' ? paretoData.resumen.clients : paretoData.resumen.suppliers;
+              const difRcv = r.rcv - r.totalContable;
+              return (
+                <div className="mb-3 p-2.5 rounded-lg border border-slate-200 bg-slate-50 text-[11px] text-slate-600 flex flex-wrap gap-x-6 gap-y-1">
+                  <span><b>Total según contabilidad:</b> ${Math.round(r.totalContable).toLocaleString('es-CL')} ({paretoType === 'clients' ? 'ingresos' : 'gastos'}, igual al Estado de Resultados)</span>
+                  <span><b>Sin auxiliar:</b> ${Math.round(r.sinAux).toLocaleString('es-CL')}</span>
+                  {r.rcv > 0 && (
+                    <span title="El RCV es solo una referencia: si difiere, la diferencia se explica; la contabilidad es la que manda.">
+                      <b>Referencia RCV:</b> ${Math.round(r.rcv).toLocaleString('es-CL')} · diferencia con contabilidad ${Math.round(difRcv).toLocaleString('es-CL')}
+                    </span>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* TABLA DETALLADA PARATO */}
             <div className="overflow-x-auto border border-slate-200 rounded-lg">
               <table className="w-full text-xs text-left border-collapse">
@@ -1054,7 +1050,7 @@ export default function IndicadoresFinancierosView({
                 </thead>
                 <tbody className="divide-y divide-slate-200">
                   {(paretoType === 'clients' ? paretoData.clients : paretoData.suppliers).map((item) => (
-                    <tr key={item.rut} className={`hover:bg-slate-50 transition-colors ${item.isCore80 ? 'bg-indigo-50/20' : ''}`}>
+                    <tr key={item.rut} onClick={() => setPivotAux({ rut: item.rut, name: item.name, tipo: paretoType })} title="Ver el detalle por mes, cuenta y centro de costo" className={`hover:bg-indigo-100/40 transition-colors cursor-pointer ${item.isCore80 ? 'bg-indigo-50/20' : ''}`}>
                       <td className="p-2.5 text-center font-bold text-slate-600">{item.rank}</td>
                       <td className="p-2.5 font-mono font-semibold text-slate-900">{item.rut}</td>
                       <td className="p-2.5 font-medium text-slate-800">{item.name}</td>
@@ -1076,6 +1072,15 @@ export default function IndicadoresFinancierosView({
                       </td>
                     </tr>
                   ))}
+                  {Math.round((paretoType === 'clients' ? paretoData.resumen.clients : paretoData.resumen.suppliers).sinAux) !== 0 && (
+                    <tr onClick={() => setPivotAux({ rut: '', name: '(Sin auxiliar)', tipo: paretoType })} className="bg-amber-50/50 hover:bg-amber-100/50 cursor-pointer" title="Contabilizado sin auxiliar">
+                      <td className="p-2.5 text-center text-slate-400">—</td>
+                      <td className="p-2.5 font-mono text-slate-400">—</td>
+                      <td className="p-2.5 font-medium text-amber-800">(Sin auxiliar) · contabilizado sin RUT</td>
+                      <td className="p-2.5 text-right font-mono font-bold text-slate-900">${Math.round((paretoType === 'clients' ? paretoData.resumen.clients : paretoData.resumen.suppliers).sinAux).toLocaleString('es-CL')}</td>
+                      <td className="p-2.5 text-right text-slate-400" colSpan={3}></td>
+                    </tr>
+                  )}
                   {(paretoType === 'clients' ? paretoData.clients : paretoData.suppliers).length === 0 && (
                     <tr>
                       <td colSpan={7} className="p-6 text-center text-slate-400">
@@ -1396,6 +1401,20 @@ export default function IndicadoresFinancierosView({
           filtroInicial={pivotGasto.filtro}
           vistaInicial={pivotGasto.vista === 'cuenta' ? undefined : pivotGasto.vista}
           onClose={() => setPivotGasto(null)}
+        />
+      )}
+      {pivotAux && (
+        <DetallePivotModal
+          cuentas={pivotAux.tipo === 'clients' ? cuentasIngreso : gastoCuentas}
+          naturaleza={pivotAux.tipo === 'clients' ? 'INGRESO' : 'GASTO'}
+          vouchers={vouchers}
+          anio={selectedYear}
+          mesCorte={cutoffMonth > 0 ? cutoffMonth : 12}
+          titulo={`${pivotAux.tipo === 'clients' ? 'Ventas a' : 'Gastos con'} ${pivotAux.rut ? pivotAux.rut + ' ' : ''}${pivotAux.name}`}
+          costCenters={costCenters}
+          expenseItems={expenseItems}
+          filtroInicial={{ dim: 'aux', valor: pivotAux.rut || '(sin dato)' }}
+          onClose={() => setPivotAux(null)}
         />
       )}
     </div>

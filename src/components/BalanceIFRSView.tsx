@@ -31,6 +31,7 @@ interface BalanceIFRSViewProps {
   accounts: ChartOfAccount[];
   fiscalYears: FiscalPeriodYear[];
   onOpenAuditor?: () => void;
+  onOpenVoucher?: (voucherRef: Voucher | string | number) => void;
   onOpenEstadoResultados?: () => void;
 }
 
@@ -53,6 +54,7 @@ interface IFRSParentRubro {
 
 export default function BalanceIFRSView({
   company,
+  onOpenVoucher,
   vouchers,
   accounts,
   fiscalYears,
@@ -837,6 +839,7 @@ export default function BalanceIFRSView({
             desdeSaldo={desde || undefined}
             hastaSaldo={dateTo || undefined}
             titulo={pivotBal.titulo}
+            onOpenVoucher={onOpenVoucher ? (v) => onOpenVoucher(v) : undefined}
             onClose={() => setPivotBal(null)}
           />
         );
@@ -854,6 +857,7 @@ export default function BalanceIFRSView({
             desde={desde}
             hasta={hasta}
             empresa={{ studyId: company.studyId, id: company.id }}
+            onOpenVoucher={onOpenVoucher}
             titulo="Balance IFRS · detalle de cuenta"
             onClose={() => setDetalleCuenta(null)}
           />

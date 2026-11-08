@@ -16,6 +16,7 @@ interface Balance8ColumnasViewProps {
   accounts: ChartOfAccount[];
   fiscalYears: FiscalPeriodYear[];
   onOpenAuditor?: () => void;
+  onOpenVoucher?: (voucherRef: Voucher | string | number) => void;
   onNavigateToLibroDiario?: () => void;
   onFixCeecVouchers?: () => Promise<void>;
 }
@@ -37,6 +38,7 @@ interface BalanceRow {
 export default function Balance8ColumnasView({
   studyId,
   company,
+  onOpenVoucher,
   vouchers,
   accounts,
   fiscalYears,
@@ -939,6 +941,7 @@ export default function Balance8ColumnasView({
             desde={desde || undefined}
             hasta={hasta || undefined}
             empresa={{ studyId: company.studyId, id: company.id }}
+            onOpenVoucher={onOpenVoucher}
             titulo="Balance de 8 columnas · detalle de cuenta"
             onClose={() => setDetalleCuenta(null)}
           />

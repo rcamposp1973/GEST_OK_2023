@@ -18,11 +18,12 @@ interface Props {
   canConfigure: boolean;
   costCenters?: CostCenterMaster[];
   expenseItems?: ExpenseItemMaster[];
+  onOpenVoucher?: (voucherRef: Voucher | string | number) => void;
 }
 
 function visiblesIds(c: KpiConfig) { return c.enabled; }
 
-export default function KpiPanel({ company, vouchers, accounts, year, cutoffMonth, canConfigure, costCenters, expenseItems }: Props) {
+export default function KpiPanel({ company, vouchers, accounts, year, cutoffMonth, canConfigure, costCenters, expenseItems, onOpenVoucher }: Props) {
   const inicial: KpiConfig = (company as any).kpiConfig?.enabled?.length ? (company as any).kpiConfig : configPorDefecto();
   const [config, setConfig] = useState<KpiConfig>(inicial);
   const [editando, setEditando] = useState(false);
@@ -199,7 +200,7 @@ export default function KpiPanel({ company, vouchers, accounts, year, cutoffMont
         </div>
       ))}
       {kpiAbierto && (
-        <KpiDetalleModal kpi={kpiAbierto} figuras={figuras} vouchers={vouchers} year={year} cutoffMonth={cutoffMonth} costCenters={costCenters} expenseItems={expenseItems} empresa={{ studyId: company.studyId, id: company.id }} onClose={() => setKpiAbierto(null)} />
+        <KpiDetalleModal kpi={kpiAbierto} figuras={figuras} vouchers={vouchers} year={year} cutoffMonth={cutoffMonth} costCenters={costCenters} expenseItems={expenseItems} empresa={{ studyId: company.studyId, id: company.id }} onOpenVoucher={onOpenVoucher} onClose={() => setKpiAbierto(null)} />
       )}
     </div>
   );

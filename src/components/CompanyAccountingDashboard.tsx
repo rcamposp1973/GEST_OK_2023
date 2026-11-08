@@ -7681,7 +7681,7 @@ export default function CompanyAccountingDashboard({
 
       {/* Modal Detalle de Comprobante */}
       {selectedVoucher && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
               <div className="bg-white rounded-xl shadow-xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[90vh]">
                 <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-50">
                   <div className="flex items-center gap-3">
@@ -8959,6 +8959,7 @@ export default function CompanyAccountingDashboard({
       {/* TAB: BALANCE DE 8 COLUMNAS */}
       {activeTab === 'balance8' && (
         <Balance8ColumnasView
+          onOpenVoucher={(v) => handleOpenVoucherModal(v)}
           periodoGlobal={periodosPorPestana['balance8'] ?? selectedRcvPeriod}
           onCambiarPeriodoGlobal={(p: string) => setPeriodosPorPestana(prev => ({ ...prev, balance8: p }))}
           studyId={studyId}
@@ -8981,6 +8982,7 @@ export default function CompanyAccountingDashboard({
       {/* TAB: BALANCE CLASIFICADO IFRS */}
       {activeTab === 'balanceIFRS' && (
         <BalanceIFRSView
+          onOpenVoucher={(v) => handleOpenVoucherModal(v)}
           periodoGlobal={periodosPorPestana['balanceIFRS'] ?? selectedRcvPeriod}
           onCambiarPeriodoGlobal={(p: string) => setPeriodosPorPestana(prev => ({ ...prev, balanceIFRS: p }))}
           company={company}
@@ -9085,6 +9087,7 @@ export default function CompanyAccountingDashboard({
       {/* TAB: ESTADO DE RESULTADOS */}
       {activeTab === 'estadoResultados' && (
         <EstadoResultadosView
+          onOpenVoucher={(v) => handleOpenVoucherModal(v)}
           periodoGlobal={periodosPorPestana['estadoResultados'] ?? selectedRcvPeriod}
           onCambiarPeriodoGlobal={(p: string) => setPeriodosPorPestana(prev => ({ ...prev, estadoResultados: p }))}
           company={company}
@@ -9136,6 +9139,7 @@ export default function CompanyAccountingDashboard({
           </div>
         ) : (
           <IndicadoresFinancierosView
+            onOpenVoucher={(v) => handleOpenVoucherModal(v)}
             company={company}
             vouchers={vouchers}
             accounts={accounts}

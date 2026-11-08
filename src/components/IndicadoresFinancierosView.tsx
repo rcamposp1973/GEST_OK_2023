@@ -73,6 +73,7 @@ interface IndicadoresFinancierosViewProps {
   expenseItems?: ExpenseItemMaster[];
   /** Contador / administrador: puede elegir qué KPIs ve la empresa */
   canConfigureKpis?: boolean;
+  onOpenVoucher?: (voucherRef: Voucher | string | number) => void;
 }
 
 const MONTH_SHORT = [
@@ -96,7 +97,8 @@ export default function IndicadoresFinancierosView({
   auxiliaries = [],
   costCenters = [],
   expenseItems = [],
-  canConfigureKpis = false
+  canConfigureKpis = false,
+  onOpenVoucher
 }: IndicadoresFinancierosViewProps) {
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [cutoffMonth, setCutoffMonth] = useState<number>(10);
@@ -791,7 +793,7 @@ export default function IndicadoresFinancierosView({
       </div>
 
       {activeTab === 'kpis' && (
-        <KpiPanel company={company} vouchers={vouchers} accounts={accounts} year={selectedYear} cutoffMonth={cutoffMonth} canConfigure={canConfigureKpis} costCenters={costCenters} expenseItems={expenseItems} />
+        <KpiPanel company={company} vouchers={vouchers} accounts={accounts} year={selectedYear} cutoffMonth={cutoffMonth} canConfigure={canConfigureKpis} costCenters={costCenters} expenseItems={expenseItems} onOpenVoucher={onOpenVoucher} />
       )}
 
       {/* CONTENIDO TAB 1: RESUMEN OVERVIEW */}
@@ -1394,6 +1396,7 @@ export default function IndicadoresFinancierosView({
           titulo={pivotGasto.titulo}
           costCenters={costCenters}
           expenseItems={expenseItems}
+          onOpenVoucher={onOpenVoucher ? (v) => onOpenVoucher(v) : undefined}
           filtroInicial={pivotGasto.filtro}
           vistaInicial={pivotGasto.vista === 'cuenta' ? undefined : pivotGasto.vista}
           onClose={() => setPivotGasto(null)}
@@ -1404,6 +1407,7 @@ export default function IndicadoresFinancierosView({
           account={detSaldo.cuentas[0]}
           cuentasExtra={detSaldo.cuentas}
           soloRut={detSaldo.rut}
+          onOpenVoucher={onOpenVoucher}
           empresa={{ studyId: company.studyId, id: company.id }}
           vouchers={vouchers}
           desde={paretoBase.inicio || undefined}

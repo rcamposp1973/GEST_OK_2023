@@ -30,6 +30,7 @@ interface EstadoResultadosViewProps {
   accounts: ChartOfAccount[];
   fiscalYears: FiscalPeriodYear[];
   onOpenAuditor?: () => void;
+  onOpenVoucher?: (voucherRef: Voucher | string | number) => void;
   onOpenBalanceIFRS?: () => void;
   costCenters?: CostCenterMaster[];
   expenseItems?: ExpenseItemMaster[];
@@ -57,6 +58,7 @@ export default function EstadoResultadosView({
   fiscalYears,
   periodoGlobal,
   onCambiarPeriodoGlobal,
+  onOpenVoucher,
   costCenters,
   expenseItems,
   onOpenAuditor,
@@ -348,6 +350,38 @@ export default function EstadoResultadosView({
     };
   }, [accounts, vouchers, accountMap, selectedYear, showZeroBalances, cutoffMonth]);
 
+  // Comparación: el mismo período (enero hasta el mes de corte) del año anterior, por rubro, con la misma regla que el informe
+  const [comparar, setComparar] = useState<boolean>(true);
+  const anteriorPorRubro = useMemo(() => {
+    const ID_RUBRO: Record<string, string> = {
+      INGRESOS_ORD: '5101', COSTO_VENTAS: '4101', GASTO_PERSONAL: '4201', GASTO_ADM: '4202', DEPRECIACION: '4203',
+      ING_FIN: '5301', COSTO_FIN: '4301', OTROS_ING: '5201', OTROS_GASTOS: '4401', IMPUESTO: '4501',
+    };
+    const corte = cutoffMonth > 0 ? cutoffMonth : 12;
+    const out: Record<string, number> = {};
+    vouchers.forEach(v => {
+      if (v.status === 'Anulado' || v.origin === 'CIERRE_ANIO' || !v.date) return;
+      if (parseInt(v.date.slice(0, 4), 10) !== selectedYear - 1) return;
+      if (parseInt(v.date.slice(5, 7), 10) > corte) return;
+      const ls = v.lines || [];
+      const d = ls.reduce((a, l) => a + (Number(l.debit) || 0), 0);
+      const c = ls.reduce((a, l) => a + (Number(l.credit) || 0), 0);
+      if (Math.abs(d - c) > 0.01) return;
+      ls.forEach(l => {
+        const acc = accountMap.get(l.accountId) || accountMap.get(l.accountCode);
+        if (!acc) return;
+        const nat = getNaturaleza(acc);
+        if (nat !== 'INGRESO' && nat !== 'GASTO') return;
+        const id = ID_RUBRO[getRubroER(acc)];
+        if (!id) return;
+        const dd = Number(l.debit) || 0, cc = Number(l.credit) || 0;
+        out[id] = (out[id] || 0) + (nat === 'INGRESO' ? cc - dd : dd - cc);
+      });
+    });
+    return out;
+  }, [vouchers, accountMap, selectedYear, cutoffMonth]);
+  const hayAnterior = useMemo(() => Object.values(anteriorPorRubro).some(v => Math.round(v) !== 0), [anteriorPorRubro]);
+
   // Export CSV IFRS
   const handleExportCSV = () => {
     const limit = statementData.cutoffLimit || 12;
@@ -412,8 +446,30 @@ export default function EstadoResultadosView({
             </span>
           </div>
 
-          <div className={`font-mono font-black text-xs ${isExpense ? 'text-slate-800' : 'text-slate-900'}`}>
-            {isExpense && rubro.total > 0 ? '-' : ''}${rubro.total.toLocaleString('es-CL')}
+          <div className="flex items-center gap-3">
+            {comparar && hayAnterior && (() => {
+              const ant = anteriorPorRubro[rubro.id] || 0;
+              const corte = cutoffMonth > 0 ? cutoffMonth : 12;
+              const mesAct = rubro.monthlyTotals[corte - 1] || 0;
+              const mesAnt = corte > 1 ? (rubro.monthlyTotals[corte - 2] || 0) : null;
+              const varPct = (a: number, b: number) => (Math.abs(b) > 0.5 ? ((a - b) / Math.abs(b)) * 100 : null);
+              const chip = (p: number | null) => p === null ? null : (
+                <span className={`font-mono ${p === 0 ? 'text-slate-400' : (p > 0) === !isExpense ? 'text-emerald-700' : 'text-rose-700'}`}>
+                  {p > 0 ? '▲' : p < 0 ? '▼' : '='}{Math.abs(p).toFixed(0)}%
+                </span>
+              );
+              const pAnio = varPct(rubro.total, ant);
+              const pMes = mesAnt !== null ? varPct(mesAct, mesAnt) : null;
+              return (
+                <span className="hidden md:flex items-center gap-3 text-[10px] text-slate-500 font-normal">
+                  {mesAnt !== null && <span title="Movimiento del mes de corte frente al mes anterior">Mes ${Math.round(mesAct).toLocaleString('es-CL')} {chip(pMes)}</span>}
+                  <span title={`Mismo período de ${selectedYear - 1}: $${Math.round(ant).toLocaleString('es-CL')}`}>Año ant. ${Math.round(ant).toLocaleString('es-CL')} {chip(pAnio)}</span>
+                </span>
+              );
+            })()}
+            <div className={`font-mono font-black text-xs ${isExpense ? 'text-slate-800' : 'text-slate-900'}`}>
+              {isExpense && rubro.total > 0 ? '-' : ''}${rubro.total.toLocaleString('es-CL')}
+            </div>
           </div>
         </div>
 
@@ -588,6 +644,16 @@ export default function EstadoResultadosView({
               className="rounded text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5"
             />
             <span>Mostrar rubros sin movimiento ($0)</span>
+          </label>
+
+          <label className="flex items-center gap-1.5 text-xs text-slate-700 cursor-pointer ml-2">
+            <input
+              type="checkbox"
+              checked={comparar}
+              onChange={(e) => setComparar(e.target.checked)}
+              className="rounded text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5"
+            />
+            <span>Comparar con mes anterior y año anterior</span>
           </label>
         </div>
 
@@ -993,6 +1059,7 @@ export default function EstadoResultadosView({
           titulo={pivot.titulo}
           costCenters={costCenters}
           expenseItems={expenseItems}
+          onOpenVoucher={onOpenVoucher ? (v) => onOpenVoucher(v) : undefined}
           onClose={() => setPivot(null)}
         />
       )}

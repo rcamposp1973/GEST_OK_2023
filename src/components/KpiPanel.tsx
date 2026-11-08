@@ -3,7 +3,7 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { Settings2, CheckCircle2, AlertCircle, Save } from 'lucide-react';
 import KpiDetalleModal from './KpiDetalleModal';
 import { db } from '../lib/firebase';
-import type { Company, Voucher, ChartOfAccount } from '../types';
+import type { Company, Voucher, ChartOfAccount, CostCenterMaster, ExpenseItemMaster } from '../types';
 import {
   calcularFiguras, KPI_CATALOGO, KPI_PAQUETES, KPI_POR_ID, KpiConfig, KpiGrupo,
   configPorDefecto, formatKpi, semaforo, KpiInputs, KpiDef
@@ -16,11 +16,13 @@ interface Props {
   year: number;
   cutoffMonth: number;
   canConfigure: boolean;
+  costCenters?: CostCenterMaster[];
+  expenseItems?: ExpenseItemMaster[];
 }
 
 function visiblesIds(c: KpiConfig) { return c.enabled; }
 
-export default function KpiPanel({ company, vouchers, accounts, year, cutoffMonth, canConfigure }: Props) {
+export default function KpiPanel({ company, vouchers, accounts, year, cutoffMonth, canConfigure, costCenters, expenseItems }: Props) {
   const inicial: KpiConfig = (company as any).kpiConfig?.enabled?.length ? (company as any).kpiConfig : configPorDefecto();
   const [config, setConfig] = useState<KpiConfig>(inicial);
   const [editando, setEditando] = useState(false);
@@ -197,7 +199,7 @@ export default function KpiPanel({ company, vouchers, accounts, year, cutoffMont
         </div>
       ))}
       {kpiAbierto && (
-        <KpiDetalleModal kpi={kpiAbierto} figuras={figuras} vouchers={vouchers} year={year} cutoffMonth={cutoffMonth} onClose={() => setKpiAbierto(null)} />
+        <KpiDetalleModal kpi={kpiAbierto} figuras={figuras} vouchers={vouchers} year={year} cutoffMonth={cutoffMonth} costCenters={costCenters} expenseItems={expenseItems} onClose={() => setKpiAbierto(null)} />
       )}
     </div>
   );

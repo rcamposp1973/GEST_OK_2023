@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { X, ChevronRight } from 'lucide-react';
-import type { ChartOfAccount, Voucher } from '../types';
+import type { ChartOfAccount, Voucher, CostCenterMaster, ExpenseItemMaster } from '../types';
 
 // Panel tipo "tabla dinámica" para el Estado de Resultados:
 // filas = una dimensión (centro de costo, ítem, cuenta, auxiliar...), columnas = meses.
@@ -18,6 +18,12 @@ interface Props {
   mesCorte: number; // 1..12
   titulo: string;
   onClose: () => void;
+  /** Para mostrar "código - nombre" en vez del código guardado en el comprobante. */
+  costCenters?: CostCenterMaster[];
+  expenseItems?: ExpenseItemMaster[];
+  /** Abrir ya filtrado por una dimensión (p. ej. un centro de costo) y/o partiendo por otra. */
+  filtroInicial?: { dim: Dim; valor: string };
+  vistaInicial?: Dim;
 }
 
 type Linea = {
@@ -32,7 +38,16 @@ const NOMBRE_DIM: Record<Dim, string> = {
 };
 const fmt = (n: number) => Math.round(n).toLocaleString('es-CL');
 
-export default function DetallePivotModal({ cuentas, naturaleza, vouchers, anio, mesCorte, titulo, onClose }: Props) {
+/** Etiqueta "código - nombre" de un centro de costo o ítem guardado por código/id/nombre. */
+export function etiquetaMaestro(raw: string | undefined, lista?: { id: string; code: string; name: string }[]): string {
+  const v = (raw || '').trim();
+  if (!v || v === 'NONE') return SIN;
+  const low = v.toLowerCase();
+  const m = lista?.find(x => x.id === v || x.code.toLowerCase() === low || x.name.toLowerCase() === low);
+  return m ? `${m.code} - ${m.name}` : v;
+}
+
+export default function DetallePivotModal({ cuentas, naturaleza, vouchers, anio, mesCorte, titulo, onClose, costCenters, expenseItems, filtroInicial, vistaInicial }: Props) {
   const nMeses = mesCorte > 0 ? mesCorte : 12;
 
   const lineas = useMemo<Linea[]>(() => {
@@ -45,6 +60,10 @@ export default function DetallePivotModal({ cuentas, naturaleza, vouchers, anio,
       if (f.slice(0, 4) !== String(anio)) return;
       const mes = parseInt(f.slice(5, 7), 10) - 1;
       if (mes < 0 || mes >= nMeses) return;
+      // Misma regla que los informes: solo comprobantes cuadrados
+      const deb = (v.lines || []).reduce((a, l) => a + (Number(l.debit) || 0), 0);
+      const cre = (v.lines || []).reduce((a, l) => a + (Number(l.credit) || 0), 0);
+      if (Math.abs(deb - cre) > 0.01) return;
       (v.lines || []).forEach(l => {
         const cta = ids.has(l.accountId) ? cuentas.find(c => c.id === l.accountId) : codigos.get(l.accountCode);
         if (!cta) return;
@@ -54,8 +73,8 @@ export default function DetallePivotModal({ cuentas, naturaleza, vouchers, anio,
           fecha: f, mes, numero: Number(v.voucherNumber || 0), glosa: l.gloss || v.gloss || '',
           valor: naturaleza === 'INGRESO' ? -neto : neto,
           cuenta: `${cta.code} ${cta.name}`,
-          cc: (l.costCenter || '').trim() || SIN,
-          item: (l.expenseItem || '').trim() || SIN,
+          cc: etiquetaMaestro(l.costCenter, costCenters),
+          item: etiquetaMaestro(l.expenseItem, expenseItems),
           aux: rut ? `${rut} ${(l.auxiliaryName || '').trim()}` : SIN,
           proyecto: (l.project || '').trim() || SIN,
           producto: (l.product || '').trim() || SIN,
@@ -64,7 +83,7 @@ export default function DetallePivotModal({ cuentas, naturaleza, vouchers, anio,
       });
     });
     return out.sort((a, b) => a.fecha.localeCompare(b.fecha) || a.numero - b.numero);
-  }, [vouchers, cuentas, naturaleza, anio, nMeses]);
+  }, [vouchers, cuentas, naturaleza, anio, nMeses, costCenters, expenseItems]);
 
   // Dimensiones con datos reales (cuenta solo si el panel abarca varias cuentas)
   const dimsDisponibles = useMemo<Dim[]>(() => {
@@ -76,9 +95,22 @@ export default function DetallePivotModal({ cuentas, naturaleza, vouchers, anio,
     return d;
   }, [lineas, cuentas.length]);
 
-  const [filtros, setFiltros] = useState<{ dim: Dim; valor: string }[]>([]);
+  const siguienteVista = (filtrosNuevos: { dim: Dim; valor: string }[]): Vista => {
+    const u = filtrosNuevos.map(f => f.dim);
+    const restantes = dimsDisponibles.filter(d => !u.includes(d));
+    // Sugerencia natural: centro de costo ⇄ ítem; si no, la primera libre; si no, movimientos
+    const ultima = u[u.length - 1];
+    const par: Dim | undefined = ultima === 'cc' ? 'item' : ultima === 'item' ? 'cc' : undefined;
+    if (par && restantes.includes(par)) return par;
+    return restantes[0] || 'mov';
+  };
+
+  const [filtros, setFiltros] = useState<{ dim: Dim; valor: string }[]>(() => (filtroInicial ? [filtroInicial] : []));
   const [mesSel, setMesSel] = useState<number | null>(null);
-  const [vista, setVista] = useState<Vista>(() => dimsDisponibles[0] || 'mov');
+  const [vista, setVista] = useState<Vista>(() => {
+    if (vistaInicial && dimsDisponibles.includes(vistaInicial) && vistaInicial !== filtroInicial?.dim) return vistaInicial;
+    return filtroInicial ? siguienteVista([filtroInicial]) : (dimsDisponibles[0] || 'mov');
+  });
 
   const usadas = filtros.map(f => f.dim);
   const libres = dimsDisponibles.filter(d => !usadas.includes(d));
@@ -109,16 +141,6 @@ export default function DetallePivotModal({ cuentas, naturaleza, vouchers, anio,
     return t;
   }, [filtradas]);
   const totalGeneral = totalMeses.reduce((s, v) => s + v, 0);
-
-  const siguienteVista = (filtrosNuevos: { dim: Dim; valor: string }[]): Vista => {
-    const u = filtrosNuevos.map(f => f.dim);
-    const restantes = dimsDisponibles.filter(d => !u.includes(d));
-    // Sugerencia natural: centro de costo ⇄ ítem; si no, la primera libre; si no, movimientos
-    const ultima = u[u.length - 1];
-    const par: Dim | undefined = ultima === 'cc' ? 'item' : ultima === 'item' ? 'cc' : undefined;
-    if (par && restantes.includes(par)) return par;
-    return restantes[0] || 'mov';
-  };
 
   const bajar = (valor: string, mes: number | null) => {
     if (vista === 'mov') return;

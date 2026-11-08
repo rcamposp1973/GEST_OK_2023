@@ -8987,6 +8987,8 @@ export default function CompanyAccountingDashboard({
           vouchers={vouchers}
           accounts={accounts}
           fiscalYears={fiscalYears}
+          costCenters={costCenters}
+          expenseItems={expenseItems}
           onOpenAuditor={() => {
             setActiveTab('auditorEstadosFinancieros');
             setActiveRibbonGroup('INDICADORES');

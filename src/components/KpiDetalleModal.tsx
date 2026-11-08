@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, ChevronDown, ChevronRight, Table2 } from 'lucide-react';
-import type { ChartOfAccount, Voucher } from '../types';
+import type { ChartOfAccount, Voucher, CostCenterMaster, ExpenseItemMaster } from '../types';
 import {
   KpiDef, KpiFigures, FIGURA_NOMBRE, FIGURA_DERIVADA, FIGURA_RESULTADO, cifrasDeKpi, formatKpi,
 } from '../utils/kpiEngine';
@@ -14,6 +14,8 @@ interface Props {
   year: number;
   cutoffMonth: number;
   onClose: () => void;
+  costCenters?: CostCenterMaster[];
+  expenseItems?: ExpenseItemMaster[];
 }
 
 const fmt = (n: number) => Math.round(n).toLocaleString('es-CL');
@@ -22,7 +24,7 @@ const valorFigura = (f: KpiFigures, k: string): number => Number((f as any)[k]) 
 const EXTRAS: Record<string, { fig: string; signo: 1 | -1 }[]> = { patrimonio: [{ fig: 'resultado', signo: 1 }] };
 const ultimoDia = (y: number, m: number) => `${y}-${String(m).padStart(2, '0')}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
 
-export default function KpiDetalleModal({ kpi, figuras, vouchers, year, cutoffMonth, onClose }: Props) {
+export default function KpiDetalleModal({ kpi, figuras, vouchers, year, cutoffMonth, onClose, costCenters, expenseItems }: Props) {
   const mesCorte = cutoffMonth > 0 ? cutoffMonth : 12;
   const [abiertos, setAbiertos] = useState<Record<string, boolean>>({});
   const [pivot, setPivot] = useState<{ cuentas: ChartOfAccount[]; naturaleza: 'INGRESO' | 'GASTO'; titulo: string } | null>(null);
@@ -109,7 +111,7 @@ export default function KpiDetalleModal({ kpi, figuras, vouchers, year, cutoffMo
         </div>
       </div>
       {pivot && (
-        <DetallePivotModal cuentas={pivot.cuentas} naturaleza={pivot.naturaleza} vouchers={vouchers} anio={year} mesCorte={mesCorte} titulo={pivot.titulo} onClose={() => setPivot(null)} />
+        <DetallePivotModal cuentas={pivot.cuentas} naturaleza={pivot.naturaleza} vouchers={vouchers} anio={year} mesCorte={mesCorte} titulo={pivot.titulo} costCenters={costCenters} expenseItems={expenseItems} onClose={() => setPivot(null)} />
       )}
       {cuentaSaldo && (
         <DetalleCuentaModal account={cuentaSaldo} vouchers={vouchers} desde={`${year}-01-01`} hasta={ultimoDia(year, mesCorte)} titulo={`KPI ${kpi.nombre} · detalle de cuenta`} onClose={() => setCuentaSaldo(null)} />

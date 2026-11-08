@@ -13,6 +13,8 @@ import {
 import { triggerIframePrint } from '../utils/printUtils';
 import KpiPanel from './KpiPanel';
 import { calcularFiguras } from '../utils/kpiEngine';
+import { getNaturaleza } from '../utils/ifrsClassification';
+import DetallePivotModal, { etiquetaMaestro } from './DetallePivotModal';
 import {
   BarChart3,
   Landmark,
@@ -461,57 +463,47 @@ export default function IndicadoresFinancierosView({
     return { clients: clientsList, suppliers: suppliersList };
   }, [vouchers, rcvDocuments, auxiliaryMap, selectedYear, cutoffMonth]);
 
-  // Expense Breakdown Report
+  // Informe de gastos: misma base que el Estado de Resultados (cuentas de naturaleza GASTO, neto debe-haber,
+  // sin anulados, solo comprobantes cuadrados), para que las cifras coincidan y se puedan abrir al detalle.
+  const gastoCuentas = useMemo(() => accounts.filter(a => getNaturaleza(a) === 'GASTO'), [accounts]);
   const expenseBreakdown = useMemo(() => {
-    const expenseMap = new Map<string, { codeOrId: string; name: string; total: number }>();
+    const byKey = new Map<string, ChartOfAccount>();
+    accounts.forEach(a => { byKey.set(a.id, a); byKey.set(a.code, a); });
+    const expenseMap = new Map<string, { codeOrId: string; name: string; total: number; valor: string; cuenta?: ChartOfAccount }>();
+    const SIN_DATO = '(sin dato)';
 
-    const validVouchers = vouchers.filter(v => {
-      if (v.status === 'Anulado') return false;
-      const vYear = v.date ? parseInt(v.date.slice(0, 4)) : selectedYear;
-      if (vYear !== selectedYear) return false;
-      if (cutoffMonth > 0 && v.date && v.date.length >= 7) {
-        const vMonth = parseInt(v.date.slice(5, 7), 10);
-        if (vMonth > cutoffMonth) return false;
-      }
-      return true;
-    });
+    vouchers.forEach(v => {
+      if (v.status === 'Anulado' || v.origin === 'CIERRE_ANIO' || !v.date) return;
+      if (parseInt(v.date.slice(0, 4), 10) !== selectedYear) return;
+      const vMonth = parseInt(v.date.slice(5, 7), 10);
+      if (cutoffMonth > 0 && vMonth > cutoffMonth) return;
+      const lines = v.lines || [];
+      const deb = lines.reduce((a, l) => a + (Number(l.debit) || 0), 0);
+      const cre = lines.reduce((a, l) => a + (Number(l.credit) || 0), 0);
+      if (Math.abs(deb - cre) > 0.01) return;
+      lines.forEach(l => {
+        const acc = byKey.get(l.accountId) || byKey.get(l.accountCode);
+        if (!acc || getNaturaleza(acc) !== 'GASTO') return;
+        const val = (Number(l.debit) || 0) - (Number(l.credit) || 0);
+        if (!val) return;
 
-    validVouchers.forEach(v => {
-      if (!v.lines) return;
-      v.lines.forEach(l => {
-        const debit = Number(l.debit) || 0;
-        const credit = Number(l.credit) || 0;
-        const val = debit - credit;
-        if (val <= 0) return;
-
-        const codeStr = (l.accountCode || '').trim();
-        const prefix = codeStr.charAt(0);
-
-        if (prefix === '4') {
-          let key = '';
-          let label = '';
-
-          if (expenseGrouping === 'byAccount') {
-            key = l.accountCode || l.accountId || 'S/C';
-            label = `${l.accountCode || ''} - ${l.accountName || 'Gasto'}`;
-          } else if (expenseGrouping === 'byCostCenter') {
-            key = l.costCenter || 'SIN_CC';
-            const ccObj = costCenters.find(c => c.id === key || c.code === key || c.name === key);
-            label = ccObj ? `${ccObj.code} - ${ccObj.name}` : (l.costCenter || 'Sin Centro de Costo');
-          } else {
-            key = l.expenseItem || 'GENERAL';
-            const expObj = expenseItems.find(e => e.id === key || e.code === key || e.name === key);
-            label = expObj ? `${expObj.code} - ${expObj.name}` : (l.expenseItem || 'Gastos Generales / Operativos');
-          }
-
-          const existing = expenseMap.get(key) || { codeOrId: key, name: label, total: 0 };
-          existing.total += val;
-          expenseMap.set(key, existing);
+        let key: string, label: string, valor = '';
+        if (expenseGrouping === 'byAccount') {
+          key = acc.id; label = `${acc.code} - ${acc.name}`;
+        } else if (expenseGrouping === 'byCostCenter') {
+          valor = etiquetaMaestro(l.costCenter, costCenters);
+          key = valor; label = valor === SIN_DATO ? 'Sin Centro de Costo' : valor;
+        } else {
+          valor = etiquetaMaestro(l.expenseItem, expenseItems);
+          key = valor; label = valor === SIN_DATO ? 'Sin Ítem de Gasto' : valor;
         }
+        const existing = expenseMap.get(key) || { codeOrId: key, name: label, total: 0, valor, cuenta: expenseGrouping === 'byAccount' ? acc : undefined };
+        existing.total += val;
+        expenseMap.set(key, existing);
       });
     });
 
-    const items = Array.from(expenseMap.values()).sort((a, b) => b.total - a.total);
+    const items = Array.from(expenseMap.values()).filter(x => Math.round(x.total) !== 0).sort((a, b) => b.total - a.total);
     const grandTotalExpenses = items.reduce((acc, curr) => acc + curr.total, 0);
 
     return items.map(item => ({
@@ -519,7 +511,14 @@ export default function IndicadoresFinancierosView({
       pctOfTotal: grandTotalExpenses > 0 ? (item.total / grandTotalExpenses) * 100 : 0,
       monthlyAvg: item.total / (cutoffMonth > 0 ? cutoffMonth : 12)
     }));
-  }, [vouchers, costCenters, expenseItems, selectedYear, expenseGrouping, cutoffMonth]);
+  }, [vouchers, accounts, costCenters, expenseItems, selectedYear, expenseGrouping, cutoffMonth]);
+
+  const [pivotGasto, setPivotGasto] = useState<{ cuentas: ChartOfAccount[]; titulo: string; filtro?: { dim: 'cc' | 'item'; valor: string }; vista?: 'cc' | 'item' | 'cuenta' } | null>(null);
+  const abrirGasto = (item: { name: string; valor: string; cuenta?: ChartOfAccount }) => {
+    if (expenseGrouping === 'byAccount' && item.cuenta) setPivotGasto({ cuentas: [item.cuenta], titulo: item.name });
+    else if (expenseGrouping === 'byCostCenter') setPivotGasto({ cuentas: gastoCuentas, titulo: `Centro de costo: ${item.name}`, filtro: { dim: 'cc', valor: item.valor }, vista: 'item' });
+    else setPivotGasto({ cuentas: gastoCuentas, titulo: `Ítem de gasto: ${item.name}`, filtro: { dim: 'item', valor: item.valor }, vista: 'cc' });
+  };
 
   // Financial & Unit Economics Metrics (Clean, professional names)
   const unitEconomics = useMemo(() => {
@@ -819,7 +818,7 @@ export default function IndicadoresFinancierosView({
       </div>
 
       {activeTab === 'kpis' && (
-        <KpiPanel company={company} vouchers={vouchers} accounts={accounts} year={selectedYear} cutoffMonth={cutoffMonth} canConfigure={canConfigureKpis} />
+        <KpiPanel company={company} vouchers={vouchers} accounts={accounts} year={selectedYear} cutoffMonth={cutoffMonth} canConfigure={canConfigureKpis} costCenters={costCenters} expenseItems={expenseItems} />
       )}
 
       {/* CONTENIDO TAB 1: RESUMEN OVERVIEW */}
@@ -1182,8 +1181,8 @@ export default function IndicadoresFinancierosView({
                 </thead>
                 <tbody className="divide-y divide-slate-200">
                   {expenseBreakdown.map((item) => (
-                    <tr key={item.codeOrId} className="hover:bg-slate-50 transition-colors">
-                      <td className="p-2.5 font-semibold text-slate-800">{item.name}</td>
+                    <tr key={item.codeOrId} onClick={() => abrirGasto(item)} title="Ver el detalle por mes, centro de costo e ítem" className="hover:bg-indigo-50 transition-colors cursor-pointer">
+                      <td className="p-2.5 font-semibold text-indigo-800">{item.name}</td>
                       <td className="p-2.5 text-right font-mono font-bold text-slate-900">
                         ${item.total.toLocaleString('es-CL')}
                       </td>
@@ -1383,6 +1382,21 @@ export default function IndicadoresFinancierosView({
             </div>
           </div>
         </div>
+      )}
+      {pivotGasto && (
+        <DetallePivotModal
+          cuentas={pivotGasto.cuentas}
+          naturaleza="GASTO"
+          vouchers={vouchers}
+          anio={selectedYear}
+          mesCorte={cutoffMonth > 0 ? cutoffMonth : 12}
+          titulo={pivotGasto.titulo}
+          costCenters={costCenters}
+          expenseItems={expenseItems}
+          filtroInicial={pivotGasto.filtro}
+          vistaInicial={pivotGasto.vista === 'cuenta' ? undefined : pivotGasto.vista}
+          onClose={() => setPivotGasto(null)}
+        />
       )}
     </div>
   );

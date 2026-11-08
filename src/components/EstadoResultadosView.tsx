@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import DetallePivotModal from './DetallePivotModal';
-import { Company, Voucher, ChartOfAccount, FiscalPeriodYear } from '../types';
+import { Company, Voucher, ChartOfAccount, FiscalPeriodYear, CostCenterMaster, ExpenseItemMaster } from '../types';
 import { EstadoResultadosPrintModal } from './EstadoResultadosPrintModal';
 import { getNaturaleza, getRubroER, RubroERId } from '../utils/ifrsClassification';
 import { 
@@ -31,6 +31,8 @@ interface EstadoResultadosViewProps {
   fiscalYears: FiscalPeriodYear[];
   onOpenAuditor?: () => void;
   onOpenBalanceIFRS?: () => void;
+  costCenters?: CostCenterMaster[];
+  expenseItems?: ExpenseItemMaster[];
 }
 
 interface MonthlyAccountItem {
@@ -55,6 +57,8 @@ export default function EstadoResultadosView({
   fiscalYears,
   periodoGlobal,
   onCambiarPeriodoGlobal,
+  costCenters,
+  expenseItems,
   onOpenAuditor,
   onOpenBalanceIFRS
 }: EstadoResultadosViewProps) {
@@ -987,6 +991,8 @@ export default function EstadoResultadosView({
           anio={selectedYear}
           mesCorte={cutoffMonth > 0 ? cutoffMonth : 12}
           titulo={pivot.titulo}
+          costCenters={costCenters}
+          expenseItems={expenseItems}
           onClose={() => setPivot(null)}
         />
       )}

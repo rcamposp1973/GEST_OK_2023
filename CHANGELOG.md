@@ -10,7 +10,7 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 ---
 
 ## Próxima (en Pruebas) — Cierre y apertura de año
-- Pareto 80/20: ahora explica el saldo por cobrar (clientes) y por pagar (proveedores) al mes de corte, con la misma regla del Balance IFRS (rubros 1102 y 2101, acumulado desde la última apertura). Muestra el saldo contable total, saldos a favor y sin auxiliar, y las cuentas incluidas; cada fila abre los documentos abiertos y movimientos del auxiliar. Principio: la contabilidad manda.
+- Regla 80/20 (antes "Pareto"): ahora explica el saldo por cobrar (clientes) y por pagar (proveedores) al mes de corte, con la misma regla del Balance IFRS (rubros 1102 y 2101, acumulado desde la última apertura). Muestra el saldo contable total, saldos a favor y sin auxiliar, y las cuentas incluidas; cada fila abre los documentos abiertos y movimientos del auxiliar. Principio: la contabilidad manda.
 - Indicadores Financieros › Informe de gastos: ahora usa la misma base que el Estado de Resultados (neto debe-haber, solo comprobantes cuadrados) y cada fila abre la tabla dinámica (centro de costo ⇄ ítem, por mes). El panel muestra "código - nombre" de centros de costo e ítems.
 - KPIs: cada tarjeta se abre y muestra de qué cifras sale (con su fórmula), cada cifra se despliega en sus componentes y cuentas, y las de resultado abren la tabla dinámica por centro de costo, ítem y mes.
 - Estado de Resultados: al hacer clic en un rubro o cuenta se abre un panel tipo tabla dinámica (filas por centro de costo / ítem / cuenta / auxiliar, columnas por mes); clic en una fila baja un nivel, clic en un mes llega a los movimientos; ruta de navegación para volver.

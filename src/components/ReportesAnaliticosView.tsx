@@ -2142,7 +2142,7 @@ export default function ReportesAnaliticosView({
                     salesBreakdownTab === 'CLIENTES' ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-600'
                   }`}
                 >
-                  Ranking Clientes (Pareto)
+                  Ranking Clientes (regla 80/20)
                 </button>
                 <button
                   onClick={() => setSalesBreakdownTab('CENTROS_COSTO')}

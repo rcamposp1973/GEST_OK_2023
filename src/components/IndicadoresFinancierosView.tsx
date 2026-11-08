@@ -578,7 +578,7 @@ export default function IndicadoresFinancierosView({
                 Tablero de Indicadores Financieros, KPIs & Inteligencia de Negocios
               </h3>
               <p className="text-xs text-slate-500">
-                {company.name} (RUT: {company.rut}) &bull; Análisis de Liquidez, Márgenes, Pareto 80/20, Gastos y Rendimiento
+                {company.name} (RUT: {company.rut}) &bull; Análisis de Liquidez, Márgenes, Regla 80/20, Gastos y Rendimiento
               </p>
             </div>
           </div>
@@ -756,7 +756,7 @@ export default function IndicadoresFinancierosView({
           }`}
         >
           <Users className="w-4 h-4 text-emerald-600" />
-          <span>Informe Pareto 80/20 (Clientes/Prov)</span>
+          <span>Regla 80/20 (Clientes/Prov.)</span>
         </button>
 
         <button
@@ -968,7 +968,7 @@ export default function IndicadoresFinancierosView({
               <div>
                 <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
                   <Users className="w-4 h-4 text-indigo-600" />
-                  Análisis de Pareto 80/20: Concentración de Negocio
+                  Regla 80/20: Concentración de Negocio
                 </h4>
                 <p className="text-xs text-slate-500">
                   Identifica el 20% de los clientes que concentra el 80% de las cuentas por cobrar, y el 20% de los proveedores que concentra el 80% de las cuentas por pagar
@@ -1006,7 +1006,7 @@ export default function IndicadoresFinancierosView({
                   <Tooltip formatter={(val: any, name: any) => [name.includes('%') ? `${Number(val).toFixed(1)}%` : `$${Number(val).toLocaleString('es-CL')}`, name]} />
                   <Legend />
                   <Bar yAxisId="left" dataKey="total" name={paretoType === 'clients' ? 'Por cobrar ($)' : 'Por pagar ($)'} fill="#4f46e5" radius={[4, 4, 0, 0]} />
-                  <Line yAxisId="right" type="monotone" dataKey="pctAcumulado" name="% Acumulado Pareto" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} />
+                  <Line yAxisId="right" type="monotone" dataKey="pctAcumulado" name="% Acumulado (regla 80/20)" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>

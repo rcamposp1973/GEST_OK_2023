@@ -4,6 +4,10 @@ import type { ChartOfAccount, Voucher } from '../types';
 
 interface Props {
   account: ChartOfAccount;
+  /** Varias cuentas a la vez (p. ej. un rubro completo); si no se indica, solo `account`. */
+  cuentasExtra?: ChartOfAccount[];
+  /** Solo las líneas de este auxiliar ('' = líneas sin auxiliar). */
+  soloRut?: string;
   vouchers: Voucher[];
   desde?: string;   // YYYY-MM-DD (incluido)
   hasta?: string;   // YYYY-MM-DD (incluido)
@@ -20,7 +24,7 @@ type Linea = {
 const fmt = (n: number) => Math.round(n).toLocaleString('es-CL');
 const SIN = '(sin dato)';
 
-export default function DetalleCuentaModal({ account, vouchers, desde, hasta, titulo, onClose, onOpenVoucher }: Props) {
+export default function DetalleCuentaModal({ account, cuentasExtra, soloRut, vouchers, desde, hasta, titulo, onClose, onOpenVoucher }: Props) {
   const lineas = useMemo<Linea[]>(() => {
     const out: Linea[] = [];
     vouchers.forEach(v => {
@@ -29,7 +33,11 @@ export default function DetalleCuentaModal({ account, vouchers, desde, hasta, ti
       if (desde && f < desde) return;
       if (hasta && f > hasta) return;
       (v.lines || []).forEach(l => {
-        if (l.accountId !== account.id && l.accountCode !== account.code) return;
+        const enCuentas = cuentasExtra && cuentasExtra.length
+          ? cuentasExtra.some(c => c.id === l.accountId || c.code === l.accountCode)
+          : (l.accountId === account.id || l.accountCode === account.code);
+        if (!enCuentas) return;
+        if (soloRut !== undefined && (l.auxiliaryRut || '').trim() !== soloRut) return;
         out.push({
           fecha: f, numero: Number(v.voucherNumber || 0), voucher: v, glosa: l.gloss || v.gloss || '',
           debe: l.debit || 0, haber: l.credit || 0,
@@ -41,7 +49,7 @@ export default function DetalleCuentaModal({ account, vouchers, desde, hasta, ti
       });
     });
     return out.sort((a, b) => a.fecha.localeCompare(b.fecha) || a.numero - b.numero);
-  }, [vouchers, account, desde, hasta]);
+  }, [vouchers, account, cuentasExtra, soloRut, desde, hasta]);
 
   const agrupar = (clave: (l: Linea) => string, etiqueta?: (l: Linea) => string) => {
     const m = new Map<string, { clave: string; etiqueta: string; debe: number; haber: number; n: number }>();

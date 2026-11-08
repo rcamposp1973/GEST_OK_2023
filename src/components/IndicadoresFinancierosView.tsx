@@ -13,8 +13,9 @@ import {
 import { triggerIframePrint } from '../utils/printUtils';
 import KpiPanel from './KpiPanel';
 import { calcularFiguras } from '../utils/kpiEngine';
-import { getNaturaleza } from '../utils/ifrsClassification';
-import { contrapartes, repartirAuxiliar } from '../utils/auxiliarContraparte';
+import { getNaturaleza, getRubroESF } from '../utils/ifrsClassification';
+import { inicioAcumuladoVigente } from '../utils/cierreAnio';
+import DetalleCuentaModal from './DetalleCuentaModal';
 import DetallePivotModal, { etiquetaMaestro } from './DetallePivotModal';
 import {
   BarChart3,
@@ -366,88 +367,74 @@ export default function IndicadoresFinancierosView({
   }, [vouchers, selectedYear, cutoffMonth]);
 
   // Pareto 80/20 Analysis (Clientes / Proveedores)
-  // Pareto: la CONTABILIDAD manda. Todo sale de los comprobantes (misma regla que Resultados);
-  // lo contabilizado sin auxiliar se muestra como "(Sin auxiliar)" para que el total calce con la contabilidad.
-  // El RCV solo se entrega como referencia para explicar diferencias, nunca reemplaza la cifra contable.
-  const paretoData = useMemo(() => {
-    type Item = { rut: string; name: string; total: number };
+  // Pareto 80/20 sobre SALDOS: qué 20% de los clientes explica el 80% de las cuentas por cobrar, y qué 20% de los
+  // proveedores explica el 80% de las cuentas por pagar. La CONTABILIDAD manda: sale de los comprobantes con la misma
+  // regla del Balance IFRS (rubros 1102 y 2101, acumulado desde la última apertura hasta el mes de corte), de modo que
+  // el total calza con el balance. Lo que está sin auxiliar o a favor del auxiliar se muestra aparte, nunca se oculta.
+  const paretoBase = useMemo(() => {
+    const inicio = inicioAcumuladoVigente(vouchers);
+    const ultimo = selectedYear + '-' + String(cutoffMonth > 0 ? cutoffMonth : 12).padStart(2, '0') + '-31';
     const byKey = new Map<string, ChartOfAccount>();
     accounts.forEach(a => { byKey.set(a.id, a); byKey.set(a.code, a); });
-    const clientMap = new Map<string, Item>();
-    const supplierMap = new Map<string, Item>();
-    let ventasSinAux = 0, gastosSinAux = 0;
+    return { inicio, ultimo, byKey };
+  }, [vouchers, accounts, selectedYear, cutoffMonth]);
+
+  const paretoData = useMemo(() => {
+    type Item = { rut: string; name: string; total: number };
+    const { inicio, ultimo, byKey } = paretoBase;
+    const cxc = new Map<string, Item>(), cxp = new Map<string, Item>();
+    const cuentasIncl = { clients: new Map<string, ChartOfAccount>(), suppliers: new Map<string, ChartOfAccount>() };
+    const sinAux = { clients: 0, suppliers: 0 };
+    const total = { clients: 0, suppliers: 0 };
 
     vouchers.forEach(v => {
-      if (v.status === 'Anulado' || v.origin === 'CIERRE_ANIO' || !v.date) return;
-      if (parseInt(v.date.slice(0, 4), 10) !== selectedYear) return;
-      if (cutoffMonth > 0 && parseInt(v.date.slice(5, 7), 10) > cutoffMonth) return;
+      if (v.status === 'Anulado' || !v.date) return;
+      if (v.date > ultimo || (inicio && v.date < inicio)) return;
       const lines = v.lines || [];
       const deb = lines.reduce((a, l) => a + (Number(l.debit) || 0), 0);
       const cre = lines.reduce((a, l) => a + (Number(l.credit) || 0), 0);
       if (Math.abs(deb - cre) > 0.01) return;
-      const natDe = (l: any) => {
-        const acc = byKey.get(l.accountId) || byKey.get(l.accountCode);
-        const n = acc ? getNaturaleza(acc) : null;
-        return n === 'INGRESO' || n === 'GASTO' ? n : null;
-      };
-      const contra = contrapartes(lines, l => natDe(l) !== null);
       lines.forEach(l => {
-        const nat = natDe(l);
-        if (!nat) return;
-        const val = nat === 'INGRESO' ? (Number(l.credit) || 0) - (Number(l.debit) || 0) : (Number(l.debit) || 0) - (Number(l.credit) || 0);
-        if (!val) return;
-        repartirAuxiliar(l, contra).forEach(parte => {
-          const monto = val * parte.parte;
-          if (!parte.rut) { if (nat === 'INGRESO') ventasSinAux += monto; else gastosSinAux += monto; return; }
-          const name = parte.name || auxiliaryMap.get(parte.rut)?.name || `Aux. RUT ${parte.rut}`;
-          const map = nat === 'INGRESO' ? clientMap : supplierMap;
-          const curr = map.get(parte.rut) || { rut: parte.rut, name, total: 0 };
-          curr.total += monto;
-          map.set(parte.rut, curr);
-        });
+        const acc = byKey.get(l.accountId) || byKey.get(l.accountCode);
+        if (!acc) return;
+        const nat = getNaturaleza(acc);
+        const rubro = nat === 'ACTIVO' || nat === 'PASIVO' ? getRubroESF(acc) : '';
+        const tipo: 'clients' | 'suppliers' | null = nat === 'ACTIVO' && rubro === '1102' ? 'clients' : nat === 'PASIVO' && rubro === '2101' ? 'suppliers' : null;
+        if (!tipo) return;
+        const d = Number(l.debit) || 0, c = Number(l.credit) || 0;
+        const saldo = tipo === 'clients' ? d - c : c - d;
+        if (!saldo) return;
+        cuentasIncl[tipo].set(acc.id, acc);
+        total[tipo] += saldo;
+        const rut = (l.auxiliaryRut || '').trim();
+        if (!rut) { sinAux[tipo] += saldo; return; }
+        const map = tipo === 'clients' ? cxc : cxp;
+        const curr = map.get(rut) || { rut, name: (l.auxiliaryName || '').trim() || auxiliaryMap.get(rut)?.name || `Aux. RUT ${rut}`, total: 0 };
+        curr.total += saldo;
+        map.set(rut, curr);
       });
     });
 
-    // Referencia RCV (solo informativa)
-    let rcvVentas = 0, rcvCompras = 0;
-    rcvDocuments.forEach(doc => {
-      const docDate = doc.fechaEmision || doc.date || (doc.period ? `${doc.period}-01` : '');
-      if (docDate && docDate.length >= 7) {
-        if (parseInt(docDate.slice(0, 4), 10) !== selectedYear) return;
-        if (cutoffMonth > 0 && parseInt(docDate.slice(5, 7), 10) > cutoffMonth) return;
-      }
-      const amount = doc.montoNeto || doc.montoTotal || 0;
-      if (doc.tipoRegistro === 'Venta') rcvVentas += amount; else if (doc.tipoRegistro === 'Compra') rcvCompras += amount;
-    });
-
-    const buildParetoTable = (items: Item[], sinAux: number) => {
-      const sorted = items.filter(x => Math.round(x.total) !== 0).sort((a, b) => b.total - a.total);
-      const conAux = sorted.reduce((acc, curr) => acc + curr.total, 0);
-      const grandTotal = conAux + sinAux; // = total contable de la cuenta de resultado
-      let runningSum = 0;
-      const filas = sorted.map((item, idx) => {
-        runningSum += item.total;
-        const pctIndividual = grandTotal > 0 ? (item.total / grandTotal) * 100 : 0;
-        const pctAcumulado = grandTotal > 0 ? (runningSum / grandTotal) * 100 : 0;
-        const isCore80 = pctAcumulado <= 80 || (idx > 0 && grandTotal > 0 && ((runningSum - item.total) / grandTotal) * 100 < 80);
+    const construir = (m: Map<string, Item>, tipo: 'clients' | 'suppliers') => {
+      const todos = Array.from(m.values());
+      const positivos = todos.filter(x => Math.round(x.total) > 0).sort((a, b) => b.total - a.total);
+      const aFavor = todos.filter(x => Math.round(x.total) < 0).reduce((a, x) => a + x.total, 0);
+      const base = positivos.reduce((a, x) => a + x.total, 0);
+      let acum = 0;
+      const filas = positivos.map((item, idx) => {
+        acum += item.total;
+        const pctIndividual = base > 0 ? (item.total / base) * 100 : 0;
+        const pctAcumulado = base > 0 ? (acum / base) * 100 : 0;
+        const isCore80 = pctAcumulado <= 80 || (idx > 0 && base > 0 && ((acum - item.total) / base) * 100 < 80);
         return { rank: idx + 1, rut: item.rut, name: item.name, total: item.total, pctIndividual, pctAcumulado, isCore80 };
       });
-      return { filas, conAux, sinAux, totalContable: grandTotal };
+      return { filas, resumen: { totalContable: total[tipo], base, aFavor, sinAux: sinAux[tipo], cuentas: Array.from(cuentasIncl[tipo].values()) } };
     };
+    const c = construir(cxc, 'clients'), sp = construir(cxp, 'suppliers');
+    return { clients: c.filas, suppliers: sp.filas, resumen: { clients: c.resumen, suppliers: sp.resumen } };
+  }, [vouchers, paretoBase, auxiliaryMap]);
 
-    const c = buildParetoTable(Array.from(clientMap.values()), ventasSinAux);
-    const sp = buildParetoTable(Array.from(supplierMap.values()), gastosSinAux);
-    return {
-      clients: c.filas, suppliers: sp.filas,
-      resumen: {
-        clients: { totalContable: c.totalContable, sinAux: c.sinAux, rcv: rcvVentas },
-        suppliers: { totalContable: sp.totalContable, sinAux: sp.sinAux, rcv: rcvCompras },
-      },
-    };
-  }, [vouchers, accounts, rcvDocuments, auxiliaryMap, selectedYear, cutoffMonth]);
-
-  const [pivotAux, setPivotAux] = useState<{ rut: string; name: string; tipo: 'clients' | 'suppliers' } | null>(null);
-  const cuentasIngreso = useMemo(() => accounts.filter(a => getNaturaleza(a) === 'INGRESO'), [accounts]);
+  const [detSaldo, setDetSaldo] = useState<{ cuentas: ChartOfAccount[]; rut: string; name: string; tipo: 'clients' | 'suppliers' } | null>(null);
 
   // Informe de gastos: misma base que el Estado de Resultados (cuentas de naturaleza GASTO, neto debe-haber,
   // sin anulados, solo comprobantes cuadrados), para que las cifras coincidan y se puedan abrir al detalle.
@@ -984,7 +971,7 @@ export default function IndicadoresFinancierosView({
                   Análisis de Pareto 80/20: Concentración de Negocio
                 </h4>
                 <p className="text-xs text-slate-500">
-                  Identifica el 20% de los auxiliares que generan el 80% del volumen de ventas o gastos
+                  Identifica el 20% de los clientes que concentra el 80% de las cuentas por cobrar, y el 20% de los proveedores que concentra el 80% de las cuentas por pagar
                 </p>
               </div>
 
@@ -995,7 +982,7 @@ export default function IndicadoresFinancierosView({
                     paretoType === 'clients' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  80/20 Clientes (Ventas)
+                  80/20 Clientes (Por cobrar)
                 </button>
                 <button
                   onClick={() => setParetoType('suppliers')}
@@ -1003,7 +990,7 @@ export default function IndicadoresFinancierosView({
                     paretoType === 'suppliers' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  80/20 Proveedores (Gastos)
+                  80/20 Proveedores (Por pagar)
                 </button>
               </div>
             </div>
@@ -1018,7 +1005,7 @@ export default function IndicadoresFinancierosView({
                   <YAxis yAxisId="right" orientation="right" domain={[0, 100]} tickFormatter={(val) => `${val}%`} tick={{ fontSize: 10 }} />
                   <Tooltip formatter={(val: any, name: any) => [name.includes('%') ? `${Number(val).toFixed(1)}%` : `$${Number(val).toLocaleString('es-CL')}`, name]} />
                   <Legend />
-                  <Bar yAxisId="left" dataKey="total" name={paretoType === 'clients' ? 'Venta ($)' : 'Gasto ($)'} fill="#4f46e5" radius={[4, 4, 0, 0]} />
+                  <Bar yAxisId="left" dataKey="total" name={paretoType === 'clients' ? 'Por cobrar ($)' : 'Por pagar ($)'} fill="#4f46e5" radius={[4, 4, 0, 0]} />
                   <Line yAxisId="right" type="monotone" dataKey="pctAcumulado" name="% Acumulado Pareto" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} />
                 </ComposedChart>
               </ResponsiveContainer>
@@ -1027,16 +1014,18 @@ export default function IndicadoresFinancierosView({
             {/* CUADRATURA CON LA CONTABILIDAD */}
             {(() => {
               const r = paretoType === 'clients' ? paretoData.resumen.clients : paretoData.resumen.suppliers;
-              const difRcv = r.rcv - r.totalContable;
+              const f = (n: number) => '$' + Math.round(n).toLocaleString('es-CL');
               return (
-                <div className="mb-3 p-2.5 rounded-lg border border-slate-200 bg-slate-50 text-[11px] text-slate-600 flex flex-wrap gap-x-6 gap-y-1">
-                  <span><b>Total según contabilidad:</b> ${Math.round(r.totalContable).toLocaleString('es-CL')} ({paretoType === 'clients' ? 'ingresos' : 'gastos'}, igual al Estado de Resultados)</span>
-                  <span><b>Sin auxiliar:</b> ${Math.round(r.sinAux).toLocaleString('es-CL')}</span>
-                  {r.rcv > 0 && (
-                    <span title="El RCV es solo una referencia: si difiere, la diferencia se explica; la contabilidad es la que manda.">
-                      <b>Referencia RCV:</b> ${Math.round(r.rcv).toLocaleString('es-CL')} · diferencia con contabilidad ${Math.round(difRcv).toLocaleString('es-CL')}
-                    </span>
-                  )}
+                <div className="mb-3 p-2.5 rounded-lg border border-slate-200 bg-slate-50 text-[11px] text-slate-600 space-y-1">
+                  <div className="flex flex-wrap gap-x-6 gap-y-1">
+                    <span><b>Saldo según contabilidad:</b> {f(r.totalContable)} ({paretoType === 'clients' ? 'por cobrar' : 'por pagar'} al corte, igual al Balance IFRS)</span>
+                    <span><b>Auxiliares con saldo:</b> {f(r.base)} (base del 80/20)</span>
+                    {Math.round(r.aFavor) !== 0 && <span><b>Saldos a favor / anticipos:</b> {f(r.aFavor)}</span>}
+                    {Math.round(r.sinAux) !== 0 && <span><b>Sin auxiliar:</b> {f(r.sinAux)}</span>}
+                  </div>
+                  <div className="text-[10px] text-slate-500">
+                    Cuentas incluidas: {r.cuentas.length ? r.cuentas.map(c => `${c.code} ${c.name}`).join(' · ') : 'ninguna con movimientos'}.
+                  </div>
                 </div>
               );
             })()}
@@ -1049,7 +1038,7 @@ export default function IndicadoresFinancierosView({
                     <th className="p-2.5 text-center">Rank</th>
                     <th className="p-2.5">RUT</th>
                     <th className="p-2.5">Razón Social / Nombre</th>
-                    <th className="p-2.5 text-right">{paretoType === 'clients' ? 'Monto Ventas ($)' : 'Monto Compras ($)'}</th>
+                    <th className="p-2.5 text-right">{paretoType === 'clients' ? 'Saldo por cobrar ($)' : 'Saldo por pagar ($)'}</th>
                     <th className="p-2.5 text-right">% Participación</th>
                     <th className="p-2.5 text-right">% Acumulado</th>
                     <th className="p-2.5 text-center">Categorización 80/20</th>
@@ -1057,7 +1046,7 @@ export default function IndicadoresFinancierosView({
                 </thead>
                 <tbody className="divide-y divide-slate-200">
                   {(paretoType === 'clients' ? paretoData.clients : paretoData.suppliers).map((item) => (
-                    <tr key={item.rut} onClick={() => setPivotAux({ rut: item.rut, name: item.name, tipo: paretoType })} title="Ver el detalle por mes, cuenta y centro de costo" className={`hover:bg-indigo-100/40 transition-colors cursor-pointer ${item.isCore80 ? 'bg-indigo-50/20' : ''}`}>
+                    <tr key={item.rut} onClick={() => setDetSaldo({ cuentas: (paretoType === 'clients' ? paretoData.resumen.clients : paretoData.resumen.suppliers).cuentas, rut: item.rut, name: item.name, tipo: paretoType })} title="Ver los documentos abiertos y movimientos de este auxiliar" className={`hover:bg-indigo-100/40 transition-colors cursor-pointer ${item.isCore80 ? 'bg-indigo-50/20' : ''}`}>
                       <td className="p-2.5 text-center font-bold text-slate-600">{item.rank}</td>
                       <td className="p-2.5 font-mono font-semibold text-slate-900">{item.rut}</td>
                       <td className="p-2.5 font-medium text-slate-800">{item.name}</td>
@@ -1080,7 +1069,7 @@ export default function IndicadoresFinancierosView({
                     </tr>
                   ))}
                   {Math.round((paretoType === 'clients' ? paretoData.resumen.clients : paretoData.resumen.suppliers).sinAux) !== 0 && (
-                    <tr onClick={() => setPivotAux({ rut: '', name: '(Sin auxiliar)', tipo: paretoType })} className="bg-amber-50/50 hover:bg-amber-100/50 cursor-pointer" title="Contabilizado sin auxiliar">
+                    <tr onClick={() => setDetSaldo({ cuentas: (paretoType === 'clients' ? paretoData.resumen.clients : paretoData.resumen.suppliers).cuentas, rut: '', name: '(Sin auxiliar)', tipo: paretoType })} className="bg-amber-50/50 hover:bg-amber-100/50 cursor-pointer" title="Contabilizado sin auxiliar">
                       <td className="p-2.5 text-center text-slate-400">—</td>
                       <td className="p-2.5 font-mono text-slate-400">—</td>
                       <td className="p-2.5 font-medium text-amber-800">(Sin auxiliar) · contabilizado sin RUT</td>
@@ -1091,7 +1080,7 @@ export default function IndicadoresFinancierosView({
                   {(paretoType === 'clients' ? paretoData.clients : paretoData.suppliers).length === 0 && (
                     <tr>
                       <td colSpan={7} className="p-6 text-center text-slate-400">
-                        No hay registros auxiliares contables para generar el informe 80/20 en este ejercicio.
+                        No hay auxiliares con saldo en estas cuentas al mes de corte.
                       </td>
                     </tr>
                   )}
@@ -1410,18 +1399,16 @@ export default function IndicadoresFinancierosView({
           onClose={() => setPivotGasto(null)}
         />
       )}
-      {pivotAux && (
-        <DetallePivotModal
-          cuentas={pivotAux.tipo === 'clients' ? cuentasIngreso : gastoCuentas}
-          naturaleza={pivotAux.tipo === 'clients' ? 'INGRESO' : 'GASTO'}
+      {detSaldo && detSaldo.cuentas.length > 0 && (
+        <DetalleCuentaModal
+          account={detSaldo.cuentas[0]}
+          cuentasExtra={detSaldo.cuentas}
+          soloRut={detSaldo.rut}
           vouchers={vouchers}
-          anio={selectedYear}
-          mesCorte={cutoffMonth > 0 ? cutoffMonth : 12}
-          titulo={`${pivotAux.tipo === 'clients' ? 'Ventas a' : 'Gastos con'} ${pivotAux.rut ? pivotAux.rut + ' ' : ''}${pivotAux.name}`}
-          costCenters={costCenters}
-          expenseItems={expenseItems}
-          filtroInicial={{ dim: 'aux', valor: pivotAux.rut || '(sin dato)' }}
-          onClose={() => setPivotAux(null)}
+          desde={paretoBase.inicio || undefined}
+          hasta={paretoBase.ultimo}
+          titulo={`${detSaldo.tipo === 'clients' ? 'Por cobrar' : 'Por pagar'} · ${detSaldo.rut ? detSaldo.rut + ' ' : ''}${detSaldo.name}`}
+          onClose={() => setDetSaldo(null)}
         />
       )}
     </div>

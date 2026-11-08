@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import DetalleCuentaModal from './DetalleCuentaModal';
+import DetallePivotModal from './DetallePivotModal';
 import { Company, Voucher, ChartOfAccount, FiscalPeriodYear } from '../types';
 import { EstadoResultadosPrintModal } from './EstadoResultadosPrintModal';
 import { getNaturaleza, getRubroER, RubroERId } from '../utils/ifrsClassification';
@@ -61,7 +61,7 @@ export default function EstadoResultadosView({
   const [selectedYear, setSelectedYear] = useState<number>(() => periodoGlobal ? parseInt(periodoGlobal.slice(0, 4), 10) : new Date().getFullYear());
   const [cutoffMonth, setCutoffMonth] = useState<number>(() => periodoGlobal ? parseInt(periodoGlobal.slice(5, 7), 10) : 10);
 
-  const [detalleCuenta, setDetalleCuenta] = useState<ChartOfAccount | null>(null);
+  const [pivot, setPivot] = useState<{ cuentas: ChartOfAccount[]; naturaleza: 'INGRESO' | 'GASTO'; titulo: string } | null>(null);
 
   const ultimoDia = (y: number, m: number) => `${y}-${String(m).padStart(2, '0')}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
 
@@ -393,7 +393,11 @@ export default function EstadoResultadosView({
 
     return (
       <div key={rubro.id} className="border border-slate-200 rounded-lg overflow-hidden bg-white mb-1 shadow-2xs">
-        <div className="px-3 py-1.5 bg-slate-50/80 flex justify-between items-center text-xs">
+        <div
+          onClick={() => rubro.accounts.length > 0 && setPivot({ cuentas: rubro.accounts.map(a => a.account), naturaleza: isExpense ? 'GASTO' : 'INGRESO', titulo: rubro.name })}
+          title="Ver el detalle del rubro por centro de costo, ítem y mes"
+          className="px-3 py-1.5 bg-slate-50/80 flex justify-between items-center text-xs cursor-pointer hover:bg-indigo-50"
+        >
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-200 text-slate-800">
               {rubro.code}
@@ -412,7 +416,7 @@ export default function EstadoResultadosView({
         {showAccountDetails && rubro.accounts.length > 0 && (
           <div className="divide-y divide-slate-100 bg-white text-[11px] font-mono">
             {rubro.accounts.map(acc => (
-              <div key={acc.account.id} onClick={() => setDetalleCuenta(acc.account)} title="Ver el detalle de esta cuenta" className="px-4 py-0.5 flex justify-between items-center hover:bg-indigo-50 pl-8 cursor-pointer">
+              <div key={acc.account.id} onClick={() => setPivot({ cuentas: [acc.account], naturaleza: isExpense ? 'GASTO' : 'INGRESO', titulo: `${acc.account.code} · ${acc.account.name}` })} title="Ver el detalle de esta cuenta" className="px-4 py-0.5 flex justify-between items-center hover:bg-indigo-50 pl-8 cursor-pointer">
                 <div className="flex items-center gap-2 truncate max-w-[380px]">
                   <span className="text-slate-500 font-semibold">{acc.account.code}</span>
                   <span className="font-sans text-slate-700 truncate">{acc.account.name}</span>
@@ -975,14 +979,15 @@ export default function EstadoResultadosView({
         showAccountDetails={showAccountDetails}
         statementData={statementData}
       />
-      {detalleCuenta && (
-        <DetalleCuentaModal
-          account={detalleCuenta}
+      {pivot && (
+        <DetallePivotModal
+          cuentas={pivot.cuentas}
+          naturaleza={pivot.naturaleza}
           vouchers={vouchers}
-          desde={`${selectedYear}-01-01`}
-          hasta={ultimoDia(selectedYear, cutoffMonth > 0 ? cutoffMonth : 12)}
-          titulo="Estado de Resultados · detalle de cuenta"
-          onClose={() => setDetalleCuenta(null)}
+          anio={selectedYear}
+          mesCorte={cutoffMonth > 0 ? cutoffMonth : 12}
+          titulo={pivot.titulo}
+          onClose={() => setPivot(null)}
         />
       )}
     </div>

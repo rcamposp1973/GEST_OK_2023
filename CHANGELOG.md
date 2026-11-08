@@ -10,6 +10,7 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 ---
 
 ## Próxima (en Pruebas) — Cierre y apertura de año
+- Estado de Resultados: al hacer clic en un rubro o cuenta se abre un panel tipo tabla dinámica (filas por centro de costo / ítem / cuenta / auxiliar, columnas por mes); clic en una fila baja un nivel, clic en un mes llega a los movimientos; ruta de navegación para volver.
 - Nuevo módulo **Cierre y apertura de año** (Finanzas): revisión previa, comprobante de cierre de resultados (31-12) y comprobante de apertura del año siguiente (01-01) con los saldos; las cuentas con auxiliar o documento se abren partida por partida (solo lo pendiente). Se puede revertir.
 - Balance IFRS, Balance de 8 columnas y Estado de Resultados ignoran el comprobante de cierre para no vaciar el resultado del año.
 - Las cuentas sin auxiliar que se analizan con pareos se abren partida por partida (solo lo no pareado al 31-12).

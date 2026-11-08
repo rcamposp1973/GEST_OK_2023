@@ -25,6 +25,8 @@ export interface KpiFigures {
   margenBruto: number; ebit: number; ebitda: number; resultado: number;
   // Series mensuales (12)
   ingresosMes: number[]; gastosMes: number[];
+  // Cuentas que componen cada cifra base (para explicar y abrir el detalle de cada KPI)
+  detalle: Record<string, { acc: ChartOfAccount; valor: number }[]>;
 }
 
 export function calcularFiguras(vouchers: Voucher[], accounts: ChartOfAccount[], year: number, cutoffMonth: number, inputs: KpiInputs = {}): KpiFigures {
@@ -61,9 +63,13 @@ export function calcularFiguras(vouchers: Voucher[], accounts: ChartOfAccount[],
     inputs, meses: corte, efectivo: 0, cxc: 0, inventarios: 0, cxp: 0, activoCorriente: 0, activoNoCorriente: 0, activoTotal: 0,
     pasivoCorriente: 0, pasivoNoCorriente: 0, pasivoTotal: 0, deudaFinanciera: 0, patrimonio: 0,
     ingresos: 0, costoVentas: 0, gastoPersonal: 0, gastoAdm: 0, depreciacion: 0, ingFin: 0, costoFin: 0,
-    otrosIng: 0, otrosGastos: 0, impuesto: 0, margenBruto: 0, ebit: 0, ebitda: 0, resultado: 0, ingresosMes, gastosMes
+    otrosIng: 0, otrosGastos: 0, impuesto: 0, margenBruto: 0, ebit: 0, ebitda: 0, resultado: 0, ingresosMes, gastosMes,
+    detalle: {}
   };
   let totIng = 0, totGas = 0;
+  const detalle: Record<string, { acc: ChartOfAccount; valor: number }[]> = {};
+  const reg = (k: string, acc: ChartOfAccount, valor: number) => { (detalle[k] ||= []).push({ acc, valor }); };
+  f.detalle = detalle;
 
   sums.forEach(({ acc, d, c }) => {
     const nat = getNaturaleza(acc);
@@ -71,33 +77,33 @@ export function calcularFiguras(vouchers: Voucher[], accounts: ChartOfAccount[],
       const s = d - c;
       const r = getRubroESF(acc);
       const sec = RUBROS_ESF.find(x => x.id === r)?.seccion || 'ACTIVO_CORRIENTE';
-      if (sec === 'ACTIVO_NO_CORRIENTE') f.activoNoCorriente += s; else f.activoCorriente += s;
-      if (r === '1101') f.efectivo += s;
-      if (r === '1102') f.cxc += s;
-      if (r === '1103') f.inventarios += s;
+      if (sec === 'ACTIVO_NO_CORRIENTE') { f.activoNoCorriente += s; reg('activoNoCorriente', acc, s); } else { f.activoCorriente += s; reg('activoCorriente', acc, s); }
+      if (r === '1101') { f.efectivo += s; reg('efectivo', acc, s); }
+      if (r === '1102') { f.cxc += s; reg('cxc', acc, s); }
+      if (r === '1103') { f.inventarios += s; reg('inventarios', acc, s); }
     } else if (nat === 'PASIVO') {
       const s = c - d;
       const r = getRubroESF(acc);
       const sec = RUBROS_ESF.find(x => x.id === r)?.seccion || 'PASIVO_CORRIENTE';
-      if (sec === 'PASIVO_NO_CORRIENTE') f.pasivoNoCorriente += s; else f.pasivoCorriente += s;
-      if (r === '2101') f.cxp += s;
-      if (r === '2102' || r === '2201') f.deudaFinanciera += s;
+      if (sec === 'PASIVO_NO_CORRIENTE') { f.pasivoNoCorriente += s; reg('pasivoNoCorriente', acc, s); } else { f.pasivoCorriente += s; reg('pasivoCorriente', acc, s); }
+      if (r === '2101') { f.cxp += s; reg('cxp', acc, s); }
+      if (r === '2102' || r === '2201') { f.deudaFinanciera += s; reg('deudaFinanciera', acc, s); }
     } else if (nat === 'PATRIMONIO') {
-      f.patrimonio += c - d;
+      f.patrimonio += c - d; reg('patrimonio', acc, c - d);
     } else if (nat === 'INGRESO') {
       const s = c - d; totIng += s;
       const r = getRubroER(acc);
-      if (r === 'ING_FIN') f.ingFin += s; else if (r === 'OTROS_ING') f.otrosIng += s; else f.ingresos += s;
+      if (r === 'ING_FIN') { f.ingFin += s; reg('ingFin', acc, s); } else if (r === 'OTROS_ING') { f.otrosIng += s; reg('otrosIng', acc, s); } else { f.ingresos += s; reg('ingresos', acc, s); }
     } else if (nat === 'GASTO') {
       const s = d - c; totGas += s;
       switch (getRubroER(acc)) {
-        case 'COSTO_VENTAS': f.costoVentas += s; break;
-        case 'GASTO_PERSONAL': f.gastoPersonal += s; break;
-        case 'DEPRECIACION': f.depreciacion += s; break;
-        case 'COSTO_FIN': f.costoFin += s; break;
-        case 'OTROS_GASTOS': f.otrosGastos += s; break;
-        case 'IMPUESTO': f.impuesto += s; break;
-        default: f.gastoAdm += s;
+        case 'COSTO_VENTAS': f.costoVentas += s; reg('costoVentas', acc, s); break;
+        case 'GASTO_PERSONAL': f.gastoPersonal += s; reg('gastoPersonal', acc, s); break;
+        case 'DEPRECIACION': f.depreciacion += s; reg('depreciacion', acc, s); break;
+        case 'COSTO_FIN': f.costoFin += s; reg('costoFin', acc, s); break;
+        case 'OTROS_GASTOS': f.otrosGastos += s; reg('otrosGastos', acc, s); break;
+        case 'IMPUESTO': f.impuesto += s; reg('impuesto', acc, s); break;
+        default: f.gastoAdm += s; reg('gastoAdm', acc, s);
       }
     }
   });
@@ -110,6 +116,50 @@ export function calcularFiguras(vouchers: Voucher[], accounts: ChartOfAccount[],
   f.ebit = f.margenBruto - f.gastoPersonal - f.gastoAdm - f.depreciacion;
   f.ebitda = f.ebit + f.depreciacion;
   return f;
+}
+
+// ───────────────────── Explicación de cada KPI ─────────────────────
+/** Nombre legible de cada cifra que usan las fórmulas. */
+export const FIGURA_NOMBRE: Record<string, string> = {
+  efectivo: 'Efectivo y equivalentes', cxc: 'Cuentas por cobrar', inventarios: 'Inventarios', cxp: 'Cuentas por pagar',
+  activoCorriente: 'Activo corriente', activoNoCorriente: 'Activo no corriente', activoTotal: 'Activo total',
+  pasivoCorriente: 'Pasivo corriente', pasivoNoCorriente: 'Pasivo no corriente', pasivoTotal: 'Pasivo total',
+  deudaFinanciera: 'Deuda financiera', patrimonio: 'Patrimonio (incluye resultado del ejercicio)',
+  ingresos: 'Ingresos de actividades ordinarias', costoVentas: 'Costo de ventas', gastoPersonal: 'Gastos de personal',
+  gastoAdm: 'Gastos de administración', depreciacion: 'Depreciación y amortización', ingFin: 'Ingresos financieros',
+  costoFin: 'Costos financieros', otrosIng: 'Otras ganancias', otrosGastos: 'Otras pérdidas', impuesto: 'Impuesto a las ganancias',
+  margenBruto: 'Margen bruto', ebit: 'Resultado operacional', ebitda: 'EBITDA', resultado: 'Resultado del ejercicio',
+};
+/** Cifras que se arman a partir de otras (signo +1 suma, -1 resta). */
+export const FIGURA_DERIVADA: Record<string, { fig: string; signo: 1 | -1 }[]> = {
+  activoTotal: [{ fig: 'activoCorriente', signo: 1 }, { fig: 'activoNoCorriente', signo: 1 }],
+  pasivoTotal: [{ fig: 'pasivoCorriente', signo: 1 }, { fig: 'pasivoNoCorriente', signo: 1 }],
+  margenBruto: [{ fig: 'ingresos', signo: 1 }, { fig: 'costoVentas', signo: -1 }],
+  ebit: [{ fig: 'margenBruto', signo: 1 }, { fig: 'gastoPersonal', signo: -1 }, { fig: 'gastoAdm', signo: -1 }, { fig: 'depreciacion', signo: -1 }],
+  ebitda: [{ fig: 'ebit', signo: 1 }, { fig: 'depreciacion', signo: 1 }],
+  resultado: [
+    { fig: 'ingresos', signo: 1 }, { fig: 'costoVentas', signo: -1 }, { fig: 'gastoPersonal', signo: -1 }, { fig: 'gastoAdm', signo: -1 },
+    { fig: 'depreciacion', signo: -1 }, { fig: 'ingFin', signo: 1 }, { fig: 'otrosIng', signo: 1 }, { fig: 'costoFin', signo: -1 },
+    { fig: 'otrosGastos', signo: -1 }, { fig: 'impuesto', signo: -1 },
+  ],
+};
+/** Cifras de resultado (se abren por mes) y su naturaleza; el resto son saldos al corte. */
+export const FIGURA_RESULTADO: Record<string, 'INGRESO' | 'GASTO'> = {
+  ingresos: 'INGRESO', ingFin: 'INGRESO', otrosIng: 'INGRESO',
+  costoVentas: 'GASTO', gastoPersonal: 'GASTO', gastoAdm: 'GASTO', depreciacion: 'GASTO', costoFin: 'GASTO', otrosGastos: 'GASTO', impuesto: 'GASTO',
+};
+
+/** Detecta qué cifras lee la fórmula de un KPI (sin tener que declararlo a mano en el catálogo). */
+export function cifrasDeKpi(k: { calcular: (f: KpiFigures) => number | null }, f: KpiFigures): string[] {
+  const usadas: string[] = [];
+  const proxy = new Proxy(f, {
+    get(t, prop) {
+      if (typeof prop === 'string' && prop in FIGURA_NOMBRE && !usadas.includes(prop)) usadas.push(prop);
+      return (t as any)[prop];
+    },
+  });
+  try { k.calcular(proxy as KpiFigures); } catch { /* fórmula con datos incompletos */ }
+  return usadas;
 }
 
 // ───────────────────────── Catálogo ─────────────────────────

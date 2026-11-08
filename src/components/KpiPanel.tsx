@@ -1,11 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { Settings2, CheckCircle2, AlertCircle, Save } from 'lucide-react';
+import KpiDetalleModal from './KpiDetalleModal';
 import { db } from '../lib/firebase';
 import type { Company, Voucher, ChartOfAccount } from '../types';
 import {
   calcularFiguras, KPI_CATALOGO, KPI_PAQUETES, KPI_POR_ID, KpiConfig, KpiGrupo,
-  configPorDefecto, formatKpi, semaforo, KpiInputs
+  configPorDefecto, formatKpi, semaforo, KpiInputs, KpiDef
 } from '../utils/kpiEngine';
 
 interface Props {
@@ -26,6 +27,7 @@ export default function KpiPanel({ company, vouchers, accounts, year, cutoffMont
   const [borrador, setBorrador] = useState<KpiConfig>(inicial);
   const [guardando, setGuardando] = useState(false);
   const [msg, setMsg] = useState('');
+  const [kpiAbierto, setKpiAbierto] = useState<KpiDef | null>(null);
 
   const [inputs, setInputs] = useState<KpiInputs>(((company as any).kpiInputs || {})[String(year)] || {});
   const [inputsTodos, setInputsTodos] = useState<Record<string, KpiInputs>>((company as any).kpiInputs || {});
@@ -179,7 +181,7 @@ export default function KpiPanel({ company, vouchers, accounts, year, cutoffMont
               const s = semaforo(k, v);
               const borde = s === 'ok' ? 'border-emerald-300' : s === 'alerta' ? 'border-amber-300' : 'border-slate-200';
               return (
-                <div key={k.id} className={`bg-white rounded-xl border ${borde} p-3 shadow-xs`} title={k.descripcion}>
+                <div key={k.id} onClick={() => setKpiAbierto(k)} className={`bg-white rounded-xl border ${borde} p-3 shadow-xs cursor-pointer hover:shadow-md hover:border-indigo-300 transition`} title="Clic para ver de dónde sale este KPI">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-semibold text-slate-600">{k.nombre}</span>
                     {s === 'ok' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
@@ -187,12 +189,16 @@ export default function KpiPanel({ company, vouchers, accounts, year, cutoffMont
                   </div>
                   <div className="text-xl font-extrabold text-slate-900 mt-1">{formatKpi(k, v)}</div>
                   <div className="text-[10px] text-slate-400 mt-1 leading-snug">{k.descripcion}</div>
+                  <div className="text-[10px] text-indigo-600 font-semibold mt-1" data-solo-trabajo>Ver detalle ›</div>
                 </div>
               );
             })}
           </div>
         </div>
       ))}
+      {kpiAbierto && (
+        <KpiDetalleModal kpi={kpiAbierto} figuras={figuras} vouchers={vouchers} year={year} cutoffMonth={cutoffMonth} onClose={() => setKpiAbierto(null)} />
+      )}
     </div>
   );
 }

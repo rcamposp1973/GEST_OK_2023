@@ -3,6 +3,7 @@ import { db, auth } from '../lib/firebase';
 import { collection, getDocs, doc, setDoc, deleteDoc, writeBatch, updateDoc } from 'firebase/firestore';
 import { getNaturaleza } from '../utils/ifrsClassification';
 import { getAllOpenPeriods } from '../utils/periodUtils';
+import { repartoParcial, pareadoPorLinea } from '../utils/pareoParcial';
 import {
   Company,
   ChartOfAccount,
@@ -80,6 +81,10 @@ export interface ExtVoucherLine {
   auxiliaryName?: string;
   matchId?: string | null;
   matchGroup?: AccountMatch | null;
+  /** Pareo parcial: la partida se muestra en fragmentos (lo pareado y lo que sigue abierto). */
+  parcial?: boolean;
+  origDebit?: number;
+  origCredit?: number;
 }
 
 export default function AnalisisCuentasView({
@@ -208,8 +213,8 @@ export default function AnalisisCuentasView({
   const accountLines = useMemo(() => {
     if (!selectedAccountId) return [];
     
-    // Mapa rápido de lineKeys calzadas -> AccountMatch
-    const matchedMap = new Map<string, AccountMatch>();
+    // Mapa rápido de lineKeys calzadas -> pareos que la cubren (una partida puede estar pareada en partes)
+    const matchedMap = new Map<string, { match: AccountMatch; ref: MatchedLineRef }[]>();
     matches.forEach(m => {
       if (m.status !== 'DESCALZADO') {
         // Fecha de pareo = fecha del movimiento más nuevo del grupo (sin importar cuándo se hizo el pareo)
@@ -217,7 +222,9 @@ export default function AnalisisCuentasView({
         if (fechaCorte && fechaPareo > fechaCorte) return; // a la fecha de corte aún estaba abierta
         m.matchedLines.forEach(l => {
           const key = `${l.voucherId}_${l.lineIndex}`;
-          matchedMap.set(key, m);
+          const arr = matchedMap.get(key) || [];
+          arr.push({ match: m, ref: l });
+          matchedMap.set(key, arr);
         });
       }
     });
@@ -232,10 +239,8 @@ export default function AnalisisCuentasView({
       voucher.lines.forEach((line, index) => {
         if (line.accountId === selectedAccountId || line.accountCode === selectedAccount?.code) {
           const lineKey = `${voucher.id}_${index}`;
-          const matchGroup = matchedMap.get(lineKey) || null;
-          
-          lines.push({
-            key: lineKey,
+          const refs = matchedMap.get(lineKey) || [];
+          const base = {
             voucherId: voucher.id,
             voucherNumber: Number(voucher.voucherNumber || (voucher as any).number || 0),
             voucherDate: voucher.date,
@@ -245,15 +250,37 @@ export default function AnalisisCuentasView({
             accountId: line.accountId || selectedAccountId,
             accountCode: line.accountCode || selectedAccount?.code || '',
             accountName: line.accountName || selectedAccount?.name || '',
-            debit: line.debit || 0,
-            credit: line.credit || 0,
             gloss: line.gloss || voucher.gloss || '',
             documentRef: line.documentRef,
             auxiliaryRut: line.auxiliaryRut,
             auxiliaryName: line.auxiliaryName,
-            matchId: matchGroup ? matchGroup.id : null,
-            matchGroup: matchGroup
-          });
+            origDebit: line.debit || 0,
+            origCredit: line.credit || 0,
+          };
+          const pareadoD = refs.reduce((a, r) => a + (r.ref.debit || 0), 0);
+          const pareadoC = refs.reduce((a, r) => a + (r.ref.credit || 0), 0);
+          const restoD = Math.max(0, (line.debit || 0) - pareadoD);
+          const restoC = Math.max(0, (line.credit || 0) - pareadoC);
+          const quedaAbierto = restoD > 0.5 || restoC > 0.5;
+
+          if (refs.length === 0) {
+            lines.push({ ...base, key: lineKey, debit: line.debit || 0, credit: line.credit || 0, matchId: null, matchGroup: null });
+          } else {
+            // Partida pareada completa por un solo pareo: igual que siempre (misma clave). Si está pareada en partes,
+            // se muestra un fragmento por cada pareo y, aparte, lo que sigue abierto.
+            const fragmentada = quedaAbierto || refs.length > 1;
+            refs.forEach(r => {
+              lines.push({
+                ...base,
+                key: fragmentada ? `${lineKey}#${r.match.id}` : lineKey,
+                debit: r.ref.debit || 0, credit: r.ref.credit || 0,
+                matchId: r.match.id, matchGroup: r.match, parcial: fragmentada,
+              });
+            });
+            if (quedaAbierto) {
+              lines.push({ ...base, key: lineKey, debit: restoD, credit: restoC, matchId: null, matchGroup: null, parcial: true });
+            }
+          }
         }
       });
     });
@@ -265,6 +292,14 @@ export default function AnalisisCuentasView({
       return a.voucherNumber - b.voucherNumber;
     });
   }, [selectedAccountId, selectedAccount, vouchers, periodFilter, matches, fechaCorte]);
+
+  // Cuánto de cada partida ya está pareado (incluye pareos posteriores a la fecha de corte): evita parear dos veces lo mismo
+  const pareadoTotales = useMemo(() => pareadoPorLinea(matches), [matches]);
+  const lineaYaPareada = (l: ExtVoucherLine): boolean => {
+    const u = pareadoTotales.get(`${l.voucherId}_${l.lineIndex}`);
+    if (!u) return false;
+    return u.debit + l.debit > (l.origDebit ?? l.debit) + 0.5 || u.credit + l.credit > (l.origCredit ?? l.credit) + 0.5;
+  };
 
   // --- LISTA DE RUTS / AUXILIARES PRESENTES EN ESTA CUENTA ---
   const accountRutsList = useMemo(() => {
@@ -696,9 +731,7 @@ export default function AnalisisCuentasView({
     const cuentaDif = accounts.find(a => a.id === cuentaDifId);
     if (!cuentaDif) { window.alert('Elige la cuenta donde se registrará la diferencia.'); return; }
     const todas = [...selectionMath.selectedDebitsList, ...selectionMath.selectedCreditsList];
-    const yaPareadas = new Set<string>();
-    matches.forEach(m => { if (m.status !== 'DESCALZADO') m.matchedLines.forEach(l => yaPareadas.add(`${l.voucherId}_${l.lineIndex}`)); });
-    if (todas.some(l => yaPareadas.has(l.key))) { window.alert('Alguna partida ya fue compensada con una fecha posterior. Quita la fecha de corte y revisa el pareo anterior.'); return; }
+    if (todas.some(l => lineaYaPareada(l))) { window.alert('Alguna partida ya fue compensada con una fecha posterior. Quita la fecha de corte y revisa el pareo anterior.'); return; }
     const fecha = todas.reduce((mx, l) => ((l.voucherDate || '') > mx ? (l.voucherDate || '') : mx), '');
     const periodo = fecha.slice(0, 7);
     if (fiscalYears && fiscalYears.length > 0 && !getAllOpenPeriods(fiscalYears).some(p => p.period === periodo)) {
@@ -769,6 +802,59 @@ export default function AnalisisCuentasView({
     }
   };
 
+  // --- PAREO PARCIAL: se parea hasta el monto menor (el lado mayor, de la partida más antigua a la más nueva) y el resto queda abierto ---
+  const repartoSel = useMemo(
+    () => repartoParcial(selectionMath.selectedDebitsList, selectionMath.selectedCreditsList),
+    [selectionMath.selectedDebitsList, selectionMath.selectedCreditsList]
+  );
+  const puedeParcial = selectionMath.diff > 0 && selectionMath.selectedDebitsList.length > 0 && selectionMath.selectedCreditsList.length > 0 && repartoSel.monto > 0;
+
+  const handlePartialMatch = async () => {
+    if (!puedeParcial || !selectedAccount) return;
+    const seleccion = [...selectionMath.selectedDebitsList, ...selectionMath.selectedCreditsList];
+    if (seleccion.some(l => lineaYaPareada(l))) {
+      window.alert('Alguna partida ya fue compensada con una fecha posterior. Quita la fecha de corte y revisa el pareo anterior.');
+      return;
+    }
+    const montoPor = new Map<string, number>();
+    [...repartoSel.debitos, ...repartoSel.creditos].forEach(a => montoPor.set(a.key, a.monto));
+    const refs: MatchedLineRef[] = seleccion
+      .filter(l => montoPor.has(l.key))
+      .map(l => ({
+        voucherId: l.voucherId, voucherNumber: l.voucherNumber, voucherDate: l.voucherDate, voucherPeriod: l.voucherPeriod,
+        lineIndex: l.lineIndex, accountId: l.accountId, accountCode: l.accountCode,
+        debit: l.debit > 0 ? montoPor.get(l.key)! : 0, credit: l.credit > 0 ? montoPor.get(l.key)! : 0,
+        gloss: l.gloss, documentRef: l.documentRef, auxiliaryRut: l.auxiliaryRut, auxiliaryName: l.auxiliaryName,
+      }));
+    setSaveStatus('SAVING');
+    try {
+      const matchId = `match_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+      const ahora = new Date().toISOString();
+      const nuevo: AccountMatch = {
+        id: matchId, accountId: selectedAccount.id, accountCode: selectedAccount.code, accountName: selectedAccount.name,
+        matchedLines: refs,
+        totalAmount: repartoSel.monto,
+        matchDate: ahora,
+        fechaPareo: refs.reduce((mx, l) => ((l.voucherDate || '') > mx ? (l.voucherDate || '') : mx), ''),
+        matchedBy: auth.currentUser?.email || 'Usuario Contable',
+        notes: matchNotes.trim() || `Pareo parcial por $${Math.round(repartoSel.monto).toLocaleString('es-CL')}`,
+        creationMode: 'MANUAL', status: 'CALZADO',
+      };
+      await setDoc(doc(db, 'studies', studyId, 'companies', company.id, 'accountMatches', matchId), nuevo);
+      setMatches(prev => [...prev, nuevo]);
+      setSelectedDebitKeys([]); setSelectedCreditKeys([]); setMatchNotes('');
+      setSaveStatus('SAVED');
+      logAuditEvent({
+        userId: auth.currentUser?.uid || 'user', userEmail: auth.currentUser?.email || 'usuario@gestok.cl', studyId, companyId: company.id,
+        action: 'CONTABILIZAR', module: 'PLAN_CUENTAS',
+        details: `Pareo parcial en ${selectedAccount.code} por $${Math.round(repartoSel.monto).toLocaleString('es-CL')} (${refs.length} líneas; resto abierto cargos $${Math.round(repartoSel.restoDebitos)} / abonos $${Math.round(repartoSel.restoCreditos)})`,
+      } as any);
+    } catch (err) {
+      console.error('Error al guardar pareo parcial:', err);
+      setSaveStatus('ERROR');
+    }
+  };
+
   // --- POSICIONES POR IDENTIFICADOR (ej: cada fondo mutuo, cada folio) ---
   const [verPosiciones, setVerPosiciones] = useState<boolean>(true);
   const posiciones = useMemo(() => {
@@ -789,9 +875,7 @@ export default function AnalisisCuentasView({
     if (!selectionMath.isMatchedPair || !selectedAccount) return;
 
     // Con fecha de corte activa hay partidas que se ven abiertas pero ya fueron compensadas después: no se pueden parear dos veces
-    const yaPareadas = new Set<string>();
-    matches.forEach(m => { if (m.status !== 'DESCALZADO') m.matchedLines.forEach(l => yaPareadas.add(`${l.voucherId}_${l.lineIndex}`)); });
-    const repetida = [...selectionMath.selectedDebitsList, ...selectionMath.selectedCreditsList].find(l => yaPareadas.has(l.key));
+    const repetida = [...selectionMath.selectedDebitsList, ...selectionMath.selectedCreditsList].find(l => lineaYaPareada(l));
     if (repetida) {
       window.alert(`La partida del comprobante #${repetida.voucherNumber} ya fue compensada con una fecha posterior. Quita la fecha de corte y deshaz ese pareo si quieres rehacerlo.`);
       return;
@@ -2409,6 +2493,22 @@ export default function AnalisisCuentasView({
                   title="Crea un comprobante con la diferencia y compensa todo el grupo"
                 >
                   Compensar y registrar diferencia
+                </button>
+              </div>
+            )}
+
+            {/* Pareo parcial: se compensa hasta el monto menor y el resto queda abierto */}
+            {puedeParcial && (
+              <div className="flex items-center gap-2 bg-slate-800 border border-sky-500/40 rounded-lg px-2 py-1.5">
+                <span className="text-[11px] text-sky-200 max-w-[210px] leading-tight">
+                  Parear ${Math.round(repartoSel.monto).toLocaleString('es-CL')} y dejar abierto ${Math.round(selectionMath.sumDebits > selectionMath.sumCredits ? repartoSel.restoDebitos : repartoSel.restoCreditos).toLocaleString('es-CL')} ({selectionMath.sumDebits > selectionMath.sumCredits ? 'cargos' : 'abonos'}, de la partida más antigua a la más nueva)
+                </span>
+                <button
+                  onClick={handlePartialMatch}
+                  className="px-3 py-1.5 bg-sky-500 hover:bg-sky-400 text-slate-900 rounded-md font-bold text-[11px] whitespace-nowrap"
+                  title="Parea hasta el monto menor; lo que sobra del lado mayor sigue como partida abierta"
+                >
+                  Parear parcialmente
                 </button>
               </div>
             )}

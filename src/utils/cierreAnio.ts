@@ -77,14 +77,20 @@ export function generarPropuesta(accounts: ChartOfAccount[], vouchers: Voucher[]
   // Saldos por cuenta: resultados solo del año; balance acumulado hasta el cierre
   // Pareos vigentes al 31-12 (análisis de cuentas): las líneas pareadas no se arrastran a la apertura
   const hastaStr = `${anio}-12-31`;
-  const pareadas = new Set<string>();
+  // Monto ya pareado por línea (un pareo parcial compensa solo una parte; el resto sigue abierto y se arrastra)
+  const pareado = new Map<string, { debit: number; credit: number }>();
   const cuentasConPareo = new Set<string>();
   matches.forEach(m => {
     if (m.status === 'DESCALZADO') return;
     const fp = m.fechaPareo || m.matchedLines.reduce((mx, l) => ((l.voucherDate || '') > mx ? (l.voucherDate || '') : mx), '');
     if (fp > hastaStr) return;
     cuentasConPareo.add(m.accountId);
-    m.matchedLines.forEach(l => pareadas.add(`${l.voucherId}_${l.lineIndex}`));
+    m.matchedLines.forEach(l => {
+      const k = `${l.voucherId}_${l.lineIndex}`;
+      const e = pareado.get(k) || { debit: 0, credit: 0 };
+      e.debit += l.debit || 0; e.credit += l.credit || 0;
+      pareado.set(k, e);
+    });
   });
   const abiertasSinAux = new Map<string, VoucherLine[]>();  // cuenta con pareos -> líneas aún abiertas
   const saldo = new Map<string, number>();                 // cuenta -> debe - haber
@@ -99,10 +105,15 @@ export function generarPropuesta(accounts: ChartOfAccount[], vouchers: Voucher[]
       if (esResultado && !v.date.startsWith(String(anio))) return;
       const neto = (l.debit || 0) - (l.credit || 0);
       saldo.set(cta.id, (saldo.get(cta.id) || 0) + neto);
-      if (!esResultado && !(cta.requiereAuxiliarRUT || cta.requiereDocumento) && cuentasConPareo.has(cta.id) && !pareadas.has(`${v.id}_${idx}`) && neto !== 0) {
-        const arr = abiertasSinAux.get(cta.id) || [];
-        arr.push({ ...l, gloss: `${v.date} Vch #${v.voucherNumber} ${l.gloss || v.gloss || ''}`.trim() });
-        abiertasSinAux.set(cta.id, arr);
+      if (!esResultado && !(cta.requiereAuxiliarRUT || cta.requiereDocumento) && cuentasConPareo.has(cta.id) && neto !== 0) {
+        const par = pareado.get(`${v.id}_${idx}`);
+        const restoD = Math.max(0, (l.debit || 0) - (par?.debit || 0));
+        const restoC = Math.max(0, (l.credit || 0) - (par?.credit || 0));
+        if (restoD > 0.5 || restoC > 0.5) {
+          const arr = abiertasSinAux.get(cta.id) || [];
+          arr.push({ ...l, debit: restoD, credit: restoC, gloss: `${v.date} Vch #${v.voucherNumber} ${l.gloss || v.gloss || ''}`.trim() });
+          abiertasSinAux.set(cta.id, arr);
+        }
       }
       if (!esResultado && (cta.requiereAuxiliarRUT || cta.requiereDocumento)) {
         const mapa = partidas.get(cta.id) || new Map<string, VoucherLine>();

@@ -294,13 +294,26 @@ export default function PlanillaConsultasDinamicasView({
   // Mapa de líneas calzadas: `${voucherId}_${lineIndex}` -> matchId
   const matchedLinesMap = useMemo(() => {
     const map = new Map<string, string>();
+    // Una partida pareada solo en parte (pareo parcial) sigue abierta: se considera compensada únicamente si lo pareado cubre su monto
+    const montos = new Map<string, { d: number; c: number }>();
     matches.forEach(m => {
+      if (m.status === 'DESCALZADO') return;
       m.matchedLines.forEach(l => {
-        map.set(`${l.voucherId}_${l.lineIndex}`, m.id);
+        const k = `${l.voucherId}_${l.lineIndex}`;
+        map.set(k, m.id);
+        const e = montos.get(k) || { d: 0, c: 0 };
+        e.d += l.debit || 0; e.c += l.credit || 0;
+        montos.set(k, e);
       });
     });
+    const lineaOriginal = new Map<string, { d: number; c: number }>();
+    vouchers.forEach(v => (v.lines || []).forEach((ln, i) => lineaOriginal.set(`${v.id}_${i}`, { d: Number(ln.debit) || 0, c: Number(ln.credit) || 0 })));
+    montos.forEach((e, k) => {
+      const o = lineaOriginal.get(k);
+      if (o && (o.d - e.d > 0.5 || o.c - e.c > 0.5)) map.delete(k);
+    });
     return map;
-  }, [matches]);
+  }, [matches, vouchers]);
 
   // Normalizar fecha de corte
   const normalizedCutoffDate = useMemo(() => {

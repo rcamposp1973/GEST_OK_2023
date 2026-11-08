@@ -59,16 +59,39 @@ export default function DetalleCuentaModal({ account, vouchers, desde, hasta, ti
   const porItem = useMemo(() => agrupar(l => l.item), [lineas]);
   const porProy = useMemo(() => agrupar(l => l.proyecto), [lineas]);
   const porProd = useMemo(() => agrupar(l => l.producto), [lineas]);
-  const abiertos = useMemo(
-    () => agrupar(l => (l.doc ? `${l.rut}|${l.doc}` : ''), l => (l.doc ? `${l.rut ? l.rut + ' · ' : ''}${l.doc}` : SIN)).filter(g => g.clave !== SIN && Math.round(g.debe - g.haber) !== 0),
-    [lineas]
-  );
+  // Documentos abiertos agrupados por auxiliar. El documento se reconoce por tipo (dígitos) + número,
+  // así "33 #2540" y "DTE 33 N° 33 #2540" se compensan como el mismo documento.
+  const abiertosPorAux = useMemo(() => {
+    type Doc = { clave: string; etiqueta: string; debe: number; haber: number; n: number };
+    type Aux = { rut: string; nombre: string; debe: number; haber: number; docs: Doc[] };
+    const auxs = new Map<string, Aux>();
+    lineas.forEach(l => {
+      if (!l.doc) return;
+      const numero = l.doc.match(/#\s*(\d+)/)?.[1] ?? l.doc.match(/(\d+)\s*$/)?.[1] ?? '';
+      const tipo = (l.doc.match(/\d+/) || [''])[0];
+      const clave = numero ? `${tipo}|${numero}` : l.doc;
+      const etiqueta = numero ? `${tipo ? tipo + ' ' : ''}#${numero}` : l.doc;
+      const kAux = l.rut || SIN;
+      const a = auxs.get(kAux) || { rut: kAux, nombre: l.auxiliar, debe: 0, haber: 0, docs: [] };
+      let d = a.docs.find(x => x.clave === clave);
+      if (!d) { d = { clave, etiqueta, debe: 0, haber: 0, n: 0 }; a.docs.push(d); }
+      d.debe += l.debe; d.haber += l.haber; d.n += 1;
+      a.debe += l.debe; a.haber += l.haber;
+      auxs.set(kAux, a);
+    });
+    return Array.from(auxs.values())
+      .map(a => ({ ...a, docs: a.docs.filter(d => Math.round(d.debe - d.haber) !== 0).sort((x, y) => Math.abs(y.debe - y.haber) - Math.abs(x.debe - x.haber)) }))
+      .filter(a => a.docs.length > 0)
+      .sort((x, y) => Math.abs(y.debe - y.haber) - Math.abs(x.debe - x.haber));
+  }, [lineas]);
+  const nDocsAbiertos = abiertosPorAux.reduce((s, a) => s + a.docs.length, 0);
+  const [expandidos, setExpandidos] = useState<Record<string, boolean>>({});
 
   const hay = (arr: { clave: string }[]) => arr.some(g => g.clave !== SIN);
   const tabs = [
     { id: 'mov', t: `Movimientos (${lineas.length})`, ok: true },
     { id: 'aux', t: 'Auxiliares', ok: hay(porAux) },
-    { id: 'abiertos', t: `Documentos abiertos (${abiertos.length})`, ok: abiertos.length > 0 },
+    { id: 'abiertos', t: `Documentos abiertos (${nDocsAbiertos})`, ok: nDocsAbiertos > 0 },
     { id: 'cc', t: 'Centros de costo', ok: hay(porCC) },
     { id: 'item', t: 'Ítems', ok: hay(porItem) },
     { id: 'proy', t: 'Proyectos', ok: hay(porProy) },
@@ -147,7 +170,38 @@ export default function DetalleCuentaModal({ account, vouchers, desde, hasta, ti
             </table>
           )}
           {activa === 'aux' && tablaGrupo(porAux, 'Auxiliar')}
-          {activa === 'abiertos' && tablaGrupo(abiertos, 'Documento abierto')}
+          {activa === 'abiertos' && (
+            <table className="w-full text-xs">
+              <thead className="bg-slate-50 text-slate-500 sticky top-0">
+                <tr><th className="text-left p-1.5">Auxiliar / Documento</th><th className="text-right p-1.5">Docs</th><th className="text-right p-1.5">Debe</th><th className="text-right p-1.5">Haber</th><th className="text-right p-1.5">Saldo abierto</th></tr>
+              </thead>
+              <tbody>
+                {abiertosPorAux.map(a => {
+                  const abierto = expandidos[a.rut] ?? abiertosPorAux.length === 1;
+                  return (
+                    <React.Fragment key={a.rut}>
+                      <tr className="border-t border-slate-200 bg-slate-50 cursor-pointer hover:bg-slate-100" onClick={() => setExpandidos(p => ({ ...p, [a.rut]: !abierto }))}>
+                        <td className="px-1.5 py-1 font-bold">{abierto ? '▾' : '▸'} {a.rut === SIN ? SIN : `${a.rut} ${a.nombre}`}</td>
+                        <td className="px-1.5 py-1 text-right">{a.docs.length}</td>
+                        <td className="px-1.5 py-1 text-right font-mono">{fmt(a.docs.reduce((s, d) => s + d.debe, 0))}</td>
+                        <td className="px-1.5 py-1 text-right font-mono">{fmt(a.docs.reduce((s, d) => s + d.haber, 0))}</td>
+                        <td className="px-1.5 py-1 text-right font-mono font-bold">{fmt(a.docs.reduce((s, d) => s + d.debe - d.haber, 0))}</td>
+                      </tr>
+                      {abierto && a.docs.map(d => (
+                        <tr key={d.clave} className="border-t border-slate-100">
+                          <td className="pl-6 pr-1.5 py-0.5">{d.etiqueta}</td>
+                          <td className="px-1.5 py-0.5 text-right">{d.n}</td>
+                          <td className="px-1.5 py-0.5 text-right font-mono">{d.debe ? fmt(d.debe) : ''}</td>
+                          <td className="px-1.5 py-0.5 text-right font-mono">{d.haber ? fmt(d.haber) : ''}</td>
+                          <td className="px-1.5 py-0.5 text-right font-mono">{fmt(d.debe - d.haber)}</td>
+                        </tr>
+                      ))}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
           {activa === 'cc' && tablaGrupo(porCC, 'Centro de costo')}
           {activa === 'item' && tablaGrupo(porItem, 'Ítem de gasto')}
           {activa === 'proy' && tablaGrupo(porProy, 'Proyecto')}

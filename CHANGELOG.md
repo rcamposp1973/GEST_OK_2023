@@ -19,6 +19,7 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 - Análisis de Auxiliares: el Excel exportado incluye la fecha de corte.
 - Cuentas: **Compensar y registrar diferencia**: si cargos y abonos marcados no cuadran (ej: aporte vs rescate de un fondo mutuo), crea el comprobante con la diferencia contra la cuenta de resultado elegida (se sugiere la financiera) y compensa todo el grupo; recuerda la cuenta elegida.
 - Cuentas: panel **Posiciones por identificador** (aportes, rescates y saldo abierto por cada fondo/folio); un clic filtra sus partidas.
+- **Detalle navegable**: en el Balance IFRS y el Estado de Resultados, un clic en una cuenta abre un panel con sus movimientos y, según los datos de la cuenta, auxiliares, documentos abiertos, centros de costo, ítems, proyectos y productos, al período mostrado.
 
 ---
 

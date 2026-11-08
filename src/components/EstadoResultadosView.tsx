@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import DetalleCuentaModal from './DetalleCuentaModal';
 import { Company, Voucher, ChartOfAccount, FiscalPeriodYear } from '../types';
 import { EstadoResultadosPrintModal } from './EstadoResultadosPrintModal';
 import { getNaturaleza, getRubroER, RubroERId } from '../utils/ifrsClassification';
@@ -59,6 +60,10 @@ export default function EstadoResultadosView({
 }: EstadoResultadosViewProps) {
   const [selectedYear, setSelectedYear] = useState<number>(() => periodoGlobal ? parseInt(periodoGlobal.slice(0, 4), 10) : new Date().getFullYear());
   const [cutoffMonth, setCutoffMonth] = useState<number>(() => periodoGlobal ? parseInt(periodoGlobal.slice(5, 7), 10) : 10);
+
+  const [detalleCuenta, setDetalleCuenta] = useState<ChartOfAccount | null>(null);
+
+  const ultimoDia = (y: number, m: number) => `${y}-${String(m).padStart(2, '0')}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
 
   // Período compartido entre pestañas
   useEffect(() => {
@@ -407,7 +412,7 @@ export default function EstadoResultadosView({
         {showAccountDetails && rubro.accounts.length > 0 && (
           <div className="divide-y divide-slate-100 bg-white text-[11px] font-mono">
             {rubro.accounts.map(acc => (
-              <div key={acc.account.id} className="px-4 py-0.5 flex justify-between items-center hover:bg-slate-50 pl-8">
+              <div key={acc.account.id} onClick={() => setDetalleCuenta(acc.account)} title="Ver el detalle de esta cuenta" className="px-4 py-0.5 flex justify-between items-center hover:bg-indigo-50 pl-8 cursor-pointer">
                 <div className="flex items-center gap-2 truncate max-w-[380px]">
                   <span className="text-slate-500 font-semibold">{acc.account.code}</span>
                   <span className="font-sans text-slate-700 truncate">{acc.account.name}</span>
@@ -970,6 +975,16 @@ export default function EstadoResultadosView({
         showAccountDetails={showAccountDetails}
         statementData={statementData}
       />
+      {detalleCuenta && (
+        <DetalleCuentaModal
+          account={detalleCuenta}
+          vouchers={vouchers}
+          desde={`${selectedYear}-01-01`}
+          hasta={ultimoDia(selectedYear, cutoffMonth > 0 ? cutoffMonth : 12)}
+          titulo="Estado de Resultados · detalle de cuenta"
+          onClose={() => setDetalleCuenta(null)}
+        />
+      )}
     </div>
   );
 }

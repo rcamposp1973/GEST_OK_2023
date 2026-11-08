@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { periodosParaSelector } from '../utils/periodUtils';
+import DetalleCuentaModal from './DetalleCuentaModal';
 import { inicioAcumuladoVigente } from '../utils/cierreAnio';
 import { Company, Voucher, ChartOfAccount, FiscalPeriodYear } from '../types';
 import { 
@@ -59,6 +60,7 @@ export default function BalanceIFRSView({
   onOpenEstadoResultados
 }: BalanceIFRSViewProps) {
   const [periodFilter, setPeriodFilter] = useState<string>('Todos');
+  const [detalleCuenta, setDetalleCuenta] = useState<ChartOfAccount | null>(null);
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
   const [showZeroBalances, setShowZeroBalances] = useState<boolean>(false);
@@ -412,7 +414,7 @@ export default function BalanceIFRSView({
         {isExpanded && showAccountDetails && rubro.accounts.length > 0 && (
           <div className="divide-y divide-slate-100 bg-slate-50/40 text-[11px] font-mono">
             {rubro.accounts.map(acc => (
-              <div key={acc.id} className="px-3 py-0.5 flex justify-between items-center hover:bg-slate-100/80 transition-colors pl-8">
+              <div key={acc.id} onClick={() => { const a = accounts.find(x => x.id === acc.id); if (a) setDetalleCuenta(a); }} title="Ver el detalle de esta cuenta" className="px-3 py-0.5 flex justify-between items-center hover:bg-indigo-50 transition-colors pl-8 cursor-pointer">
                 <div className="flex items-center gap-2 truncate max-w-[320px]">
                   <span className="text-slate-500 font-semibold">{acc.code}</span>
                   <span className="font-sans text-slate-800 truncate">{acc.name}</span>
@@ -796,6 +798,22 @@ export default function BalanceIFRSView({
         dateTo={dateTo}
         isBalanced={isBalanced}
       />
+      {detalleCuenta && (() => {
+        const anioP = periodFilter !== 'Todos' ? parseInt(periodFilter.slice(0, 4), 10) : 0;
+        const mesP = periodFilter !== 'Todos' ? parseInt(periodFilter.slice(5, 7), 10) : 0;
+        const desde = dateFrom || (anioP ? `${anioP}-01-01` : '');
+        const hasta = dateTo || (anioP ? `${anioP}-${String(mesP).padStart(2, '0')}-${String(new Date(anioP, mesP, 0).getDate()).padStart(2, '0')}` : '');
+        return (
+          <DetalleCuentaModal
+            account={detalleCuenta}
+            vouchers={vouchers}
+            desde={desde}
+            hasta={hasta}
+            titulo="Balance IFRS · detalle de cuenta"
+            onClose={() => setDetalleCuenta(null)}
+          />
+        );
+      })()}
     </div>
   );
 }

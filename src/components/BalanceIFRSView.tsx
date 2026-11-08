@@ -466,6 +466,7 @@ export default function BalanceIFRSView({
           )}
           {onOpenAuditor && (
             <button
+              data-solo-trabajo
               onClick={onOpenAuditor}
               className="px-3 py-1.5 bg-indigo-900 hover:bg-indigo-950 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors shadow-2xs border border-indigo-700 cursor-pointer"
               title="Auditar Balance Clasificado IFRS y emitir Dictamen Oficial"
@@ -562,7 +563,7 @@ export default function BalanceIFRSView({
 
       {/* Revisión de clasificación de cuentas */}
       {hallazgos.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl text-xs">
+        <div data-solo-trabajo className="bg-amber-50 border border-amber-200 rounded-xl text-xs">
           <button
             type="button"
             onClick={() => setShowRevision(v => !v)}

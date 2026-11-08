@@ -5445,7 +5445,7 @@ export default function CompanyAccountingDashboard({
   return (
     <div 
       style={{ top: '0px' }}
-      className="fixed inset-0 z-40 bg-slate-950 text-slate-100 flex flex-col w-screen overflow-hidden select-none animate-in fade-in duration-150"
+      className={`fixed inset-0 z-40 bg-slate-950 text-slate-100 flex flex-col w-screen overflow-hidden select-none animate-in fade-in duration-150 ${isZenMode ? 'modo-presentacion' : ''}`}
     >
       {/* CABECERA COCKPIT CON PESTAÑAS INTEGRADAS, SELECTORES OPERATIVOS Y CONTROL ZEN */}
       <CockpitTabBar
@@ -5481,7 +5481,7 @@ export default function CompanyAccountingDashboard({
       />
 
       {/* BOTÓN FLOTANTE PARA RESTAURAR EL DOCK CUANDO ESTÁ OCULTO */}
-      {dockPosition === 'hidden' && (
+      {dockPosition === 'hidden' && !isZenMode && (
         <button
           onClick={() => handleSetDockPosition('left')}
           className="fixed bottom-3 left-3 z-50 bg-[#0D253D] hover:bg-slate-800 text-indigo-200 border border-slate-600 px-3 py-2 rounded-xl shadow-2xl text-xs font-bold flex items-center gap-2 cursor-pointer transition-all animate-bounce"
@@ -5494,7 +5494,7 @@ export default function CompanyAccountingDashboard({
       {/* ÁREA PRINCIPAL: DOCK LATERAL + SUPERFICIE DE TRABAJO CONTABLE */}
       <div className="flex-1 flex flex-row overflow-hidden relative w-full h-full min-h-0 bg-slate-950">
         {/* DOCK LATERAL IZQUIERDO */}
-        {dockPosition === 'left' && (
+        {dockPosition === 'left' && !isZenMode && (
           <CockpitDock
             position="left"
             onChangePosition={handleSetDockPosition}
@@ -9780,7 +9780,7 @@ export default function CompanyAccountingDashboard({
         </div>
 
         {/* DOCK LATERAL DERECHO */}
-        {dockPosition === 'right' && (
+        {dockPosition === 'right' && !isZenMode && (
           <CockpitDock
             position="right"
             onChangePosition={handleSetDockPosition}

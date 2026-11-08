@@ -15,6 +15,8 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 - Las cuentas sin auxiliar que se analizan con pareos se abren partida por partida (solo lo no pareado al 31-12).
 - Botón para cerrar los 12 meses del año tras el cierre (deja abierto enero del año siguiente).
 - "Todo el ejercicio" en los balances no suma años anteriores a la última apertura generada (evita duplicar saldos).
+- **Modo presentación** (botón "Presentación" arriba): oculta la barra lateral, los avisos internos y los botones de auditoría para mostrar los estados al cliente.
+- Análisis de Auxiliares: el Excel exportado incluye la fecha de corte.
 
 ---
 

@@ -1226,6 +1226,7 @@ export default function AnalisisAuxiliaresView({
   // Exportar a Excel CSV
   const handleExportCSV = () => {
     let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+    csvContent += dateFilterMode === 'corte' ? `Analisis de auxiliares a la fecha de corte;${cutoffDate}\n` : `Analisis de auxiliares por rango;${startDate};${endDate}\n`;
     
     if (viewMode === 'byAccount') {
       csvContent += "Código Cuenta;Nombre Cuenta;Categoría;RUT Auxiliar;Razón Social;Tipo Doc;Folio / N° Doc;Fecha;Débitos ($);Créditos ($);Saldo ($);Estado\n";
@@ -1278,7 +1279,7 @@ export default function AnalisisAuxiliaresView({
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `Analisis_Auxiliares_${viewMode === 'byAccount' ? 'Por_Cuenta' : 'Por_RUT'}_${company.rut || 'Empresa'}.csv`);
+    link.setAttribute("download", `Analisis_Auxiliares_${viewMode === 'byAccount' ? 'Por_Cuenta' : 'Por_RUT'}_${company.rut || 'Empresa'}_${dateFilterMode === 'corte' ? cutoffDate : endDate}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

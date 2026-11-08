@@ -493,6 +493,7 @@ export default function EstadoResultadosView({
 
           {onOpenAuditor && (
             <button
+              data-solo-trabajo
               onClick={onOpenAuditor}
               className="px-3 py-1.5 bg-indigo-900 hover:bg-indigo-950 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors shadow-2xs border border-indigo-700"
               title="Auditar Estado de Resultados y emitir Dictamen Oficial"

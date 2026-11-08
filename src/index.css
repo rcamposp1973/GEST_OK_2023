@@ -115,3 +115,6 @@ input::placeholder, textarea::placeholder {
 }
 
 
+
+/* Modo presentación: oculta lo que es solo de trabajo (avisos internos, botones de auditoría, etc.) */
+.modo-presentacion [data-solo-trabajo] { display: none !important; }

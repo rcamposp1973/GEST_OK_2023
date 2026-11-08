@@ -3,7 +3,7 @@ import {
   X, Plus, Maximize2, Minimize2, ArrowLeft, Lock, Unlock, 
   Search, Pin, LayoutGrid,
   ChevronLeft, ChevronRight, Keyboard,
-  Activity, Settings, Key, LogOut, Check, Sparkles
+  Activity, Settings, Key, LogOut, Check, Sparkles, Presentation
 } from 'lucide-react';
 import { WorkspaceTab, DockPosition, CATEGORY_COLORS, COCKPIT_MODULE_CATALOG } from './cockpitTypes';
 import { Company, FiscalPeriodYear, UserRole } from '../../types';
@@ -307,6 +307,18 @@ export const CockpitTabBar: React.FC<CockpitTabBarProps> = ({
                 ⌘K
               </kbd>
             </button>
+
+            {/* Modo presentación: oculta barras y avisos de trabajo para mostrar los estados al cliente */}
+            {onToggleZenMode && (
+              <button
+                onClick={onToggleZenMode}
+                className={`px-2 py-1 rounded-lg border transition-colors cursor-pointer flex items-center gap-1 ${isZenMode ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 border-slate-200'}`}
+                title={isZenMode ? 'Salir del modo presentación' : 'Modo presentación: pantalla limpia para mostrar al cliente'}
+              >
+                <Presentation className="w-3.5 h-3.5" />
+                <span className="text-[11px] font-medium hidden lg:inline">{isZenMode ? 'Salir de presentación' : 'Presentación'}</span>
+              </button>
+            )}
 
             {/* Keyboard Shortcuts Guide Trigger */}
             <button

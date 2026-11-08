@@ -4,7 +4,7 @@ import {
   BarChart3, Settings, Calendar, Download, FileSpreadsheet, 
   ShieldCheck, Boxes, Package, Briefcase, Calculator, Building2, 
   Sparkles, Search, Table as TableIcon, Warehouse as WarehouseIcon, Activity, Clock
-  , CalendarCheck
+  , CalendarCheck, Camera
 } from 'lucide-react';
 
 export type DockPosition = 'left' | 'right' | 'bottom' | 'hidden';
@@ -118,6 +118,15 @@ export const COCKPIT_MODULE_CATALOG: CockpitModuleItem[] = [
     icon: Sliders,
     colorScheme: 'indigo',
     description: 'Control de partidas pendientes y calces de cuentas'
+  },
+  {
+    id: 'informeMensual',
+    label: 'Informe mensual (foto fija)',
+    shortLabel: 'Informe mes',
+    category: 'INDICADORES',
+    icon: Camera,
+    colorScheme: 'indigo',
+    description: 'Congela las cifras del mes con comentarios del contador y avisa si la contabilidad cambia'
   },
   {
     id: 'cierreAnio',

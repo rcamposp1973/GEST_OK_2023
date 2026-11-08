@@ -28,6 +28,7 @@ import Formulario29View from './Formulario29View';
 import PlantillasYCargaMasivaView from './PlantillasYCargaMasivaView';
 import ImportacionInteligenteView from './ImportacionInteligenteView';
 import CierreAperturaAnioView from './CierreAperturaAnioView';
+import InformeMensualView from './InformeMensualView';
 import ExcelImportCenterModal from './ExcelImportCenterModal';
 import IndicadoresEconomicosView from './IndicadoresEconomicosView';
 import EmisionDteView from './EmisionDteView';
@@ -126,6 +127,7 @@ const QUICK_ACCESS_ITEMS = [
   { id: 'employees', label: 'Ficha de Empleados', group: 'PERSONAL', icon: Briefcase, tab: 'employees' },
   { id: 'liquidaciones', label: 'Liquidaciones de Sueldos', group: 'PERSONAL', icon: Calculator, tab: 'liquidaciones' },
   { id: 'indicadoresFinancieros', label: 'Indicadores & KPIs', group: 'INDICADORES', icon: TrendingUp, tab: 'indicadoresFinancieros' },
+  { id: 'informeMensual', label: 'Informe mensual (foto fija)', group: 'INDICADORES', icon: FileText, tab: 'informeMensual' },
   { id: 'exchange', label: 'Indicadores Económicos (UF/USD/UTM)', group: 'INDICADORES', icon: Calendar, tab: 'exchange' },
   { id: 'accounts', label: 'Plan de Cuentas', group: 'CONFIGURACIONES', icon: FolderTree, tab: 'accounts' },
   { id: 'auxiliaries', label: 'Maestro de Auxiliares', group: 'CONFIGURACIONES', icon: Users, tab: 'auxiliaries' },
@@ -175,7 +177,7 @@ export default function CompanyAccountingDashboard({
   const { withProcess } = useProcess();
   type RibbonGroup = 'FINANZAS' | 'OPERACIONES' | 'TESORERIA' | 'PERSONAL' | 'IMPORTACIONES' | 'IMPUESTOS' | 'INDICADORES' | 'CONFIGURACIONES' | 'FAVORITOS';
   const [activeRibbonGroup, setActiveRibbonGroup] = useState<RibbonGroup>('FINANZAS');
-  const [activeTab, setActiveTab] = useState<'accounts' | 'auxiliaries' | 'periods' | 'rcv' | 'exchange' | 'rcvParams' | 'centralizaciones' | 'f29Codes' | 'vouchers' | 'libroDiario' | 'libroMayor' | 'balance8' | 'balanceIFRS' | 'analisisAuxiliares' | 'analisisCuentas' | 'planillaConsultas' | 'analyticsHud' | 'reportesAnaliticos' | 'estadoResultados' | 'indicadoresFinancieros' | 'auditorEstadosFinancieros' | 'smartNotebooks' | 'flujoDeCaja' | 'agingDeudas' | 'nominasPago' | 'cobranza' | 'conciliacionBancaria' | 'libroBancoColaborativo' | 'cargaMasiva' | 'formulario29' | 'plantillasCarga' | 'importacionInteligente' | 'cierreAnio' | 'rendicionGastos' | 'emisionDte' | 'tablasAnalisis' | 'controlFolios' | 'productsServices' | 'operativaComercial' | 'stockKardex' | 'warehouses' | 'employees' | 'liquidaciones' | 'activoFijo' | 'ddjj' | 'agenticStudy2040' | 'agenticPyme2040' | 'home' | 'buscadorComprobantes'>('home');
+  const [activeTab, setActiveTab] = useState<'accounts' | 'auxiliaries' | 'periods' | 'rcv' | 'exchange' | 'rcvParams' | 'centralizaciones' | 'f29Codes' | 'vouchers' | 'libroDiario' | 'libroMayor' | 'balance8' | 'balanceIFRS' | 'analisisAuxiliares' | 'analisisCuentas' | 'planillaConsultas' | 'analyticsHud' | 'reportesAnaliticos' | 'estadoResultados' | 'indicadoresFinancieros' | 'auditorEstadosFinancieros' | 'smartNotebooks' | 'flujoDeCaja' | 'agingDeudas' | 'nominasPago' | 'cobranza' | 'conciliacionBancaria' | 'libroBancoColaborativo' | 'cargaMasiva' | 'formulario29' | 'plantillasCarga' | 'importacionInteligente' | 'cierreAnio' | 'informeMensual' | 'rendicionGastos' | 'emisionDte' | 'tablasAnalisis' | 'controlFolios' | 'productsServices' | 'operativaComercial' | 'stockKardex' | 'warehouses' | 'employees' | 'liquidaciones' | 'activoFijo' | 'ddjj' | 'agenticStudy2040' | 'agenticPyme2040' | 'home' | 'buscadorComprobantes'>('home');
   const [auxSubTab, setAuxSubTab] = useState<'deudores' | 'acreedores'>('deudores');
   const [employeeSubTab, setEmployeeSubTab] = useState<'employees' | 'contracts' | 'attendance' | 'advances' | 'severance' | 'certificates'>('employees');
   const [payrollTab, setPayrollTab] = useState<'NOMINA' | 'LIQUIDACION_INDIVIDUAL' | 'LRD_DT' | 'PREVIRED' | 'PARAMETROS' | 'CONCEPTOS' | 'RELIQUIDACIONES'>('NOMINA');
@@ -9118,7 +9120,7 @@ export default function CompanyAccountingDashboard({
             setActiveTab(tab as any);
             if (tab === 'vouchers' || tab === 'libroDiario' || tab === 'libroMayor' || tab === 'balance8' || tab === 'analisisCuentas' || tab === 'analisisAuxiliares') {
               setActiveRibbonGroup('FINANZAS');
-            } else if (tab === 'indicadoresFinancieros' || tab === 'balanceIFRS' || tab === 'estadoResultados' || tab === 'flujoDeCaja') {
+            } else if (tab === 'indicadoresFinancieros' || tab === 'informeMensual' || tab === 'balanceIFRS' || tab === 'estadoResultados' || tab === 'flujoDeCaja') {
               setActiveRibbonGroup('INDICADORES');
             } else if (tab === 'conciliacionBancaria' || tab === 'nominasPago' || tab === 'cobranza') {
               setActiveRibbonGroup('TESORERIA');
@@ -9324,6 +9326,10 @@ export default function CompanyAccountingDashboard({
           auxiliaries={auxiliaries}
           onRefreshData={fetchData}
         />
+      )}
+
+      {activeTab === 'informeMensual' && (
+        <InformeMensualView studyId={studyId} company={company} accounts={accounts} vouchers={vouchers} canEdit={!isReadOnly} />
       )}
 
       {activeTab === 'cierreAnio' && (

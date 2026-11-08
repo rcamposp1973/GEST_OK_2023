@@ -17,6 +17,8 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 - "Todo el ejercicio" en los balances no suma años anteriores a la última apertura generada (evita duplicar saldos).
 - **Modo presentación** (botón "Presentación" arriba): oculta la barra lateral, los avisos internos y los botones de auditoría para mostrar los estados al cliente.
 - Análisis de Auxiliares: el Excel exportado incluye la fecha de corte.
+- Cuentas: **Compensar y registrar diferencia**: si cargos y abonos marcados no cuadran (ej: aporte vs rescate de un fondo mutuo), crea el comprobante con la diferencia contra la cuenta de resultado elegida (se sugiere la financiera) y compensa todo el grupo; recuerda la cuenta elegida.
+- Cuentas: panel **Posiciones por identificador** (aportes, rescates y saldo abierto por cada fondo/folio); un clic filtra sus partidas.
 
 ---
 

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { db, auth } from '../lib/firebase';
-import { collection, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, deleteDoc, writeBatch, updateDoc } from 'firebase/firestore';
+import { getNaturaleza } from '../utils/ifrsClassification';
+import { getAllOpenPeriods } from '../utils/periodUtils';
 import {
   Company,
   ChartOfAccount,
@@ -665,6 +667,122 @@ export default function AnalisisCuentasView({
       selectedCreditsList
     };
   }, [accountLines, selectedDebitKeys, selectedCreditKeys]);
+
+  // --- PAREO CON DIFERENCIA: la diferencia se registra como resultado en la cuenta que corresponda ---
+  const [cuentaDifId, setCuentaDifId] = useState<string>('');
+  const signedSel = selectionMath.sumDebits - selectionMath.sumCredits; // <0: rescates mayores que aportes (ganancia en una cuenta de activo)
+  const candidatasDif = useMemo(() => {
+    const gana = signedSel < 0;
+    return accounts
+      .filter(a => a.isImputable !== false && a.id !== selectedAccountId && getNaturaleza(a) === (gana ? 'INGRESO' : 'GASTO'))
+      .sort((a, b) => a.code.localeCompare(b.code));
+  }, [accounts, signedSel, selectedAccountId]);
+  useEffect(() => {
+    if (!selectedAccountId || selectionMath.diff === 0) return;
+    const guardada = (company as any).diferenciasPareo?.[`${selectedAccountId}|${signedSel < 0 ? 'G' : 'P'}`];
+    if (guardada && candidatasDif.some(c => c.id === guardada)) { setCuentaDifId(guardada); return; }
+    // Sugerencia: cuenta financiera (clasificación IFRS 5201/3201/4201 o nombre con interés/financ/reajuste)
+    const fin = candidatasDif.find(a => /^(3201|4201|5201)/.test((a.codigoIFRS || '').replace(/\D/g, '')))
+      || candidatasDif.find(a => /interes|financ|reajuste|rentabil/.test(a.name.toLowerCase()));
+    setCuentaDifId(fin?.id || '');
+  }, [selectedAccountId, signedSel, candidatasDif.length]);
+
+  const handleMatchWithDifference = async () => {
+    if (!selectedAccount || selectionMath.diff === 0) return;
+    if (selectionMath.selectedDebitsList.length === 0 || selectionMath.selectedCreditsList.length === 0) {
+      window.alert('Para compensar con diferencia, marca al menos un cargo y un abono.');
+      return;
+    }
+    const cuentaDif = accounts.find(a => a.id === cuentaDifId);
+    if (!cuentaDif) { window.alert('Elige la cuenta donde se registrará la diferencia.'); return; }
+    const todas = [...selectionMath.selectedDebitsList, ...selectionMath.selectedCreditsList];
+    const yaPareadas = new Set<string>();
+    matches.forEach(m => { if (m.status !== 'DESCALZADO') m.matchedLines.forEach(l => yaPareadas.add(`${l.voucherId}_${l.lineIndex}`)); });
+    if (todas.some(l => yaPareadas.has(l.key))) { window.alert('Alguna partida ya fue compensada con una fecha posterior. Quita la fecha de corte y revisa el pareo anterior.'); return; }
+    const fecha = todas.reduce((mx, l) => ((l.voucherDate || '') > mx ? (l.voucherDate || '') : mx), '');
+    const periodo = fecha.slice(0, 7);
+    if (fiscalYears && fiscalYears.length > 0 && !getAllOpenPeriods(fiscalYears).some(p => p.period === periodo)) {
+      window.alert(`El período ${periodo} está cerrado: ábrelo en Configuraciones para registrar la diferencia.`);
+      return;
+    }
+    const monto = Math.round(Math.abs(signedSel));
+    const docs = Array.from(new Set(todas.map(l => l.documentRef).filter(Boolean)));
+    const glosa = `Resultado por compensación${docs.length === 1 ? ' ' + docs[0] : ''} - ${selectedAccount.name}`;
+    const lineaCuenta = {
+      accountId: selectedAccount.id, accountCode: selectedAccount.code, accountName: selectedAccount.name,
+      debit: signedSel < 0 ? monto : 0, credit: signedSel > 0 ? monto : 0, gloss: glosa,
+      ...(docs.length === 1 ? { documentRef: docs[0] as string } : {}),
+    };
+    const lineaResultado = {
+      accountId: cuentaDif.id, accountCode: cuentaDif.code, accountName: cuentaDif.name,
+      debit: signedSel > 0 ? monto : 0, credit: signedSel < 0 ? monto : 0, gloss: glosa,
+    };
+    setSaveStatus('SAVING');
+    try {
+      const companyRef = doc(db, 'studies', studyId, 'companies', company.id);
+      const numero = vouchers.reduce((m, v) => Math.max(m, v.voucherNumber || 0), 0) + 1;
+      const ahora = new Date().toISOString();
+      const uid = auth.currentUser?.uid || 'sistema';
+      const email = auth.currentUser?.email || '';
+      const vRef = doc(collection(companyRef, 'vouchers'));
+      const batch = writeBatch(db);
+      batch.set(vRef, {
+        voucherNumber: numero, date: fecha, period: periodo, type: 'Traspaso', gloss: glosa,
+        lines: [lineaCuenta, lineaResultado], totalDebit: monto, totalCredit: monto, status: 'Valido',
+        origin: 'PAREO_DIFERENCIA', creationMode: 'SISTEMA',
+        createdBy: uid, createdByUserEmail: email, createdAt: ahora, lastModifiedBy: uid, lastModifiedAt: ahora,
+      });
+      const ref = (l: ExtVoucherLine): MatchedLineRef => ({
+        voucherId: l.voucherId, voucherNumber: l.voucherNumber, voucherDate: l.voucherDate, voucherPeriod: l.voucherPeriod,
+        lineIndex: l.lineIndex, accountId: l.accountId, accountCode: l.accountCode, debit: l.debit, credit: l.credit,
+        gloss: l.gloss, documentRef: l.documentRef, auxiliaryRut: l.auxiliaryRut, auxiliaryName: l.auxiliaryName,
+      });
+      const matchId = `match_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+      const nuevo: AccountMatch = {
+        id: matchId, accountId: selectedAccount.id, accountCode: selectedAccount.code, accountName: selectedAccount.name,
+        matchedLines: [
+          ...todas.map(ref),
+          { voucherId: vRef.id, voucherNumber: numero, voucherDate: fecha, voucherPeriod: periodo, lineIndex: 0,
+            accountId: selectedAccount.id, accountCode: selectedAccount.code,
+            debit: lineaCuenta.debit, credit: lineaCuenta.credit, gloss: glosa, documentRef: (lineaCuenta as any).documentRef },
+        ],
+        totalAmount: Math.max(selectionMath.sumDebits, selectionMath.sumCredits),
+        matchDate: ahora, fechaPareo: fecha, matchedBy: email || 'Usuario Contable',
+        notes: matchNotes.trim() || `Compensación con diferencia ${monto.toLocaleString('es-CL')} a ${cuentaDif.code}`,
+        creationMode: 'MANUAL', status: 'CALZADO',
+      };
+      batch.set(doc(companyRef, 'accountMatches', matchId), nuevo);
+      await batch.commit();
+      // recordar la cuenta de resultado elegida para esta cuenta
+      const clave = `${selectedAccount.id}|${signedSel < 0 ? 'G' : 'P'}`;
+      updateDoc(companyRef, { diferenciasPareo: { ...((company as any).diferenciasPareo || {}), [clave]: cuentaDif.id } }).catch(() => {});
+      setMatches(prev => [...prev, nuevo]);
+      setSelectedDebitKeys([]); setSelectedCreditKeys([]); setMatchNotes('');
+      setSaveStatus('SAVED');
+      logAuditEvent({
+        userId: uid, userEmail: email, studyId, companyId: company.id, action: 'CONTABILIZAR', module: 'PLAN_CUENTAS',
+        details: `Compensación con diferencia ${monto} en ${selectedAccount.code} contra ${cuentaDif.code} (comprobante #${numero})`,
+      } as any);
+    } catch (err) {
+      console.error('Error al compensar con diferencia:', err);
+      setSaveStatus('ERROR');
+    }
+  };
+
+  // --- POSICIONES POR IDENTIFICADOR (ej: cada fondo mutuo, cada folio) ---
+  const [verPosiciones, setVerPosiciones] = useState<boolean>(true);
+  const posiciones = useMemo(() => {
+    const m = new Map<string, { id: string; cargos: number; abonos: number; abierto: number; n: number }>();
+    accountLines.forEach(l => {
+      const id = (l.documentRef || '').trim() || '(sin identificador)';
+      const p = m.get(id) || { id, cargos: 0, abonos: 0, abierto: 0, n: 0 };
+      p.cargos += l.debit; p.abonos += l.credit; p.n += 1;
+      if (!l.matchId) p.abierto += l.debit - l.credit;
+      m.set(id, p);
+    });
+    return Array.from(m.values()).sort((a, b) => a.id.localeCompare(b.id));
+  }, [accountLines]);
+  const hayIdentificadores = posiciones.some(p => p.id !== '(sin identificador)');
 
   // --- GUARDAR CALCE MANUAL ---
   const handleCreateManualMatch = async () => {
@@ -1722,6 +1840,37 @@ export default function AnalisisCuentasView({
         )}
       </div>
 
+      {/* --- POSICIONES POR IDENTIFICADOR (fondos, folios, contratos) --- */}
+      {selectedAccount && hayIdentificadores && (
+        <div className="bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">Posiciones por identificador ({posiciones.length})</span>
+            <button onClick={() => setVerPosiciones(v => !v)} className="text-[11px] text-indigo-600 hover:underline">{verPosiciones ? 'Ocultar' : 'Mostrar'}</button>
+          </div>
+          {verPosiciones && (
+            <div className="mt-1 max-h-40 overflow-auto">
+              <table className="w-full text-[11px]">
+                <thead className="text-slate-500"><tr>
+                  <th className="text-left py-0.5">Identificador</th><th className="text-right">Mov.</th>
+                  <th className="text-right">Aportes (Debe)</th><th className="text-right">Rescates (Haber)</th><th className="text-right">Saldo abierto</th>
+                </tr></thead>
+                <tbody>
+                  {posiciones.map(p => (
+                    <tr key={p.id} className="border-t border-slate-100 hover:bg-indigo-50 cursor-pointer" onClick={() => setFilterDoc(p.id === '(sin identificador)' ? '' : p.id)} title="Filtrar las partidas de este identificador">
+                      <td className="py-0.5 font-mono">{p.id}</td>
+                      <td className="text-right">{p.n}</td>
+                      <td className="text-right font-mono">{Math.round(p.cargos).toLocaleString('es-CL')}</td>
+                      <td className="text-right font-mono">{Math.round(p.abonos).toLocaleString('es-CL')}</td>
+                      <td className={`text-right font-mono font-bold ${Math.round(p.abierto) === 0 ? 'text-emerald-700' : 'text-amber-700'}`}>{Math.round(p.abierto).toLocaleString('es-CL')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* --- TABLA PRINCIPAL DE MOVIMIENTOS: CARGOS VS ABONOS --- */}
       {viewMode === 'CALZADAS' ? (
         /* VISTA DE MOVIMIENTOS YA COMPENSADOS */
@@ -2238,6 +2387,31 @@ export default function AnalisisCuentasView({
                 )}
               </div>
             </div>
+
+            {/* Compensar con diferencia: la diferencia va a una cuenta de resultado */}
+            {selectionMath.diff > 0 && selectionMath.selectedDebitsList.length > 0 && selectionMath.selectedCreditsList.length > 0 && (
+              <div className="flex items-center gap-2 bg-slate-800 border border-amber-500/40 rounded-lg px-2 py-1.5">
+                <span className="text-[11px] text-amber-200 whitespace-nowrap">
+                  {signedSel < 0 ? 'Ganancia' : 'Pérdida'} ${Math.round(Math.abs(signedSel)).toLocaleString('es-CL')} →
+                </span>
+                <select
+                  value={cuentaDifId}
+                  onChange={(e) => setCuentaDifId(e.target.value)}
+                  className="bg-slate-900 border border-slate-600 text-white text-[11px] rounded px-1.5 py-1 max-w-[220px]"
+                >
+                  <option value="">— cuenta de resultado —</option>
+                  {candidatasDif.map(a => <option key={a.id} value={a.id}>{a.code} {a.name}</option>)}
+                </select>
+                <button
+                  onClick={handleMatchWithDifference}
+                  disabled={!cuentaDifId}
+                  className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-slate-900 rounded-md font-bold text-[11px] whitespace-nowrap"
+                  title="Crea un comprobante con la diferencia y compensa todo el grupo"
+                >
+                  Compensar y registrar diferencia
+                </button>
+              </div>
+            )}
 
             {/* Ingrese nota y botón final de Compensar */}
             <div className="flex items-center gap-2 w-full md:w-auto">

@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { periodosParaSelector } from '../utils/periodUtils';
 import DetalleCuentaModal from './DetalleCuentaModal';
+import DetallePivotModal from './DetallePivotModal';
 import { inicioAcumuladoVigente } from '../utils/cierreAnio';
 import { Company, Voucher, ChartOfAccount, FiscalPeriodYear } from '../types';
 import { 
@@ -16,7 +17,8 @@ import {
   EyeOff,
   Layers,
   ShieldCheck,
-  TrendingUp
+  TrendingUp,
+  Table2
 } from 'lucide-react';
 import { BalanceIFRSPrintModal } from './BalanceIFRSPrintModal';
 import { getNaturaleza, getRubroESF, RUBROS_ESF, problemasClasificacion } from '../utils/ifrsClassification';
@@ -61,6 +63,7 @@ export default function BalanceIFRSView({
 }: BalanceIFRSViewProps) {
   const [periodFilter, setPeriodFilter] = useState<string>('Todos');
   const [detalleCuenta, setDetalleCuenta] = useState<ChartOfAccount | null>(null);
+  const [pivotBal, setPivotBal] = useState<{ cuentas: ChartOfAccount[]; naturaleza: 'ACTIVO' | 'PASIVO'; titulo: string } | null>(null);
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
   const [showZeroBalances, setShowZeroBalances] = useState<boolean>(false);
@@ -405,8 +408,24 @@ export default function BalanceIFRSView({
             </span>
           </div>
 
-          <div className="font-mono font-black text-xs">
-            ${rubro.total.toLocaleString('es-CL')}
+          <div className="flex items-center gap-2">
+            {rubro.accounts.length > 0 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const cuentas = rubro.accounts.map(a => accounts.find(x => x.id === a.id)).filter(Boolean) as ChartOfAccount[];
+                  setPivotBal({ cuentas, naturaleza: colorTheme === 'indigo' ? 'ACTIVO' : 'PASIVO', titulo: rubro.name });
+                }}
+                title="Ver el saldo de este rubro mes a mes, por cuenta y auxiliar"
+                data-solo-trabajo
+                className="p-0.5 rounded text-slate-500 hover:text-indigo-700 hover:bg-white/70"
+              >
+                <Table2 className="w-3.5 h-3.5" />
+              </button>
+            )}
+            <div className="font-mono font-black text-xs">
+              ${rubro.total.toLocaleString('es-CL')}
+            </div>
           </div>
         </div>
 
@@ -798,10 +817,35 @@ export default function BalanceIFRSView({
         dateTo={dateTo}
         isBalanced={isBalanced}
       />
+      {pivotBal && (() => {
+        const anioP = periodFilter !== 'Todos' ? parseInt(periodFilter.slice(0, 4), 10) : 0;
+        const mesP = periodFilter !== 'Todos' ? parseInt(periodFilter.slice(5, 7), 10) : 0;
+        // Mismo criterio que el balance: con período elegido acumula desde enero; en "Todos", desde la última apertura
+        const anioUlt = vouchers.reduce((m, v) => Math.max(m, parseInt((v.date || '0').slice(0, 4), 10) || 0), 0);
+        const anio = anioP || (dateTo ? parseInt(dateTo.slice(0, 4), 10) : anioUlt) || new Date().getFullYear();
+        const mes = mesP || (dateTo && anioP === 0 ? parseInt(dateTo.slice(5, 7), 10) : 12);
+        const base = anioP ? `${anioP}-01-01` : inicioAcumuladoVigente(vouchers);
+        const desde = dateFrom && dateFrom > base ? dateFrom : base;
+        return (
+          <DetallePivotModal
+            cuentas={pivotBal.cuentas}
+            naturaleza={pivotBal.naturaleza}
+            modoSaldo
+            vouchers={vouchers}
+            anio={anio}
+            mesCorte={mes}
+            desdeSaldo={desde || undefined}
+            hastaSaldo={dateTo || undefined}
+            titulo={pivotBal.titulo}
+            onClose={() => setPivotBal(null)}
+          />
+        );
+      })()}
       {detalleCuenta && (() => {
         const anioP = periodFilter !== 'Todos' ? parseInt(periodFilter.slice(0, 4), 10) : 0;
         const mesP = periodFilter !== 'Todos' ? parseInt(periodFilter.slice(5, 7), 10) : 0;
-        const desde = dateFrom || (anioP ? `${anioP}-01-01` : '');
+        const baseD = anioP ? `${anioP}-01-01` : inicioAcumuladoVigente(vouchers);
+        const desde = dateFrom && dateFrom > baseD ? dateFrom : baseD;
         const hasta = dateTo || (anioP ? `${anioP}-${String(mesP).padStart(2, '0')}-${String(new Date(anioP, mesP, 0).getDate()).padStart(2, '0')}` : '');
         return (
           <DetalleCuentaModal

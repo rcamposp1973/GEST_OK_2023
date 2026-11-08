@@ -3,7 +3,7 @@ import { X, ChevronRight } from 'lucide-react';
 import type { ChartOfAccount, Voucher, CostCenterMaster, ExpenseItemMaster } from '../types';
 import { contrapartes, repartirAuxiliar } from '../utils/auxiliarContraparte';
 
-// Panel tipo "tabla dinámica" para el Estado de Resultados:
+// Panel tipo "tabla dinámica" para Resultados (movimiento del mes) y Balance (saldo acumulado al cierre de cada mes):
 // filas = una dimensión (centro de costo, ítem, cuenta, auxiliar...), columnas = meses.
 // Al hacer clic en una fila se baja un nivel (filtra y pasa a la siguiente dimensión);
 // al hacer clic en un mes se llega directo a los movimientos de ese mes.
@@ -13,7 +13,8 @@ type Vista = Dim | 'mov';
 
 interface Props {
   cuentas: ChartOfAccount[];
-  naturaleza: 'INGRESO' | 'GASTO';
+  /** INGRESO/GASTO = cuentas de resultado; ACTIVO/PASIVO = cuentas de balance (se usa con modoSaldo). */
+  naturaleza: 'INGRESO' | 'GASTO' | 'ACTIVO' | 'PASIVO';
   vouchers: Voucher[];
   anio: number | string;
   mesCorte: number; // 1..12
@@ -25,10 +26,18 @@ interface Props {
   /** Abrir ya filtrado por una dimensión (p. ej. un centro de costo) y/o partiendo por otra. */
   filtroInicial?: { dim: Dim; valor: string };
   vistaInicial?: Dim;
+  /** Balance: las columnas muestran el saldo acumulado al cierre de cada mes (no el movimiento del mes). */
+  modoSaldo?: boolean;
+  /** Modo saldo: primer día desde el que se acumula (lo anterior al año va a "Saldo inicial"). */
+  desdeSaldo?: string;
+  /** Modo saldo: último día incluido (por defecto, fin del mes de corte). */
+  hastaSaldo?: string;
+  /** Si se entrega, el número de comprobante pasa a ser un enlace. */
+  onOpenVoucher?: (v: Voucher) => void;
 }
 
 type Linea = {
-  fecha: string; mes: number; numero: number; glosa: string; valor: number;
+  voucher: Voucher; fecha: string; mes: number; numero: number; glosa: string; valor: number;
   cuenta: string; cc: string; item: string; aux: string; proyecto: string; producto: string; doc: string;
 };
 
@@ -48,8 +57,9 @@ export function etiquetaMaestro(raw: string | undefined, lista?: { id: string; c
   return m ? `${m.code} - ${m.name}` : v;
 }
 
-export default function DetallePivotModal({ cuentas, naturaleza, vouchers, anio, mesCorte, titulo, onClose, costCenters, expenseItems, filtroInicial, vistaInicial }: Props) {
+export default function DetallePivotModal({ cuentas, naturaleza, vouchers, anio, mesCorte, titulo, onClose, costCenters, expenseItems, filtroInicial, vistaInicial, modoSaldo, desdeSaldo, hastaSaldo, onOpenVoucher }: Props) {
   const nMeses = mesCorte > 0 ? mesCorte : 12;
+  const signoDebe = naturaleza === 'GASTO' || naturaleza === 'ACTIVO'; // saldo = debe − haber; si no, haber − debe
 
   const lineas = useMemo<Linea[]>(() => {
     const ids = new Set(cuentas.map(c => c.id));
@@ -63,9 +73,20 @@ export default function DetallePivotModal({ cuentas, naturaleza, vouchers, anio,
     vouchers.forEach(v => {
       if (v.status === 'Anulado' || v.origin === 'CIERRE_ANIO') return;
       const f = v.date || '';
-      if (f.slice(0, 4) !== String(anio)) return;
-      const mes = parseInt(f.slice(5, 7), 10) - 1;
-      if (mes < 0 || mes >= nMeses) return;
+      let mes: number;
+      if (modoSaldo) {
+        // Saldo: acumula desde `desdeSaldo` hasta el corte; lo anterior al año del informe es "Saldo inicial" (mes -1)
+        if (!f || (desdeSaldo && f < desdeSaldo)) return;
+        const tope = hastaSaldo || `${anio}-${String(nMeses).padStart(2, '0')}-31`;
+        if (f > tope) return;
+        const y = parseInt(f.slice(0, 4), 10);
+        mes = y < Number(anio) ? -1 : parseInt(f.slice(5, 7), 10) - 1;
+        if (mes >= nMeses) return;
+      } else {
+        if (f.slice(0, 4) !== String(anio)) return;
+        mes = parseInt(f.slice(5, 7), 10) - 1;
+        if (mes < 0 || mes >= nMeses) return;
+      }
       // Misma regla que los informes: solo comprobantes cuadrados
       const deb = (v.lines || []).reduce((a, l) => a + (Number(l.debit) || 0), 0);
       const cre = (v.lines || []).reduce((a, l) => a + (Number(l.credit) || 0), 0);
@@ -77,11 +98,12 @@ export default function DetallePivotModal({ cuentas, naturaleza, vouchers, anio,
         const cta = ids.has(l.accountId) ? cuentas.find(c => c.id === l.accountId) : codigos.get(l.accountCode);
         if (!cta) return;
         const neto = (l.debit || 0) - (l.credit || 0);
-        repartirAuxiliar(l, contra).forEach(parte => {
+        // En balance el auxiliar es solo el propio de la línea (un banco no se atribuye al cliente de otra línea)
+        (modoSaldo ? [{ rut: (l.auxiliaryRut || '').trim(), name: (l.auxiliaryName || '').trim(), parte: 1 }] : repartirAuxiliar(l, contra)).forEach(parte => {
           const rut = parte.rut;
           out.push({
-            fecha: f, mes, numero: Number(v.voucherNumber || 0), glosa: l.gloss || v.gloss || '',
-            valor: (naturaleza === 'INGRESO' ? -neto : neto) * parte.parte,
+            voucher: v, fecha: f, mes, numero: Number(v.voucherNumber || 0), glosa: l.gloss || v.gloss || '',
+            valor: (signoDebe ? neto : -neto) * parte.parte,
             cuenta: `${cta.code} ${cta.name}`,
             cc: etiquetaMaestro(l.costCenter, costCenters),
             item: etiquetaMaestro(l.expenseItem, expenseItems),
@@ -94,7 +116,7 @@ export default function DetallePivotModal({ cuentas, naturaleza, vouchers, anio,
       });
     });
     return out.sort((a, b) => a.fecha.localeCompare(b.fecha) || a.numero - b.numero);
-  }, [vouchers, cuentas, naturaleza, anio, nMeses, costCenters, expenseItems]);
+  }, [vouchers, cuentas, naturaleza, anio, nMeses, costCenters, expenseItems, modoSaldo, desdeSaldo, hastaSaldo]);
 
   // Dimensiones con datos reales (cuenta solo si el panel abarca varias cuentas)
   const dimsDisponibles = useMemo<Dim[]>(() => {
@@ -135,27 +157,43 @@ export default function DetallePivotModal({ cuentas, naturaleza, vouchers, anio,
     [lineas, filtros, mesSel]
   );
 
+  // Cada fila tiene 13 posiciones: [0] = saldo inicial (solo balance), [1..12] = enero..diciembre.
+  // En modo saldo se acumulan; en resultado se muestra el movimiento de cada mes.
+  const acumular = (arr: number[]): number[] => {
+    if (!modoSaldo) return arr;
+    const out = [...arr];
+    for (let i = 1; i < out.length; i++) out[i] += out[i - 1];
+    return out;
+  };
   const filas = useMemo(() => {
     if (vista === 'mov') return [];
     const m = new Map<string, number[]>();
     filtradas.forEach(l => {
       const k = l[vista];
-      const arr = m.get(k) || new Array(12).fill(0);
-      arr[l.mes] += l.valor;
+      const arr = m.get(k) || new Array(13).fill(0);
+      arr[l.mes + 1] += l.valor;
       m.set(k, arr);
     });
     return Array.from(m.entries())
-      .map(([clave, meses]) => ({ clave, meses, total: meses.reduce((s, v) => s + v, 0) }))
-      .filter(f => Math.round(f.total) !== 0 || f.meses.some(v => Math.round(v) !== 0))
+      .map(([clave, mov]) => {
+        const cols = acumular(mov);
+        const total = modoSaldo ? cols[nMeses] : mov.reduce((s, v) => s + v, 0);
+        return { clave, cols, total };
+      })
+      .filter(f => Math.round(f.total) !== 0 || f.cols.some(v => Math.round(v) !== 0))
       .sort((a, b) => Math.abs(b.total) - Math.abs(a.total));
-  }, [filtradas, vista]);
+  }, [filtradas, vista, modoSaldo, nMeses]);
 
   const totalMeses = useMemo(() => {
-    const t = new Array(12).fill(0);
-    filtradas.forEach(l => { t[l.mes] += l.valor; });
+    const t = new Array(13).fill(0); // [0] saldo inicial, [1..12] meses
+    filtradas.forEach(l => { t[l.mes + 1] += l.valor; });
     return t;
   }, [filtradas]);
+  const totalCols = acumular(totalMeses);
   const totalGeneral = totalMeses.reduce((s, v) => s + v, 0);
+  const hayInicial = !!modoSaldo && mesSel === null && Math.round(totalMeses[0]) !== 0;
+  const etiquetaTotal = modoSaldo && mesSel === null ? 'Saldo al corte' : 'Total';
+  const tipoInforme = modoSaldo ? 'Balance · saldos acumulados' : 'Estado de Resultados';
 
   const bajar = (valor: string, mes: number | null) => {
     if (vista === 'mov') return;
@@ -180,9 +218,9 @@ export default function DetallePivotModal({ cuentas, naturaleza, vouchers, anio,
       <div className="bg-white w-full max-w-6xl h-full shadow-2xl flex flex-col text-slate-800" onClick={e => e.stopPropagation()}>
         <div className="px-4 py-2 border-b border-slate-200 flex items-start justify-between gap-3">
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Estado de Resultados · detalle {anio} (ene–{MESES[nMeses - 1].toLowerCase()})</div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{tipoInforme} · detalle {anio} (ene–{MESES[nMeses - 1].toLowerCase()})</div>
             <div className="text-sm font-bold">{titulo}</div>
-            <div className="text-[11px] text-slate-500">Total del período: <b>{fmt(totalGeneral)}</b> · {filtradas.length} movimientos</div>
+            <div className="text-[11px] text-slate-500">{etiquetaTotal === 'Saldo al corte' ? 'Saldo al corte' : 'Total de la selección'}: <b>{fmt(totalGeneral)}</b> · {filtradas.length} movimientos</div>
           </div>
           <button onClick={onClose} className="p-1 rounded hover:bg-slate-100" aria-label="Cerrar"><X size={18} /></button>
         </div>
@@ -204,7 +242,7 @@ export default function DetallePivotModal({ cuentas, naturaleza, vouchers, anio,
             <>
               <ChevronRight size={12} className="text-slate-400" />
               <span className="px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 font-bold">
-                {MESES[mesSel]} {anio}
+                {mesSel < 0 ? 'Saldo inicial' : `${MESES[mesSel]} ${anio}`}
                 <button className="ml-1 text-indigo-400 hover:text-indigo-700" onClick={() => { setMesSel(null); if (vista === 'mov') setVista(siguienteVista(filtros)); }} aria-label="Quitar mes">×</button>
               </span>
             </>
@@ -234,8 +272,9 @@ export default function DetallePivotModal({ cuentas, naturaleza, vouchers, anio,
               <thead className="bg-slate-50 text-slate-500 sticky top-0 z-10">
                 <tr>
                   <th className="text-left p-1.5 sticky left-0 bg-slate-50 min-w-[200px]">{NOMBRE_DIM[vista]}</th>
+                  {hayInicial && <th className="text-right p-1.5 whitespace-nowrap">Saldo inicial</th>}
                   {MESES.slice(0, nMeses).map(m => <th key={m} className="text-right p-1.5 whitespace-nowrap">{m}</th>)}
-                  <th className="text-right p-1.5 font-bold">Total</th>
+                  <th className="text-right p-1.5 font-bold">{etiquetaTotal}</th>
                 </tr>
               </thead>
               <tbody>
@@ -246,10 +285,17 @@ export default function DetallePivotModal({ cuentas, naturaleza, vouchers, anio,
                         {f.clave}
                       </button>
                     </td>
-                    {f.meses.slice(0, nMeses).map((v, i) => (
+                    {hayInicial && (
+                      <td className="px-1.5 py-0.5 text-right font-mono">
+                        {Math.round(f.cols[0]) !== 0
+                          ? <button className="hover:underline hover:text-indigo-700" onClick={() => bajar(f.clave, -1)} title="Ver los movimientos anteriores al año">{fmt(f.cols[0])}</button>
+                          : ''}
+                      </td>
+                    )}
+                    {f.cols.slice(1, nMeses + 1).map((v, i) => (
                       <td key={i} className="px-1.5 py-0.5 text-right font-mono">
                         {Math.round(v) !== 0
-                          ? <button className="hover:underline hover:text-indigo-700" onClick={() => bajar(f.clave, i)} title={`Ver movimientos de ${MESES[i]}`}>{fmt(v)}</button>
+                          ? <button className="hover:underline hover:text-indigo-700" onClick={() => bajar(f.clave, i)} title={modoSaldo ? `Ver los movimientos de ${MESES[i]} (la cifra es el saldo acumulado al cierre del mes)` : `Ver movimientos de ${MESES[i]}`}>{fmt(v)}</button>
                           : ''}
                       </td>
                     ))}
@@ -257,13 +303,14 @@ export default function DetallePivotModal({ cuentas, naturaleza, vouchers, anio,
                   </tr>
                 ))}
                 {filas.length === 0 && (
-                  <tr><td colSpan={nMeses + 2} className="p-4 text-center text-slate-400">Sin movimientos para esta selección.</td></tr>
+                  <tr><td colSpan={nMeses + 3} className="p-4 text-center text-slate-400">Sin movimientos para esta selección.</td></tr>
                 )}
               </tbody>
               <tfoot className="bg-slate-100 font-bold sticky bottom-0">
                 <tr className="border-t-2 border-slate-300">
-                  <td className="px-1.5 py-1 sticky left-0 bg-slate-100">Total</td>
-                  {totalMeses.slice(0, nMeses).map((v, i) => <td key={i} className="px-1.5 py-1 text-right font-mono">{Math.round(v) !== 0 ? fmt(v) : ''}</td>)}
+                  <td className="px-1.5 py-1 sticky left-0 bg-slate-100">{modoSaldo ? 'Total (saldo)' : 'Total'}</td>
+                  {hayInicial && <td className="px-1.5 py-1 text-right font-mono">{Math.round(totalCols[0]) !== 0 ? fmt(totalCols[0]) : ''}</td>}
+                  {totalCols.slice(1, nMeses + 1).map((v, i) => <td key={i} className="px-1.5 py-1 text-right font-mono">{Math.round(v) !== 0 ? fmt(v) : ''}</td>)}
                   <td className="px-1.5 py-1 text-right font-mono">{fmt(totalGeneral)}</td>
                 </tr>
               </tfoot>
@@ -283,7 +330,11 @@ export default function DetallePivotModal({ cuentas, naturaleza, vouchers, anio,
                 {filtradas.slice(0, 1000).map((l, i) => (
                   <tr key={i} className="border-t border-slate-100 hover:bg-slate-50">
                     <td className="px-1.5 py-0.5 font-mono whitespace-nowrap">{l.fecha}</td>
-                    <td className="px-1.5 py-0.5">#{l.numero}</td>
+                    <td className="px-1.5 py-0.5">
+                      {onOpenVoucher
+                        ? <button className="text-indigo-600 hover:underline" onClick={() => onOpenVoucher(l.voucher)} title="Abrir el comprobante">#{l.numero}</button>
+                        : <>#{l.numero}</>}
+                    </td>
                     {cuentas.length > 1 && <td className="px-1.5 py-0.5 max-w-[180px] truncate" title={l.cuenta}>{l.cuenta}</td>}
                     <td className="px-1.5 py-0.5 max-w-[240px] truncate" title={l.glosa}>{l.glosa}</td>
                     <td className="px-1.5 py-0.5">{l.cc === SIN ? '' : l.cc}</td>

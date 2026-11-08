@@ -5,6 +5,7 @@ import { Company, Voucher, ChartOfAccount, FiscalPeriodYear } from '../types';
 import { printAndLogOfficialBook } from '../utils/folioService';
 import { ShieldCheck, Scale, Printer, Download } from 'lucide-react';
 import { BalancePrintModal } from './BalancePrintModal';
+import DetalleCuentaModal from './DetalleCuentaModal';
 
 interface Balance8ColumnasViewProps {
   periodoGlobal?: string;
@@ -51,6 +52,7 @@ export default function Balance8ColumnasView({
   const [onlyWithMovements, setOnlyWithMovements] = useState<boolean>(true);
   const [isPrintingOfficial, setIsPrintingOfficial] = useState<boolean>(false);
   const [showPrintModal, setShowPrintModal] = useState<boolean>(false);
+  const [detalleCuenta, setDetalleCuenta] = useState<ChartOfAccount | null>(null);
 
   // Handle period change with automatic year start date setting
   const handlePeriodChange = (val: string) => {
@@ -755,7 +757,7 @@ export default function Balance8ColumnasView({
                 </tr>
               ) : (
                 rows.map((r, idx) => (
-                  <tr key={r.code || idx} className="hover:bg-slate-50">
+                  <tr key={r.code || idx} className="hover:bg-indigo-50/60 cursor-pointer" title="Ver el detalle de esta cuenta" onClick={() => { const a = accounts.find(x => x.code === r.code); if (a) setDetalleCuenta(a); }}>
                     <td className="py-1.5 px-2.5 font-bold text-slate-800 border-r border-slate-100">{r.code}</td>
                     <td className="py-1.5 px-3 font-sans font-medium text-slate-900 border-r border-slate-100 truncate max-w-xs">{r.name}</td>
                     <td className="py-1.5 px-2 text-center border-r border-slate-100">
@@ -922,6 +924,25 @@ export default function Balance8ColumnasView({
         dateTo={dateTo}
         isFullyBalanced={isFullyBalanced}
       />
+      {detalleCuenta && (() => {
+        const anioP = periodFilter !== 'Todos' ? parseInt(periodFilter.slice(0, 4), 10) : 0;
+        const mesP = periodFilter !== 'Todos' ? parseInt(periodFilter.slice(5, 7), 10) : 0;
+        // Mismo criterio del balance: con período elegido acumula desde enero; en "Todos", desde la última apertura
+        const base = anioP ? `${anioP}-01-01` : inicioAcumuladoVigente(vouchers);
+        const desde = dateFrom && dateFrom > base ? dateFrom : base;
+        const finMes = anioP ? `${anioP}-${String(mesP).padStart(2, '0')}-${String(new Date(anioP, mesP, 0).getDate()).padStart(2, '0')}` : '';
+        const hasta = dateTo && (!finMes || dateTo < finMes) ? dateTo : finMes;
+        return (
+          <DetalleCuentaModal
+            account={detalleCuenta}
+            vouchers={vouchers}
+            desde={desde || undefined}
+            hasta={hasta || undefined}
+            titulo="Balance de 8 columnas · detalle de cuenta"
+            onClose={() => setDetalleCuenta(null)}
+          />
+        );
+      })()}
     </div>
   );
 }

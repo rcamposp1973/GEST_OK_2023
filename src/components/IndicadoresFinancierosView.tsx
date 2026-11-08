@@ -14,6 +14,7 @@ import { triggerIframePrint } from '../utils/printUtils';
 import KpiPanel from './KpiPanel';
 import { calcularFiguras } from '../utils/kpiEngine';
 import { getNaturaleza } from '../utils/ifrsClassification';
+import { contrapartes, repartirAuxiliar } from '../utils/auxiliarContraparte';
 import DetallePivotModal, { etiquetaMaestro } from './DetallePivotModal';
 import {
   BarChart3,
@@ -384,20 +385,26 @@ export default function IndicadoresFinancierosView({
       const deb = lines.reduce((a, l) => a + (Number(l.debit) || 0), 0);
       const cre = lines.reduce((a, l) => a + (Number(l.credit) || 0), 0);
       if (Math.abs(deb - cre) > 0.01) return;
-      lines.forEach(l => {
+      const natDe = (l: any) => {
         const acc = byKey.get(l.accountId) || byKey.get(l.accountCode);
-        if (!acc) return;
-        const nat = getNaturaleza(acc);
-        if (nat !== 'INGRESO' && nat !== 'GASTO') return;
+        const n = acc ? getNaturaleza(acc) : null;
+        return n === 'INGRESO' || n === 'GASTO' ? n : null;
+      };
+      const contra = contrapartes(lines, l => natDe(l) !== null);
+      lines.forEach(l => {
+        const nat = natDe(l);
+        if (!nat) return;
         const val = nat === 'INGRESO' ? (Number(l.credit) || 0) - (Number(l.debit) || 0) : (Number(l.debit) || 0) - (Number(l.credit) || 0);
         if (!val) return;
-        const rut = (l.auxiliaryRut || '').trim();
-        if (!rut) { if (nat === 'INGRESO') ventasSinAux += val; else gastosSinAux += val; return; }
-        const name = l.auxiliaryName || auxiliaryMap.get(rut)?.name || `Aux. RUT ${rut}`;
-        const map = nat === 'INGRESO' ? clientMap : supplierMap;
-        const curr = map.get(rut) || { rut, name, total: 0 };
-        curr.total += val;
-        map.set(rut, curr);
+        repartirAuxiliar(l, contra).forEach(parte => {
+          const monto = val * parte.parte;
+          if (!parte.rut) { if (nat === 'INGRESO') ventasSinAux += monto; else gastosSinAux += monto; return; }
+          const name = parte.name || auxiliaryMap.get(parte.rut)?.name || `Aux. RUT ${parte.rut}`;
+          const map = nat === 'INGRESO' ? clientMap : supplierMap;
+          const curr = map.get(parte.rut) || { rut: parte.rut, name, total: 0 };
+          curr.total += monto;
+          map.set(parte.rut, curr);
+        });
       });
     });
 

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { X, ChevronRight } from 'lucide-react';
 import type { ChartOfAccount, Voucher, CostCenterMaster, ExpenseItemMaster } from '../types';
+import { contrapartes, repartirAuxiliar } from '../utils/auxiliarContraparte';
 
 // Panel tipo "tabla dinámica" para el Estado de Resultados:
 // filas = una dimensión (centro de costo, ítem, cuenta, auxiliar...), columnas = meses.
@@ -69,21 +70,26 @@ export default function DetallePivotModal({ cuentas, naturaleza, vouchers, anio,
       const deb = (v.lines || []).reduce((a, l) => a + (Number(l.debit) || 0), 0);
       const cre = (v.lines || []).reduce((a, l) => a + (Number(l.credit) || 0), 0);
       if (Math.abs(deb - cre) > 0.01) return;
+      const enSel = (l: any) => ids.has(l.accountId) || codigos.has(l.accountCode);
+      // Auxiliar de cada línea: el propio, o el de la contrapartida del comprobante (Clientes, Proveedores...)
+      const contra = contrapartes(v.lines || [], enSel);
       (v.lines || []).forEach(l => {
         const cta = ids.has(l.accountId) ? cuentas.find(c => c.id === l.accountId) : codigos.get(l.accountCode);
         if (!cta) return;
         const neto = (l.debit || 0) - (l.credit || 0);
-        const rut = (l.auxiliaryRut || '').trim();
-        out.push({
-          fecha: f, mes, numero: Number(v.voucherNumber || 0), glosa: l.gloss || v.gloss || '',
-          valor: naturaleza === 'INGRESO' ? -neto : neto,
-          cuenta: `${cta.code} ${cta.name}`,
-          cc: etiquetaMaestro(l.costCenter, costCenters),
-          item: etiquetaMaestro(l.expenseItem, expenseItems),
-          aux: rut ? `${rut} ${nombreAux.get(rut) || ''}`.trim() : SIN,
-          proyecto: (l.project || '').trim() || SIN,
-          producto: (l.product || '').trim() || SIN,
-          doc: [l.documentType, l.documentRef].filter(Boolean).join(' ').trim(),
+        repartirAuxiliar(l, contra).forEach(parte => {
+          const rut = parte.rut;
+          out.push({
+            fecha: f, mes, numero: Number(v.voucherNumber || 0), glosa: l.gloss || v.gloss || '',
+            valor: (naturaleza === 'INGRESO' ? -neto : neto) * parte.parte,
+            cuenta: `${cta.code} ${cta.name}`,
+            cc: etiquetaMaestro(l.costCenter, costCenters),
+            item: etiquetaMaestro(l.expenseItem, expenseItems),
+            aux: rut ? `${rut} ${nombreAux.get(rut) || parte.name || ''}`.trim() : SIN,
+            proyecto: (l.project || '').trim() || SIN,
+            producto: (l.product || '').trim() || SIN,
+            doc: [l.documentType, l.documentRef].filter(Boolean).join(' ').trim(),
+          });
         });
       });
     });

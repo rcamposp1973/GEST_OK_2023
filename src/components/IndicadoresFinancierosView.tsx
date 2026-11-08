@@ -1404,6 +1404,7 @@ export default function IndicadoresFinancierosView({
           account={detSaldo.cuentas[0]}
           cuentasExtra={detSaldo.cuentas}
           soloRut={detSaldo.rut}
+          empresa={{ studyId: company.studyId, id: company.id }}
           vouchers={vouchers}
           desde={paretoBase.inicio || undefined}
           hasta={paretoBase.ultimo}

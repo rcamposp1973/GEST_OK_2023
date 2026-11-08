@@ -853,6 +853,7 @@ export default function BalanceIFRSView({
             vouchers={vouchers}
             desde={desde}
             hasta={hasta}
+            empresa={{ studyId: company.studyId, id: company.id }}
             titulo="Balance IFRS · detalle de cuenta"
             onClose={() => setDetalleCuenta(null)}
           />

@@ -199,7 +199,7 @@ export default function KpiPanel({ company, vouchers, accounts, year, cutoffMont
         </div>
       ))}
       {kpiAbierto && (
-        <KpiDetalleModal kpi={kpiAbierto} figuras={figuras} vouchers={vouchers} year={year} cutoffMonth={cutoffMonth} costCenters={costCenters} expenseItems={expenseItems} onClose={() => setKpiAbierto(null)} />
+        <KpiDetalleModal kpi={kpiAbierto} figuras={figuras} vouchers={vouchers} year={year} cutoffMonth={cutoffMonth} costCenters={costCenters} expenseItems={expenseItems} empresa={{ studyId: company.studyId, id: company.id }} onClose={() => setKpiAbierto(null)} />
       )}
     </div>
   );

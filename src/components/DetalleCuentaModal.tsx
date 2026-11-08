@@ -1,6 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { X } from 'lucide-react';
-import type { ChartOfAccount, Voucher } from '../types';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import type { AccountMatch, ChartOfAccount, Voucher } from '../types';
+import { pareadoPorLinea } from '../utils/pareoParcial';
 
 interface Props {
   account: ChartOfAccount;
@@ -14,17 +17,35 @@ interface Props {
   titulo?: string;
   onClose: () => void;
   onOpenVoucher?: (voucherRef: Voucher | string | number) => void;
+  /** Si se entrega, los documentos abiertos descuentan lo pareado en Análisis de Cuentas (a la fecha de corte). */
+  empresa?: { studyId: string; id: string };
 }
 
 type Linea = {
   fecha: string; numero: number; voucher: Voucher; glosa: string; debe: number; haber: number;
   rut: string; auxiliar: string; doc: string; cc: string; item: string; proyecto: string; producto: string;
+  debeAb: number; haberAb: number; // lo que sigue abierto después de descontar pareos
 };
 
 const fmt = (n: number) => Math.round(n).toLocaleString('es-CL');
 const SIN = '(sin dato)';
 
-export default function DetalleCuentaModal({ account, cuentasExtra, soloRut, vouchers, desde, hasta, titulo, onClose, onOpenVoucher }: Props) {
+export default function DetalleCuentaModal({ account, cuentasExtra, soloRut, vouchers, desde, hasta, titulo, onClose, onOpenVoucher, empresa }: Props) {
+  // Pareos de Análisis de Cuentas (solo si se conoce la empresa)
+  const [matches, setMatches] = useState<AccountMatch[]>([]);
+  useEffect(() => {
+    if (!empresa) return;
+    let vivo = true;
+    getDocs(collection(db, 'studies', empresa.studyId, 'companies', empresa.id, 'accountMatches'))
+      .then(snap => { if (vivo) setMatches(snap.docs.map(d => ({ ...(d.data() as AccountMatch), id: d.id }))); })
+      .catch(() => { /* sin pareos: se muestran los documentos por tipo y número */ });
+    return () => { vivo = false; };
+  }, [empresa?.studyId, empresa?.id]);
+  // Un pareo cuenta solo si su fecha de pareo (la del movimiento más nuevo del grupo) es anterior o igual al corte
+  const pareado = useMemo(() => pareadoPorLinea(matches.filter(m => {
+    const fp = m.fechaPareo || m.matchedLines.reduce((mx, l) => ((l.voucherDate || '') > mx ? (l.voucherDate || '') : mx), '');
+    return !hasta || fp <= hasta;
+  })), [matches, hasta]);
   const lineas = useMemo<Linea[]>(() => {
     const out: Linea[] = [];
     vouchers.forEach(v => {
@@ -32,7 +53,7 @@ export default function DetalleCuentaModal({ account, cuentasExtra, soloRut, vou
       const f = v.date || '';
       if (desde && f < desde) return;
       if (hasta && f > hasta) return;
-      (v.lines || []).forEach(l => {
+      (v.lines || []).forEach((l, idx) => {
         const enCuentas = cuentasExtra && cuentasExtra.length
           ? cuentasExtra.some(c => c.id === l.accountId || c.code === l.accountCode)
           : (l.accountId === account.id || l.accountCode === account.code);
@@ -41,6 +62,8 @@ export default function DetalleCuentaModal({ account, cuentasExtra, soloRut, vou
         out.push({
           fecha: f, numero: Number(v.voucherNumber || 0), voucher: v, glosa: l.gloss || v.gloss || '',
           debe: l.debit || 0, haber: l.credit || 0,
+          debeAb: Math.max(0, (l.debit || 0) - (pareado.get(`${v.id}_${idx}`)?.debit || 0)),
+          haberAb: Math.max(0, (l.credit || 0) - (pareado.get(`${v.id}_${idx}`)?.credit || 0)),
           rut: (l.auxiliaryRut || '').trim(), auxiliar: (l.auxiliaryName || '').trim(),
           doc: [l.documentType, l.documentRef].filter(Boolean).join(' ').trim(),
           cc: (l.costCenter || '').trim(), item: (l.expenseItem || '').trim(),
@@ -49,7 +72,7 @@ export default function DetalleCuentaModal({ account, cuentasExtra, soloRut, vou
       });
     });
     return out.sort((a, b) => a.fecha.localeCompare(b.fecha) || a.numero - b.numero);
-  }, [vouchers, account, cuentasExtra, soloRut, desde, hasta]);
+  }, [vouchers, account, cuentasExtra, soloRut, desde, hasta, pareado]);
 
   const agrupar = (clave: (l: Linea) => string, etiqueta?: (l: Linea) => string) => {
     const m = new Map<string, { clave: string; etiqueta: string; debe: number; haber: number; n: number }>();
@@ -83,8 +106,8 @@ export default function DetalleCuentaModal({ account, cuentasExtra, soloRut, vou
       const a = auxs.get(kAux) || { rut: kAux, nombre: l.auxiliar, debe: 0, haber: 0, docs: [] };
       let d = a.docs.find(x => x.clave === clave);
       if (!d) { d = { clave, etiqueta, debe: 0, haber: 0, n: 0 }; a.docs.push(d); }
-      d.debe += l.debe; d.haber += l.haber; d.n += 1;
-      a.debe += l.debe; a.haber += l.haber;
+      d.debe += l.debeAb; d.haber += l.haberAb; d.n += 1;
+      a.debe += l.debeAb; a.haber += l.haberAb;
       auxs.set(kAux, a);
     });
     return Array.from(auxs.values())
@@ -179,6 +202,12 @@ export default function DetalleCuentaModal({ account, cuentasExtra, soloRut, vou
           )}
           {activa === 'aux' && tablaGrupo(porAux, 'Auxiliar')}
           {activa === 'abiertos' && (
+            <>
+            {empresa && (
+              <p className="text-[10px] text-slate-500 mb-1.5">
+                Descuenta los pareos de Análisis de Cuentas vigentes a la fecha de corte ({pareado.size} partida(s) con pareo total o parcial).
+              </p>
+            )}
             <table className="w-full text-xs">
               <thead className="bg-slate-50 text-slate-500 sticky top-0">
                 <tr><th className="text-left p-1.5">Auxiliar / Documento</th><th className="text-right p-1.5">Docs</th><th className="text-right p-1.5">Debe</th><th className="text-right p-1.5">Haber</th><th className="text-right p-1.5">Saldo abierto</th></tr>
@@ -209,6 +238,7 @@ export default function DetalleCuentaModal({ account, cuentasExtra, soloRut, vou
                 })}
               </tbody>
             </table>
+            </>
           )}
           {activa === 'cc' && tablaGrupo(porCC, 'Centro de costo')}
           {activa === 'item' && tablaGrupo(porItem, 'Ítem de gasto')}

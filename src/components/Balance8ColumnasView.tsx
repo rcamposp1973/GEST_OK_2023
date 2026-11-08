@@ -938,6 +938,7 @@ export default function Balance8ColumnasView({
             vouchers={vouchers}
             desde={desde || undefined}
             hasta={hasta || undefined}
+            empresa={{ studyId: company.studyId, id: company.id }}
             titulo="Balance de 8 columnas · detalle de cuenta"
             onClose={() => setDetalleCuenta(null)}
           />

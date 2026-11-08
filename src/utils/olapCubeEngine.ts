@@ -1,4 +1,5 @@
 import { Voucher, ChartOfAccount, Auxiliary } from '../types';
+import { getNaturaleza, getRubroER, getRubroESF, RUBROS_ESF } from './ifrsClassification';
 
 /**
  * Dimensiones analíticas soportadas en el motor OLAP de Gest_OK
@@ -199,7 +200,14 @@ export class OlapCube {
     this.indexByProject.clear();
 
     vouchers.forEach((v) => {
-      if (v.status === 'Anulado') return;
+      // La contabilidad manda: misma regla que Resultados y Balance (sin anulados, sin el comprobante de cierre de año, solo cuadrados)
+      if (v.status === 'Anulado' || v.origin === 'CIERRE_ANIO') return;
+      {
+        const ls = v.lines || [];
+        const d = ls.reduce((a, l) => a + (Number(l.debit) || 0), 0);
+        const c = ls.reduce((a, l) => a + (Number(l.credit) || 0), 0);
+        if (Math.abs(d - c) > 0.01) return;
+      }
       const vDate = v.date || '';
       const vYear = vDate.slice(0, 4) || 'S/A';
       const vMonth = vDate.slice(5, 7) || '01';
@@ -289,6 +297,31 @@ export class OlapCube {
           accountClass === '4' && 
           (name.includes('impuesto a la renta') || name.includes('impuesto de primera'));
 
+        // Clasificación oficial (IFRS) de la cuenta del plan. El cubo usa internamente 1 Activo, 2 Pasivo, 3 Patrimonio,
+        // 4 Gasto, 5 Ingreso; se deriva de la naturaleza de la cuenta y no del primer dígito del código.
+        let claseOficial: string | null = null;
+        let oficial: Partial<Record<'isCurrentAsset' | 'isCurrentLiability' | 'isInventory' | 'isReceivable' | 'isPayable' | 'isCostOfSales' | 'isOperatingExpense' | 'isDepreciationAmort' | 'isFinancialResult' | 'isTax', boolean>> | null = null;
+        if (acc) {
+          const nat = getNaturaleza(acc);
+          const CLASE: Record<string, string> = { ACTIVO: '1', PASIVO: '2', PATRIMONIO: '3', GASTO: '4', INGRESO: '5' };
+          claseOficial = CLASE[nat] || null;
+          const rbE = nat === 'ACTIVO' || nat === 'PASIVO' ? getRubroESF(acc) : '';
+          const sec = RUBROS_ESF.find(r => r.id === rbE)?.seccion || '';
+          const rbR = nat === 'GASTO' || nat === 'INGRESO' ? getRubroER(acc) : '';
+          oficial = {
+            isCurrentAsset: nat === 'ACTIVO' && sec !== 'ACTIVO_NO_CORRIENTE',
+            isCurrentLiability: nat === 'PASIVO' && sec !== 'PASIVO_NO_CORRIENTE',
+            isInventory: nat === 'ACTIVO' && rbE === '1103',
+            isReceivable: nat === 'ACTIVO' && rbE === '1102',
+            isPayable: nat === 'PASIVO' && rbE === '2101',
+            isCostOfSales: nat === 'GASTO' && rbR === 'COSTO_VENTAS',
+            isOperatingExpense: nat === 'GASTO' && (rbR === 'GASTO_PERSONAL' || rbR === 'GASTO_ADM'),
+            isDepreciationAmort: nat === 'GASTO' && rbR === 'DEPRECIACION',
+            isFinancialResult: rbR === 'ING_FIN' || rbR === 'COSTO_FIN',
+            isTax: nat === 'GASTO' && rbR === 'IMPUESTO',
+          };
+        }
+
         const debit = Number(l.debit) || 0;
         const credit = Number(l.credit) || 0;
         const net = debit - credit;
@@ -315,22 +348,22 @@ export class OlapCube {
           accountCode: rawCode,
           accountName: l.accountName || acc?.name || 'Cuenta Contable',
           accountType: acc?.type || 'Activo',
-          accountClass,
+          accountClass: claseOficial ?? accountClass,
           accountGroup,
           accountSubgroup,
 
           rubroBalance: rubroBal,
           rubroResultado: rubroRes,
-          isCurrentAsset,
-          isCurrentLiability,
-          isInventory,
-          isReceivable,
-          isPayable,
-          isCostOfSales,
-          isOperatingExpense,
-          isDepreciationAmort,
-          isFinancialResult,
-          isTax,
+          isCurrentAsset: oficial?.isCurrentAsset ?? isCurrentAsset,
+          isCurrentLiability: oficial?.isCurrentLiability ?? isCurrentLiability,
+          isInventory: oficial?.isInventory ?? isInventory,
+          isReceivable: oficial?.isReceivable ?? isReceivable,
+          isPayable: oficial?.isPayable ?? isPayable,
+          isCostOfSales: oficial?.isCostOfSales ?? isCostOfSales,
+          isOperatingExpense: oficial?.isOperatingExpense ?? isOperatingExpense,
+          isDepreciationAmort: oficial?.isDepreciationAmort ?? isDepreciationAmort,
+          isFinancialResult: oficial?.isFinancialResult ?? isFinancialResult,
+          isTax: oficial?.isTax ?? isTax,
 
           costCenter: cc,
           auxiliaryRut: auxRut,

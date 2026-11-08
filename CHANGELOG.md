@@ -9,6 +9,9 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## Próxima (en Pruebas) — Reportes alineados con la contabilidad
+- Reportes Analíticos y panel Analytics HUD: ahora clasifican las cuentas con la clasificación IFRS del plan (no con el primer dígito del código), excluyen comprobantes anulados, descuadrados y el de cierre de año. Se corrigió que la fuente "Contabilidad" del análisis de ventas tomaba las cuentas que parten en 4 (gastos) como ventas; ahora usa los ingresos de actividades ordinarias.
+
 ## 1.8.0 — 7 de noviembre de 2026 — Detalle navegable, Cierre y apertura de año
 - Regla 80/20 (antes "Pareto"): ahora explica el saldo por cobrar (clientes) y por pagar (proveedores) al mes de corte, con la misma regla del Balance IFRS (rubros 1102 y 2101, acumulado desde la última apertura). Muestra el saldo contable total, saldos a favor y sin auxiliar, y las cuentas incluidas; cada fila abre los documentos abiertos y movimientos del auxiliar. Principio: la contabilidad manda.
 - Indicadores Financieros › Informe de gastos: ahora usa la misma base que el Estado de Resultados (neto debe-haber, solo comprobantes cuadrados) y cada fila abre la tabla dinámica (centro de costo ⇄ ítem, por mes). El panel muestra "código - nombre" de centros de costo e ítems.

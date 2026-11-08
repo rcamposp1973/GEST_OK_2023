@@ -17,6 +17,7 @@ import {
 } from '../types';
 import { logAuditEvent } from '../utils/auditLogger';
 import { triggerIframePrint } from '../utils/printUtils';
+import { getNaturaleza, getRubroER } from '../utils/ifrsClassification';
 import {
   BarChart3,
   TrendingUp,
@@ -373,11 +374,21 @@ export default function ReportesAnaliticosView({
     gloss: string;
   }
 
+  // La contabilidad manda: mismas reglas que Resultados y Balance (sin anulados, sin el comprobante de cierre de año,
+  // solo comprobantes cuadrados) y la clasificación IFRS de la cuenta, no el primer dígito del código.
+  const comprobanteValido = (v: Voucher): boolean => {
+    if (v.status === 'Anulado' || v.origin === 'CIERRE_ANIO') return false;
+    const ls = v.lines || [];
+    const deb = ls.reduce((a, l) => a + (Number(l.debit) || 0), 0);
+    const cre = ls.reduce((a, l) => a + (Number(l.credit) || 0), 0);
+    return Math.abs(deb - cre) <= 0.01;
+  };
+
   const normalizedLines = useMemo<NormalizedVoucherLine[]>(() => {
     const list: NormalizedVoucherLine[] = [];
 
     vouchers.forEach(v => {
-      if (v.status === 'Anulado') return;
+      if (!comprobanteValido(v)) return;
       if (!v.date && !v.period) return;
 
       // Safe date parsing without timezone shift bugs
@@ -433,6 +444,14 @@ export default function ReportesAnaliticosView({
           }
         }
 
+        // Clasificación oficial (IFRS) de la cuenta del plan; si la cuenta no existe en el plan se mantiene la heurística anterior
+        const cuentaPlan = accountsMap.get(l.accountId) || accountsMap.get(l.accountCode);
+        if (cuentaPlan) {
+          const nat = getNaturaleza(cuentaPlan);
+          if (nat === 'GASTO') accClass = getRubroER(cuentaPlan) === 'COSTO_VENTAS' ? 'COSTO' : 'GASTO';
+          else if (nat === 'ACTIVO' || nat === 'PASIVO' || nat === 'PATRIMONIO' || nat === 'INGRESO') accClass = nat;
+        }
+
         const ccInfo = resolveCostCenterLabel(l.costCenter);
         const eiInfo = resolveExpenseItemLabel(l.expenseItem);
         const pInfo = l.project ? (projectsMap.get(l.project)?.name ? `${projectsMap.get(l.project)!.code} - ${projectsMap.get(l.project)!.name}` : l.project) : '(Sin Proyecto)';
@@ -470,7 +489,7 @@ export default function ReportesAnaliticosView({
     });
 
     return list;
-  }, [vouchers, selectedYear, resolveAccountLabel, resolveCostCenterLabel, resolveExpenseItemLabel, projectsMap, productsMap]);
+  }, [vouchers, selectedYear, accountsMap, resolveAccountLabel, resolveCostCenterLabel, resolveExpenseItemLabel, projectsMap, productsMap]);
 
   // =========================================================================
   // MOTOR DE CÁLCULO DE LA MATRIZ DINÁMICA (PIVOT TABLE)
@@ -479,10 +498,10 @@ export default function ReportesAnaliticosView({
     return normalizedLines.filter(line => {
       // Filtro de tipo de cuenta
       if (accountFilter === 'GASTOS') {
-        const isExpense = ['GASTO', 'COSTO'].includes(line.accountClass) || line.accountCode.startsWith('4') || line.accountCode.startsWith('5') || line.accountCode.startsWith('6');
+        const isExpense = ['GASTO', 'COSTO'].includes(line.accountClass);
         if (!isExpense) return false;
       } else if (accountFilter === 'INGRESOS') {
-        const isIncome = line.accountClass === 'INGRESO' || line.accountCode.startsWith('3') || line.accountCode.startsWith('5');
+        const isIncome = line.accountClass === 'INGRESO';
         if (!isIncome) return false;
       } else if (accountFilter === 'BALANCE') {
         if (!['ACTIVO', 'PASIVO', 'PATRIMONIO'].includes(line.accountClass)) return false;
@@ -891,7 +910,7 @@ export default function ReportesAnaliticosView({
     // Procesar Contabilidad (Cuentas de Ingresos / Asientos) si corresponde
     if (salesDataSource === 'CONTABILIDAD') {
       vouchers.forEach(v => {
-        if (v.status === 'Anulado') return;
+        if (!comprobanteValido(v)) return;
         if (!v.date) return;
         const d = new Date(v.date);
         const y = d.getFullYear();
@@ -899,7 +918,9 @@ export default function ReportesAnaliticosView({
 
         (v.lines || []).forEach(l => {
           const accInfo = resolveAccountLabel(l.accountId || l.accountCode);
-          if (accInfo.code.startsWith('4')) { // Cuenta de Ingreso
+          const cuentaVenta = accountsMap.get(l.accountId) || accountsMap.get(l.accountCode);
+          // Ventas = ingresos de actividades ordinarias según el plan de cuentas (clasificación IFRS)
+          if (cuentaVenta && getNaturaleza(cuentaVenta) === 'INGRESO' && getRubroER(cuentaVenta) === 'INGRESOS_ORD') {
             const netIncome = (Number(l.credit) || 0) - (Number(l.debit) || 0); // Ingresos aumentan al Haber
             if (y === selectedYear) {
               actualMonthlySales[m] += netIncome;
@@ -1033,6 +1054,7 @@ export default function ReportesAnaliticosView({
     salesDataSource,
     salesCompareMode,
     salesBudget,
+    accountsMap,
     resolveAccountLabel,
     resolveCostCenterLabel
   ]);

@@ -1,3 +1,4 @@
+import { CondicionesVigenciaEditor } from './payroll/CondicionesVigenciaEditor';
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Users, UserPlus, Search, Edit2, Trash2, CheckCircle2, XCircle, 
@@ -272,6 +273,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
     healthPlanType: 'FONASA_7',
     healthPlanValue: 0,
     hasCesantiaAFC: true,
+    condiciones: [],
     apvType: 'NINGUNO',
     apvInstitution: '',
     apvAmount: 0,
@@ -360,6 +362,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
       healthPlanType: emp.healthPlanType,
       healthPlanValue: emp.healthPlanValue || 0,
       hasCesantiaAFC: emp.hasCesantiaAFC ?? true,
+      condiciones: emp.condiciones || [],
       apvType: emp.apvType || 'NINGUNO',
       apvInstitution: emp.apvInstitution || '',
       apvAmount: emp.apvAmount || 0,
@@ -1927,7 +1930,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
                       <option value="MODELO">AFP Modelo (10.58%)</option>
                       <option value="PLANVITAL">AFP Planvital (11.16%)</option>
                       <option value="PROVIDA">AFP Provida (11.45%)</option>
-                      <option value="UNO">AFP Uno (10.49%)</option>
+                      <option value="UNO">AFP Uno (10.46%)</option>
                       <option value="INP">IPS / Ex Cajas (18.84%)</option>
                       <option value="JUBILADO_COTIZA">Jubilado Cotizante</option>
                       <option value="JUBILADO_NO_COTIZA">Jubilado No Cotizante (0%)</option>
@@ -2076,6 +2079,8 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
                   </div>
                 </div>
               </div>
+
+              <CondicionesVigenciaEditor value={formData.condiciones || []} onChange={(v) => setFormData({ ...formData, condiciones: v })} />
 
               {/* Modal Footer */}
               <div className="pt-4 border-t border-slate-200 flex justify-end items-center gap-3">

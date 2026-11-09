@@ -9,6 +9,12 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## Próxima (en Pruebas) — Sueldos: vigencias por fecha y seguro de cesantía
+
+- **Cambios con vigencia (desde / hasta)** en la ficha del trabajador: AFP, Isapre/Fonasa y plan, tipo de contrato, bonos, colación, movilización, cuotas de préstamo, seguros y otros descuentos. Se pueden registrar varios cambios sucesivos (cambio de AFP, paso de Fonasa a Isapre y de vuelta, etc.). Los meses anteriores no se alteran.
+- **Seguro de cesantía según contrato**: indefinido y part time 0,6 % trabajador + 2,4 % empleador; plazo fijo y obra o faena 0 % + 3,0 %; con 11 años de servicio en contrato indefinido el trabajador deja de cotizar y el empleador sigue con 0,8 %; pensionados sin seguro. Antes el part time se trataba como plazo fijo.
+- **AFP Uno**: la comisión correcta es 0,46 % (total 10,46 %); se corrigió la etiqueta de 10,49 % y se ignora ese valor antiguo guardado en fichas.
+
 ## 1.9.0 — 8 de noviembre de 2026 — Reportes alineados con la contabilidad, pareo parcial e informe mensual
 
 - **Informe mensual (foto fija)**: nuevo módulo en Indicadores. Congela las cifras de un mes (resultados, situación financiera e indicadores) junto con los comentarios del contador. Si después la contabilidad cambia, avisa qué cifras difieren de la foto; la foto no se modifica sola. Se imprime a PDF y en modo presentación los comentarios se muestran como texto.

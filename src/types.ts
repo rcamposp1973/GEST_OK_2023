@@ -1265,6 +1265,34 @@ export interface InventoryMovement {
 }
 
 export type ContractType = 'INDEFINIDO' | 'PLAZO_FIJO' | 'OBRA_FAENA' | 'PART_TIME';
+/** Cambio de condiciones previsionales/contractuales de un trabajador, vigente DESDE un mes (YYYY-MM).
+ *  Los campos base del trabajador son las condiciones iniciales; cada tramo las modifica desde su mes. */
+export interface EmployeeCondicion {
+  id: string;
+  desde: string; // YYYY-MM (primer mes en que rige)
+  hasta?: string; // YYYY-MM (último mes en que rige); vacío = sigue vigente
+  pensionSystem?: PensionSystem;
+  pensionCommissionPercent?: number;
+  healthSystem?: HealthSystem;
+  healthPlanType?: HealthPlanType;
+  healthPlanValue?: number;
+  isapreGesValue?: number;
+  contractType?: ContractType;
+  hasCesantiaAFC?: boolean;
+  // Haberes y descuentos pactados con vigencia (bonos temporales, cuotas de préstamo, etc.)
+  colacionPactada?: number;
+  movilizacionPactada?: number;
+  viaticosPactados?: number;
+  bonosPactados?: number;
+  otrosImponiblesPactados?: number;
+  otrosNoImponiblesPactados?: number;
+  descuentoSeguroComplementario?: number;
+  descuentoAhorroBienestar?: number;
+  descuentoPrestamoCuota?: number;
+  otrosDescuentosPactados?: number;
+  motivo?: string;
+}
+
 export type PensionSystem = 'CAPITAL' | 'CUPRUM' | 'HABITAT' | 'MODELO' | 'PLANVITAL' | 'PROVIDA' | 'UNO' | 'INP' | 'JUBILADO_COTIZA' | 'JUBILADO_NO_COTIZA';
 export type HealthSystem = 'FONASA' | 'BANMEDICA' | 'COLMENA' | 'CONSALUD' | 'CRUZ_BLANCA' | 'NUEVA_MASVIDA' | 'VIDA_TRES' | 'ESENCIAL' | 'ISALUD';
 export type HealthPlanType = 'FONASA_7' | 'ISAPRE_UF' | 'ISAPRE_PESOS' | 'ISAPRE_PORCENTAJE';
@@ -1327,6 +1355,7 @@ export interface Employee {
   bankAccountType?: 'CORRIENTE' | 'VISTA' | 'RUT' | 'AHORRO';
   bankAccountNumber?: string;
   salaryHistory?: SalaryHistoryEntry[];
+  condiciones?: EmployeeCondicion[]; // cambios de AFP / salud / contrato con vigencia "desde"
   active: boolean;
   createdAt: string;
   updatedAt?: string;

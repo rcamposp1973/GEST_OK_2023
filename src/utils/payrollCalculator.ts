@@ -361,12 +361,53 @@ export function calculateImpuestoUnicoSegundaCategoria(taxableBaseClp: number, u
 /**
  * Calcula la liquidación de sueldo completa para un trabajador en un período específico
  */
+/** Condiciones del trabajador vigentes en un período (YYYY-MM): base + tramos "desde" <= período. */
+export function condicionesPara(employee: Employee, period: string): Employee {
+  const tramos = (employee.condiciones || [])
+    .filter(c => c.desde && c.desde <= period && (!c.hasta || c.hasta >= period))
+    .sort((a, b) => a.desde.localeCompare(b.desde));
+  if (!tramos.length) return employee;
+  const e: any = { ...employee };
+  const CAMPOS = ['healthSystem', 'healthPlanType', 'healthPlanValue', 'isapreGesValue', 'contractType', 'hasCesantiaAFC',
+    'colacionPactada', 'movilizacionPactada', 'viaticosPactados', 'bonosPactados', 'otrosImponiblesPactados',
+    'otrosNoImponiblesPactados', 'descuentoSeguroComplementario', 'descuentoAhorroBienestar', 'descuentoPrestamoCuota', 'otrosDescuentosPactados'];
+  for (const t of tramos as any[]) {
+    if (t.pensionSystem !== undefined && t.pensionSystem !== e.pensionSystem) {
+      e.pensionSystem = t.pensionSystem;
+      e.pensionCommissionPercent = t.pensionCommissionPercent; // undefined => comisión oficial vigente
+    } else if (t.pensionCommissionPercent !== undefined) {
+      e.pensionCommissionPercent = t.pensionCommissionPercent;
+    }
+    for (const k of CAMPOS) if (t[k] !== undefined && t[k] !== null && t[k] !== '') e[k] = t[k];
+  }
+  return e as Employee;
+}
+
+/** Tasas del seguro de cesantía (Ley 19.728) según contrato y antigüedad.
+ *  Indefinido (incl. jornada parcial): trabajador 0,6 % + empleador 2,4 %.
+ *  Plazo fijo / obra o faena: trabajador 0 % + empleador 3,0 %.
+ *  Indefinido con 11 años (132 meses) con el mismo empleador: trabajador 0 %; empleador sigue con 0,8 % (Fondo Solidario). */
+export function tasasCesantia(employee: Employee, period: string): { trabajador: number; empleador: number } {
+  // Pensionados no están afectos al seguro de cesantía (salvo invalidez parcial: se desactiva con el interruptor de cesantía = sí)
+  if (!employee.hasCesantiaAFC || employee.pensionSystem === 'JUBILADO_NO_COTIZA' || employee.pensionSystem === 'JUBILADO_COTIZA') return { trabajador: 0, empleador: 0 };
+  if (employee.contractType === 'INDEFINIDO' || employee.contractType === 'PART_TIME') {
+    const h = (employee.hireDate || '').slice(0, 7);
+    if (h && period) {
+      const meses = (parseInt(period.slice(0, 4), 10) - parseInt(h.slice(0, 4), 10)) * 12 + (parseInt(period.slice(5, 7), 10) - parseInt(h.slice(5, 7), 10));
+      if (meses >= 132) return { trabajador: 0, empleador: 0.8 };
+    }
+    return { trabajador: 0.6, empleador: 2.4 };
+  }
+  return { trabajador: 0, empleador: 3.0 };
+}
+
 export function calculatePayrollSlip(
-  employee: Employee,
+  employeeBase: Employee,
   params: PayrollParameters,
   input: MonthPayrollInput = {},
   conceptsList: PayrollConcept[] = []
 ): PayrollSlip {
+  const employee = condicionesPara(employeeBase, params.period);
   const [yearStr, monthStr] = params.period.split('-');
   const year = parseInt(yearStr, 10) || new Date().getFullYear();
   const month = parseInt(monthStr, 10) || (new Date().getMonth() + 1);
@@ -512,7 +553,9 @@ export function calculatePayrollSlip(
 
   // 7. Descuentos Previsionales (Cargo Trabajador)
   // AFP
-  const afpTasa = employee.pensionCommissionPercent || params.afpCommissions[employee.pensionSystem] || DEFAULT_AFP_COMMISSIONS[employee.pensionSystem] || 11.44;
+  // 10,49 fue una comisión antigua de AFP Uno guardada en fichas: se ignora y se usa la oficial vigente
+  const comisionFicha = (employee.pensionSystem === 'UNO' && employee.pensionCommissionPercent === 10.49) ? undefined : employee.pensionCommissionPercent;
+  const afpTasa = comisionFicha || params.afpCommissions[employee.pensionSystem] || DEFAULT_AFP_COMMISSIONS[employee.pensionSystem] || 11.44;
   const afpMonto = employee.pensionSystem === 'JUBILADO_NO_COTIZA' ? 0 : Math.round(baseImponibleAfp * (afpTasa / 100));
 
   // Salud
@@ -547,14 +590,8 @@ export function calculatePayrollSlip(
   }
 
   // AFC Trabajador (0.6% Indefinido, 0% Plazo Fijo / Obra)
-  let afcTrabajadorTasa = 0;
-  if (employee.hasCesantiaAFC && employee.pensionSystem !== 'JUBILADO_NO_COTIZA') {
-    if (employee.contractType === 'INDEFINIDO') {
-      afcTrabajadorTasa = 0.6;
-    } else {
-      afcTrabajadorTasa = 0.0;
-    }
-  }
+  const tasasAfc = tasasCesantia(employee, params.period);
+  const afcTrabajadorTasa = tasasAfc.trabajador;
   const afcTrabajadorMonto = Math.round(baseImponibleAfc * (afcTrabajadorTasa / 100));
 
   // APV (Ahorro Previsional Voluntario)
@@ -613,14 +650,7 @@ export function calculatePayrollSlip(
   const sisMonto = (employee.pensionSystem === 'JUBILADO_NO_COTIZA' || sisIntegradoEnReforma) ? 0 : Math.round(baseImponibleAfp * (params.tasaSisPercent / 100));
 
   // AFC Empleador: 2.4% indefinido (1.6% individual + 0.8% solidario), 3.0% plazo fijo (solidario)
-  let afcEmpleadorTasa = 0;
-  if (employee.hasCesantiaAFC && employee.pensionSystem !== 'JUBILADO_NO_COTIZA') {
-    if (employee.contractType === 'INDEFINIDO') {
-      afcEmpleadorTasa = 2.4;
-    } else {
-      afcEmpleadorTasa = 3.0;
-    }
-  }
+  const afcEmpleadorTasa = tasasAfc.empleador;
   const afcEmpleadorMonto = Math.round(baseImponibleAfc * (afcEmpleadorTasa / 100));
 
   // Mutual de Seguridad / Accidentes del Trabajo (Ley 16.744): Tasa base + adicional según siniestralidad de la empresa
@@ -920,10 +950,10 @@ export function calculateAnnualReliquidation(
 
   const afpTasa = employee.pensionCommissionPercent || DEFAULT_AFP_COMMISSIONS[employee.pensionSystem] || 11.44;
   const isJubiladoNoCotiza = employee.pensionSystem === 'JUBILADO_NO_COTIZA';
-  const afcTasa = (employee.hasCesantiaAFC && !isJubiladoNoCotiza && employee.contractType === 'INDEFINIDO') ? 0.6 : 0.0;
 
   const detallesMesAMes: ReliquidationMonthDetail[] = monthsList.map(monthKey => {
     const slip = existingSlips[monthKey];
+    const afcTasa = tasasCesantia(condicionesPara(employee, monthKey), monthKey).trabajador;
     const paramsMes = historicalParams[monthKey] || { uf: 38000, utm: 66000, topeAfpUf: 84.3, topeAfcUf: 126.6 };
     const ufMes = paramsMes.uf || 38000;
     const utmMes = paramsMes.utm || 66000;

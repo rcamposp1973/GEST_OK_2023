@@ -9,7 +9,7 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
-## Próxima (en Pruebas) — Cambios previsionales registrados por el contador
+## 1.9.2 — 9 de noviembre de 2026 — Cambios previsionales registrados por el contador
 
 - Al guardar la ficha de un trabajador, si cambió AFP, salud (Fonasa/Isapre), tipo o valor del plan o tipo de contrato, el sistema pide registrarlo: desde qué mes rige, el motivo y, opcionalmente, el respaldo (FUN de Isapre, carta de AFP, anexo). Ya no se cambia en silencio. También se puede marcar como corrección de un dato mal ingresado.
 - Cada cambio guarda quién lo registró y cuándo, y el respaldo se puede abrir desde la ficha. Tamaño máximo del respaldo: 700 KB (PDF o imagen).

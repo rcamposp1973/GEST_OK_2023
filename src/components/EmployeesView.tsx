@@ -1,4 +1,6 @@
 import { CondicionesVigenciaEditor } from './payroll/CondicionesVigenciaEditor';
+import { subirRespaldo, tamanoLegible, MAX_RESPALDO_BYTES } from '../utils/respaldosPrevisionales';
+import { auth } from '../lib/firebase';
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Users, UserPlus, Search, Edit2, Trash2, CheckCircle2, XCircle, 
@@ -184,6 +186,8 @@ R.U.T.: ${companyRut}                          R.U.T.: ${workerRut}`;
 }
 
 interface EmployeesViewProps {
+  studyId?: string;
+  companyId?: string;
   employees: Employee[];
   costCenters: CostCenterMaster[];
   onSaveEmployee: (employee: Employee) => Promise<void>;
@@ -198,6 +202,8 @@ interface EmployeesViewProps {
 }
 
 export const EmployeesView: React.FC<EmployeesViewProps> = ({
+  studyId,
+  companyId,
   employees,
   costCenters,
   onSaveEmployee,
@@ -407,13 +413,44 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
     }));
   };
 
+  // Campos previsionales/contractuales cuyo cambio debe registrarlo el contador con fecha de vigencia
+  const CAMPOS_VIGENCIA = ['pensionSystem', 'healthSystem', 'healthPlanType', 'healthPlanValue', 'contractType'] as const;
+  const ETIQUETA_CAMPO: Record<string, string> = { pensionSystem: 'AFP', healthSystem: 'Salud (Fonasa/Isapre)', healthPlanType: 'Tipo de plan', healthPlanValue: 'Valor del plan', contractType: 'Tipo de contrato' };
+  const [cambioPendiente, setCambioPendiente] = useState<{ campos: string[] } | null>(null);
+  const [cambioForm, setCambioForm] = useState<{ modo: 'DESDE' | 'CORRECCION'; desde: string; motivo: string; archivo: File | null }>({ modo: 'DESDE', desde: new Date().toISOString().slice(0, 7), motivo: '', archivo: null });
+  const [errorCambio, setErrorCambio] = useState('');
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.rut.trim() || !formData.name.trim() || !formData.position.trim()) {
       alert('Por favor complete los campos obligatorios: RUT, Nombre y Cargo.');
       return;
     }
+    if (editingEmployee) {
+      const campos = CAMPOS_VIGENCIA.filter(k => (formData as any)[k] !== (editingEmployee as any)[k] && !((formData as any)[k] === 0 && (editingEmployee as any)[k] === undefined));
+      if (campos.length > 0) {
+        setErrorCambio('');
+        setCambioForm({ modo: 'DESDE', desde: new Date().toISOString().slice(0, 7), motivo: '', archivo: null });
+        setCambioPendiente({ campos: campos as string[] });
+        return;
+      }
+    }
+    await guardarFicha();
+  };
 
+  const confirmarCambio = async () => {
+    if (!cambioPendiente || !editingEmployee) return;
+    if (cambioForm.modo === 'DESDE' && !cambioForm.desde) { setErrorCambio('Indica desde qué mes rige el cambio.'); return; }
+    let respaldo: { id: string; nombre: string } | undefined;
+    if (cambioForm.modo === 'DESDE' && cambioForm.archivo && studyId && companyId) {
+      try { respaldo = await subirRespaldo(studyId, companyId, editingEmployee.id, cambioForm.archivo); }
+      catch (err: any) { setErrorCambio(err?.message || 'No se pudo subir el respaldo'); return; }
+    }
+    setCambioPendiente(null);
+    await guardarFicha(cambioForm.modo === 'DESDE' ? { campos: cambioPendiente.campos, desde: cambioForm.desde, motivo: cambioForm.motivo.trim(), respaldo } : undefined);
+  };
+
+  const guardarFicha = async (cambio?: { campos: string[]; desde: string; motivo: string; respaldo?: { id: string; nombre: string } }) => {
     try {
       setIsSaving(true);
       let updatedSalaryHistory = editingEmployee?.salaryHistory ? [...editingEmployee.salaryHistory] : [];
@@ -442,10 +479,24 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
         });
       }
 
+      let datos: any = { ...formData };
+      if (cambio && editingEmployee) {
+        // El cambio queda registrado con vigencia "desde"; la ficha base conserva las condiciones anteriores
+        const tramo: any = { id: `cond_${Date.now()}`, desde: cambio.desde, motivo: cambio.motivo || undefined, registradoPor: auth.currentUser?.email || undefined, registradoEn: new Date().toISOString() };
+        if (cambio.respaldo) { tramo.respaldoId = cambio.respaldo.id; tramo.respaldoNombre = cambio.respaldo.nombre; }
+        for (const k of cambio.campos) { tramo[k] = (formData as any)[k]; datos[k] = (editingEmployee as any)[k]; }
+        if (cambio.campos.includes('pensionSystem')) {
+          const def = DEFAULT_AFP_COMMISSIONS[formData.pensionSystem];
+          if (formData.pensionCommissionPercent && formData.pensionCommissionPercent !== def) tramo.pensionCommissionPercent = formData.pensionCommissionPercent;
+          datos.pensionCommissionPercent = editingEmployee.pensionCommissionPercent;
+        }
+        datos.condiciones = [...(formData.condiciones || []), tramo];
+      }
+
       const employeePayload: Employee = {
         id: editingEmployee ? editingEmployee.id : `emp_${Date.now()}`,
         companyId: editingEmployee ? editingEmployee.companyId : '',
-        ...formData,
+        ...datos,
         salaryHistory: updatedSalaryHistory,
         createdAt: editingEmployee ? editingEmployee.createdAt : new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -464,6 +515,29 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
 
   return (
     <div className="space-y-6">
+      {cambioPendiente && (
+        <div className="fixed inset-0 z-[120] bg-slate-900/60 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-5 space-y-3 text-sm">
+            <h3 className="text-base font-bold text-slate-900">Registrar cambio previsional</h3>
+            <p className="text-xs text-slate-600">Cambiaste: <b>{cambioPendiente.campos.map(c => ETIQUETA_CAMPO[c] || c).join(', ')}</b>. Este cambio debe quedar registrado con la fecha desde la cual rige, para no alterar las liquidaciones de meses anteriores.</p>
+            <label className="flex items-start gap-2 text-xs cursor-pointer"><input type="radio" checked={cambioForm.modo === 'DESDE'} onChange={() => setCambioForm({ ...cambioForm, modo: 'DESDE' })} className="mt-0.5" /><span><b>El trabajador cambió</b> (ej. de Fonasa a Isapre): rige desde un mes y los anteriores no cambian.</span></label>
+            {cambioForm.modo === 'DESDE' && (
+              <div className="pl-6 space-y-2">
+                <label className="block text-[11px] font-semibold text-slate-600">Rige desde (mes) *<input type="month" value={cambioForm.desde} onChange={e => setCambioForm({ ...cambioForm, desde: e.target.value })} className="mt-0.5 w-full px-2 py-1.5 border border-slate-300 rounded text-xs" /></label>
+                <label className="block text-[11px] font-semibold text-slate-600">Motivo<input type="text" value={cambioForm.motivo} onChange={e => setCambioForm({ ...cambioForm, motivo: e.target.value })} placeholder="Ej. Se afilió a Isapre Cruz Blanca" className="mt-0.5 w-full px-2 py-1.5 border border-slate-300 rounded text-xs" /></label>
+                <label className="block text-[11px] font-semibold text-slate-600">Respaldo (FUN, carta, anexo) — opcional, máx. {tamanoLegible(MAX_RESPALDO_BYTES)}
+                  <input type="file" accept=".pdf,.png,.jpg,.jpeg" onChange={e => setCambioForm({ ...cambioForm, archivo: e.target.files?.[0] || null })} className="mt-0.5 block w-full text-xs" /></label>
+              </div>
+            )}
+            <label className="flex items-start gap-2 text-xs cursor-pointer"><input type="radio" checked={cambioForm.modo === 'CORRECCION'} onChange={() => setCambioForm({ ...cambioForm, modo: 'CORRECCION' })} className="mt-0.5" /><span><b>Corrijo un dato mal ingresado</b>: se corrige desde el ingreso del trabajador (cambia todos los meses sin liquidación guardada).</span></label>
+            {errorCambio && <p className="text-xs text-rose-600 font-semibold">{errorCambio}</p>}
+            <div className="flex justify-end gap-2 pt-2">
+              <button type="button" onClick={() => setCambioPendiente(null)} className="px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded-lg cursor-pointer">Volver a la ficha</button>
+              <button type="button" onClick={confirmarCambio} className="px-4 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg cursor-pointer">Registrar y guardar</button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Header del Módulo */}
       <div className="bg-white rounded-xl shadow-xs border border-slate-200 p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
@@ -2080,7 +2154,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
                 </div>
               </div>
 
-              <CondicionesVigenciaEditor value={formData.condiciones || []} onChange={(v) => setFormData({ ...formData, condiciones: v })} />
+              <CondicionesVigenciaEditor value={formData.condiciones || []} onChange={(v) => setFormData({ ...formData, condiciones: v })} empresa={studyId && companyId ? { studyId, companyId, employeeId: editingEmployee?.id || 'nuevo' } : undefined} />
 
               {/* Modal Footer */}
               <div className="pt-4 border-t border-slate-200 flex justify-end items-center gap-3">

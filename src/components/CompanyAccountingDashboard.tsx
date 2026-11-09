@@ -9159,6 +9159,8 @@ export default function CompanyAccountingDashboard({
       {/* TAB: EMPLEADOS Y CONTRATOS */}
       {activeTab === 'employees' && (
         <EmployeesView
+          studyId={studyId}
+          companyId={company.id}
           employees={employees}
           costCenters={costCenters}
           onSaveEmployee={handleSaveEmployee}

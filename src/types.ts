@@ -1291,6 +1291,10 @@ export interface EmployeeCondicion {
   descuentoPrestamoCuota?: number;
   otrosDescuentosPactados?: number;
   motivo?: string;
+  respaldoId?: string; // documento de respaldo opcional (FUN, carta, anexo)
+  respaldoNombre?: string;
+  registradoPor?: string;
+  registradoEn?: string;
 }
 
 export type PensionSystem = 'CAPITAL' | 'CUPRUM' | 'HABITAT' | 'MODELO' | 'PLANVITAL' | 'PROVIDA' | 'UNO' | 'INP' | 'JUBILADO_COTIZA' | 'JUBILADO_NO_COTIZA';

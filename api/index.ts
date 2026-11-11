@@ -5,7 +5,7 @@
 import express from "express";
 import crypto from "crypto";
 import { getApps, initializeApp, cert } from "firebase-admin/app";
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { getFirestore, FieldValue, FieldPath } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
 import helmet from "helmet";
 import { GoogleGenAI } from "@google/genai";
@@ -1153,6 +1153,96 @@ ${JSON.stringify(simplifiedTransactions, null, 2)}`;
       error: `Error interno de Agente 1: ${globalErr.message || String(globalErr)}`
     });
   }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Alertas por correo para el Super Administrador.
+// Una revisión diaria (Vercel Cron, ver vercel.json) envía un correo SOLO si hay algo por revisar.
+// Variables de entorno: RESEND_API_KEY (envío), ALERT_EMAIL_TO (destino), CRON_SECRET (protege la ruta),
+// ALERT_EMAIL_FROM (opcional; por defecto el remitente de pruebas de Resend, que solo envía al dueño de la cuenta).
+// Costo: 1 lectura por estudio + los registros de actividad de los últimos 7 días, una vez al día.
+// ─────────────────────────────────────────────────────────────────────────────
+async function evaluarAlertas(): Promise<{ alertas: string[]; revisado: string[] }> {
+  const alertas: string[] = [];
+  const revisado: string[] = [];
+  const ahora = Date.now();
+
+  // 1) Indicadores UF/dólar al día (intenta sincronizar antes de avisar)
+  try { await sincronizarIndicadoresOficiales(false); } catch { /* se evalúa con lo publicado */ }
+  try {
+    const s = await adminDb.collection('globalExchangeRates').orderBy(FieldPath.documentId(), 'desc').limit(1).get();
+    const d = s.docs[0];
+    if (!d) alertas.push('Indicadores UF/dólar: no hay valores publicados.');
+    else {
+      const fecha = String((d.data() as any).date || d.id);
+      const dias = Math.floor((ahora - new Date(fecha + 'T12:00:00').getTime()) / 86400000);
+      if (dias > 2) alertas.push(`Indicadores UF/dólar sin actualizar: el último valor es del ${fecha} (${dias} días).`);
+      revisado.push(`Indicadores: último valor ${fecha}`);
+    }
+  } catch (e: any) { alertas.push('Indicadores UF/dólar: no se pudo revisar (' + (e?.message || 'error') + ').'); }
+
+  // 2) Estudios vigentes sin actividad en 7 días, y 3) estudios cerca del límite de empresas
+  try {
+    const estudios = await adminDb.collection('studies').get();
+    const desde = new Date(ahora - 7 * 86400000).toISOString();
+    const logs = await adminDb.collection('auditLogs').where('timestamp', '>=', desde).select('studyId').get();
+    const activos = new Set(logs.docs.map(l => (l.data() as any).studyId).filter(Boolean));
+    for (const e of estudios.docs) {
+      const d: any = e.data();
+      if (d.estado === 'Sin Vigencia') continue;
+      const creado = d.createdAt ? new Date(d.createdAt).getTime() : 0;
+      if (!activos.has(e.id) && (!creado || ahora - creado > 7 * 86400000)) alertas.push(`Estudio sin actividad en 7 días: ${d.name || e.id}.`);
+      try {
+        const n = (await adminDb.collection('studies').doc(e.id).collection('companies').count().get()).data().count;
+        const max = Number(d.maxCompanies) || 10;
+        if (n / max >= 0.9) alertas.push(`Estudio cerca de su límite de plan: ${d.name || e.id} tiene ${n} de ${max} empresas.`);
+      } catch { /* sin conteo */ }
+    }
+    revisado.push(`Estudios revisados: ${estudios.size}`);
+  } catch (e: any) { alertas.push('Estudios y actividad: no se pudo revisar (' + (e?.message || 'error') + ').'); }
+
+  return { alertas, revisado };
+}
+
+async function enviarCorreoAlerta(asunto: string, lineas: string[]): Promise<{ ok: boolean; error?: string }> {
+  const key = process.env.RESEND_API_KEY;
+  const to = process.env.ALERT_EMAIL_TO;
+  if (!key) return { ok: false, error: 'Falta la variable RESEND_API_KEY en Vercel.' };
+  if (!to) return { ok: false, error: 'Falta la variable ALERT_EMAIL_TO en Vercel.' };
+  const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const html = `<div style="font-family:Arial,sans-serif;font-size:14px;color:#0f172a"><h3 style="margin:0 0 8px">${esc(asunto)}</h3><ul style="padding-left:18px">${lineas.map(l => `<li style="margin:4px 0">${esc(l)}</li>`).join('')}</ul><p style="color:#64748b;font-size:12px">Revisión automática diaria de Pulso Contable.</p></div>`;
+  try {
+    const r = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: process.env.ALERT_EMAIL_FROM || 'Pulso Contable <onboarding@resend.dev>', to: to.split(',').map(x => x.trim()).filter(Boolean), subject: asunto, html }),
+    });
+    if (!r.ok) return { ok: false, error: `El servicio de correo respondió ${r.status}: ${(await r.text()).slice(0, 200)}` };
+    return { ok: true };
+  } catch (e: any) { return { ok: false, error: e?.message || 'No se pudo enviar el correo' }; }
+}
+
+// Ruta diaria (la llama Vercel Cron con "Authorization: Bearer <CRON_SECRET>")
+app.get("/api/alertas", async (req, res) => {
+  const secret = process.env.CRON_SECRET;
+  if (!secret || req.headers.authorization !== `Bearer ${secret}`) return res.status(401).json({ ok: false, error: 'No autorizado' });
+  try {
+    const { alertas, revisado } = await evaluarAlertas();
+    if (alertas.length === 0) return res.json({ ok: true, enviado: false, alertas, revisado });
+    const envio = await enviarCorreoAlerta(`[Pulso Contable] ${alertas.length} alerta(s) por revisar`, alertas);
+    res.status(envio.ok ? 200 : 502).json({ ok: envio.ok, enviado: envio.ok, error: envio.error, alertas, revisado });
+  } catch (e: any) { res.status(500).json({ ok: false, error: e?.message || 'Error en la revisión' }); }
+});
+
+// Correo de prueba (botón del panel; solo Super Administrador): envía el estado actual
+app.post("/api/alertas/prueba", verifyFirebaseAuth, async (req: AuthenticatedRequest, res) => {
+  if (req.user?.role !== 'SUPER_USER' && req.user?.isSuperUser !== true) return res.status(403).json({ ok: false, error: 'Solo el Super Administrador puede enviar la prueba.' });
+  try {
+    const { alertas, revisado } = await evaluarAlertas();
+    const lineas = alertas.length ? alertas : ['Sin alertas: todo en orden.', ...revisado];
+    const envio = await enviarCorreoAlerta('[Pulso Contable] Correo de prueba de alertas', ['Este es un correo de prueba.', ...lineas]);
+    res.status(envio.ok ? 200 : 502).json({ ok: envio.ok, error: envio.error, alertas, revisado });
+  } catch (e: any) { res.status(500).json({ ok: false, error: e?.message || 'Error en la revisión' }); }
 });
 
 export default app;

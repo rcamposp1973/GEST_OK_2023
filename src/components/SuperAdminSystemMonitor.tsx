@@ -141,6 +141,7 @@ export default function SuperAdminSystemMonitor({ onSelectStudy }: Props) {
   const [claveSii, setClaveSii] = useState(() => { try { return localStorage.getItem('gest_ok_master_api_key') || ''; } catch { return ''; } });
   const [verClave, setVerClave] = useState(false);
   const [claveOk, setClaveOk] = useState(false);
+  const [prueba, setPrueba] = useState<{ estado: 'enviando' | 'ok' | 'error'; texto: string } | null>(null);
 
   const cargar = useCallback(async (forzar: boolean) => {
     if (!forzar) {
@@ -183,6 +184,18 @@ export default function SuperAdminSystemMonitor({ onSelectStudy }: Props) {
     (logs || []).forEach(l => { m[l.module || 'OTROS'] = (m[l.module || 'OTROS'] || 0) + 1; });
     return Object.entries(m).sort((a, b) => b[1] - a[1]);
   }, [logs]);
+
+  const enviarPrueba = async () => {
+    setPrueba({ estado: 'enviando', texto: 'Enviando…' });
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      const r = await fetch('/api/alertas/prueba', { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+      const j = await r.json().catch(() => ({}));
+      setPrueba(r.ok && j.ok
+        ? { estado: 'ok', texto: j.alertas?.length ? `Correo enviado con ${j.alertas.length} alerta(s).` : 'Correo enviado: sin alertas, todo en orden.' }
+        : { estado: 'error', texto: j.error || `No se pudo enviar (error ${r.status}).` });
+    } catch (e: any) { setPrueba({ estado: 'error', texto: e?.message || 'No se pudo enviar.' }); }
+  };
 
   const problemas = (panel?.chequeos || []).filter(c => c.estado !== 'ok');
   const TABS: { id: typeof tab; t: string }[] = [
@@ -263,6 +276,12 @@ export default function SuperAdminSystemMonitor({ onSelectStudy }: Props) {
               <b className="text-slate-800">Última acción:</b> {panel.ultimo.que} · {panel.ultimo.quien} · {cuandoTxt(panel.ultimo.cuando)}
             </div>
           )}
+          <div className="bg-white border border-slate-200 rounded-2xl p-3.5 space-y-2">
+            <div className="text-sm font-extrabold text-slate-900">Alertas por correo</div>
+            <p className="text-xs text-slate-600">Cada día a las 9:00 (hora de Chile) el sistema revisa indicadores UF/dólar, estudios sin actividad por 7 días y estudios cerca de su límite de plan. Te escribe solo si hay algo por revisar.</p>
+            <button onClick={enviarPrueba} disabled={prueba?.estado === 'enviando'} className="w-full min-h-11 rounded-xl border border-slate-300 bg-white text-sm font-bold text-slate-800 active:scale-[.99] disabled:opacity-60">Enviar correo de prueba</button>
+            {prueba && <p className={`text-xs font-semibold ${prueba.estado === 'ok' ? 'text-emerald-700' : prueba.estado === 'error' ? 'text-rose-700' : 'text-slate-500'}`}>{prueba.texto}</p>}
+          </div>
           <p className="text-[11px] text-slate-500 px-1">Los datos se consultan solo al abrir y al pulsar Actualizar; no se refrescan solos. Los totales usan conteos, que cuestan una fracción de leer cada registro.</p>
         </>
       )}

@@ -306,11 +306,11 @@ function Dashboard() {
           ) : (
           <div className="space-y-6 max-w-7xl mx-auto">
             {/* SUPER ADMIN NAVIGATION TABS */}
-            <div className="bg-white p-1.5 rounded-xl border border-slate-200 shadow-2xs flex flex-wrap items-center justify-between gap-2">
-              <div className="flex flex-wrap items-center gap-1">
+            <div className="bg-white p-1.5 rounded-xl border border-slate-200 shadow-2xs flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+              <div className="flex items-center gap-1 overflow-x-auto md:flex-wrap md:overflow-visible pb-1 md:pb-0">
                 <button
                   onClick={() => setSuperAdminTab('monitor')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  className={`shrink-0 whitespace-nowrap min-h-10 md:min-h-0 px-3.5 md:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                     superAdminTab === 'monitor'
                       ? 'bg-slate-900 text-white shadow-2xs'
                       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -322,7 +322,7 @@ function Dashboard() {
 
                 <button
                   onClick={() => setSuperAdminTab('indicators_loader')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  className={`shrink-0 whitespace-nowrap min-h-10 md:min-h-0 px-3.5 md:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                     superAdminTab === 'indicators_loader'
                       ? 'bg-slate-900 text-white shadow-2xs'
                       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -334,7 +334,7 @@ function Dashboard() {
 
                 <button
                   onClick={() => setSuperAdminTab('studies')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  className={`shrink-0 whitespace-nowrap min-h-10 md:min-h-0 px-3.5 md:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                     superAdminTab === 'studies'
                       ? 'bg-slate-900 text-white shadow-2xs'
                       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -346,7 +346,7 @@ function Dashboard() {
 
                 <button
                   onClick={() => setSuperAdminTab('create_study')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  className={`shrink-0 whitespace-nowrap min-h-10 md:min-h-0 px-3.5 md:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                     superAdminTab === 'create_study'
                       ? 'bg-slate-900 text-white shadow-2xs'
                       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -358,7 +358,7 @@ function Dashboard() {
 
                 <button
                   onClick={() => setSuperAdminTab('super_users')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  className={`shrink-0 whitespace-nowrap min-h-10 md:min-h-0 px-3.5 md:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                     superAdminTab === 'super_users'
                       ? 'bg-slate-900 text-white shadow-2xs'
                       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -370,7 +370,7 @@ function Dashboard() {
 
                 <button
                   onClick={() => setSuperAdminTab('testimonials')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  className={`shrink-0 whitespace-nowrap min-h-10 md:min-h-0 px-3.5 md:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                     superAdminTab === 'testimonials'
                       ? 'bg-slate-900 text-white shadow-2xs'
                       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -382,7 +382,7 @@ function Dashboard() {
 
                 <button
                   onClick={() => setSuperAdminTab('pricing')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  className={`shrink-0 whitespace-nowrap min-h-10 md:min-h-0 px-3.5 md:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                     superAdminTab === 'pricing'
                       ? 'bg-slate-900 text-white shadow-2xs'
                       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -394,7 +394,7 @@ function Dashboard() {
 
                 <button
                   onClick={() => setSuperAdminTab('marketing_promo')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  className={`shrink-0 whitespace-nowrap min-h-10 md:min-h-0 px-3.5 md:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                     superAdminTab === 'marketing_promo'
                       ? 'bg-slate-900 text-white shadow-2xs'
                       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -406,7 +406,7 @@ function Dashboard() {
 
                 <button
                   onClick={() => setSuperAdminTab('audit_logs')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  className={`shrink-0 whitespace-nowrap min-h-10 md:min-h-0 px-3.5 md:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                     superAdminTab === 'audit_logs'
                       ? 'bg-slate-900 text-white shadow-2xs'
                       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -418,7 +418,7 @@ function Dashboard() {
 
                 <button
                   onClick={() => setSuperAdminTab('presentation')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  className={`shrink-0 whitespace-nowrap min-h-10 md:min-h-0 px-3.5 md:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                     superAdminTab === 'presentation'
                       ? 'bg-slate-900 text-white shadow-2xs'
                       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'

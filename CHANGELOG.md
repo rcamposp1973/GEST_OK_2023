@@ -16,6 +16,7 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 - **Estado del sistema real**: servidor, base de datos, sesión, indicadores UF/dólar (fecha del último valor) y clave SII, con aviso si algo falla. Antes eran etiquetas fijas "ONLINE 100 %".
 - **Cifras exactas de actividad** (hoy, 7 y 30 días) en vez del tope de 800 registros.
 - **Alertas por correo**: revisión diaria (9:00 hora de Chile) que escribe solo si hay algo por revisar: indicadores UF/dólar sin actualizar, estudios sin actividad por 7 días y estudios cerca de su límite de plan. Botón "Enviar correo de prueba" en el panel. Requiere configurar en Vercel `RESEND_API_KEY`, `ALERT_EMAIL_TO` y `CRON_SECRET`.
+- **Página de inicio rediseñada**: más limpia y moderna, con un solo mensaje, un ejemplo de balance que cuadra, las funciones en lista, planes en UF (desde el panel) y formulario de contacto. Se quitaron las demostraciones con pestañas (sus cifras de ejemplo no cuadraban), los testimonios inactivos, el campo de correo del portada y las insignias. Una sola escucha a la base de datos (planes) en vez de dos.
 - Se quitaron textos que confundían: "propagada a todos los estudios", proveedor y endpoint que no hacían nada, "alta disponibilidad", insignias y banners de relleno. La clave del SII se declara tal como funciona: se guarda solo en este navegador.
 
 ## 1.9.2 — 9 de noviembre de 2026 — Cambios previsionales registrados por el contador

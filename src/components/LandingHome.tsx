@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Check, CheckCircle2 } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { APP_VERSION } from '../constants/version';
 import { db } from '../lib/firebase';
 import { collection, addDoc, onSnapshot } from 'firebase/firestore';
@@ -22,15 +22,6 @@ const CAPACIDADES: { titulo: string; texto: string }[] = [
 ];
 
 const REGIMENES = ['Régimen ProPyme General (14-D N°3)', 'Régimen ProPyme Transparente (14-D N°8)', 'Régimen General Semi-Integrado (14-A)'];
-
-// Ejemplo ilustrativo: los saldos deudores y acreedores suman lo mismo.
-const EJEMPLO: { cuenta: string; deudor: number; acreedor: number }[] = [
-  { cuenta: 'Banco', deudor: 13100000, acreedor: 0 },
-  { cuenta: 'Clientes por cobrar', deudor: 8700000, acreedor: 0 },
-  { cuenta: 'Proveedores', deudor: 0, acreedor: 6500000 },
-  { cuenta: 'Capital', deudor: 0, acreedor: 15300000 },
-];
-const clp = (n: number) => (n ? `$ ${n.toLocaleString('es-CL')}` : '');
 
 export default function LandingHome({ onGoToLogin }: LandingHomeProps) {
   const [leadName, setLeadName] = useState('');
@@ -89,8 +80,6 @@ export default function LandingHome({ onGoToLogin }: LandingHomeProps) {
     }
   };
 
-  const totalD = EJEMPLO.reduce((s, r) => s + r.deudor, 0);
-  const totalA = EJEMPLO.reduce((s, r) => s + r.acreedor, 0);
   const campo = 'w-full min-h-11 bg-white border border-slate-300 rounded-lg px-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-teal-700 focus:ring-2 focus:ring-teal-700/20';
 
   return (
@@ -115,9 +104,9 @@ export default function LandingHome({ onGoToLogin }: LandingHomeProps) {
 
       {/* Portada */}
       <section className="bg-[#F5F7FA] border-b border-slate-200">
-        <div className="max-w-6xl mx-auto px-5 py-16 md:py-24 grid md:grid-cols-2 gap-12 items-center">
-          <div>
-            <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900 leading-[1.08]">
+        <div className="max-w-6xl mx-auto px-5 py-20 md:py-32">
+          <div className="max-w-3xl">
+            <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-slate-900 leading-[1.06]">
               Contabilidad, impuestos y remuneraciones en un solo sistema.
             </h1>
             <p className="mt-5 text-lg text-slate-600 leading-relaxed max-w-xl">
@@ -132,41 +121,6 @@ export default function LandingHome({ onGoToLogin }: LandingHomeProps) {
               </a>
             </div>
           </div>
-
-          {/* Una sola imagen del producto: un balance que cuadra */}
-          <figure className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden" aria-label="Ejemplo de balance de comprobación">
-            <div className="px-5 py-3 border-b border-slate-200 flex items-center justify-between">
-              <span className="text-sm font-bold text-slate-900">Balance de comprobación</span>
-              <span className="text-xs text-slate-500">Ejemplo ilustrativo</span>
-            </div>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-slate-500 text-xs">
-                  <th className="text-left font-medium px-5 py-2">Cuenta</th>
-                  <th className="text-right font-medium px-3 py-2">Saldo deudor</th>
-                  <th className="text-right font-medium px-5 py-2">Saldo acreedor</th>
-                </tr>
-              </thead>
-              <tbody>
-                {EJEMPLO.map(r => (
-                  <tr key={r.cuenta} className="border-t border-slate-100">
-                    <td className="px-5 py-2.5 text-slate-800">{r.cuenta}</td>
-                    <td className="px-3 py-2.5 text-right tabular-nums text-slate-800">{clp(r.deudor)}</td>
-                    <td className="px-5 py-2.5 text-right tabular-nums text-slate-800">{clp(r.acreedor)}</td>
-                  </tr>
-                ))}
-                <tr className="border-t-2 border-slate-900 font-bold">
-                  <td className="px-5 py-3">Totales</td>
-                  <td className="px-3 py-3 text-right tabular-nums">{clp(totalD)}</td>
-                  <td className="px-5 py-3 text-right tabular-nums">{clp(totalA)}</td>
-                </tr>
-              </tbody>
-            </table>
-            <figcaption className="px-5 py-3 bg-teal-50 border-t border-teal-100 text-sm text-teal-900 flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 shrink-0" />
-              <span>Debe y haber cuadran. En el sistema, cada cuenta se abre hasta sus movimientos y comprobantes.</span>
-            </figcaption>
-          </figure>
         </div>
       </section>
 

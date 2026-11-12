@@ -9,6 +9,10 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.9.7 — 11 de noviembre de 2026 — Impresión de la liquidación (refuerzo)
+
+- La ventana de impresión ahora copia directamente el diseño ya cargado en pantalla, sin volver a descargarlo.
+
 ## 1.9.6 — 11 de noviembre de 2026 — Impresión de la liquidación
 
 - Corrige la impresión de la liquidación de sueldo: salía sin diseño (textos pegados, sin cuadros ni colores). Ahora se imprime igual que se ve en pantalla.

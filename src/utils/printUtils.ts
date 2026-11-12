@@ -47,10 +47,20 @@ export function triggerIframePrint(options: TriggerIframePrintOptions): void {
   let appStyles = '';
   if (options.useAppStyles) {
     const base = document.baseURI;
-    const links = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
-      .map((l) => `<link rel="stylesheet" href="${new URL((l as HTMLLinkElement).getAttribute('href') || '', base).href}">`)
-      .join('\n');
-    const inline = Array.from(document.querySelectorAll('style')).map((st) => `<style>${st.innerHTML}</style>`).join('\n');
+    // Se copian las reglas CSS ya cargadas (no depende de volver a descargar las hojas de estilo)
+    let rules = '';
+    const fallbackLinks: string[] = [];
+    Array.from(document.styleSheets).forEach((sheet) => {
+      try {
+        rules += Array.from(sheet.cssRules).map((r) => r.cssText).join('\n') + '\n';
+      } catch {
+        if (sheet.href) fallbackLinks.push(`<link rel="stylesheet" href="${new URL(sheet.href, base).href}">`);
+      }
+    });
+    const fonts = Array.from(document.querySelectorAll('link[rel="stylesheet"][href*="fonts.googleapis"]'))
+      .map((l) => `<link rel="stylesheet" href="${(l as HTMLLinkElement).href}">`).join('\n');
+    const links = fallbackLinks.join('\n') + fonts;
+    const inline = `<style>${rules}</style>`;
     appStyles = links + inline;
   }
   const baseStyles = options.useAppStyles

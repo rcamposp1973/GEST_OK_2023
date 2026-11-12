@@ -13,6 +13,7 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 - **Una sola fila de cifras** en la nómina: imponible, retenciones al trabajador, líquido a pagar y costo para la empresa, con nombres distintos. Se quitaron las tarjetas duplicadas del encabezado ("Leyes sociales totales" se confundía con "Leyes sociales y retenciones").
 - **Período una sola vez**: en el selector. Se quitó de la insignia junto al título, de los botones ("Reprocesar", "Procesar") y del título de la planilla.
+- Se quitó el botón "Guardar liquidaciones" de la planilla: hacía exactamente lo mismo que "Procesar" del encabezado.
 - **Resumen compacto**: las cuatro cifras en una sola franja baja, y se quitó el aviso amarillo "Período sin procesar" (repetía el botón Procesar de arriba); ahora basta una marca "Vista previa, sin procesar" junto al título de la planilla.
 - **Parámetros del período** (UF, UTM, ingreso mínimo, tope, SIS) en una línea discreta en vez de una franja negra.
 - Se quitaron las líneas descriptivas y la insignia "Capa 1: Módulo Operativo" del encabezado de los módulos.

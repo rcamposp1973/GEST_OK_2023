@@ -1407,14 +1407,6 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
                   <Download className="w-3.5 h-3.5" />
                   Exportar a Excel (.csv)
                 </button>
-
-                <button
-                  onClick={handleSaveAllSlips}
-                  className="px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition-colors flex items-center gap-1.5"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  Guardar Liquidaciones
-                </button>
               </div>
             </div>
 

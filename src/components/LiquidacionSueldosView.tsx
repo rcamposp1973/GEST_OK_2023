@@ -36,6 +36,7 @@ interface LiquidacionSueldosViewProps {
   companyName: string;
   companyRut: string;
   companyAddress?: string;
+  companyGiro?: string;
   employees: Employee[];
   accounts: ChartOfAccount[];
   costCenters: CostCenterMaster[];
@@ -65,6 +66,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
   companyName,
   companyRut,
   companyAddress,
+  companyGiro,
   employees,
   accounts,
   costCenters,
@@ -1641,7 +1643,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
                         Identificación y Jornada
                       </th>
                       <th colSpan={7} className="py-2 px-3 border-r border-slate-700 text-center bg-indigo-950 text-indigo-200">
-                        Haberes del Trabajador
+                        Haberes
                       </th>
                       <th colSpan={4} className="py-2 px-3 border-r border-slate-700 text-center bg-rose-950 text-rose-200">
                         Previsión Salud
@@ -1868,7 +1870,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
                 <h2 className="text-base font-black uppercase text-slate-900 tracking-tight">{companyName}</h2>
                 <p className="text-xs text-slate-600 font-mono">RUT: {companyRut}</p>
                 {companyAddress && <p className="text-xs text-slate-500">{companyAddress}</p>}
-                <p className="text-[11px] text-slate-500">Giro: Servicios Empresariales y Profesionales</p>
+                {companyGiro && <p className="text-[11px] text-slate-500">Giro: {companyGiro}</p>}
               </div>
 
               <div className="text-right">
@@ -1878,7 +1880,6 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
                 <p className="text-xs font-bold text-slate-800 mt-1 uppercase">
                   Período: {new Intl.DateTimeFormat('es-CL', { month: 'long', year: 'numeric' }).format(new Date(selectedYear, selectedMonth - 1, 1))}
                 </p>
-                <p className="text-[10px] text-slate-500">Ley N° 18.018 y Art. 54 Código del Trabajo</p>
               </div>
             </div>
 
@@ -1925,7 +1926,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
               <div className="border border-slate-200 rounded-xl p-4 bg-white flex flex-col justify-between">
                 <div>
                   <h4 className="text-xs font-black uppercase text-indigo-900 border-b border-indigo-100 pb-2 mb-3">
-                    I. Haberes del Trabajador
+                    I. Haberes
                   </h4>
 
                   {/* A. Haberes Imponibles */}
@@ -2018,7 +2019,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
               <div className="border border-slate-200 rounded-xl p-4 bg-white flex flex-col justify-between">
                 <div>
                   <h4 className="text-xs font-black uppercase text-rose-900 border-b border-rose-100 pb-2 mb-3">
-                    II. Descuentos de Ley y Varios
+                    II. Descuentos
                   </h4>
 
                   {/* A. Descuentos Previsionales */}
@@ -2110,15 +2111,6 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
                   ${activeSlip.liquidoAPagar.toLocaleString('es-CL')}
                 </span>
               </div>
-            </div>
-
-            {/* Aportes Patronales / Informativo Costo Empresa */}
-            <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 text-[11px] text-slate-600 mb-8 flex flex-wrap justify-between items-center gap-2">
-              <span className="font-bold text-slate-800 uppercase">Aportes del Empleador (Informativo):</span>
-              <span>SIS (1.49%): ${activeSlip.sisMonto.toLocaleString('es-CL')}</span>
-              <span>AFC Empleador ({activeSlip.afcEmpleadorTasa}%): ${activeSlip.afcEmpleadorMonto.toLocaleString('es-CL')}</span>
-              <span>Mutualidad (0.93%): ${activeSlip.mutualMonto.toLocaleString('es-CL')}</span>
-              <span className="font-bold text-indigo-950">Costo Empresa: ${activeSlip.costoTotalEmpresa.toLocaleString('es-CL')}</span>
             </div>
 
             {/* Declaración Legal y Firmas */}

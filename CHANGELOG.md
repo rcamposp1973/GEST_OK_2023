@@ -9,6 +9,13 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.9.5 — 11 de noviembre de 2026 — Liquidación de sueldo más limpia
+
+- Se quitó de la liquidación el recuadro de "Aportes del empleador / Costo Empresa" (no es exigido en la liquidación).
+- El giro que se imprime ahora es el de la empresa empleadora (antes salía un texto fijo). Si la empresa no tiene giro, no se muestra.
+- Se quitó la referencia "Ley N° 18.018 y Art. 54 Código del Trabajo" del encabezado.
+- Títulos simplificados: "Haberes" y "Descuentos" (también en la planilla de remuneraciones).
+
 ## 1.9.4 — 11 de noviembre de 2026 — Remuneraciones con menos repetición
 
 - **Una sola fila de cifras** en la nómina: imponible, retenciones al trabajador, líquido a pagar y costo para la empresa, con nombres distintos. Se quitaron las tarjetas duplicadas del encabezado ("Leyes sociales totales" se confundía con "Leyes sociales y retenciones").

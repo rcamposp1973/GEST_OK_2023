@@ -9188,6 +9188,7 @@ export default function CompanyAccountingDashboard({
           companyName={company.name}
           companyRut={company.rut}
           companyAddress={company.address}
+          companyGiro={company.giro}
           employees={employees}
           accounts={accounts}
           costCenters={costCenters}

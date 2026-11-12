@@ -63,7 +63,6 @@ export const StandardModuleHeader: React.FC<StandardModuleHeaderProps> = ({
   subtitle,
   icon: Icon,
   iconBgColor = 'bg-indigo-600',
-  layerBadge = { layer: 1, label: 'Capa 1: Módulo Operativo' },
   period,
   centralizationStatus,
   kpis,
@@ -71,13 +70,6 @@ export const StandardModuleHeader: React.FC<StandardModuleHeaderProps> = ({
   onRefresh,
   isRefreshing = false
 }) => {
-  const layerColors: Record<number, string> = {
-    1: 'bg-blue-50 text-blue-700 border-blue-200',
-    2: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-    3: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    4: 'bg-purple-50 text-purple-700 border-purple-200'
-  };
-
   const kpiVariantStyles: Record<string, { bg: string; border: string; text: string; iconColor: string }> = {
     default: { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-900', iconColor: 'text-slate-500' },
     success: { bg: 'bg-emerald-50/60', border: 'border-emerald-200', text: 'text-emerald-900', iconColor: 'text-emerald-600' },
@@ -103,18 +95,6 @@ export const StandardModuleHeader: React.FC<StandardModuleHeaderProps> = ({
                 <h1 className="text-lg font-bold text-slate-900 tracking-tight leading-snug">
                   {title}
                 </h1>
-
-                {/* Badge de Capa ERP */}
-                <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${layerColors[layerBadge.layer] || layerColors[1]}`}>
-                  {layerBadge.label || `Capa ${layerBadge.layer}`}
-                </span>
-
-                {/* Badge de Período si aplica */}
-                {period && (
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-slate-100 text-slate-800 border border-slate-200">
-                    {period.selectedPeriod}
-                  </span>
-                )}
               </div>
 
               {subtitle && (

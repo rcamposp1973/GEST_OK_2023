@@ -9,6 +9,13 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## Próxima (en Pruebas) — Remuneraciones con menos repetición
+
+- **Una sola fila de cifras** en la nómina: imponible, retenciones al trabajador, líquido a pagar y costo para la empresa, con nombres distintos. Se quitaron las tarjetas duplicadas del encabezado ("Leyes sociales totales" se confundía con "Leyes sociales y retenciones").
+- **Período una sola vez**: en el selector. Se quitó de la insignia junto al título, de los botones ("Reprocesar", "Procesar") y del título de la planilla.
+- **Parámetros del período** (UF, UTM, ingreso mínimo, tope, SIS) en una línea discreta en vez de una franja negra.
+- Se quitaron las líneas descriptivas y la insignia "Capa 1: Módulo Operativo" del encabezado de los módulos.
+
 ## 1.9.3 — 11 de noviembre de 2026 — Panel del Super Administrador, alertas por correo y página de inicio
 
 - **Panel rediseñado para teléfono**: tarjetas en vez de tablas, botones grandes, pestañas deslizables (también en la barra superior del Super Administrador).

@@ -1060,11 +1060,9 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
     <div className="space-y-6">
       {/* HEADER ESTANDARIZADO DE MÓDULO */}
       <StandardModuleHeader
-        title="Módulo de Remuneraciones & RRHH"
-        subtitle="Cálculo legal mensual, vigencias, aperturas dinámicas, reliquidaciones y centralización contable al Libro Diario."
+        title="Remuneraciones"
         icon={Calculator}
         iconBgColor="bg-indigo-600"
-        layerBadge={{ layer: 1, label: 'Capa 1: Módulo Operativo' }}
         period={{
           selectedPeriod: periodStr,
           onPrevPeriod: handlePrevMonth,
@@ -1080,36 +1078,6 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
           disabled: isFuturePeriodBlocked || slipsForPeriod.length === 0,
           disabledTooltip: slipsForPeriod.length === 0 ? 'Calcule y guarde primero las liquidaciones del período' : undefined
         }}
-        kpis={[
-          {
-            label: 'Trabajadores',
-            value: totals.totalEmployees,
-            subtext: `${slipsForPeriod.length} liquidaciones procesadas`,
-            icon: Users,
-            variant: 'default'
-          },
-          {
-            label: 'Total Imponible (Gasto)',
-            value: `$${totals.totalImponible.toLocaleString('es-CL')}`,
-            subtext: 'Base cálculo legal',
-            icon: DollarSign,
-            variant: 'purple'
-          },
-          {
-            label: 'Sueldos Líquidos a Pagar',
-            value: `$${totals.totalLiquido.toLocaleString('es-CL')}`,
-            subtext: 'Pasivo neto transferencias',
-            icon: HeartPulse,
-            variant: 'success'
-          },
-          {
-            label: 'Leyes Sociales Totales',
-            value: `$${(totals.totalAfp + totals.totalSalud + totals.totalAfcTrabajador + totals.totalAfcEmpleador + totals.totalSis + totals.totalMutual).toLocaleString('es-CL')}`,
-            subtext: 'Previred + Mutual + Aportes',
-            icon: Shield,
-            variant: 'warning'
-          }
-        ]}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {/* Botón Carga Masiva Excel Tabulado */}
@@ -1149,7 +1117,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
               title={isFuturePeriodBlocked ? 'Período bloqueado' : 'Calcular y procesar liquidaciones'}
             >
               {isFuturePeriodBlocked ? <Lock className="w-3.5 h-3.5 text-slate-200" /> : <Sparkles className="w-3.5 h-3.5 text-amber-300" />}
-              <span>{isFuturePeriodBlocked ? `Bloqueado` : isPeriodProcessed ? `Re-Procesar (${periodStr})` : `Procesar (${periodStr})`}</span>
+              <span>{isFuturePeriodBlocked ? 'Bloqueado' : isPeriodProcessed ? 'Reprocesar' : 'Procesar'}</span>
             </button>
 
             {/* Botón Reset / Limpiar Período */}
@@ -1168,40 +1136,14 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
         }
       />
 
-      {/* Banner de Parámetros Previsionales del Período */}
-      <div className="bg-slate-900 text-white rounded-xl p-4 shadow-sm border border-slate-800">
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Shield className="w-4 h-4 text-amber-400" />
-            <span className="text-xs font-bold uppercase tracking-wider text-amber-300">
-              Parámetros Previsionales Vigentes ({periodStr})
-            </span>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-mono">
-            <div>
-              <span className="text-slate-400">UF Período:</span>{' '}
-              <span className="font-bold text-emerald-400">${periodParams.uf.toLocaleString('es-CL')}</span>
-            </div>
-            <div>
-              <span className="text-slate-400">UTM Período:</span>{' '}
-              <span className="font-bold text-indigo-300">${periodParams.utm.toLocaleString('es-CL')}</span>
-            </div>
-            <div>
-              <span className="text-slate-400">IMM (Ingreso Mínimo):</span>{' '}
-              <span className="font-bold text-white">${periodParams.imm.toLocaleString('es-CL')}</span>
-            </div>
-            <div>
-              <span className="text-slate-400">Tope AFP/Salud:</span>{' '}
-              <span className="font-bold text-amber-300">{periodParams.topeImponibleAfpUf} UF (${Math.round(periodParams.topeImponibleAfpUf * periodParams.uf).toLocaleString('es-CL')})</span>
-            </div>
-            <div>
-              <span className="text-slate-400">SIS Empleador:</span>{' '}
-              <span className="font-bold text-white">{periodParams.tasaSisPercent}%</span>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Parámetros del período en una sola línea */}
+      <p className="px-1 text-xs text-slate-500 flex flex-wrap gap-x-4 gap-y-1">
+        <span>UF del período <b className="text-slate-800 tabular-nums">${periodParams.uf.toLocaleString('es-CL')}</b></span>
+        <span>UTM <b className="text-slate-800 tabular-nums">${periodParams.utm.toLocaleString('es-CL')}</b></span>
+        <span>Ingreso mínimo <b className="text-slate-800 tabular-nums">${periodParams.imm.toLocaleString('es-CL')}</b></span>
+        <span>Tope AFP y salud <b className="text-slate-800 tabular-nums">{periodParams.topeImponibleAfpUf} UF (${Math.round(periodParams.topeImponibleAfpUf * periodParams.uf).toLocaleString('es-CL')})</b></span>
+        <span>SIS empleador <b className="text-slate-800">{periodParams.tasaSisPercent}%</b></span>
+      </p>
 
       {/* Navegación por Pestañas del Módulo */}
       <div className="border-b border-slate-200 flex flex-wrap justify-between items-center bg-white px-3 rounded-xl shadow-xs gap-2">
@@ -1428,35 +1370,35 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
           {/* Tarjetas de Resumen Financiero de la Nómina */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Imponible</p>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Imponible</p>
               <p className="text-2xl font-bold font-mono text-slate-900 mt-1">
                 ${totals.totalImponible.toLocaleString('es-CL')}
               </p>
-              <p className="text-[11px] text-slate-500 mt-1">Sueldos base + Gratificación + HE + Bonos</p>
+              <p className="text-[11px] text-slate-500 mt-1">{totals.totalEmployees} {totals.totalEmployees === 1 ? 'trabajador' : 'trabajadores'}: sueldo base, gratificación, horas extra y bonos</p>
             </div>
 
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Leyes Sociales & Retenciones</p>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Retenciones al trabajador</p>
               <p className="text-2xl font-bold font-mono text-rose-700 mt-1">
                 ${(totals.totalAfp + totals.totalSalud + totals.totalAfcTrabajador + totals.totalImpuestoUnico).toLocaleString('es-CL')}
               </p>
-              <p className="text-[11px] text-slate-500 mt-1">AFP, Fonasa/Isapre, AFC e Impuesto Único</p>
+              <p className="text-[11px] text-slate-500 mt-1">AFP, salud, cesantía e impuesto único</p>
             </div>
 
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Líquido a Pagar</p>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Líquido a pagar</p>
               <p className="text-2xl font-bold font-mono text-emerald-700 mt-1">
                 ${totals.totalLiquido.toLocaleString('es-CL')}
               </p>
-              <p className="text-[11px] text-slate-500 mt-1">Líquido a transferir a colaboradores</p>
+              <p className="text-[11px] text-slate-500 mt-1">Lo que se transfiere a los trabajadores</p>
             </div>
 
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Costo Total Empresa</p>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Costo para la empresa</p>
               <p className="text-2xl font-bold font-mono text-indigo-900 mt-1">
                 ${totals.costoTotalEmpresa.toLocaleString('es-CL')}
               </p>
-              <p className="text-[11px] text-slate-500 mt-1">Haberes + SIS + AFC Emp. + Mutual</p>
+              <p className="text-[11px] text-slate-500 mt-1">Haberes más SIS, cesantía y mutual del empleador</p>
             </div>
           </div>
 
@@ -1465,13 +1407,8 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
             <div className="p-4 border-b border-slate-200 bg-slate-50/70 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
               <div>
                 <h3 className="text-sm font-bold text-slate-900">
-                  Planilla de Remuneraciones - {periodStr}
+                  Planilla de remuneraciones
                 </h3>
-                <p className="text-xs text-slate-500">
-                  {payrollViewMode === 'EXCEL_COMPLETO' 
-                    ? 'Estructura idéntica a planilla Excel: Haberes, Salud, AFP, Seguro Cesantía, Impuesto Único y Aportes Patronales (Previred).' 
-                    : 'Ingresa novedades de días trabajados, horas extras o bonos para recálculo instantáneo.'}
-                </p>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">

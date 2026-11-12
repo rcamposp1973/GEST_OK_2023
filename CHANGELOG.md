@@ -9,7 +9,7 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
-## Próxima (en Pruebas) — Remuneraciones con menos repetición
+## 1.9.4 — 11 de noviembre de 2026 — Remuneraciones con menos repetición
 
 - **Una sola fila de cifras** en la nómina: imponible, retenciones al trabajador, líquido a pagar y costo para la empresa, con nombres distintos. Se quitaron las tarjetas duplicadas del encabezado ("Leyes sociales totales" se confundía con "Leyes sociales y retenciones").
 - **Período una sola vez**: en el selector. Se quitó de la insignia junto al título, de los botones ("Reprocesar", "Procesar") y del título de la planilla.

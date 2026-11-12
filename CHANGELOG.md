@@ -9,6 +9,10 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.9.6 — 11 de noviembre de 2026 — Impresión de la liquidación
+
+- Corrige la impresión de la liquidación de sueldo: salía sin diseño (textos pegados, sin cuadros ni colores). Ahora se imprime igual que se ve en pantalla.
+
 ## 1.9.5 — 11 de noviembre de 2026 — Liquidación de sueldo más limpia
 
 - Se quitó de la liquidación el recuadro de "Aportes del empleador / Costo Empresa" (no es exigido en la liquidación).

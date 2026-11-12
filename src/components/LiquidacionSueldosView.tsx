@@ -1051,6 +1051,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
     if (slipElement) {
       triggerIframePrint({
         title: `Liquidacion_Sueldo_${companyName}`,
+        useAppStyles: true,
         htmlContent: slipElement.innerHTML
       });
     } else {

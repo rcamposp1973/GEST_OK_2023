@@ -5,6 +5,8 @@
 export interface TriggerIframePrintOptions {
   title: string;
   styles?: string;
+  /** Usa los estilos de la aplicación (Tailwind) en vez de los estilos básicos: el documento se imprime igual que se ve en pantalla. */
+  useAppStyles?: boolean;
   htmlContent: string;
 }
 
@@ -41,6 +43,20 @@ export function triggerIframePrint(options: TriggerIframePrintOptions): void {
     }
   `;
 
+  // Estilos de la aplicación (hojas enlazadas y estilos incrustados), para imprimir igual que en pantalla
+  let appStyles = '';
+  if (options.useAppStyles) {
+    const base = document.baseURI;
+    const links = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
+      .map((l) => `<link rel="stylesheet" href="${new URL((l as HTMLLinkElement).getAttribute('href') || '', base).href}">`)
+      .join('\n');
+    const inline = Array.from(document.querySelectorAll('style')).map((st) => `<style>${st.innerHTML}</style>`).join('\n');
+    appStyles = links + inline;
+  }
+  const baseStyles = options.useAppStyles
+    ? `@page { size: letter portrait; margin: 10mm; } body { margin: 0; background: #ffffff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }`
+    : defaultStyles;
+
   try {
     const printWindow = window.open('', '_blank');
     if (printWindow) {
@@ -50,13 +66,14 @@ export function triggerIframePrint(options: TriggerIframePrintOptions): void {
           <head>
             <meta charset="utf-8">
             <title>${options.title}</title>
+            ${appStyles}
             <style>
-              ${defaultStyles}
+              ${baseStyles}
               ${options.styles || ''}
             </style>
           </head>
           <body>
-            ${options.htmlContent}
+            ${options.useAppStyles ? `<div class="text-xs font-sans text-slate-900">${options.htmlContent}</div>` : options.htmlContent}
             <script>
               window.onload = function() {
                 setTimeout(() => {

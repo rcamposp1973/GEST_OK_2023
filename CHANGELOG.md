@@ -9,6 +9,10 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.9.8 — 11 de noviembre de 2026 — Liquidación en una sola hoja
+
+- La liquidación de sueldo se ajusta de tamaño para imprimirse en una hoja. Si tiene demasiados ítems (más del límite legible), continúa en una segunda hoja.
+
 ## 1.9.7 — 11 de noviembre de 2026 — Impresión de la liquidación (refuerzo)
 
 - La ventana de impresión ahora copia directamente el diseño ya cargado en pantalla, sin volver a descargarlo.

@@ -7,6 +7,8 @@ export interface TriggerIframePrintOptions {
   styles?: string;
   /** Usa los estilos de la aplicación (Tailwind) en vez de los estilos básicos: el documento se imprime igual que se ve en pantalla. */
   useAppStyles?: boolean;
+  /** Reduce el tamaño para que el documento quepa en una hoja (si es demasiado largo, sigue en más hojas). */
+  fitOnePage?: boolean;
   htmlContent: string;
 }
 
@@ -83,9 +85,16 @@ export function triggerIframePrint(options: TriggerIframePrintOptions): void {
             </style>
           </head>
           <body>
-            ${options.useAppStyles ? `<div class="text-xs font-sans text-slate-900">${options.htmlContent}</div>` : options.htmlContent}
+            ${options.useAppStyles ? `<div id="gest-print-wrap" class="text-xs font-sans text-slate-900">${options.htmlContent}</div>` : options.htmlContent}
             <script>
               window.onload = function() {
+                ${options.fitOnePage ? `
+                try {
+                  var w = document.getElementById('gest-print-wrap');
+                  var maxH = 975;
+                  var h0 = w.getBoundingClientRect().height;
+                  if (h0 > maxH) { w.style.zoom = Math.max(0.55, 0.97 * maxH / h0); }
+                } catch (e) {}` : ''}
                 setTimeout(() => {
                   window.focus();
                   window.print();

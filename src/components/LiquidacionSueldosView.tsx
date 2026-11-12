@@ -1052,6 +1052,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
       triggerIframePrint({
         title: `Liquidacion_Sueldo_${companyName}`,
         useAppStyles: true,
+        fitOnePage: true,
         htmlContent: slipElement.innerHTML
       });
     } else {

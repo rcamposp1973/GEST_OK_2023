@@ -9,7 +9,7 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
-## Próxima (en Pruebas) — Panel del Super Administrador, para teléfono y bajo costo
+## 1.9.3 — 11 de noviembre de 2026 — Panel del Super Administrador, alertas por correo y página de inicio
 
 - **Panel rediseñado para teléfono**: tarjetas en vez de tablas, botones grandes, pestañas deslizables (también en la barra superior del Super Administrador).
 - **Sin consultas automáticas**: antes leía toda la base cada 30 segundos y mantenía un flujo en vivo. Ahora carga una vez al abrir (o usa una copia de hasta 10 minutos) y solo consulta de nuevo al pulsar "Actualizar". Los totales usan consultas de conteo, mucho más baratas que leer cada registro. La actividad detallada se lee solo al abrir esa pestaña.

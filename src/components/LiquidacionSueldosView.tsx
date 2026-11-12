@@ -1342,63 +1342,23 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
           {/* PESTAÑA 1: NÓMINA MENSUAL DE SUELDOS */}
           {activeTab === 'NOMINA' && (
         <div className="space-y-6">
-          {!isPeriodProcessed && (
-            <div className="bg-amber-50 border border-amber-200/80 rounded-2xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-2xs">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-amber-500 text-white rounded-xl shrink-0 shadow-xs">
-                  <AlertTriangle className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-amber-900 uppercase tracking-wide">
-                    Atención: Período {periodStr} sin Procesar (Modo Vista Previa)
-                  </h4>
-                  <p className="text-xs text-amber-800 mt-0.5">
-                    Estás viendo la simulación en tiempo real. Presiona el botón verde de la barra superior o haz clic en <strong>Procesar Remuneraciones</strong> para guardar y congelar las liquidaciones oficiales del mes.
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={handleSaveAllSlips}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-xs transition-all shrink-0 flex items-center gap-1.5"
-              >
-                <Sparkles className="w-4 h-4 text-amber-300" />
-                Procesar Remuneraciones ({periodStr})
-              </button>
+          {/* Resumen de la nómina: una sola franja compacta */}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-xs grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0 divide-slate-200">
+            <div className="px-4 py-2.5" title={`${totals.totalEmployees} ${totals.totalEmployees === 1 ? 'trabajador' : 'trabajadores'}: sueldo base, gratificación, horas extra y bonos`}>
+              <p className="text-[11px] font-semibold text-slate-500">Imponible <span className="font-normal">({totals.totalEmployees} {totals.totalEmployees === 1 ? 'trabajador' : 'trabajadores'})</span></p>
+              <p className="text-lg font-bold tabular-nums text-slate-900 leading-tight">${totals.totalImponible.toLocaleString('es-CL')}</p>
             </div>
-          )}
-          {/* Tarjetas de Resumen Financiero de la Nómina */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Imponible</p>
-              <p className="text-2xl font-bold font-mono text-slate-900 mt-1">
-                ${totals.totalImponible.toLocaleString('es-CL')}
-              </p>
-              <p className="text-[11px] text-slate-500 mt-1">{totals.totalEmployees} {totals.totalEmployees === 1 ? 'trabajador' : 'trabajadores'}: sueldo base, gratificación, horas extra y bonos</p>
+            <div className="px-4 py-2.5" title="AFP, salud, cesantía e impuesto único">
+              <p className="text-[11px] font-semibold text-slate-500">Retenciones al trabajador</p>
+              <p className="text-lg font-bold tabular-nums text-rose-700 leading-tight">${(totals.totalAfp + totals.totalSalud + totals.totalAfcTrabajador + totals.totalImpuestoUnico).toLocaleString('es-CL')}</p>
             </div>
-
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Retenciones al trabajador</p>
-              <p className="text-2xl font-bold font-mono text-rose-700 mt-1">
-                ${(totals.totalAfp + totals.totalSalud + totals.totalAfcTrabajador + totals.totalImpuestoUnico).toLocaleString('es-CL')}
-              </p>
-              <p className="text-[11px] text-slate-500 mt-1">AFP, salud, cesantía e impuesto único</p>
+            <div className="px-4 py-2.5" title="Lo que se transfiere a los trabajadores">
+              <p className="text-[11px] font-semibold text-slate-500">Líquido a pagar</p>
+              <p className="text-lg font-bold tabular-nums text-emerald-700 leading-tight">${totals.totalLiquido.toLocaleString('es-CL')}</p>
             </div>
-
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Líquido a pagar</p>
-              <p className="text-2xl font-bold font-mono text-emerald-700 mt-1">
-                ${totals.totalLiquido.toLocaleString('es-CL')}
-              </p>
-              <p className="text-[11px] text-slate-500 mt-1">Lo que se transfiere a los trabajadores</p>
-            </div>
-
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Costo para la empresa</p>
-              <p className="text-2xl font-bold font-mono text-indigo-900 mt-1">
-                ${totals.costoTotalEmpresa.toLocaleString('es-CL')}
-              </p>
-              <p className="text-[11px] text-slate-500 mt-1">Haberes más SIS, cesantía y mutual del empleador</p>
+            <div className="px-4 py-2.5" title="Haberes más SIS, cesantía y mutual del empleador">
+              <p className="text-[11px] font-semibold text-slate-500">Costo para la empresa</p>
+              <p className="text-lg font-bold tabular-nums text-indigo-900 leading-tight">${totals.costoTotalEmpresa.toLocaleString('es-CL')}</p>
             </div>
           </div>
 
@@ -1408,6 +1368,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
               <div>
                 <h3 className="text-sm font-bold text-slate-900">
                   Planilla de remuneraciones
+                  {!isPeriodProcessed && <span className="ml-2 align-middle text-[11px] font-semibold text-amber-800 bg-amber-100 border border-amber-200 rounded px-1.5 py-0.5">Vista previa, sin procesar</span>}
                 </h3>
               </div>
 

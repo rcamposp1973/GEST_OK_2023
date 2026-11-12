@@ -2,6 +2,13 @@
 
 Lista viva. Cada punto se pasa al CHANGELOG cuando se hace.
 
+## Versión 2.0.0
+- **Asistente conversacional con IA**, como servicio de pago.
+  - Etapa 1, solo lectura: preguntas sobre una empresa ("¿por qué subieron los gastos de administración?", "¿qué clientes explican el 80 % por cobrar?"), con respuestas que enlazan a la cifra y al comprobante de origen. La IA no calcula: pide las cifras al sistema y las explica. La contabilidad manda.
+  - Etapa 2: acciones con confirmación del contador (por ejemplo, preparar el informe mensual).
+  - Modelo de cobro: interruptor por estudio activado por el Super Administrador, con verificación en el servidor; complemento de precio fijo en UF más un cupo mensual de preguntas, con paquetes adicionales. Medir el costo real antes de fijar precios.
+  - Antes de construirlo: elegir proveedor con plan de pago y condiciones de privacidad que no usen los datos para entrenar modelos; definir qué datos se envían y avisarlo en los contratos; respetar permisos y separación entre estudios; que nunca invente cifras; mostrar el consumo por estudio en el panel del Super Administrador.
+
 ## Panel del Super Administrador
 - **Clave API del SII al servidor.** Hoy se guarda solo en el navegador de quien la ingresa; la consulta automática del RCV funciona únicamente desde ese equipo. Mover la clave a una variable segura del servidor y hacer que las consultas al SII pasen por el servidor (así sirve a todos los estudios y la clave no llega a ningún navegador).
 - **Pestaña "Asistente IA"** (entrenamiento): se dejó tal cual. Mejora futura: revisar qué hace, simplificarla y dejarla con texto claro.

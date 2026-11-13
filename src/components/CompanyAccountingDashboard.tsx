@@ -8,6 +8,7 @@ import { EmployeesView } from './EmployeesView';
 import { LiquidacionSueldosView } from './LiquidacionSueldosView';
 import { syncOnlineChileanIndicators } from '../utils/chileanEconomicIndicators';
 import { logAuditEvent } from '../utils/auditLogger';
+import { ivaCreditoCoherente, normalizarIvaDocRcv } from '../utils/rcvIva';
 import { notify } from '../context/ToastContext';
 import LibroDiarioView from './LibroDiarioView';
 import LibroMayorView from './LibroMayorView';
@@ -1441,7 +1442,7 @@ export default function CompanyAccountingDashboard({
 
       const cleanRcvDocs = rcvSnap.docs
         .filter(d => !demoDocs.some(dd => dd.id === d.id))
-        .map(d => ({ ...d.data(), id: d.id } as RCVDocument));
+        .map(d => normalizarIvaDocRcv({ ...d.data(), id: d.id } as RCVDocument));
       setRcvDocuments(filterAndPurgeDuplicateRcvDocs(cleanRcvDocs));
 
       const fetchedVouchers = vouchSnap.docs.map(d => ({ ...d.data(), id: d.id } as Voucher));
@@ -1585,7 +1586,7 @@ export default function CompanyAccountingDashboard({
           );
           return !isDemo;
         })
-        .map(d => ({ ...d.data(), id: d.id } as RCVDocument));
+        .map(d => normalizarIvaDocRcv({ ...d.data(), id: d.id } as RCVDocument));
       setRcvDocuments(filterAndPurgeDuplicateRcvDocs(cleanRcvDocs));
     }, (err) => console.warn("Realtime listener error rcv:", err));
 
@@ -2370,6 +2371,11 @@ export default function CompanyAccountingDashboard({
                 montoTotal = montoExento;
               }
             }
+          }
+
+          // Coherencia: el IVA sin derecho a crédito no puede contarse también como IVA crédito
+          if (tipoRegistro === 'Compra' && montoIvaNoRec > 0) {
+            montoIva = ivaCreditoCoherente({ tipoRegistro, montoNeto, montoIva, montoExento, montoTotal, montoIvaNoRecuperable: montoIvaNoRec });
           }
 
           // Detección de referencia para Notas de Crédito / Débito (Folio de la factura que corrigen, rebajan o anulan)
@@ -6928,9 +6934,12 @@ export default function CompanyAccountingDashboard({
                           const ivaNoRec = parseFloat((form.elements.namedItem('ivaNoRec') as HTMLInputElement)?.value) || 0;
                           const codIvaNoRec = (form.elements.namedItem('codIvaNoRec') as HTMLSelectElement)?.value?.trim() || '';
 
+                          // Coherencia: lo que queda sin derecho a crédito se descuenta del IVA crédito
+                          const ivaFinal = isVenta ? iva : ivaCreditoCoherente({ tipoRegistro: 'Compra', montoNeto: neto, montoIva: iva, montoExento: exento, montoTotal: total, montoIvaNoRecuperable: ivaNoRec });
+
                           const updatePayload: any = {
                             montoNeto: neto,
-                            montoIva: iva,
+                            montoIva: ivaFinal,
                             montoIvaNoRecuperable: ivaNoRec > 0 ? ivaNoRec : 0,
                             codigoIvaNoRec: ivaNoRec > 0 && codIvaNoRec ? codIvaNoRec : null,
                             montoExento: exento,

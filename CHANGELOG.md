@@ -9,6 +9,14 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.9.11 — 13 de noviembre de 2026 — RCV: IVA crédito e IVA sin derecho ya no se duplican
+
+- Una compra no puede mostrar IVA crédito y a la vez el mismo IVA como "sin derecho a crédito". Ahora, si ambos suman más que el total, lo que está sin derecho se descuenta del IVA crédito (en pantalla, en el comprobante, en el resumen y al importar o editar).
+- El IVA sin derecho a crédito se carga al gasto, en la misma cuenta del valor neto (el exento sigue en su cuenta de exentos).
+- Para corregir un comprobante ya generado con el error, basta abrir "Editar" en la factura y guardar: el comprobante se rehace cuadrado.
+
+---
+
 ## 1.9.10 — 13 de noviembre de 2026 — RCV: la factura y su comprobante quedan amarrados
 
 - Al editar una factura ya contabilizada (por ejemplo, marcar IVA sin derecho a crédito), el sistema te advierte, muestra el comprobante y, al guardar, lo actualiza para que factura y contabilidad queden iguales.

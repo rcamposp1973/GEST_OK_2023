@@ -9,6 +9,15 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.9.10 — 13 de noviembre de 2026 — RCV: la factura y su comprobante quedan amarrados
+
+- Al editar una factura ya contabilizada (por ejemplo, marcar IVA sin derecho a crédito), el sistema te advierte, muestra el comprobante y, al guardar, lo actualiza para que factura y contabilidad queden iguales.
+- Si el comprobante tiene partidas ya compensadas o conciliadas, no lo toca: te pide descalzarlas primero. Si el período está cerrado, también lo bloquea.
+- En lugar de "Registrado", cada factura contabilizada muestra un botón "Comp. N° X" que abre su comprobante.
+- Nueva columna "Exento" en la tabla del RCV: las facturas exentas ahora muestran su monto igual que en el SII.
+
+---
+
 ## 1.9.9 — 13 de noviembre de 2026 — Compensación de partidas en todas las cuentas
 
 - Nuevo botón "Compensar todas las cuentas" en Análisis de Cuentas: revisa a la vez todas las cuentas de activo y pasivo (proveedores, clientes, honorarios, anticipos, etc.) y propone compensar cada partida contra su pago, cobro o nota de crédito/débito, sin importar la cuenta del banco ni la fecha.

@@ -3680,6 +3680,10 @@ export default function CompanyAccountingDashboard({
     };
   };
 
+  // Comprobante que respalda a un documento del RCV (por enlace directo o por origen)
+  const findVoucherForRcv = (docItem: RCVDocument): Voucher | undefined =>
+    vouchers.find(v => (docItem.voucherId && v.id === docItem.voucherId) || v.createdFromRcvId === docItem.id);
+
   const handleContabilizarSingle = async (docId: string) => {
     if (isReadOnly) {
       alert('Modo Solo Lectura: El perfil Observador no puede contabilizar documentos contables ni generar comprobantes.');
@@ -6624,6 +6628,7 @@ export default function CompanyAccountingDashboard({
                     <th className="p-3">{rcvFilterType === 'Venta' ? 'Razón Social Cliente' : rcvFilterType === 'Compra' ? 'Razón Social Proveedor' : 'Razón Social'}</th>
                     <th className="p-3">Tipo Doc / Folio</th>
                     <th className="p-3 text-right">{rcvFilterType === 'Honorarios' ? 'Bruto' : 'Neto'}</th>
+                    <th className="p-3 text-right text-sky-800">{rcvFilterType === 'Honorarios' ? '-' : 'Exento'}</th>
                     <th className="p-3 text-right">{rcvFilterType === 'Honorarios' ? 'Retención' : 'IVA Crédito'}</th>
                     <th className="p-3 text-right text-amber-800">{rcvFilterType === 'Honorarios' ? '-' : 'IVA Sin Crédito'}</th>
                     <th className="p-3 text-right">{rcvFilterType === 'Honorarios' ? 'Líquido / Pagado' : 'Total'}</th>
@@ -6728,6 +6733,15 @@ export default function CompanyAccountingDashboard({
                         <td className={`p-3 text-right font-mono ${isNotaCredito ? 'text-rose-700' : 'text-slate-900'}`}>
                           ${displayNeto.toLocaleString('es-CL')}
                         </td>
+                        <td className="p-3 text-right font-mono">
+                          {!isBHE && Number(docItem.montoExento) > 0 ? (
+                            <span className={`font-semibold px-1.5 py-0.5 rounded text-[11px] bg-sky-50 border border-sky-200 ${isNotaCredito ? 'text-rose-700' : 'text-sky-900'}`}>
+                              ${Number(docItem.montoExento).toLocaleString('es-CL')}
+                            </span>
+                          ) : (
+                            <span className="text-slate-300 font-normal">$0</span>
+                          )}
+                        </td>
                         <td className={`p-3 text-right font-mono ${isNotaCredito ? 'text-rose-700' : 'text-slate-900'}`}>
                           ${displayIva.toLocaleString('es-CL')}
                           {docItem.tipoRegistro === 'Compra' && displayIva === 0 && displayIvaNoRec > 0 && (
@@ -6784,7 +6798,20 @@ export default function CompanyAccountingDashboard({
                                 Contabilizar
                               </button>
                             ) : (
-                              <span className="text-emerald-700 bg-emerald-50 px-2 py-1 rounded text-[10px] font-semibold">Registrado</span>
+                              (() => {
+                                const vLink = findVoucherForRcv(docItem);
+                                return vLink ? (
+                                  <button
+                                    onClick={() => handleOpenVoucherModal(vLink)}
+                                    className="text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2 py-1 rounded text-[10px] font-semibold transition-colors"
+                                    title="Ver el comprobante contable de esta factura"
+                                  >
+                                    Comp. N° {vLink.voucherNumber}
+                                  </button>
+                                ) : (
+                                  <span className="text-amber-800 bg-amber-50 border border-amber-200 px-2 py-1 rounded text-[10px] font-semibold" title="El documento figura contabilizado pero no se encontró su comprobante">Sin comprobante</span>
+                                );
+                              })()
                             )}
                             <button
                               onClick={() => handleDeleteSingleRcvDoc(docItem.id, docItem.tipoRegistro, docItem.folio)}
@@ -6799,7 +6826,7 @@ export default function CompanyAccountingDashboard({
                   })}
                   {rcvDocuments.filter(d => d.period === selectedRcvPeriod).length === 0 && (
                     <tr>
-                      <td colSpan={11} className="p-8 text-center">
+                      <td colSpan={12} className="p-8 text-center">
                         <div className="flex flex-col items-center justify-center gap-3">
                           <p className="text-slate-500 italic text-sm">
                             No hay documentos registrados para el período <strong>{selectedRcvPeriod}</strong>.
@@ -6837,6 +6864,26 @@ export default function CompanyAccountingDashboard({
                     </svg>
                   </button>
                 </div>
+                {editingRcvDoc.estadoContabilizado && (() => {
+                  const vBan = findVoucherForRcv(editingRcvDoc);
+                  return (
+                    <div className="mx-5 mt-4 p-3 rounded-lg border border-amber-300 bg-amber-50 text-xs text-amber-950 flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-bold">Este documento ya está contabilizado{vBan ? ` en el Comprobante N° ${vBan.voucherNumber}` : ''}.</p>
+                        <p className="mt-0.5 text-amber-800">Si guardas cambios en los montos, el comprobante se actualizará automáticamente para mantener la factura y la contabilidad iguales.</p>
+                      </div>
+                      {vBan && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenVoucherModal(vBan)}
+                          className="shrink-0 bg-white hover:bg-amber-100 border border-amber-300 text-amber-900 font-semibold px-2.5 py-1.5 rounded-lg"
+                        >
+                          Ver comprobante
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
                 {(() => {
                   const isVenta = editingRcvDoc.tipoRegistro === 'Venta';
                   const cleanCompRut = (company.rut || '').replace(/[^0-9kK]/g, '').toUpperCase();
@@ -6922,7 +6969,77 @@ export default function CompanyAccountingDashboard({
                             updatePayload.razonSocialReceptor = company.name;
                           }
 
+                          // Si ya está contabilizado: validar y preparar la actualización del comprobante
+                          let voucherSync: { ref: any; data: any; num: number } | null = null;
+                          if (editingRcvDoc.estadoContabilizado) {
+                            if (isReadOnly) {
+                              alert('Modo Solo Lectura: no puedes modificar documentos contabilizados.');
+                              return;
+                            }
+                            const periodCheck = checkIsPeriodClosed(editingRcvDoc.period || (editingRcvDoc.fechaEmision || '').substring(0, 7));
+                            if (periodCheck.isClosed) {
+                              alert(`Acción Bloqueada:\n\n${periodCheck.errorMsg}\n\nEl documento está contabilizado en un período cerrado. Ábrelo primero en 'Configuraciones > Períodos Contables'.`);
+                              return;
+                            }
+                            const vOld = findVoucherForRcv(editingRcvDoc);
+                            if (vOld) {
+                              const rebuilt = buildVoucherForRcvDocument({ ...editingRcvDoc, ...updatePayload } as RCVDocument, vOld.voucherNumber);
+                              // No tocar comprobantes que ya tienen partidas calzadas si cambia su estructura
+                              const matchSnap = await getDocs(collection(companyRef, 'accountMatches'));
+                              const used: { lineIndex: number; accountId: string; debit: number; credit: number }[] = [];
+                              matchSnap.forEach(m => {
+                                const md: any = m.data();
+                                if (md.status === 'DESCALZADO') return;
+                                (md.matchedLines || []).forEach((ml: any) => {
+                                  if (ml.voucherId === vOld.id) used.push(ml);
+                                });
+                              });
+                              const broken = used.some(ml => {
+                                const nl: any = rebuilt.lines[ml.lineIndex];
+                                return !nl || nl.accountId !== ml.accountId || Math.abs((Number(nl.debit) || 0) - (Number(ml.debit) || 0)) > 0.5 || Math.abs((Number(nl.credit) || 0) - (Number(ml.credit) || 0)) > 0.5;
+                              });
+                              if (broken) {
+                                alert(`No se puede modificar: el Comprobante N° ${vOld.voucherNumber} tiene partidas compensadas o conciliadas con estos montos.\n\nDescalza primero esas partidas (Análisis de Cuentas) y vuelve a guardar el cambio.`);
+                                return;
+                              }
+                              if (!window.confirm(`Este documento está contabilizado en el Comprobante N° ${vOld.voucherNumber}.\n\nAl guardar, el comprobante se reemplazará con los nuevos montos. ¿Continuar?`)) {
+                                return;
+                              }
+                              const keepStatus = vOld.status === 'Anulado' ? 'Anulado' : rebuilt.status;
+                              voucherSync = {
+                                ref: doc(companyRef, 'vouchers', vOld.id),
+                                num: vOld.voucherNumber,
+                                data: {
+                                  lines: rebuilt.lines,
+                                  totalDebit: rebuilt.totalDebit,
+                                  totalCredit: rebuilt.totalCredit,
+                                  status: keepStatus,
+                                  isDescuadrado: rebuilt.isDescuadrado,
+                                  descuadreDifference: rebuilt.descuadreDifference,
+                                  gloss: rebuilt.gloss,
+                                  date: rebuilt.date,
+                                  lastModifiedBy: auth.currentUser?.uid || 'edicion-rcv',
+                                  lastModifiedAt: new Date().toISOString()
+                                }
+                              };
+                            }
+                          }
+
                           await updateDoc(doc(companyRef, 'rcvDocuments', editingRcvDoc.id), updatePayload);
+
+                          if (voucherSync) {
+                            await updateDoc(voucherSync.ref, voucherSync.data);
+                            logAuditEvent({
+                              userId: auth.currentUser?.uid || 'anon',
+                              userEmail: auth.currentUser?.email || '',
+                              studyId,
+                              companyId: company.id,
+                              action: 'MODIFICAR',
+                              module: 'COMPROBANTES',
+                              details: `Comprobante N° ${voucherSync.num} actualizado por edición del Doc RCV ${updatePayload.tipoDoc} Folio #${editingRcvDoc.folio} en ${company.name}`,
+                              metadata: { voucherNumber: voucherSync.num, rcvDocId: editingRcvDoc.id, folio: editingRcvDoc.folio }
+                            });
+                          }
 
                           // Auto-registrar en Maestro de Auxiliares si no existe
                           const cleanRut = rut.replace(/[^0-9kK]/g, '').toUpperCase();
@@ -6944,7 +7061,7 @@ export default function CompanyAccountingDashboard({
 
                           setEditingRcvDoc(null);
                           await fetchData();
-                          alert('Documento actualizado y datos sincronizados correctamente.');
+                          alert(voucherSync ? `Documento actualizado. El Comprobante N° ${voucherSync.num} se actualizó con los nuevos montos.` : 'Documento actualizado y datos sincronizados correctamente.');
                         } catch (err: any) {
                           alert('Error actualizando documento: ' + err.message);
                         }

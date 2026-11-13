@@ -4,6 +4,7 @@ import { collection, getDocs, doc, setDoc, deleteDoc, writeBatch, updateDoc } fr
 import { getNaturaleza } from '../utils/ifrsClassification';
 import { getAllOpenPeriods } from '../utils/periodUtils';
 import { repartoParcial, pareadoPorLinea } from '../utils/pareoParcial';
+import { proponerCompensaciones } from '../utils/compensacionGlobal';
 import {
   Company,
   ChartOfAccount,
@@ -150,6 +151,10 @@ export default function AnalisisCuentasView({
     creditLines: ExtVoucherLine[];
     totalAmount: number;
     rule: string;
+    /** Compensación de todas las cuentas: nivel de seguridad y cuenta a la que se asocia el pareo. */
+    nivel?: 'EXACTO' | 'SUGERENCIA';
+    accountId?: string; accountCode?: string; accountName?: string;
+    entreCuentas?: boolean;
   }[] | null>(null);
 
   // --- CARGAR MATCHES DESDE FIRESTORE ---
@@ -987,6 +992,19 @@ export default function AnalisisCuentasView({
     }
   };
 
+  // --- COMPENSACIÓN DE TODAS LAS CUENTAS DE ACTIVO Y PASIVO (pagos, cobros, notas de crédito/débito) ---
+  const handleRunGlobalCompensation = () => {
+    const props = proponerCompensaciones(vouchers, accounts, matches);
+    setSuggestedMatches(props.map(p => ({
+      id: p.id,
+      debitLines: p.debitLines as unknown as ExtVoucherLine[],
+      creditLines: p.creditLines as unknown as ExtVoucherLine[],
+      totalAmount: p.totalAmount,
+      rule: `${p.accountCode} ${p.accountName} · ${p.regla}`,
+      nivel: p.nivel, accountId: p.accountId, accountCode: p.accountCode, accountName: p.accountName, entreCuentas: p.entreCuentas,
+    })));
+  };
+
   // --- MOTOR DE CALCE INTELIGENTE (ALGORITMO MULTI-REGLA N-A-1 Y 1-A-1) ---
   const handleRunSmartAutoMatch = () => {
     if (!selectedAccount) return;
@@ -1152,7 +1170,8 @@ export default function AnalisisCuentasView({
 
   // --- APLICAR TODAS O INDIVIDUALES SUGERENCIAS DE CALCE ---
   const handleApplySuggestedMatches = async (toApply = suggestedMatches) => {
-    if (!toApply || toApply.length === 0 || !selectedAccount) return;
+    if (!toApply || toApply.length === 0) return;
+    if (!selectedAccount && toApply.some(t => !t.accountId)) return;
 
     setSaveStatus('SAVING');
     try {
@@ -1195,9 +1214,9 @@ export default function AnalisisCuentasView({
 
         const matchObj: AccountMatch = {
           id: matchId,
-          accountId: selectedAccount.id,
-          accountCode: selectedAccount.code,
-          accountName: selectedAccount.name,
+          accountId: sug.accountId || selectedAccount!.id,
+          accountCode: sug.accountCode || selectedAccount!.code,
+          accountName: sug.accountName || selectedAccount!.name,
           matchedLines: matchedLinesRef,
           totalAmount: sug.totalAmount,
           matchDate: new Date().toISOString(),
@@ -1353,6 +1372,15 @@ export default function AnalisisCuentasView({
           >
             <Sparkles className="w-4 h-4 text-emerald-200 animate-pulse" />
             <span>Compensación</span>
+          </button>
+
+          <button
+            onClick={handleRunGlobalCompensation}
+            className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold text-xs flex items-center gap-1.5 transition-colors shadow-sm"
+            title="Revisa todas las cuentas de activo y pasivo: compensa pagos, cobros y notas de crédito/débito contra sus partidas, sin importar el banco ni la fecha"
+          >
+            <Sparkles className="w-4 h-4 text-indigo-200" />
+            <span>Compensar todas las cuentas</span>
           </button>
 
           <button
@@ -1614,6 +1642,16 @@ export default function AnalisisCuentasView({
                   <span>Compensar Todos ({suggestedMatches.length})</span>
                 </button>
               )}
+              {suggestedMatches.some(x => x.nivel === 'EXACTO') && suggestedMatches.some(x => x.nivel === 'SUGERENCIA') && (
+                <button
+                  onClick={() => handleApplySuggestedMatches(suggestedMatches.filter(x => x.nivel === 'EXACTO'))}
+                  className="px-3.5 py-1.5 bg-white hover:bg-slate-100 text-slate-900 rounded-lg font-bold text-xs flex items-center gap-1.5 transition-colors shadow-sm"
+                  title="Aplica solo las que coinciden exacto (mismo RUT, documento y monto). Las sugerencias las confirmas tú una a una."
+                >
+                  <Check className="w-4 h-4" />
+                  <span>Solo exactos ({suggestedMatches.filter(x => x.nivel === 'EXACTO').length})</span>
+                </button>
+              )}
               <button
                 onClick={() => setSuggestedMatches(null)}
                 className="p-1 text-slate-300 hover:text-white"
@@ -1625,7 +1663,7 @@ export default function AnalisisCuentasView({
 
           {suggestedMatches.length === 0 ? (
             <p className="text-xs text-indigo-200">
-              No se encontraron coincidencias directas automáticas para esta cuenta. Utiliza la barra de filtros inferiores para parear manualmente o por RUT.
+              No se encontraron coincidencias automáticas. Utiliza la barra de filtros inferiores para parear manualmente o por RUT.
             </p>
           ) : (
             <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
@@ -1633,6 +1671,11 @@ export default function AnalisisCuentasView({
                 <div key={sug.id} className="bg-indigo-800/80 p-3 rounded-lg border border-indigo-600/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
+                      {sug.nivel && (
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${sug.nivel === 'EXACTO' ? 'bg-emerald-400 text-slate-900' : 'bg-amber-300 text-slate-900'}`}>
+                          {sug.nivel === 'EXACTO' ? 'Exacto' : 'Revisar'}
+                        </span>
+                      )}
                       <span className="px-2 py-0.5 bg-indigo-700 text-indigo-200 rounded text-[10px] font-mono font-bold">
                         {sug.rule}
                       </span>

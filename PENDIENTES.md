@@ -33,3 +33,10 @@ Lista viva. Cada punto se pasa al CHANGELOG cuando se hace.
 - Base de datos separada para Pruebas (hoy Pruebas y producción comparten la misma).
 - Euro e IPC históricos; NIIF 18; Importación inteligente (fases 3 y 4); marcar más pantallas como "solo trabajo" para el modo presentación.
 - Crear la etiqueta (tag) de cada versión en GitHub (el sistema no puede hacerlo desde aquí).
+
+
+## Compensación de partidas (siguiente etapa)
+- Que se compense sola al registrar el pago, cobro o nota (hoy se revisa con el botón "Compensar todas las cuentas").
+- Pagos y cobros parciales: pagar parte de una factura y dejar el resto abierto (el pareo parcial ya existe, falta proponerlo).
+- Nota de crédito/débito: usar el folio de referencia del RCV (refFolioOrig) para ligarla con su factura.
+- Compensación entre cuentas con asiento de traspaso automático.

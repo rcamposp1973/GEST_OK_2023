@@ -9,6 +9,13 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.9.9 — 13 de noviembre de 2026 — Compensación de partidas en todas las cuentas
+
+- Nuevo botón "Compensar todas las cuentas" en Análisis de Cuentas: revisa a la vez todas las cuentas de activo y pasivo (proveedores, clientes, honorarios, anticipos, etc.) y propone compensar cada partida contra su pago, cobro o nota de crédito/débito, sin importar la cuenta del banco ni la fecha.
+- Niveles de seguridad: "Exacto" (mismo RUT y documento dentro de la misma cuenta, y el debe y el haber suman igual) y "Revisar" (documento escrito distinto, partidas del mismo RUT entre cuentas distintas, o un cargo y un abono del mismo monto). Hay un botón "Solo exactos" y cada propuesta se puede aplicar por separado.
+- Las cuentas con conciliación bancaria quedan fuera (se concilian contra la cartola), igual que los RUT y documentos genéricos (apertura, "otro").
+- No cambia nada hasta que se aplica una propuesta; los pagos parciales todavía no se proponen.
+
 ## 1.9.8 — 11 de noviembre de 2026 — Liquidación en una sola hoja
 
 - La liquidación de sueldo se ajusta de tamaño para imprimirse en una hoja. Si tiene demasiados ítems (más del límite legible), continúa en una segunda hoja.

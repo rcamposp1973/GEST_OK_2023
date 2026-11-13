@@ -9,6 +9,15 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.10.0 — 13 de noviembre de 2026 — Panel asistente para el observador
+
+- Nuevo panel conversacional a la derecha en el portal del Cliente Observador (se puede cerrar y abrir).
+- Informes con un botón, que preguntan lo que falta: Balance (pregunta la fecha), Estado de resultados (a una fecha), Cuenta corriente (pide nombre o RUT, sea cliente o proveedor), Por cobrar, Por pagar, Vencimientos e IVA del período.
+- También entiende frases simples escritas, como "balance al 31-10-2026" o "saldo de Nubox".
+- Todo se calcula con las cifras del sistema, sin inteligencia artificial: no tiene costo por consulta. Es solo de lectura.
+
+---
+
 ## 1.9.11 — 13 de noviembre de 2026 — RCV: IVA crédito e IVA sin derecho ya no se duplican
 
 - Una compra no puede mostrar IVA crédito y a la vez el mismo IVA como "sin derecho a crédito". Ahora, si ambos suman más que el total, lo que está sin derecho se descuenta del IVA crédito (en pantalla, en el comprobante, en el resumen y al importar o editar).

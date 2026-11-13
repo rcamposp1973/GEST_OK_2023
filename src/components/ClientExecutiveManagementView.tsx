@@ -11,6 +11,7 @@ import {
 } from '../types';
 import AuditorEstadosFinancierosView from './AuditorEstadosFinancierosView';
 import CompanyNotebooksView from './CompanyNotebooksView';
+import ObserverAssistantPanel from './ObserverAssistantPanel';
 import LibroBancoColaborativoView from './LibroBancoColaborativoView';
 import {
   Building2,
@@ -237,7 +238,8 @@ export default function ClientExecutiveManagementView({
   const grossMarginPct = salesMetrics.totalNeto > 0 ? (grossProfit / salesMetrics.totalNeto) * 100 : 0;
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+    <div className="flex items-start gap-4 max-w-[1700px] mx-auto">
+    <div className="space-y-6 flex-1 min-w-0 pb-12">
       
       {/* Top Banner: Observador de Gestión para Cliente Final */}
       <div className="bg-slate-900 text-white p-5 rounded-2xl shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -982,6 +984,15 @@ export default function ClientExecutiveManagementView({
         />
       )}
 
+    </div>
+
+    <ObserverAssistantPanel
+      company={company}
+      accounts={accounts}
+      vouchers={vouchers}
+      rcvDocuments={rcvDocuments}
+      selectedPeriod={selectedPeriod}
+    />
     </div>
   );
 }

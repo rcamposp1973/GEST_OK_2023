@@ -71,12 +71,6 @@ export default function StudyAdminDashboard({
   const [lastTestPurgeStats, setLastTestPurgeStats] = useState<TestStudyPurgeStats | null>(null);
   const [showDemoFerreteriaModal, setShowDemoFerreteriaModal] = useState(false);
   const [showAdminModal, setShowAdminModal] = useState(false);
-  const [modalSolo, setModalSolo] = useState(false); // true: ventana solo para configurar UNA empresa
-  const closeAdmin = () => { setShowAdminModal(false); setEditingCompany(null); setModalSolo(false); };
-  useEffect(() => {
-    // En la ventana de una sola empresa, al guardar o cancelar la edición se cierra sola
-    if (showAdminModal && modalSolo && !editingCompany) { setShowAdminModal(false); setModalSolo(false); }
-  }, [showAdminModal, modalSolo, editingCompany]);
 
   const handleExecuteTestPurge = async () => {
     if (!isCurrentStudyTest) {
@@ -122,6 +116,12 @@ export default function StudyAdminDashboard({
   // Editing states
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editingCompany, setEditingCompany] = useState<Company | null>(null);
+  const [modalSolo, setModalSolo] = useState(false); // true: ventana solo para configurar UNA empresa
+  const closeAdmin = () => { setShowAdminModal(false); setEditingCompany(null); setModalSolo(false); };
+  useEffect(() => {
+    // En la ventana de una sola empresa, al guardar o cancelar la edición se cierra sola
+    if (showAdminModal && modalSolo && !editingCompany) { setShowAdminModal(false); setModalSolo(false); }
+  }, [showAdminModal, modalSolo, editingCompany]);
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
 
   // Selected company for accounting dashboard with localStorage persistence

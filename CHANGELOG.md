@@ -9,6 +9,12 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.11.2 — 13 de noviembre de 2026 — Corrección urgente
+
+- Corregido un error que mostraba "Ocurrió un error inesperado" al entrar al panel del estudio (un orden incorrecto en el código de la ventana de configuración de clientes).
+
+---
+
 ## 1.11.1 — 13 de noviembre de 2026 — Clientes del estudio en grilla de cristal
 
 - La pantalla principal del estudio ahora es una grilla de clientes, estilo planilla con los colores y letras del sistema y efecto vidrio: buscar por nombre, RUT, giro o contador; filtrar por estado, SII y contador; ordenar por columna.

@@ -71,6 +71,12 @@ export default function StudyAdminDashboard({
   const [lastTestPurgeStats, setLastTestPurgeStats] = useState<TestStudyPurgeStats | null>(null);
   const [showDemoFerreteriaModal, setShowDemoFerreteriaModal] = useState(false);
   const [showAdminModal, setShowAdminModal] = useState(false);
+  const [modalSolo, setModalSolo] = useState(false); // true: ventana solo para configurar UNA empresa
+  const closeAdmin = () => { setShowAdminModal(false); setEditingCompany(null); setModalSolo(false); };
+  useEffect(() => {
+    // En la ventana de una sola empresa, al guardar o cancelar la edición se cierra sola
+    if (showAdminModal && modalSolo && !editingCompany) { setShowAdminModal(false); setModalSolo(false); }
+  }, [showAdminModal, modalSolo, editingCompany]);
 
   const handleExecuteTestPurge = async () => {
     if (!isCurrentStudyTest) {
@@ -624,6 +630,7 @@ export default function StudyAdminDashboard({
     const nuevoEstado = c.estado === 'Inactivo' ? 'Activo' : 'Inactivo';
     try {
       await updateDoc(doc(studyRef, 'companies', c.id), { estado: nuevoEstado });
+      setEditingCompany(prev => (prev && prev.id === c.id ? { ...prev, estado: nuevoEstado } : prev));
       await fetchData();
     } catch (err: any) {
       console.error("Error updating company status:", err);
@@ -636,9 +643,11 @@ export default function StudyAdminDashboard({
       alert('Acceso Denegado: No tienes permisos para eliminar empresas.');
       return;
     }
-    if (window.confirm('¿Eliminar esta empresa?')) {
+    const nombreEmp = companies.find(c => c.id === id)?.name || 'esta empresa';
+    if (window.confirm(`¿Eliminar la empresa "${nombreEmp}"?\n\nEsta acción no se puede deshacer. Si solo quieres dejar de trabajar con ella, usa "Desactivar empresa".`)) {
       try {
         await deleteDoc(doc(studyRef, 'companies', id));
+        setEditingCompany(prev => (prev && prev.id === id ? null : prev));
         await fetchData();
       } catch (err: any) {
         console.error("Error deleting company:", err);
@@ -1071,21 +1080,22 @@ export default function StudyAdminDashboard({
           assignments={assignments}
           canManage={!isSupportMode}
           onOpenAccounting={handleSelectCompany}
-          onManage={() => { setEditingCompany(null); setActiveTab('companies'); setCompanySection('society'); setShowAdminModal(true); }}
-          onConfigure={(c) => { setEditingCompany(c); setActiveTab('companies'); setCompanySection('society'); setShowAdminModal(true); }}
-          onCredentials={(c) => { setEditingCompany(c); setActiveTab('companies'); setCompanySection('sii'); setShowAdminModal(true); }}
+          onManage={() => { setEditingCompany(null); setModalSolo(false); setActiveTab('companies'); setCompanySection('society'); setShowAdminModal(true); }}
+          onConfigure={(c) => { setEditingCompany(c); setModalSolo(true); setActiveTab('companies'); setCompanySection('society'); setShowAdminModal(true); }}
+          onCredentials={(c) => { setEditingCompany(c); setModalSolo(true); setActiveTab('companies'); setCompanySection('sii'); setShowAdminModal(true); }}
         />
         {showAdminModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/35 backdrop-blur-sm" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowAdminModal(false); }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/35 backdrop-blur-sm" onMouseDown={(e) => { if (e.target === e.currentTarget) closeAdmin(); }}>
         <div className="relative w-full max-w-6xl max-h-[92vh] overflow-y-auto rounded-3xl border border-white/70 bg-white/80 backdrop-blur-2xl shadow-2xl p-4 sm:p-6">
         <div className="flex items-start justify-between gap-3 mb-4">
           <div>
-            <h2 className="text-lg font-extrabold text-slate-900 tracking-tight">Administrar el estudio</h2>
-            <p className="text-xs text-slate-500">Crea empresas clientes, contadores y asignaciones.</p>
+            <h2 className="text-lg font-extrabold text-slate-900 tracking-tight">{modalSolo && editingCompany ? `Configuración de ${editingCompany.name}` : 'Administrar el estudio'}</h2>
+            <p className="text-xs text-slate-500">{modalSolo ? 'Datos, representante, credenciales SII y personal asignado de este cliente.' : 'Crea empresas clientes, contadores y asignaciones.'}</p>
           </div>
-          <button type="button" onClick={() => setShowAdminModal(false)} className="w-9 h-9 rounded-xl bg-white/80 hover:bg-slate-100 border border-slate-200 text-slate-600 flex items-center justify-center" title="Cerrar"><X className="w-4 h-4" /></button>
+          <button type="button" onClick={closeAdmin} className="w-9 h-9 rounded-xl bg-white/80 hover:bg-slate-100 border border-slate-200 text-slate-600 flex items-center justify-center" title="Cerrar"><X className="w-4 h-4" /></button>
         </div>
         <div className="space-y-6">
+          {!modalSolo && (
           <div className="bg-slate-100/90 p-1 rounded-lg border border-slate-200 inline-flex flex-wrap gap-1">
             {tabs.map((tab) => (
               <button
@@ -1101,6 +1111,7 @@ export default function StudyAdminDashboard({
               </button>
             ))}
           </div>
+          )}
 
           {activeTab === 'users' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1190,16 +1201,24 @@ export default function StudyAdminDashboard({
           )}
 
           {activeTab === 'companies' && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm lg:col-span-2">
+            <div className="grid grid-cols-1 gap-6">
+              <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-medium text-slate-900">
                     {editingCompany ? `Modificar Empresa: ${editingCompany.name}` : 'Registrar Empresa Cliente (Ficha Completa)'}
                   </h3>
                   {editingCompany && (
-                    <button type="button" onClick={() => setEditingCompany(null)} className="text-sm text-slate-500 hover:text-slate-800 underline">
-                      Cancelar Edición
-                    </button>
+                    <div className="flex items-center gap-3 text-sm">
+                      <button type="button" onClick={() => handleToggleCompanyEstado(editingCompany)} className="text-amber-700 hover:text-amber-900 font-semibold">
+                        {editingCompany.estado === 'Inactivo' ? 'Activar empresa' : 'Desactivar empresa'}
+                      </button>
+                      <button type="button" onClick={() => { handleDeleteCompany(editingCompany.id); }} className="text-red-600 hover:text-red-800 font-semibold">
+                        Eliminar
+                      </button>
+                      <button type="button" onClick={() => setEditingCompany(null)} className="text-slate-500 hover:text-slate-800 underline">
+                        Cancelar Edición
+                      </button>
+                    </div>
                   )}
                 </div>
                 
@@ -1726,74 +1745,6 @@ export default function StudyAdminDashboard({
                 </form>
               </div>
 
-              <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
-                <h3 className="text-lg font-medium text-slate-900 mb-4">Empresas Registradas ({companies.length})</h3>
-                {companies.length === 0 ? (
-                  <p className="text-slate-500 text-sm">No hay empresas registradas en este estudio.</p>
-                ) : (
-                  <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
-                    {companies.map(c => {
-                      const hasSiiConfig = !!(c.dteConfig?.claveRepLegalSii || c.dteConfig?.hasCertificadoDigital || c.dteConfig?.siiConnectionStatus === 'Conectado');
-                      return (
-                        <div key={c.id} className="p-3 border border-slate-200 bg-slate-50 rounded-lg space-y-2">
-                          <div className="flex items-start justify-between">
-                            <div className="space-y-1">
-                              <p className="font-semibold text-slate-900">{c.name}</p>
-                              <p className="text-xs font-mono text-slate-600">RUT: {c.rut}</p>
-                              {c.fantasyName && <p className="text-xs text-slate-500">Fantasía: {c.fantasyName}</p>}
-                              <div className="mt-1.5 text-[11px] text-slate-600 bg-white p-2 rounded border border-slate-200">
-                                <span className="font-semibold text-slate-700">Personal Asignado: </span>
-                                {c.assignedAccountantIds && c.assignedAccountantIds.length > 0 ? (
-                                  <span className="text-indigo-700 font-bold">
-                                    {users.filter(u => c.assignedAccountantIds?.includes(u.id)).map(u => u.name).join(', ') || `${c.assignedAccountantIds.length} usuario(s)`}
-                                  </span>
-                                ) : (
-                                  <span className="text-amber-600 font-medium italic">Sin contadores asignados</span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2 pt-1">
-                                <span className={`inline-block text-[10px] px-2 py-0.5 rounded font-medium ${c.estado === 'Inactivo' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                                  {c.estado || 'Activo'}
-                                </span>
-                                {hasSiiConfig ? (
-                                  <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                    <Key className="w-3 h-3 text-emerald-600" /> SII Conectado
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-medium bg-amber-100 text-amber-800 border border-amber-300">
-                                    <AlertTriangle className="w-3 h-3 text-amber-600" /> SII Sin Claves
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3 pt-2 border-t border-slate-200 text-xs font-medium">
-                            <button onClick={() => handleSelectCompany(c)} className="text-emerald-600 hover:text-emerald-800 font-bold">
-                              Contabilidad
-                            </button>
-                            <button 
-                              onClick={() => { setEditingCompany(c); setCompanySection('sii'); }} 
-                              className="text-amber-700 hover:text-amber-900 font-bold flex items-center gap-1"
-                              title="Configurar credenciales del SII y certificado digital"
-                            >
-                              <Key className="w-3 h-3" /> Credenciales SII
-                            </button>
-                            <button onClick={() => { setEditingCompany(c); setCompanySection('society'); }} className="text-indigo-600 hover:text-indigo-800">
-                              Editar
-                            </button>
-                            <button onClick={() => handleToggleCompanyEstado(c)} className="text-amber-600 hover:text-amber-800">
-                              {c.estado === 'Inactivo' ? 'Activar' : 'Desactivar'}
-                            </button>
-                            <button onClick={() => handleDeleteCompany(c.id)} className="text-red-500 hover:text-red-700">
-                              Eliminar
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
             </div>
           )}
 

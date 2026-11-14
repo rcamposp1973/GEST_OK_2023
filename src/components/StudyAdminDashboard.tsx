@@ -5,8 +5,9 @@ import { collection, getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc, setDoc 
 import { User, Company, UserRole, Assignment, Study, ChartOfAccount, Voucher, RCVDocument, BankReconciliation, FiscalPeriodYear, DTEConfig } from '../types';
 import CompanyAccountingDashboard from './CompanyAccountingDashboard';
 import ClientExecutiveManagementView from './ClientExecutiveManagementView';
-import { ShieldAlert, Users, Building2, UserCheck, Shield, Key, LogOut, Trash2, RefreshCw, AlertTriangle, CheckCircle2, Lock, Eye, EyeOff, FileText, Upload, Sparkles, Server, Check, ArrowRight, Activity } from 'lucide-react';
+import { ShieldAlert, Users, Building2, UserCheck, Shield, Key, LogOut, Trash2, RefreshCw, AlertTriangle, CheckCircle2, Lock, Eye, EyeOff, FileText, Upload, Sparkles, Server, Check, ArrowRight, Activity, X } from 'lucide-react';
 import ChangePasswordModal from './ChangePasswordModal';
+import ClientesGrid from './ClientesGrid';
 import { isTestStudy, executeTestStudyDataPurge, TestStudyPurgeStats } from '../utils/testStudyPurgeUtils';
 import DemoFerreteriaManagerModal from './DemoFerreteriaManagerModal';
 import { DEMO_COMPANY_NAME, DEMO_COMPANY_RUT, isDemoFerreteriaCompany } from '../utils/demoFerreteriaGenerator';
@@ -69,6 +70,7 @@ export default function StudyAdminDashboard({
   const [testPurgeErrorMessage, setTestPurgeErrorMessage] = useState<string | null>(null);
   const [lastTestPurgeStats, setLastTestPurgeStats] = useState<TestStudyPurgeStats | null>(null);
   const [showDemoFerreteriaModal, setShowDemoFerreteriaModal] = useState(false);
+  const [showAdminModal, setShowAdminModal] = useState(false);
 
   const handleExecuteTestPurge = async () => {
     if (!isCurrentStudyTest) {
@@ -863,8 +865,8 @@ export default function StudyAdminDashboard({
   }
 
   const tabs: { id: 'users' | 'companies' | 'assignments' | 'demoPurge'; label: string }[] = [
-    { id: 'companies', label: 'Empresas Clientes' },
-    { id: 'users', label: 'Gestión de Usuarios' },
+    { id: 'companies', label: 'Empresas' },
+    { id: 'users', label: 'Contadores y Usuarios' },
     { id: 'assignments', label: 'Asignaciones' },
     ...(isSuperUser && isCurrentStudyTest ? [{ id: 'demoPurge'as const, label: 'Sociedad Demo (2026)' }] : [])
   ];
@@ -1051,55 +1053,38 @@ export default function StudyAdminDashboard({
 
       {/* Si es contador o analista, mostrar únicamente sus empresas asignadas */}
       {isRestrictedWorker ? (
-        <div className="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-2xs space-y-5">
-          <div>
-            <h3 className="text-base font-bold text-slate-900">
-              Empresas asignadas a tu cuenta ({visibleCompanies.length})
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Selecciona la empresa con la que deseas trabajar para abrir los libros, F29 y conciliación.
-            </p>
-          </div>
-
-          {visibleCompanies.length === 0 ? (
-            <div className="p-8 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200">
-              <p className="text-sm font-semibold text-slate-700">No tienes empresas asignadas actualmente.</p>
-              <p className="text-xs text-slate-500 mt-1">Por favor comunícate con el administrador de tu estudio para que asigne las empresas clientes a tu usuario.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {visibleCompanies.map(c => (
-                <div key={c.id} className="p-4 border border-slate-200 bg-white hover:border-slate-300 rounded-xl space-y-4 transition-all shadow-2xs flex flex-col justify-between">
-                  <div className="space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0 border border-slate-200">
-                        <Building2 className="w-4 h-4" />
-                      </div>
-                      <span className={`inline-block text-[10px] px-2 py-0.5 rounded font-semibold uppercase ${c.estado === 'Inactivo' ? 'bg-rose-50 text-rose-800 border border-rose-200' : 'bg-emerald-50 text-emerald-800 border border-emerald-200'}`}>
-                        {c.estado || 'Activo'}
-                      </span>
-                    </div>
-
-                    <div>
-                      <h4 className="font-bold text-slate-900 text-sm leading-snug">{c.name}</h4>
-                      <p className="text-xs font-mono font-medium text-slate-600 mt-0.5">RUT: {c.rut}</p>
-                      {c.fantasyName && <p className="text-xs text-slate-500 mt-0.5">Fantasía: {c.fantasyName}</p>}
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => handleSelectCompany(c)}
-                    className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs rounded-lg transition-colors flex items-center justify-center gap-2 shadow-2xs cursor-pointer"
-                  >
-                    <span>Abrir Contabilidad</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <ClientesGrid
+          title="Empresas asignadas a tu cuenta"
+          subtitle="Haz doble clic en un cliente o usa la flecha para abrir sus libros, F29 y conciliación."
+          companies={visibleCompanies}
+          users={users}
+          assignments={assignments}
+          canManage={false}
+          onOpenAccounting={handleSelectCompany}
+        />
       ) : (
+        <>
+        <ClientesGrid
+          title="Clientes del estudio"
+          companies={companies}
+          users={users}
+          assignments={assignments}
+          canManage={!isSupportMode}
+          onOpenAccounting={handleSelectCompany}
+          onManage={() => { setEditingCompany(null); setActiveTab('companies'); setCompanySection('society'); setShowAdminModal(true); }}
+          onConfigure={(c) => { setEditingCompany(c); setActiveTab('companies'); setCompanySection('society'); setShowAdminModal(true); }}
+          onCredentials={(c) => { setEditingCompany(c); setActiveTab('companies'); setCompanySection('sii'); setShowAdminModal(true); }}
+        />
+        {showAdminModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/35 backdrop-blur-sm" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowAdminModal(false); }}>
+        <div className="relative w-full max-w-6xl max-h-[92vh] overflow-y-auto rounded-3xl border border-white/70 bg-white/80 backdrop-blur-2xl shadow-2xl p-4 sm:p-6">
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <div>
+            <h2 className="text-lg font-extrabold text-slate-900 tracking-tight">Administrar el estudio</h2>
+            <p className="text-xs text-slate-500">Crea empresas clientes, contadores y asignaciones.</p>
+          </div>
+          <button type="button" onClick={() => setShowAdminModal(false)} className="w-9 h-9 rounded-xl bg-white/80 hover:bg-slate-100 border border-slate-200 text-slate-600 flex items-center justify-center" title="Cerrar"><X className="w-4 h-4" /></button>
+        </div>
         <div className="space-y-6">
           <div className="bg-slate-100/90 p-1 rounded-lg border border-slate-200 inline-flex flex-wrap gap-1">
             {tabs.map((tab) => (
@@ -1947,6 +1932,10 @@ export default function StudyAdminDashboard({
             </div>
           )}
         </div>
+        </div>
+        </div>
+        )}
+        </>
       )}
 
       {/* Modal de Demostración FERRETERIA DON ALI KT LTDA */}

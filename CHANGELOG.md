@@ -9,6 +9,16 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.11.0 — 13 de noviembre de 2026 — Clientes del estudio en grilla de cristal
+
+- La pantalla principal del estudio ahora es una grilla de clientes, estilo planilla con los colores y letras del sistema y efecto vidrio: buscar por nombre, RUT, giro o contador; filtrar por estado, SII y contador; ordenar por columna.
+- Cada cliente tiene su flecha "Contabilidad" (también con doble clic), y para el administrador, íconos de Configuración y Credenciales SII.
+- Registrar y administrar empresas, contadores y asignaciones ahora está en una ventana, con el botón "Registrar y administrar".
+- Los contadores y analistas ven la misma grilla, solo con sus empresas asignadas.
+- El panel asistente del observador (1.10.0) queda visible solo en Pruebas; en producción está oculto hasta que se apruebe.
+
+---
+
 ## 1.10.0 — 13 de noviembre de 2026 — Panel asistente para el observador
 
 - Nuevo panel conversacional a la derecha en el portal del Cliente Observador (se puede cerrar y abrir).

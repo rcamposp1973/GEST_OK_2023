@@ -986,13 +986,16 @@ export default function ClientExecutiveManagementView({
 
     </div>
 
-    <ObserverAssistantPanel
-      company={company}
-      accounts={accounts}
-      vouchers={vouchers}
-      rcvDocuments={rcvDocuments}
-      selectedPeriod={selectedPeriod}
-    />
+    {/* El asistente está en pruebas: se oculta en el sitio de producción hasta que se apruebe */}
+    {typeof window !== 'undefined' && window.location.hostname !== 'app.pulsocontable.cl' && (
+      <ObserverAssistantPanel
+        company={company}
+        accounts={accounts}
+        vouchers={vouchers}
+        rcvDocuments={rcvDocuments}
+        selectedPeriod={selectedPeriod}
+      />
+    )}
     </div>
   );
 }

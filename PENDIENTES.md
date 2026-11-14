@@ -40,3 +40,12 @@ Lista viva. Cada punto se pasa al CHANGELOG cuando se hace.
 - Pagos y cobros parciales: pagar parte de una factura y dejar el resto abierto (el pareo parcial ya existe, falta proponerlo).
 - Nota de crédito/débito: usar el folio de referencia del RCV (refFolioOrig) para ligarla con su factura.
 - Compensación entre cuentas con asiento de traspaso automático.
+
+
+## Mejoras futuras (13-nov-2026)
+- Asistente del observador: conectar Gemini para preguntas abiertas e interpretación de indicadores; más informes con botón (composición de una cuenta, ventas y compras del mes); menú lateral con módulos activables por cliente; inicio proactivo con alertas.
+- Observador (o cualquier usuario) con un mismo correo en varios estudios: hoy un correo pertenece a un solo estudio; permitir varios y elegir el estudio al entrar.
+- Pyme directa (sin estudio contable): ingreso de datos simple y acompañamiento.
+- Compensación de partidas, etapa 2: automática al registrar pagos, cobros, NC y ND.
+- Revisar impresión con estilos en certificados SII, balance y pendientes.
+- Empresa de pruebas: cambiar nombre a "Cliente de Prueba SPA", RUT 76.123.456-0, y revisar nombres reales de proveedores y clientes en sus datos.

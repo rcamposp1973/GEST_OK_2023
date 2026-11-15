@@ -9,6 +9,12 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.11.7 — 15 de noviembre de 2026 — Auxiliares: sin repetir la cuenta
+
+- Análisis por RUT: cuando el RUT tiene una sola cuenta (por ejemplo al filtrar por una cuenta), ya no se muestra de nuevo la cuenta: al abrir el RUT salen directo sus documentos, con los pendientes primero.
+
+---
+
 ## 1.11.6 — 15 de noviembre de 2026 — Auxiliares más fáciles de leer
 
 - Análisis de Auxiliares: al abrir, se ven las cuentas y cada RUT cerrado, con su saldo; el detalle de documentos se abre solo al pulsar la fila (antes todo salía desplegado y era muy largo).

@@ -2140,11 +2140,15 @@ export default function AnalisisAuxiliaresView({
                       <div className="p-4 bg-slate-50/50 space-y-3">
                         {aux.accounts.map((accItem) => {
                           const accSubKey = `${aux.cleanRut}__${accItem.accountCode}`;
-                          const isAccSubExpanded = expandedSubKeys[accSubKey] ?? false;
+                          // Si el RUT tiene una sola cuenta (p. ej. se filtró por cuenta), no se repite la cuenta: se muestran directo los documentos
+                          const soloUnaCuenta = aux.accounts.length === 1;
+                          const isAccSubExpanded = soloUnaCuenta || (expandedSubKeys[accSubKey] ?? false);
                           const isAccItemSaldado = accItem.balance === 0;
 
                           return (
                             <div key={accSubKey} className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
+                              {!soloUnaCuenta && (
+                              <>
                               {/* Cabecera de Cuenta del Auxiliar */}
                               <div
                                 onClick={() => setExpandedSubKeys({ ...expandedSubKeys, [accSubKey]: !isAccSubExpanded })}
@@ -2192,6 +2196,9 @@ export default function AnalisisAuxiliaresView({
                                 </div>
                               </div>
 
+                              </>
+                              )}
+
                               {/* Documentos dentro de la cuenta del Auxiliar */}
                               {isAccSubExpanded && (
                                 <div className="p-3 bg-slate-50/60">
@@ -2209,7 +2216,7 @@ export default function AnalisisAuxiliaresView({
                                       </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100 text-[11px]">
-                                      {accItem.documents.map((doc) => {
+                                      {[...accItem.documents].sort((x, y) => (x.balance === 0 ? 1 : 0) - (y.balance === 0 ? 1 : 0)).map((doc) => {
                                         const isDocExpanded = expandedDocs[doc.id] ?? false;
                                         const isDocSaldado = doc.balance === 0;
 

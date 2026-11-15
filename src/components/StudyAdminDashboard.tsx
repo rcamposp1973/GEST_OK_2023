@@ -357,7 +357,8 @@ export default function StudyAdminDashboard({
       alert('Acceso Denegado: Los perfiles Contador y Analista no tienen permisos para administrar usuarios.');
       return;
     }
-    const formData = new FormData(e.currentTarget);
+    const formEl = e.currentTarget;
+    const formData = new FormData(formEl);
     const name = formData.get('name') as string;
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
@@ -413,7 +414,7 @@ export default function StudyAdminDashboard({
         });
         alert('Usuario registrado exitosamente.');
       }
-      e.currentTarget.reset();
+      formEl.reset();
       await fetchData();
     } catch (err: any) {
       console.error("Error saving user:", err);
@@ -663,7 +664,8 @@ export default function StudyAdminDashboard({
       alert('Acceso Denegado: No tienes permisos para crear ni modificar asignaciones.');
       return;
     }
-    const formData = new FormData(e.currentTarget);
+    const formEl = e.currentTarget;
+    const formData = new FormData(formEl);
     const userId = formData.get('userId') as string;
     const companyId = formData.get('companyId') as string;
 
@@ -722,7 +724,7 @@ export default function StudyAdminDashboard({
         }
       }
 
-      e.currentTarget.reset();
+      formEl.reset();
       await fetchData();
     } catch (err: any) {
       console.error("Error saving assignment:", err);

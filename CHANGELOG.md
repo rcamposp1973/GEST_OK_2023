@@ -9,6 +9,14 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.11.5 — 15 de noviembre de 2026 — Asignar empresas a observadores
+
+- La ficha de la empresa (pestaña Personal Asignado) ahora también lista a los observadores, marcados como "Observador", además de contadores y analistas. Antes no aparecían y no se les podía asignar empresa.
+- La pestaña "Asignaciones" estaba vacía: ahora tiene un formulario para asignar una empresa a un usuario (contador, analista u observador) y una tabla con todas las asignaciones, con botón para quitarlas.
+- Corregido un aviso de error falso que podía aparecer después de crear un usuario o una asignación correctamente.
+
+---
+
 ## 1.11.4 — 15 de noviembre de 2026 — Ajustes al resumen del F29
 
 - El PPM se muestra como cálculo: Base imponible, Tasa PPM y, separado por una línea, Impuesto determinado (PPM). Ya no parece una suma.

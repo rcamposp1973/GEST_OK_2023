@@ -9,6 +9,15 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.11.6 — 15 de noviembre de 2026 — Auxiliares más fáciles de leer
+
+- Análisis de Auxiliares: al abrir, se ven las cuentas y cada RUT cerrado, con su saldo; el detalle de documentos se abre solo al pulsar la fila (antes todo salía desplegado y era muy largo).
+- Textos en lenguaje simple: "Nos deben" / "Debemos" según la cuenta, "Cargos" y "Abonos" en vez de Débito/Crédito, "Falta por cerrar" por documento y "N doc. por cerrar" por RUT.
+- Dentro de cada RUT, los documentos pendientes aparecen primero.
+- Nueva franja "Cómo leer esta pantalla" con la explicación en tres líneas.
+
+---
+
 ## 1.11.5 — 15 de noviembre de 2026 — Asignar empresas a observadores
 
 - La ficha de la empresa (pestaña Personal Asignado) ahora también lista a los observadores, marcados como "Observador", además de contadores y analistas. Antes no aparecían y no se les podía asignar empresa.

@@ -1511,6 +1511,14 @@ export default function AnalisisAuxiliaresView({
         </div>
       </div>
 
+      {/* GUÍA DE LECTURA EN LENGUAJE SIMPLE */}
+      <div className="bg-blue-50/70 border border-blue-100 rounded-2xl px-4 py-3 text-xs text-slate-700 flex flex-wrap gap-x-6 gap-y-1.5 items-start">
+        <span className="font-bold text-blue-900">Cómo leer esta pantalla</span>
+        <span><b>Cuenta</b> → <b>Persona o empresa (RUT)</b> → <b>Documentos</b>. Pulsa una fila para abrirla.</span>
+        <span><b>Cargos</b> = lo anotado en el Debe; <b>Abonos</b> = lo anotado en el Haber.</span>
+        <span><b>Falta por cerrar</b> = lo que aún no se paga o cobra. En <b>$0</b> el documento está al día.</span>
+      </div>
+
       {/* KPI RESUMEN DE MÉTRICAS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs space-y-1">
@@ -1809,15 +1817,15 @@ export default function AnalisisAuxiliaresView({
 
                       <div className="flex items-center gap-6 text-xs font-mono">
                         <div className="text-right">
-                          <span className="text-[10px] block font-sans text-slate-400 font-semibold uppercase">Total Débitos</span>
+                          <span className="text-[10px] block font-sans text-slate-400 font-semibold uppercase">Cargos (Debe)</span>
                           <span className="font-bold text-slate-800">${accGroup.totalDebits.toLocaleString('es-CL')}</span>
                         </div>
                         <div className="text-right">
-                          <span className="text-[10px] block font-sans text-slate-400 font-semibold uppercase">Total Créditos</span>
+                          <span className="text-[10px] block font-sans text-slate-400 font-semibold uppercase">Abonos (Haber)</span>
                           <span className="font-bold text-slate-800">${accGroup.totalCredits.toLocaleString('es-CL')}</span>
                         </div>
                         <div className="text-right min-w-[120px]">
-                          <span className="text-[10px] block font-sans text-slate-400 font-semibold uppercase">Saldo de la Cuenta</span>
+                          <span className="text-[10px] block font-sans text-slate-400 font-semibold uppercase">{accGroup.isActivo ? 'Nos deben (saldo)' : 'Debemos (saldo)'}</span>
                           <span className={`font-black text-sm ${isAccSaldada ? 'text-slate-400' : 'text-indigo-700'}`}>
                             ${accGroup.balance.toLocaleString('es-CL')}
                           </span>
@@ -1839,7 +1847,7 @@ export default function AnalisisAuxiliaresView({
                       <div className="p-4 bg-slate-50/50 space-y-3">
                         {accGroup.ruts.map((rutItem) => {
                           const rutSubKey = `${accGroup.accountCode}__${rutItem.cleanRut}`;
-                          const isRutExpanded = expandedSubKeys[rutSubKey] ?? true;
+                          const isRutExpanded = expandedSubKeys[rutSubKey] ?? false;
                           const isRutSaldado = rutItem.balance === 0;
 
                           return (
@@ -1866,15 +1874,15 @@ export default function AnalisisAuxiliaresView({
 
                                 <div className="flex items-center gap-5 text-xs font-mono">
                                   <div className="text-right">
-                                    <span className="text-[9px] block font-sans text-slate-400 uppercase">Débito</span>
+                                    <span className="text-[9px] block font-sans text-slate-400 uppercase">Cargos</span>
                                     <span className="font-semibold text-slate-700">${rutItem.totalDebits.toLocaleString('es-CL')}</span>
                                   </div>
                                   <div className="text-right">
-                                    <span className="text-[9px] block font-sans text-slate-400 uppercase">Crédito</span>
+                                    <span className="text-[9px] block font-sans text-slate-400 uppercase">Abonos</span>
                                     <span className="font-semibold text-slate-700">${rutItem.totalCredits.toLocaleString('es-CL')}</span>
                                   </div>
                                   <div className="text-right min-w-[90px]">
-                                    <span className="text-[9px] block font-sans text-slate-400 uppercase">Saldo RUT</span>
+                                    <span className="text-[9px] block font-sans text-slate-400 uppercase">{accGroup.isActivo ? 'Nos debe' : 'Le debemos'}</span>
                                     <span className={`font-bold ${isRutSaldado ? 'text-slate-400' : 'text-indigo-700'}`}>
                                       ${rutItem.balance.toLocaleString('es-CL')}
                                     </span>
@@ -1885,7 +1893,7 @@ export default function AnalisisAuxiliaresView({
                                         ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
                                         : 'bg-amber-50 text-amber-700 border border-amber-200'
                                     }`}>
-                                      {isRutSaldado ? 'Saldado' : 'Pendiente'}
+                                      {isRutSaldado ? 'Al día' : `${rutItem.documents.filter(d => d.balance !== 0).length} doc. por cerrar`}
                                     </span>
                                   </div>
                                 </div>
@@ -1901,14 +1909,14 @@ export default function AnalisisAuxiliaresView({
                                         <th className="py-2 px-2.5">Tipo Doc</th>
                                         <th className="py-2 px-2.5">Folio / N° Doc</th>
                                         <th className="py-2 px-2.5">Fecha</th>
-                                        <th className="py-2 px-2.5 text-right">Débito ($)</th>
-                                        <th className="py-2 px-2.5 text-right">Crédito ($)</th>
-                                        <th className="py-2 px-2.5 text-right">Saldo ($)</th>
+                                        <th className="py-2 px-2.5 text-right">Cargos ($)</th>
+                                        <th className="py-2 px-2.5 text-right">Abonos ($)</th>
+                                        <th className="py-2 px-2.5 text-right">Falta por cerrar ($)</th>
                                         <th className="py-2 px-2.5 text-center">Estado</th>
                                       </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100 text-[11px]">
-                                      {rutItem.documents.map((doc) => {
+                                      {[...rutItem.documents].sort((a, b) => (a.balance === 0 ? 1 : 0) - (b.balance === 0 ? 1 : 0)).map((doc) => {
                                         const isDocExpanded = expandedDocs[doc.id] ?? false;
                                         const isDocSaldado = doc.balance === 0;
 
@@ -2066,7 +2074,7 @@ export default function AnalisisAuxiliaresView({
               </div>
             ) : (
               auxiliaryGroups.map((aux) => {
-                const isAuxExpanded = expandedKeys[aux.cleanRut] ?? true;
+                const isAuxExpanded = expandedKeys[aux.cleanRut] ?? false;
                 const isSaldado = aux.balance === 0;
 
                 return (
@@ -2102,15 +2110,15 @@ export default function AnalisisAuxiliaresView({
 
                       <div className="flex items-center gap-6 text-xs font-mono">
                         <div className="text-right">
-                          <span className="text-[10px] block font-sans text-slate-400 font-semibold uppercase">Total Débitos</span>
+                          <span className="text-[10px] block font-sans text-slate-400 font-semibold uppercase">Cargos (Debe)</span>
                           <span className="font-bold text-slate-800">${aux.totalDebits.toLocaleString('es-CL')}</span>
                         </div>
                         <div className="text-right">
-                          <span className="text-[10px] block font-sans text-slate-400 font-semibold uppercase">Total Créditos</span>
+                          <span className="text-[10px] block font-sans text-slate-400 font-semibold uppercase">Abonos (Haber)</span>
                           <span className="font-bold text-slate-800">${aux.totalCredits.toLocaleString('es-CL')}</span>
                         </div>
                         <div className="text-right min-w-[120px]">
-                          <span className="text-[10px] block font-sans text-slate-400 font-semibold uppercase">Saldo Neto Consolidado</span>
+                          <span className="text-[10px] block font-sans text-slate-400 font-semibold uppercase">Saldo neto</span>
                           <span className={`font-black text-sm ${isSaldado ? 'text-slate-400' : 'text-indigo-700'}`}>
                             ${aux.balance.toLocaleString('es-CL')}
                           </span>
@@ -2132,7 +2140,7 @@ export default function AnalisisAuxiliaresView({
                       <div className="p-4 bg-slate-50/50 space-y-3">
                         {aux.accounts.map((accItem) => {
                           const accSubKey = `${aux.cleanRut}__${accItem.accountCode}`;
-                          const isAccSubExpanded = expandedSubKeys[accSubKey] ?? true;
+                          const isAccSubExpanded = expandedSubKeys[accSubKey] ?? false;
                           const isAccItemSaldado = accItem.balance === 0;
 
                           return (
@@ -2159,11 +2167,11 @@ export default function AnalisisAuxiliaresView({
 
                                 <div className="flex items-center gap-5 text-xs font-mono">
                                   <div className="text-right">
-                                    <span className="text-[9px] block font-sans text-slate-400 uppercase">Débito</span>
+                                    <span className="text-[9px] block font-sans text-slate-400 uppercase">Cargos</span>
                                     <span className="font-semibold text-slate-700">${accItem.totalDebits.toLocaleString('es-CL')}</span>
                                   </div>
                                   <div className="text-right">
-                                    <span className="text-[9px] block font-sans text-slate-400 uppercase">Crédito</span>
+                                    <span className="text-[9px] block font-sans text-slate-400 uppercase">Abonos</span>
                                     <span className="font-semibold text-slate-700">${accItem.totalCredits.toLocaleString('es-CL')}</span>
                                   </div>
                                   <div className="text-right min-w-[90px]">
@@ -2194,9 +2202,9 @@ export default function AnalisisAuxiliaresView({
                                         <th className="py-2 px-2.5">Tipo Doc</th>
                                         <th className="py-2 px-2.5">Folio / N° Doc</th>
                                         <th className="py-2 px-2.5">Fecha</th>
-                                        <th className="py-2 px-2.5 text-right">Débito ($)</th>
-                                        <th className="py-2 px-2.5 text-right">Crédito ($)</th>
-                                        <th className="py-2 px-2.5 text-right">Saldo ($)</th>
+                                        <th className="py-2 px-2.5 text-right">Cargos ($)</th>
+                                        <th className="py-2 px-2.5 text-right">Abonos ($)</th>
+                                        <th className="py-2 px-2.5 text-right">Falta por cerrar ($)</th>
                                         <th className="py-2 px-2.5 text-center">Estado</th>
                                       </tr>
                                     </thead>

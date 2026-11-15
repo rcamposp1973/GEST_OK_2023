@@ -57,7 +57,7 @@ export function plazoPagoF29(periodo: string): PlazoPago {
   while (esInhabil(d) && guard++ < 10) d = sumar(d, 1);
   const txt = (x: Date) => `${DIAS[x.getDay()]} ${x.getDate()} de ${MESES[x.getMonth()]} de ${x.getFullYear()}`;
   const nota = d.getTime() === base.getTime()
-    ? `Vence el día 20 de ${MESES[nm - 1]}.`
+    ? ''
     : `El 20 de ${MESES[nm - 1]} cae ${feriadosChile(base.getFullYear()).has(iso(base)) ? 'en feriado' : DIAS[base.getDay()]}, por eso pasa al siguiente día hábil.`;
   return { fecha: iso(d), texto: txt(d), nota };
 }

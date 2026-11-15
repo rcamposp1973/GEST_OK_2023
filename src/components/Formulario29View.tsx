@@ -1102,9 +1102,9 @@ export default function Formulario29View({
     text += `• Retención (${tRet}%): $${bRet.toLocaleString('es-CL')}\n`;
     text += `• Monto Líquido: $${bLiq.toLocaleString('es-CL')}\n\n`;
     text += ` *PPM:*\n`;
-    text += `• Ingresos del mes (base): ${m(ppmData.baseImponibleVentas)}\n`;
-    text += `• Tasa: ${taxSettings.ppmRate}%\n`;
-    text += `• PPM a pagar: ${m(ppmData.montoPPM)}\n\n`;
+    text += `• Base imponible (ingresos del mes): ${m(ppmData.baseImponibleVentas)}\n`;
+    text += `• Tasa PPM: ${taxSettings.ppmRate}%\n`;
+    text += `• Impuesto determinado (PPM): ${m(ppmData.montoPPM)}\n\n`;
     text += ` *TOTAL A PAGAR F29 (Cód. 91):* *$${resumenF29.totalPagarF29.toLocaleString('es-CL')}*\n`;
     text += ` *Plazo de pago:* ${plazoPagoFecha || plazoCalculado.texto}\n`;
     
@@ -1150,7 +1150,7 @@ export default function Formulario29View({
     const rightBoxHeight = rightBoxHeaderH + rightBoxSubH + rightBoxContentH + rightBoxFooterH + 20;
     
     // Left column items total ~445px. With 105px top margin, left ends ~550px.
-    const leftEnd = 105 + 26 + filasResumen.length * 28 + 12 + 124 + 132 + 128 + 35;
+    const leftEnd = 105 + 26 + filasResumen.length * 28 + 12 + 124 + 140 + 128 + 35;
     const height = Math.max(580, leftEnd, 105 + rightBoxHeight + 35);
     
     canvas.width = width * 2;
@@ -1312,7 +1312,7 @@ export default function Formulario29View({
     ctx.strokeStyle = '#cbd5e1';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.roundRect(leftX, currY, leftW, 118, 8);
+    ctx.roundRect(leftX, currY, leftW, 126, 8);
     ctx.fill();
     ctx.stroke();
 
@@ -1325,29 +1325,29 @@ export default function Formulario29View({
     const ppmRate = taxSettings.ppmRate || 0.1;
     const ppmAmt = ppmData.montoPPM || 0;
 
-    ctx.font = '12px "Segoe UI", Roboto, sans-serif';
-    ctx.fillStyle = '#475569';
-    ctx.textAlign = 'left';
-    ctx.fillText('• Ingresos del mes (base de cálculo):', leftX + 15, currY + 48);
-    ctx.fillStyle = '#0f172a';
-    ctx.font = 'bold 12px "Segoe UI", Roboto, monospace';
-    ctx.textAlign = 'right';
-    ctx.fillText(`$${ppmBase.toLocaleString('es-CL')}`, valX, currY + 48);
-
+    const filaPpm = (etq: string, val: string, y: number, fuerte = false) => {
+      ctx.font = `${fuerte ? 'bold ' : ''}12px "Segoe UI", Roboto, sans-serif`;
+      ctx.fillStyle = fuerte ? '#0f172a' : '#475569';
+      ctx.textAlign = 'left';
+      ctx.fillText(etq, leftX + 15, y);
+      ctx.fillStyle = fuerte ? '#4338ca' : '#0f172a';
+      ctx.font = `bold ${fuerte ? 13 : 12}px "Segoe UI", Roboto, monospace`;
+      ctx.textAlign = 'right';
+      ctx.fillText(val, valX, y);
+    };
+    filaPpm('Base imponible (ingresos del mes)', `$${ppmBase.toLocaleString('es-CL')}`, currY + 46);
     ctx.font = '10.5px "Segoe UI", Roboto, sans-serif';
     ctx.fillStyle = '#94a3b8';
     ctx.textAlign = 'left';
-    ctx.fillText(`Ventas afectas $${ppmBreakdown.afectas.toLocaleString('es-CL')} + exentas $${ppmBreakdown.exentas.toLocaleString('es-CL')} + exportaciones $${ppmBreakdown.exportaciones.toLocaleString('es-CL')}`, leftX + 28, currY + 66);
-
-    ctx.font = '12px "Segoe UI", Roboto, sans-serif';
-    ctx.fillStyle = '#475569';
-    ctx.textAlign = 'left';
-    ctx.fillText(`• Tasa PPM: ${ppmRate}%  ->  PPM a pagar:`, leftX + 15, currY + 94);
-    ctx.fillStyle = '#4338ca';
-    ctx.font = 'bold 12px "Segoe UI", Roboto, monospace';
-    ctx.textAlign = 'right';
-    ctx.fillText(`$${ppmAmt.toLocaleString('es-CL')}`, valX, currY + 94);
-    currY += 132;
+    ctx.fillText(`Ventas afectas $${ppmBreakdown.afectas.toLocaleString('es-CL')} + exentas $${ppmBreakdown.exentas.toLocaleString('es-CL')} + exportaciones $${ppmBreakdown.exportaciones.toLocaleString('es-CL')}`, leftX + 28, currY + 62);
+    filaPpm('Tasa PPM', `${ppmRate}%`, currY + 82);
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.beginPath();
+    ctx.moveTo(leftX + 15, currY + 92);
+    ctx.lineTo(valX, currY + 92);
+    ctx.stroke();
+    filaPpm('Impuesto determinado (PPM)', `$${ppmAmt.toLocaleString('es-CL')}`, currY + 110, true);
+    currY += 140;
 
     // 5. Total a Pagar F29 Box (Dark banner matching Excel)
     ctx.fillStyle = '#0f172a';
@@ -1380,9 +1380,11 @@ export default function Formulario29View({
     ctx.fillStyle = '#fbbf24';
     ctx.font = 'bold 14px "Segoe UI", Roboto, monospace';
     ctx.fillText(plazoPagoFecha || plazoCalculado.texto, leftX + 150, currY + 84);
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = '10.5px "Segoe UI", Roboto, sans-serif';
-    ctx.fillText(plazoCalculado.nota, leftX + 20, currY + 104);
+    if (!plazoManual && plazoCalculado.nota) {
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '10.5px "Segoe UI", Roboto, sans-serif';
+      ctx.fillText(plazoCalculado.nota, leftX + 20, currY + 104);
+    }
 
     // 6. Right Column: Detalle Boletas de Honorarios (Grows with boletas count)
     const rightX = leftX + leftW + 20;
@@ -2921,15 +2923,19 @@ export default function Formulario29View({
                         Pagos Provisionales Mensuales (PPM)
                       </h6>
                       <div className="flex justify-between items-center text-xs">
-                        <span className="text-slate-600 font-sans">• Ingresos del mes (base de cálculo):</span>
+                        <span className="text-slate-600 font-sans">Base imponible (ingresos del mes)</span>
                         <span className="font-mono font-bold text-slate-900">${ppmData.baseImponibleVentas.toLocaleString('es-CL')}</span>
                       </div>
                       <p className="text-[10px] text-slate-400 font-sans pl-3">
                         Ventas afectas ${ppmBreakdown.afectas.toLocaleString('es-CL')} + exentas ${ppmBreakdown.exentas.toLocaleString('es-CL')} + exportaciones ${ppmBreakdown.exportaciones.toLocaleString('es-CL')}
                       </p>
                       <div className="flex justify-between items-center text-xs">
-                        <span className="text-slate-600 font-sans">• Tasa PPM {taxSettings.ppmRate}% → PPM a pagar:</span>
-                        <span className="font-mono font-bold text-indigo-700">${ppmData.montoPPM.toLocaleString('es-CL')}</span>
+                        <span className="text-slate-600 font-sans">Tasa PPM</span>
+                        <span className="font-mono font-bold text-slate-900">{taxSettings.ppmRate}%</span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs border-t border-slate-300 pt-2 mt-1">
+                        <span className="text-slate-900 font-sans font-bold">Impuesto determinado (PPM)</span>
+                        <span className="font-mono font-extrabold text-indigo-700">${ppmData.montoPPM.toLocaleString('es-CL')}</span>
                       </div>
                     </div>
 
@@ -2945,7 +2951,7 @@ export default function Formulario29View({
                         <div className="flex justify-between"><span>PPM:</span><span>${ppmData.montoPPM.toLocaleString('es-CL')}</span></div>
                       </div>
                       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pt-1 border-t border-slate-800 mt-2">
-                        <div className="text-amber-400 font-bold text-xs font-sans">
+                        <div className="text-amber-400 font-bold text-xs font-sans whitespace-nowrap">
                           PLAZO DE PAGO:
                         </div>
                         <div className="flex items-center gap-1.5 bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
@@ -2953,11 +2959,13 @@ export default function Formulario29View({
                             type="text"
                             value={plazoPagoFecha}
                             onChange={e => setPlazoPagoFecha(e.target.value)}
-                            className="bg-transparent text-white font-mono font-bold text-xs focus:outline-none w-48 text-right"
+                            className="bg-transparent text-white font-mono font-bold text-xs focus:outline-none w-72 max-w-full text-right"
                             placeholder="Ej. viernes 20 de noviembre de 2026"
                           />
                         </div>
-                        <p className="w-full text-[10px] text-slate-500 font-sans sm:text-right">{plazoManual ? 'Fecha editada a mano.' : plazoCalculado.nota}</p>
+                        {(plazoManual ? 'Fecha editada a mano.' : plazoCalculado.nota) && (
+                          <p className="w-full text-[10px] text-slate-500 font-sans sm:text-right">{plazoManual ? 'Fecha editada a mano.' : plazoCalculado.nota}</p>
+                        )}
                       </div>
                     </div>
                   </div>

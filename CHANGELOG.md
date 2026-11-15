@@ -9,6 +9,13 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.11.4 — 15 de noviembre de 2026 — Ajustes al resumen del F29
+
+- El PPM se muestra como cálculo: Base imponible, Tasa PPM y, separado por una línea, Impuesto determinado (PPM). Ya no parece una suma.
+- El plazo de pago ya no repite la fecha: la explicación solo aparece cuando el día 20 se corre por fin de semana o feriado. El campo de fecha se ve completo.
+
+---
+
 ## 1.11.3 — 15 de noviembre de 2026 — Resumen del F29 para el cliente, completo y correcto
 
 - Compras primero, luego ventas y, al final, exportaciones solo si el cliente las tiene (lo mismo en el texto para WhatsApp y en la imagen).

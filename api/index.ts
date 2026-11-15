@@ -1245,4 +1245,163 @@ app.post("/api/alertas/prueba", verifyFirebaseAuth, async (req: AuthenticatedReq
   } catch (e: any) { res.status(500).json({ ok: false, error: e?.message || 'Error en la revisión' }); }
 });
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Mantenimiento: dejar TODOS los RUT guardados como 11.111.111-1 (solo Super Administrador).
+// Modo "plan": lista los alcances (estudios / empresas / raíz) para recorrerlos de a uno.
+// Modo "ejecutar": revisa un alcance. Con dryRun=true solo cuenta y muestra ejemplos.
+// Antes de modificar un documento guarda su valor anterior en rutMigrationBackups (se puede revertir).
+// ─────────────────────────────────────────────────────────────────────────────
+const CAMPOS_RUT_SRV = new Set([
+  'rut', 'rutEmisor', 'rutReceptor', 'rutRepresentante', 'rutRepresentanteSii', 'rutEmpresaSii',
+  'rutContraparte', 'companyRut', 'legalRepRut', 'adminRut', 'auxiliaryRut', 'employeeRut',
+  'supplierRut', 'responsibleRut',
+]);
+function formatearRutSrv(valor: any): any {
+  if (typeof valor !== 'string') return valor;
+  const t = valor.trim();
+  if (!t) return valor;
+  if (/[^0-9kK.\-\s]/.test(t)) return valor;
+  const limpio = t.replace(/[^0-9kK]/g, '').toUpperCase();
+  if (!/^\d+[0-9K]$/.test(limpio)) return valor;
+  const cuerpo = limpio.slice(0, -1).replace(/^0+/, '');
+  const dv = limpio.slice(-1);
+  if (cuerpo.length < 6 || cuerpo.length > 8) return valor;
+  return `${cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}-${dv}`;
+}
+function objSimpleSrv(v: any): boolean {
+  if (v === null || typeof v !== 'object') return false;
+  const p = Object.getPrototypeOf(v);
+  return p === Object.prototype || p === null;
+}
+function normalizarRutsSrv(dato: any, extra?: { raros: string[] }): any {
+  if (Array.isArray(dato)) {
+    let copia: any[] | null = null;
+    dato.forEach((x, i) => { const n = normalizarRutsSrv(x, extra); if (n !== x) { if (!copia) copia = dato.slice(); copia[i] = n; } });
+    return copia ?? dato;
+  }
+  if (objSimpleSrv(dato)) {
+    let copia: any = null;
+    for (const k of Object.keys(dato)) {
+      const v = dato[k];
+      let n = v;
+      if (CAMPOS_RUT_SRV.has(k) && typeof v === 'string') {
+        n = formatearRutSrv(v);
+        if (n === v && v.trim() && !/^\d{1,3}(\.\d{3}){1,2}-[0-9K]$/.test(v)) extra?.raros.push(v);
+      } else if (v && typeof v === 'object') n = normalizarRutsSrv(v, extra);
+      if (n !== v) { if (!copia) copia = { ...dato }; copia[k] = n; }
+    }
+    return copia ?? dato;
+  }
+  return dato;
+}
+const OMITIR_COLECCIONES_RUT = new Set(['auditLogs', 'companySecrets', 'rutMigrationBackups']);
+
+// Recorre un documento y sus subcolecciones (recursivo). `omitirHijas` evita bajar a esas subcolecciones.
+async function recorrerDocRut(
+  ref: any, dryRun: boolean, runId: string,
+  acc: { revisados: number; cambiados: number; porColeccion: Record<string, number>; ejemplos: any[]; raros: string[] },
+  omitirHijas: Set<string>, data?: any, sinHijas = false
+) {
+  const snapData = data ?? (await ref.get()).data();
+  if (snapData) {
+    acc.revisados++;
+    const raros: string[] = [];
+    const nuevo = normalizarRutsSrv(snapData, { raros });
+    raros.forEach(r => { if (acc.raros.length < 40 && !acc.raros.includes(r)) acc.raros.push(r); });
+    if (nuevo !== snapData) {
+      const antes: any = {}, despues: any = {};
+      for (const k of Object.keys(nuevo)) if (nuevo[k] !== snapData[k]) { antes[k] = snapData[k]; despues[k] = nuevo[k]; }
+      acc.cambiados++;
+      const col = ref.parent.id;
+      acc.porColeccion[col] = (acc.porColeccion[col] || 0) + 1;
+      if (acc.ejemplos.length < 12) acc.ejemplos.push({ ruta: ref.path, campos: Object.keys(despues) });
+      if (!dryRun) {
+        await adminDb.collection('rutMigrationBackups').add({ runId, path: ref.path, antes, creadoEn: new Date() });
+        await ref.update(despues);
+      }
+    }
+  }
+  if (sinHijas) return;
+  const subs = await ref.listCollections();
+  for (const sub of subs) {
+    if (OMITIR_COLECCIONES_RUT.has(sub.id) || omitirHijas.has(sub.id)) continue;
+    await recorrerColeccionRut(sub, dryRun, runId, acc);
+  }
+}
+
+// Documentos de una colección, de a 25 en paralelo
+async function recorrerColeccionRut(col: any, dryRun: boolean, runId: string, acc: any) {
+  const docs = await col.get();
+  for (let i = 0; i < docs.docs.length; i += 25) {
+    await Promise.all(docs.docs.slice(i, i + 25).map((d: any) => recorrerDocRut(d.ref, dryRun, runId, acc, new Set(), d.data())));
+  }
+}
+
+function soloSuperUsuario(req: AuthenticatedRequest, res: express.Response): boolean {
+  if (req.user?.role !== 'SUPER_USER' && req.user?.isSuperUser !== true) {
+    res.status(403).json({ ok: false, error: 'Solo el Super Administrador puede ejecutar este mantenimiento.' });
+    return false;
+  }
+  return true;
+}
+
+app.post("/api/admin/normalizar-ruts", verifyFirebaseAuth, async (req: AuthenticatedRequest, res) => {
+  if (!soloSuperUsuario(req, res)) return;
+  const { modo, scope, studyId, companyId, coleccion, dryRun, runId } = req.body || {};
+  try {
+    if (modo === 'plan') {
+      const alcances: any[] = [];
+      const estudios = await adminDb.collection('studies').get();
+      for (const e of estudios.docs) {
+        alcances.push({ scope: 'study', studyId: e.id, etiqueta: `Estudio ${(e.data() as any).name || e.id} (datos generales)` });
+        const empresas = await e.ref.collection('companies').get();
+        for (const c of empresas.docs) {
+          const nom = `${(e.data() as any).name || e.id} › ${(c.data() as any).name || c.id}`;
+          alcances.push({ scope: 'company', studyId: e.id, companyId: c.id, etiqueta: `${nom} (ficha)` });
+          for (const sub of await c.ref.listCollections()) {
+            if (OMITIR_COLECCIONES_RUT.has(sub.id)) continue;
+            alcances.push({ scope: 'companyCol', studyId: e.id, companyId: c.id, coleccion: sub.id, etiqueta: `${nom} › ${sub.id}` });
+          }
+        }
+      }
+      alcances.push({ scope: 'root', etiqueta: 'Usuarios y datos globales' });
+      return res.json({ ok: true, alcances });
+    }
+    if (modo === 'ejecutar') {
+      const corrida = String(runId || `run_${Date.now()}`);
+      const simular = dryRun !== false;
+      const acc = { revisados: 0, cambiados: 0, porColeccion: {} as Record<string, number>, ejemplos: [] as any[], raros: [] as string[] };
+      if (scope === 'company') {
+        if (!studyId || !companyId) return res.status(400).json({ ok: false, error: 'Falta estudio o empresa.' });
+        await recorrerDocRut(adminDb.collection('studies').doc(studyId).collection('companies').doc(companyId), simular, corrida, acc, new Set(), undefined, true);
+      } else if (scope === 'companyCol') {
+        if (!studyId || !companyId || !coleccion || OMITIR_COLECCIONES_RUT.has(coleccion)) return res.status(400).json({ ok: false, error: 'Falta estudio, empresa o colección.' });
+        await recorrerColeccionRut(adminDb.collection('studies').doc(studyId).collection('companies').doc(companyId).collection(coleccion), simular, corrida, acc);
+      } else if (scope === 'study') {
+        if (!studyId) return res.status(400).json({ ok: false, error: 'Falta el estudio.' });
+        await recorrerDocRut(adminDb.collection('studies').doc(studyId), simular, corrida, acc, new Set(['companies']));
+      } else if (scope === 'root') {
+        const cols = await adminDb.listCollections();
+        for (const col of cols) {
+          if (col.id === 'studies' || OMITIR_COLECCIONES_RUT.has(col.id)) continue;
+          await recorrerColeccionRut(col, simular, corrida, acc);
+        }
+      } else return res.status(400).json({ ok: false, error: 'Alcance no válido.' });
+      return res.json({ ok: true, simulacion: simular, runId: corrida, ...acc });
+    }
+    if (modo === 'revertir') {
+      if (!runId) return res.status(400).json({ ok: false, error: 'Falta el identificador de la corrida.' });
+      const bk = await adminDb.collection('rutMigrationBackups').where('runId', '==', runId).get();
+      let n = 0;
+      for (const d of bk.docs) { const b = d.data() as any; await adminDb.doc(b.path).update(b.antes); n++; }
+      return res.json({ ok: true, revertidos: n });
+    }
+    return res.status(400).json({ ok: false, error: 'Modo no válido.' });
+  } catch (e: any) {
+    console.error('normalizar-ruts', e);
+    res.status(500).json({ ok: false, error: e?.message || 'Error en el mantenimiento de RUT' });
+  }
+});
+
 export default app;

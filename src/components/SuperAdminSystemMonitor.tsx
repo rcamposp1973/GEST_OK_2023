@@ -8,6 +8,7 @@ import {
   Activity, Building2, Users, Briefcase, RefreshCw, Search, X, Key, Eye, EyeOff, CheckCircle2, AlertTriangle, XCircle,
 } from 'lucide-react';
 import JuniorAITrainingCenter from './JuniorAITrainingCenter';
+import RutMantenimientoCard from './RutMantenimientoCard';
 import { APP_VERSION_FULL } from '../constants/version';
 
 /**
@@ -134,7 +135,7 @@ export default function SuperAdminSystemMonitor({ onSelectStudy }: Props) {
   const [panel, setPanel] = useState<Panel | null>(null);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
-  const [tab, setTab] = useState<'resumen' | 'estudios' | 'actividad' | 'sii' | 'asistente'>('resumen');
+  const [tab, setTab] = useState<'resumen' | 'estudios' | 'actividad' | 'sii' | 'datos' | 'asistente'>('resumen');
   const [busca, setBusca] = useState('');
   const [logs, setLogs] = useState<AuditLog[] | null>(null);
   const [cargandoLogs, setCargandoLogs] = useState(false);
@@ -200,7 +201,7 @@ export default function SuperAdminSystemMonitor({ onSelectStudy }: Props) {
   const problemas = (panel?.chequeos || []).filter(c => c.estado !== 'ok');
   const TABS: { id: typeof tab; t: string }[] = [
     { id: 'resumen', t: 'Resumen' }, { id: 'estudios', t: 'Estudios' }, { id: 'actividad', t: 'Actividad' },
-    { id: 'sii', t: 'Clave SII' }, { id: 'asistente', t: 'Asistente IA' },
+    { id: 'sii', t: 'Clave SII' }, { id: 'datos', t: 'Datos' }, { id: 'asistente', t: 'Asistente IA' },
   ];
 
   const Kpi = ({ icon, n, t, sub }: { icon: React.ReactNode; n: number; t: string; sub?: string }) => (
@@ -349,6 +350,8 @@ export default function SuperAdminSystemMonitor({ onSelectStudy }: Props) {
           )}
         </>
       )}
+
+      {tab === 'datos' && <RutMantenimientoCard />}
 
       {tab === 'sii' && (
         <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3">

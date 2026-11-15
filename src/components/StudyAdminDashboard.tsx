@@ -1677,20 +1677,20 @@ export default function StudyAdminDashboard({
                         <div className="flex items-center gap-2">
                           <Users className="w-5 h-5 text-indigo-600" />
                           <h4 className="text-sm font-bold text-slate-900">
-                            Contadores y Analistas Asignados a esta Empresa
+                            Contadores, analistas y observadores de esta empresa
                           </h4>
                         </div>
                         <p className="text-xs text-slate-500">
-                          Selecciona los usuarios del estudio que tendrán autorización para visualizar y operar la contabilidad de <strong>{companyFormData.name || 'esta empresa'}</strong>.
+                          Marca quién puede entrar a <strong>{companyFormData.name || 'esta empresa'}</strong>. Los contadores y analistas operan la contabilidad; los observadores (clientes) solo ven informes y no pueden modificar nada.
                         </p>
 
-                        {users.filter(u => u.role === UserRole.ACCOUNTANT || u.role === UserRole.ANALYST).length === 0 ? (
+                        {users.filter(u => u.role === UserRole.ACCOUNTANT || u.role === UserRole.ANALYST || u.role === UserRole.OBSERVER).length === 0 ? (
                           <div className="p-4 text-center bg-white rounded-lg border border-slate-200 text-xs text-slate-500 italic">
-                            No hay usuarios con perfil Contador o Analista registrados en este estudio. Puedes crearlos en la pestaña "Gestión de Usuarios".
+                            No hay contadores, analistas ni observadores registrados en este estudio. Puedes crearlos en la pestaña "Contadores y Usuarios".
                           </div>
                         ) : (
                           <div className="space-y-2 max-h-60 overflow-y-auto bg-white p-3 rounded-lg border border-slate-200">
-                            {users.filter(u => u.role === UserRole.ACCOUNTANT || u.role === UserRole.ANALYST).map(u => {
+                            {users.filter(u => u.role === UserRole.ACCOUNTANT || u.role === UserRole.ANALYST || u.role === UserRole.OBSERVER).map(u => {
                               const isChecked = (companyFormData.assignedAccountantIds || []).includes(u.id);
                               return (
                                 <label key={u.id} className="flex items-center justify-between p-2.5 rounded-lg border border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors">
@@ -1715,8 +1715,8 @@ export default function StudyAdminDashboard({
                                       <p className="text-[11px] text-slate-500">{u.email}</p>
                                     </div>
                                   </div>
-                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${u.role === UserRole.ANALYST ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-indigo-100 text-indigo-800 border border-indigo-200'}`}>
-                                    {u.role === UserRole.ANALYST ? 'Analista' : 'Contador'}
+                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${u.role === UserRole.ANALYST ? 'bg-amber-100 text-amber-800 border border-amber-200' : u.role === UserRole.OBSERVER ? 'bg-sky-100 text-sky-800 border border-sky-300' : 'bg-indigo-100 text-indigo-800 border border-indigo-200'}`}>
+                                    {u.role === UserRole.ANALYST ? 'Analista' : u.role === UserRole.OBSERVER ? 'Observador' : 'Contador'}
                                   </span>
                                 </label>
                               );
@@ -1745,6 +1745,70 @@ export default function StudyAdminDashboard({
                 </form>
               </div>
 
+            </div>
+          )}
+
+          {activeTab === 'assignments' && (
+            <div className="space-y-5">
+              <form onSubmit={handleSaveAssignment} className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm space-y-3">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Asignar una empresa a un usuario</h3>
+                  <p className="text-xs text-slate-500">Sirve para contadores, analistas y observadores. Un observador solo verá las empresas que le asignes aquí.</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 items-end">
+                  <label className="text-xs font-semibold text-slate-600 space-y-1 block">
+                    <span>Usuario</span>
+                    <select name="userId" defaultValue="" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs bg-white">
+                      <option value="" disabled>Elige un usuario…</option>
+                      {users.filter(u => u.role === UserRole.ACCOUNTANT || u.role === UserRole.ANALYST || u.role === UserRole.OBSERVER).map(u => (
+                        <option key={u.id} value={u.id}>{u.name} · {u.role === UserRole.OBSERVER ? 'Observador' : u.role === UserRole.ANALYST ? 'Analista' : 'Contador'} · {u.email}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="text-xs font-semibold text-slate-600 space-y-1 block">
+                    <span>Empresa</span>
+                    <select name="companyId" defaultValue="" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs bg-white">
+                      <option value="" disabled>Elige una empresa…</option>
+                      {companies.map(c => <option key={c.id} value={c.id}>{c.name} · {c.rut}</option>)}
+                    </select>
+                  </label>
+                  <button type="submit" className="px-4 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold">Asignar</button>
+                </div>
+              </form>
+
+              <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead className="bg-slate-900 text-white text-[11px] uppercase tracking-wide">
+                    <tr>
+                      <th className="text-left px-3 py-2.5">Usuario</th>
+                      <th className="text-left px-3 py-2.5">Perfil</th>
+                      <th className="text-left px-3 py-2.5">Empresa</th>
+                      <th className="text-right px-3 py-2.5 w-24">Quitar</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {assignments.length === 0 && (
+                      <tr><td colSpan={4} className="px-3 py-8 text-center text-slate-500 italic">Aún no hay asignaciones.</td></tr>
+                    )}
+                    {assignments.map(a => {
+                      const u = users.find(x => x.id === a.userId);
+                      const c = companies.find(x => x.id === a.companyId);
+                      return (
+                        <tr key={a.id} className="border-t border-slate-100 hover:bg-slate-50">
+                          <td className="px-3 py-2"><p className="font-semibold text-slate-900">{u?.name || 'Usuario eliminado'}</p><p className="text-[10px] text-slate-500">{u?.email}</p></td>
+                          <td className="px-3 py-2">
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${u?.role === UserRole.OBSERVER ? 'bg-sky-100 text-sky-800 border-sky-300' : u?.role === UserRole.ANALYST ? 'bg-amber-100 text-amber-800 border-amber-200' : 'bg-indigo-100 text-indigo-800 border-indigo-200'}`}>
+                              {u?.role === UserRole.OBSERVER ? 'Observador' : u?.role === UserRole.ANALYST ? 'Analista' : 'Contador'}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2"><p className="font-semibold text-slate-900">{c?.name || 'Empresa eliminada'}</p><p className="text-[10px] font-mono text-slate-500">{c?.rut}</p></td>
+                          <td className="px-3 py-2 text-right"><button type="button" onClick={() => handleDeleteAssignment(a.id)} className="text-red-600 hover:text-red-800 font-semibold">Quitar</button></td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 

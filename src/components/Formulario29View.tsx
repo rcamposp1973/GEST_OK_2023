@@ -1,3 +1,5 @@
+import { plazoPagoF29 } from '../utils/plazoPagoF29';
+import { ivaCreditoCoherente } from '../utils/rcvIva';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import html2canvas from 'html2canvas';
 import { db } from '../lib/firebase';
@@ -49,13 +51,13 @@ export default function Formulario29View({
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [savedDeclarations, setSavedDeclarations] = useState<F29Declaration[]>([]);
   const [showClientSummaryModal, setShowClientSummaryModal] = useState<boolean>(false);
-  const [plazoPagoFecha, setPlazoPagoFecha] = useState<string>(() => {
-    const [y, m] = selectedPeriod.split('-').map(Number);
-    const nextMonth = m === 12 ? 1 : m + 1;
-    const nextYear = m === 12 ? y + 1 : y;
-    const monthNames = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-    return `20 de ${monthNames[nextMonth - 1]} de ${nextYear}`;
-  });
+  // Plazo de pago: día 20 del mes siguiente al período; si es fin de semana o feriado pasa al siguiente día hábil.
+  // El usuario puede escribir otra fecha; al cambiar de período vuelve a calcularse sola.
+  const [plazoManual, setPlazoManual] = useState<string | null>(null);
+  useEffect(() => { setPlazoManual(null); }, [selectedPeriod]);
+  const plazoCalculado = useMemo(() => plazoPagoF29(selectedPeriod), [selectedPeriod]);
+  const plazoPagoFecha = plazoManual ?? plazoCalculado.texto;
+  const setPlazoPagoFecha = (v: string) => setPlazoManual(v);
 
   const summaryCardRef = useRef<HTMLDivElement>(null);
 
@@ -1027,6 +1029,45 @@ export default function Formulario29View({
     );
   }, [periodDocs]);
 
+  // Resumen de compras del período para el informe al cliente: incluye TODO el neto y el exento,
+  // también el de las facturas cuyo IVA no da derecho a crédito (ese IVA va aparte, a gasto).
+  const resumenCompras = useMemo(() => {
+    let exento = 0, neto = 0, iva = 0, noRec = 0, total = 0, docs = 0;
+    periodDocs.filter(d => d.tipoRegistro === 'Compra').forEach(d => {
+      const f = (d.tipoDoc === '61' || String(d.nombreTipoDoc || '').toLowerCase().includes('credito') || String(d.nombreTipoDoc || '').toLowerCase().includes('crédito')) ? -1 : 1;
+      const dEx = Number(d.montoExento) || 0;
+      const dNoRec = Number(d.montoIvaNoRecuperable) || 0;
+      const dIva = ivaCreditoCoherente(d as any);
+      let dNeto = Number(d.montoNeto) || 0;
+      const dTot = Number(d.montoTotal) || 0;
+      if (dNeto === 0 && dTot > 0) dNeto = Math.max(0, dTot - dEx - dIva - dNoRec);
+      exento += f * dEx; neto += f * dNeto; iva += f * dIva; noRec += f * dNoRec;
+      total += f * (dNeto + dEx + dIva + dNoRec);
+      docs++;
+    });
+    return { exento, neto, iva, noRec, total, docs };
+  }, [periodDocs]);
+
+  // Filas del cuadro: primero compras, luego ventas, y al final exportaciones solo si existen
+  const filasResumen = useMemo(() => {
+    const rows: { concepto: string; exento: number; neto: number; iva: number; noRec: number; total: number }[] = [];
+    rows.push({ concepto: `Compras (${resumenCompras.docs})`, exento: resumenCompras.exento, neto: resumenCompras.neto, iva: resumenCompras.iva, noRec: resumenCompras.noRec, total: resumenCompras.total });
+    const vNeto = (debitoFiscalData.ventasAfectasNeto || 0) + (debitoFiscalData.ventasBoletasNeto || 0);
+    const vIva = debitoFiscalData.totalDebitoFiscal || 0;
+    rows.push({ concepto: 'Ventas afectas y boletas', exento: 0, neto: vNeto, iva: vIva, noRec: 0, total: vNeto + vIva });
+    const vEx = debitoFiscalData.ventasExentasTotal || 0;
+    if (vEx !== 0) rows.push({ concepto: 'Ventas exentas', exento: vEx, neto: 0, iva: 0, noRec: 0, total: vEx });
+    const vExp = debitoFiscalData.ventasExportacionTotal || 0;
+    if (vExp !== 0 || (debitoFiscalData.docsExportCount || 0) > 0) rows.push({ concepto: 'Exportaciones', exento: vExp, neto: 0, iva: 0, noRec: 0, total: vExp });
+    return rows;
+  }, [resumenCompras, debitoFiscalData]);
+
+  const ppmBreakdown = useMemo(() => ({
+    afectas: (debitoFiscalData.ventasAfectasNeto || 0) + (debitoFiscalData.ventasBoletasNeto || 0),
+    exentas: debitoFiscalData.ventasExentasTotal || 0,
+    exportaciones: debitoFiscalData.ventasExportacionTotal || 0
+  }), [debitoFiscalData]);
+
   const generateClientSummaryText = () => {
     const totalVentas = (debitoFiscalData.ventasAfectasNeto || 0) + (debitoFiscalData.ventasBoletasNeto || 0);
     const totalComprNeto = creditoFiscalData.comprasGiroNeto || 0;
@@ -1039,23 +1080,33 @@ export default function Formulario29View({
     const bLiq = bTotalBruto - bRet;
     const tRet = retencionesData.tasaEfectivaHonorarios || taxSettings.honorariosTaxRate;
 
+    const m = (n: number) => `$${(n || 0).toLocaleString('es-CL')}`;
     let text = ` *RESUMEN TRIBUTARIO F29 - ${company.name || company.razonSocial}*\n`;
     text += ` *Período:* ${selectedPeriod}\n\n`;
+    text += ` *COMPRAS (${resumenCompras.docs} documentos):*\n`;
+    text += `• Neto: ${m(resumenCompras.neto)}\n`;
+    if (resumenCompras.exento) text += `• Exento: ${m(resumenCompras.exento)}\n`;
+    text += `• IVA con derecho a crédito: ${m(resumenCompras.iva)}\n`;
+    if (resumenCompras.noRec) text += `• IVA sin derecho a crédito (va a gasto): ${m(resumenCompras.noRec)}\n`;
+    text += `• Total compras: ${m(resumenCompras.total)}\n\n`;
     text += ` *VENTAS:*\n`;
-    text += `• Neto / Afecto: $${totalVentas.toLocaleString('es-CL')}\n`;
-    text += `• Débito IVA: $${debitoFiscalData.totalDebitoFiscal.toLocaleString('es-CL')}\n\n`;
-    text += ` *COMPRAS:*\n`;
-    text += `• Neto Compras: $${totalComprNeto.toLocaleString('es-CL')}\n`;
-    text += `• IVA Crédito: $${(creditoFiscalData.totalCreditoFiscal || 0).toLocaleString('es-CL')}\n`;
-    text += `• IVA No Recuperable: $${totalIvaNoRec.toLocaleString('es-CL')}\n`;
-    text += `• Total Compras: $${totalCompras.toLocaleString('es-CL')}\n\n`;
+    text += `• Neto / Afecto: ${m(totalVentas)}\n`;
+    text += `• Débito IVA: ${m(debitoFiscalData.totalDebitoFiscal)}\n`;
+    if (debitoFiscalData.ventasExentasTotal) text += `• Ventas exentas: ${m(debitoFiscalData.ventasExentasTotal)}\n`;
+    text += `\n`;
+    if (debitoFiscalData.ventasExportacionTotal || debitoFiscalData.docsExportCount) {
+      text += ` *EXPORTACIONES:* ${m(debitoFiscalData.ventasExportacionTotal)}\n\n`;
+    }
     text += ` *BOLETAS DE HONORARIOS (${honorariosDocsList.length} boletas):*\n`;
     text += `• Monto Bruto: $${bTotalBruto.toLocaleString('es-CL')}${retencionesData.docsSinRetentionCount ? ` (Afecto Cód. 151: $${bBruto.toLocaleString('es-CL')})` : ''}\n`;
     text += `• Retención (${tRet}%): $${bRet.toLocaleString('es-CL')}\n`;
     text += `• Monto Líquido: $${bLiq.toLocaleString('es-CL')}\n\n`;
-    text += ` *PPM (${taxSettings.ppmRate}%):* $${ppmData.montoPPM.toLocaleString('es-CL')}\n\n`;
+    text += ` *PPM:*\n`;
+    text += `• Ingresos del mes (base): ${m(ppmData.baseImponibleVentas)}\n`;
+    text += `• Tasa: ${taxSettings.ppmRate}%\n`;
+    text += `• PPM a pagar: ${m(ppmData.montoPPM)}\n\n`;
     text += ` *TOTAL A PAGAR F29 (Cód. 91):* *$${resumenF29.totalPagarF29.toLocaleString('es-CL')}*\n`;
-    text += ` *Plazo Pago:* ${plazoPagoFecha || '20 del mes siguiente'}\n`;
+    text += ` *Plazo de pago:* ${plazoPagoFecha || plazoCalculado.texto}\n`;
     
     if (honorariosDocsList.length > 0) {
       text += `\n *Detalle Boletas de Honorarios:*\n`;
@@ -1099,7 +1150,8 @@ export default function Formulario29View({
     const rightBoxHeight = rightBoxHeaderH + rightBoxSubH + rightBoxContentH + rightBoxFooterH + 20;
     
     // Left column items total ~445px. With 105px top margin, left ends ~550px.
-    const height = Math.max(580, 105 + rightBoxHeight + 35);
+    const leftEnd = 105 + 26 + filasResumen.length * 28 + 12 + 124 + 132 + 128 + 35;
+    const height = Math.max(580, leftEnd, 105 + rightBoxHeight + 35);
     
     canvas.width = width * 2;
     canvas.height = height * 2;
@@ -1173,8 +1225,8 @@ export default function Formulario29View({
     let currY = 105;
 
     // Ventas y Compras Table
-    const colW1 = [120, 90, 90, 90, 90, 90]; // Concepto, Exento, Neto, IVA, IVA NoR, Total
-    const headers1 = ['Concepto', 'Exento', 'Neto', 'IVA', 'IVA NoR', 'Total'];
+    const colW1 = [170, 80, 90, 90, 100, 90]; // Concepto, Exento, Neto, IVA, IVA NoR, Total
+    const headers1 = ['Concepto', 'Exento', 'Neto', 'IVA', 'IVA sin crédito', 'Total'];
     
     // Header Row
     ctx.fillStyle = '#1e293b';
@@ -1186,72 +1238,20 @@ export default function Formulario29View({
     });
     currY += 26;
 
-    // Row 1: Ventas Afectas/Boletas
-    const vNeto = (debitoFiscalData.ventasAfectasNeto || 0) + (debitoFiscalData.ventasBoletasNeto || 0);
-    const vIva = debitoFiscalData.totalDebitoFiscal || 0;
-    const vTotal = vNeto + vIva;
-
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(leftX, currY, leftW, 28);
-    ctx.strokeStyle = '#e2e8f0';
-    ctx.strokeRect(leftX, currY, leftW, 28);
-    curColX = leftX;
-    drawCell('Ventas Afectas/Boletas', curColX, currY, colW1[0], 28, 'left', false, true, '#0f172a'); curColX += colW1[0];
-    drawCell('$0', curColX, currY, colW1[1], 28, 'right', false, false); curColX += colW1[1];
-    drawCell(`$${vNeto.toLocaleString('es-CL')}`, curColX, currY, colW1[2], 28, 'right', false, false); curColX += colW1[2];
-    drawCell(`$${vIva.toLocaleString('es-CL')}`, curColX, currY, colW1[3], 28, 'right', false, false); curColX += colW1[3];
-    drawCell('$0', curColX, currY, colW1[4], 28, 'right', false, false); curColX += colW1[4];
-    drawCell(`$${vTotal.toLocaleString('es-CL')}`, curColX, currY, colW1[5], 28, 'right', false, true, '#0f172a');
-    currY += 28;
-
-    // Row 2: Exportaciones
-    const eNeto = debitoFiscalData.ventasExportacionTotal || 0;
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(leftX, currY, leftW, 28);
-    ctx.strokeStyle = '#e2e8f0';
-    ctx.strokeRect(leftX, currY, leftW, 28);
-    curColX = leftX;
-    drawCell('Exportaciones', curColX, currY, colW1[0], 28, 'left', false, true, '#0f172a'); curColX += colW1[0];
-    drawCell(`$${eNeto.toLocaleString('es-CL')}`, curColX, currY, colW1[1], 28, 'right', false, false); curColX += colW1[1];
-    drawCell('$0', curColX, currY, colW1[2], 28, 'right', false, false); curColX += colW1[2];
-    drawCell('$0', curColX, currY, colW1[3], 28, 'right', false, false); curColX += colW1[3];
-    drawCell('$0', curColX, currY, colW1[4], 28, 'right', false, false); curColX += colW1[4];
-    drawCell(`$${eNeto.toLocaleString('es-CL')}`, curColX, currY, colW1[5], 28, 'right', false, true, '#0f172a');
-    currY += 28;
-
-    // Row 3: Ventas Exentas
-    const vExento = debitoFiscalData.ventasExentasTotal || 0;
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(leftX, currY, leftW, 28);
-    ctx.strokeStyle = '#e2e8f0';
-    ctx.strokeRect(leftX, currY, leftW, 28);
-    curColX = leftX;
-    drawCell('Ventas Exentas', curColX, currY, colW1[0], 28, 'left', false, true, '#0f172a'); curColX += colW1[0];
-    drawCell(`$${vExento.toLocaleString('es-CL')}`, curColX, currY, colW1[1], 28, 'right', false, false); curColX += colW1[1];
-    drawCell('$0', curColX, currY, colW1[2], 28, 'right', false, false); curColX += colW1[2];
-    drawCell('$0', curColX, currY, colW1[3], 28, 'right', false, false); curColX += colW1[3];
-    drawCell('$0', curColX, currY, colW1[4], 28, 'right', false, false); curColX += colW1[4];
-    drawCell(`$${vExento.toLocaleString('es-CL')}`, curColX, currY, colW1[5], 28, 'right', false, true, '#0f172a');
-    currY += 28;
-
-    // Row 4: Compras
-    const cNeto = creditoFiscalData.comprasGiroNeto || 0;
-    const cIva = creditoFiscalData.totalCreditoFiscal || 0;
-    const cIvaNoRec = creditoFiscalData.ivaNoRecuperable || 0;
-    const cTotal = cNeto + cIva + cIvaNoRec;
-
-    ctx.fillStyle = '#f8fafc';
-    ctx.fillRect(leftX, currY, leftW, 28);
-    ctx.strokeStyle = '#e2e8f0';
-    ctx.strokeRect(leftX, currY, leftW, 28);
-    curColX = leftX;
-    drawCell('Compras', curColX, currY, colW1[0], 28, 'left', false, true, '#0f172a'); curColX += colW1[0];
-    drawCell('$0', curColX, currY, colW1[1], 28, 'right', false, false); curColX += colW1[1];
-    drawCell(`$${cNeto.toLocaleString('es-CL')}`, curColX, currY, colW1[2], 28, 'right', false, false); curColX += colW1[2];
-    drawCell(`$${cIva.toLocaleString('es-CL')}`, curColX, currY, colW1[3], 28, 'right', false, false); curColX += colW1[3];
-    drawCell(`$${cIvaNoRec.toLocaleString('es-CL')}`, curColX, currY, colW1[4], 28, 'right', false, false); curColX += colW1[4];
-    drawCell(`$${cTotal.toLocaleString('es-CL')}`, curColX, currY, colW1[5], 28, 'right', false, true, '#0f172a');
-    currY += 40;
+    // Filas del cuadro (compras, ventas, y exportaciones solo si existen)
+    filasResumen.forEach((r, idx) => {
+      ctx.fillStyle = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
+      ctx.fillRect(leftX, currY, leftW, 28);
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.strokeRect(leftX, currY, leftW, 28);
+      curColX = leftX;
+      const vals = [r.exento, r.neto, r.iva, r.noRec];
+      drawCell(r.concepto, curColX, currY, colW1[0], 28, 'left', false, true, '#0f172a'); curColX += colW1[0];
+      vals.forEach((v, i) => { drawCell(`$${v.toLocaleString('es-CL')}`, curColX, currY, colW1[i + 1], 28, 'right', false, false); curColX += colW1[i + 1]; });
+      drawCell(`$${r.total.toLocaleString('es-CL')}`, curColX, currY, colW1[5], 28, 'right', false, true, '#0f172a');
+      currY += 28;
+    });
+    currY += 12;
 
     // Fixed alignment line for values on the left cards
     const valX = leftX + leftW - 20;
@@ -1307,12 +1307,12 @@ export default function Formulario29View({
     ctx.fillText(`$${bLiq.toLocaleString('es-CL')}`, valX, currY + 95);
     currY += 124;
 
-    // 4. Section PPM (Summary Card)
+    // 4. Section PPM (con el detalle de cómo se llega al monto)
     ctx.fillStyle = '#ffffff';
     ctx.strokeStyle = '#cbd5e1';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.roundRect(leftX, currY, leftW, 90, 8);
+    ctx.roundRect(leftX, currY, leftW, 118, 8);
     ctx.fill();
     ctx.stroke();
 
@@ -1325,31 +1325,34 @@ export default function Formulario29View({
     const ppmRate = taxSettings.ppmRate || 0.1;
     const ppmAmt = ppmData.montoPPM || 0;
 
-    // Base Imponible Ingresos
     ctx.font = '12px "Segoe UI", Roboto, sans-serif';
     ctx.fillStyle = '#475569';
     ctx.textAlign = 'left';
-    ctx.fillText('• Base Imponible Ingresos:', leftX + 15, currY + 48);
+    ctx.fillText('• Ingresos del mes (base de cálculo):', leftX + 15, currY + 48);
     ctx.fillStyle = '#0f172a';
     ctx.font = 'bold 12px "Segoe UI", Roboto, monospace';
     ctx.textAlign = 'right';
     ctx.fillText(`$${ppmBase.toLocaleString('es-CL')}`, valX, currY + 48);
 
-    // Tasa PPM -> Monto Determinado (in blue font, matching Excel)
+    ctx.font = '10.5px "Segoe UI", Roboto, sans-serif';
+    ctx.fillStyle = '#94a3b8';
+    ctx.textAlign = 'left';
+    ctx.fillText(`Ventas afectas $${ppmBreakdown.afectas.toLocaleString('es-CL')} + exentas $${ppmBreakdown.exentas.toLocaleString('es-CL')} + exportaciones $${ppmBreakdown.exportaciones.toLocaleString('es-CL')}`, leftX + 28, currY + 66);
+
     ctx.font = '12px "Segoe UI", Roboto, sans-serif';
     ctx.fillStyle = '#475569';
     ctx.textAlign = 'left';
-    ctx.fillText(`• Tasa PPM: ${ppmRate}%  ->  Monto Determinado:`, leftX + 15, currY + 72);
+    ctx.fillText(`• Tasa PPM: ${ppmRate}%  ->  PPM a pagar:`, leftX + 15, currY + 94);
     ctx.fillStyle = '#4338ca';
     ctx.font = 'bold 12px "Segoe UI", Roboto, monospace';
     ctx.textAlign = 'right';
-    ctx.fillText(`$${ppmAmt.toLocaleString('es-CL')}`, valX, currY + 72);
-    currY += 104;
+    ctx.fillText(`$${ppmAmt.toLocaleString('es-CL')}`, valX, currY + 94);
+    currY += 132;
 
     // 5. Total a Pagar F29 Box (Dark banner matching Excel)
     ctx.fillStyle = '#0f172a';
     ctx.beginPath();
-    ctx.roundRect(leftX, currY, leftW, 115, 8);
+    ctx.roundRect(leftX, currY, leftW, 118, 8);
     ctx.fill();
 
     ctx.fillStyle = '#94a3b8';
@@ -1376,7 +1379,10 @@ export default function Formulario29View({
 
     ctx.fillStyle = '#fbbf24';
     ctx.font = 'bold 14px "Segoe UI", Roboto, monospace';
-    ctx.fillText(plazoPagoFecha || '20 de Octubre de 2026', leftX + 150, currY + 84);
+    ctx.fillText(plazoPagoFecha || plazoCalculado.texto, leftX + 150, currY + 84);
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '10.5px "Segoe UI", Roboto, sans-serif';
+    ctx.fillText(plazoCalculado.nota, leftX + 20, currY + 104);
 
     // 6. Right Column: Detalle Boletas de Honorarios (Grows with boletas count)
     const rightX = leftX + leftW + 20;
@@ -2875,43 +2881,21 @@ export default function Formulario29View({
                             <th className="py-2 px-2.5 text-right font-sans">Exento</th>
                             <th className="py-2 px-2.5 text-right font-sans">Neto</th>
                             <th className="py-2 px-2.5 text-right font-sans">IVA</th>
-                            <th className="py-2 px-2.5 text-right font-sans">IVA No Recup.</th>
+                            <th className="py-2 px-2.5 text-right font-sans">IVA sin crédito</th>
                             <th className="py-2 px-3 text-right font-sans">Total</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-[11px] text-slate-800">
-                          <tr>
-                            <td className="py-2 px-3 font-bold font-sans">Ventas Afectas/Boletas</td>
-                            <td className="py-2 px-2.5 text-right">$0</td>
-                            <td className="py-2 px-2.5 text-right">${((debitoFiscalData.ventasAfectasNeto || 0) + (debitoFiscalData.ventasBoletasNeto || 0)).toLocaleString('es-CL')}</td>
-                            <td className="py-2 px-2.5 text-right">${debitoFiscalData.totalDebitoFiscal.toLocaleString('es-CL')}</td>
-                            <td className="py-2 px-2.5 text-right">$0</td>
-                            <td className="py-2 px-3 text-right font-bold">${((debitoFiscalData.ventasAfectasNeto || 0) + (debitoFiscalData.ventasBoletasNeto || 0) + debitoFiscalData.totalDebitoFiscal).toLocaleString('es-CL')}</td>
-                          </tr>
-                          <tr>
-                            <td className="py-2 px-3 font-bold font-sans">Exportaciones</td>
-                            <td className="py-2 px-2.5 text-right">${(debitoFiscalData.ventasExportacionTotal || 0).toLocaleString('es-CL')}</td>
-                            <td className="py-2 px-2.5 text-right">$0</td>
-                            <td className="py-2 px-2.5 text-right">$0</td>
-                            <td className="py-2 px-2.5 text-right">$0</td>
-                            <td className="py-2 px-3 text-right font-bold">${(debitoFiscalData.ventasExportacionTotal || 0).toLocaleString('es-CL')}</td>
-                          </tr>
-                          <tr>
-                            <td className="py-2 px-3 font-bold font-sans">Ventas Exentas</td>
-                            <td className="py-2 px-2.5 text-right">${(debitoFiscalData.ventasExentasTotal || 0).toLocaleString('es-CL')}</td>
-                            <td className="py-2 px-2.5 text-right">$0</td>
-                            <td className="py-2 px-2.5 text-right">$0</td>
-                            <td className="py-2 px-2.5 text-right">$0</td>
-                            <td className="py-2 px-3 text-right font-bold">${(debitoFiscalData.ventasExentasTotal || 0).toLocaleString('es-CL')}</td>
-                          </tr>
-                          <tr className="bg-slate-50">
-                            <td className="py-2 px-3 font-bold font-sans">Compras</td>
-                            <td className="py-2 px-2.5 text-right">$0</td>
-                            <td className="py-2 px-2.5 text-right">${creditoFiscalData.comprasGiroNeto.toLocaleString('es-CL')}</td>
-                            <td className="py-2 px-2.5 text-right">${creditoFiscalData.totalCreditoFiscal.toLocaleString('es-CL')}</td>
-                            <td className="py-2 px-2.5 text-right">${creditoFiscalData.ivaNoRecuperable.toLocaleString('es-CL')}</td>
-                            <td className="py-2 px-3 text-right font-bold">${(creditoFiscalData.comprasGiroNeto + creditoFiscalData.totalCreditoFiscal + creditoFiscalData.ivaNoRecuperable).toLocaleString('es-CL')}</td>
-                          </tr>
+                          {filasResumen.map((r, idx) => (
+                            <tr key={r.concepto} className={idx % 2 ? 'bg-slate-50' : ''}>
+                              <td className="py-2 px-3 font-bold font-sans">{r.concepto}</td>
+                              <td className="py-2 px-2.5 text-right">${r.exento.toLocaleString('es-CL')}</td>
+                              <td className="py-2 px-2.5 text-right">${r.neto.toLocaleString('es-CL')}</td>
+                              <td className="py-2 px-2.5 text-right">${r.iva.toLocaleString('es-CL')}</td>
+                              <td className="py-2 px-2.5 text-right">${r.noRec.toLocaleString('es-CL')}</td>
+                              <td className="py-2 px-3 text-right font-bold">${r.total.toLocaleString('es-CL')}</td>
+                            </tr>
+                          ))}
                         </tbody>
                       </table>
                     </div>
@@ -2937,7 +2921,14 @@ export default function Formulario29View({
                         Pagos Provisionales Mensuales (PPM)
                       </h6>
                       <div className="flex justify-between items-center text-xs">
-                        <span className="text-slate-600 font-sans">• Monto PPM:</span>
+                        <span className="text-slate-600 font-sans">• Ingresos del mes (base de cálculo):</span>
+                        <span className="font-mono font-bold text-slate-900">${ppmData.baseImponibleVentas.toLocaleString('es-CL')}</span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 font-sans pl-3">
+                        Ventas afectas ${ppmBreakdown.afectas.toLocaleString('es-CL')} + exentas ${ppmBreakdown.exentas.toLocaleString('es-CL')} + exportaciones ${ppmBreakdown.exportaciones.toLocaleString('es-CL')}
+                      </p>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-slate-600 font-sans">• Tasa PPM {taxSettings.ppmRate}% → PPM a pagar:</span>
                         <span className="font-mono font-bold text-indigo-700">${ppmData.montoPPM.toLocaleString('es-CL')}</span>
                       </div>
                     </div>
@@ -2963,9 +2954,10 @@ export default function Formulario29View({
                             value={plazoPagoFecha}
                             onChange={e => setPlazoPagoFecha(e.target.value)}
                             className="bg-transparent text-white font-mono font-bold text-xs focus:outline-none w-48 text-right"
-                            placeholder="Ej. 20 de Octubre de 2026"
+                            placeholder="Ej. viernes 20 de noviembre de 2026"
                           />
                         </div>
+                        <p className="w-full text-[10px] text-slate-500 font-sans sm:text-right">{plazoManual ? 'Fecha editada a mano.' : plazoCalculado.nota}</p>
                       </div>
                     </div>
                   </div>

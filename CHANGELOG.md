@@ -9,6 +9,15 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.11.3 — 15 de noviembre de 2026 — Resumen del F29 para el cliente, completo y correcto
+
+- Compras primero, luego ventas y, al final, exportaciones solo si el cliente las tiene (lo mismo en el texto para WhatsApp y en la imagen).
+- Las compras muestran su neto y su exento completos, también cuando el IVA no da derecho a crédito. Ese IVA aparece aparte, como "IVA sin crédito".
+- El PPM ahora muestra cómo se calcula: ingresos del mes (ventas afectas + exentas + exportaciones), la tasa y el monto a pagar.
+- El plazo de pago se calcula solo: día 20 del mes siguiente al período declarado. Si cae sábado, domingo o feriado, pasa al siguiente día hábil, y el informe explica por qué. Se puede escribir otra fecha a mano, y al cambiar de período se recalcula.
+
+---
+
 ## 1.11.2 — 13 de noviembre de 2026 — Corrección urgente
 
 - Corregido un error que mostraba "Ocurrió un error inesperado" al entrar al panel del estudio (un orden incorrecto en el código de la ventana de configuración de clientes).

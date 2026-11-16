@@ -9,9 +9,18 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
-## 1.11.7 — 15 de noviembre de 2026 — Auxiliares: sin repetir la cuenta
+## 1.12.1 — 15 de noviembre de 2026 — Auxiliares: sin repetir la cuenta
 
 - Análisis por RUT: cuando el RUT tiene una sola cuenta (por ejemplo al filtrar por una cuenta), ya no se muestra de nuevo la cuenta: al abrir el RUT salen directo sus documentos, con los pendientes primero.
+
+---
+
+## 1.12.0 — 15 de noviembre de 2026 — Todos los RUT en formato 11.111.111-1 (solo en Pruebas)
+
+- Regla única: todo RUT se guarda como 11.111.111-1, sin importar si se digitó 111111111, 11111111-1 o 11.111.111-1. Se aplica en una sola capa por la que pasan todas las escrituras a la base de datos (formularios, importación del SII, cargas masivas, comprobantes, auxiliares, empresas, trabajadores…).
+- Campos cubiertos: RUT de empresa, estudio, auxiliares, representante legal, emisor/receptor de documentos, contraparte, trabajadores y RUT en las líneas de comprobantes.
+- Valores que no parecen un RUT (texto, "SIN RUT", largos imposibles) no se tocan.
+- Nueva herramienta (Super Administrador › Datos): revisa y corrige los registros antiguos de TODOS los estudios y empresas. Primero "Revisar" (no cambia nada), luego "Aplicar". Cada cambio queda respaldado y se puede devolver con un botón.
 
 ---
 

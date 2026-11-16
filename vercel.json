@@ -38,6 +38,10 @@
       "destination": "/api/index"
     },
     {
+      "source": "/api/admin/normalizar-ruts",
+      "destination": "/api/index"
+    },
+    {
       "source": "/api/alertas",
       "destination": "/api/index"
     },

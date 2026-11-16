@@ -15,9 +15,11 @@ export default defineConfig(() => {
       __BUILD_ID__: JSON.stringify((process.env.VERCEL_GIT_COMMIT_SHA || '').slice(0, 7)),
     },
     resolve: {
-      alias: {
-        '@': path.resolve(__dirname, '.'),
-      },
+      alias: [
+        { find: '@', replacement: path.resolve(__dirname, '.') },
+        // Todas las escrituras a Firestore pasan por una capa que deja los RUT como 11.111.111-1
+        { find: /^firebase\/firestore$/, replacement: path.resolve(__dirname, 'src/utils/firestoreConRutFormateado.ts') },
+      ],
     },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.

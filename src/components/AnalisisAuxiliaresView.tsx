@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Company, ChartOfAccount, Auxiliary, RCVDocument, Voucher, FiscalPeriodYear } from '../types';
 import { generateSIIReportPDF } from '../utils/pdfGenerator';
+import { formatearRut } from '../utils/rutFormato';
 import VoucherDocumentCorrectorModal from './VoucherDocumentCorrectorModal';
 import { 
   Building2, 
@@ -1862,7 +1863,7 @@ export default function AnalisisAuxiliaresView({
                                     {isRutExpanded ? '▼' : '▶'}
                                   </span>
                                   <span className="font-mono font-bold text-slate-900 text-xs bg-slate-100 px-2 py-0.5 rounded border border-slate-300">
-                                    {rutItem.rut}
+                                    {formatearRut(rutItem.rut)}
                                   </span>
                                   <span className="font-bold text-slate-900 text-xs">
                                     {rutItem.name}
@@ -2091,7 +2092,7 @@ export default function AnalisisAuxiliaresView({
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="font-mono font-bold text-slate-900 text-xs bg-slate-100 px-2 py-0.5 rounded border border-slate-300">
-                              {aux.rut}
+                              {formatearRut(aux.rut)}
                             </span>
                             <span className="font-bold text-slate-900 text-sm">
                               {aux.name}

@@ -9,6 +9,12 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.12.5 — 15 de noviembre de 2026 — Una partida compensada no se compensa dos veces
+
+- Pizarra Dinámica: si entre las partidas elegidas hay una que ya está compensada, el sistema no permite compensar y avisa que primero hay que descompensar la anterior. (Compensación de Cuentas ya tenía esta protección.)
+
+---
+
 ## 1.12.4 — 15 de noviembre de 2026 — Auxiliares respeta la Compensación de Cuentas
 
 - Análisis de Auxiliares: las partidas ya compensadas en "Compensación de Cuentas" se consideran cerradas y se netean entre sí, aunque tengan distinto número de documento, tipo o vencimiento. Un documento compensado aparece como "Compensado ($0)" y, con el filtro "Solo con saldo pendiente", se oculta.

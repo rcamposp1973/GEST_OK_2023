@@ -889,6 +889,13 @@ export default function PlanillaConsultasDinamicasView({
       return;
     }
 
+    // Regla: una partida ya compensada no puede volver a compensarse mientras no se descompense la primera
+    const yaCompensada = selectedRows.find(r => r.sourceRecord?.voucher && matchedLinesMap.has(`${r.sourceRecord.voucher.id}_${r.sourceRecord.lineIndex || 0}`));
+    if (yaCompensada) {
+      notify.warning(`La partida del comprobante N° ${yaCompensada.sourceRecord.voucher.voucherNumber || ''} ya está compensada. Para volver a usarla, primero descompensa la anterior.`);
+      return;
+    }
+
     setIsCompensating(true);
     try {
       const matchId = `match_sheet_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;

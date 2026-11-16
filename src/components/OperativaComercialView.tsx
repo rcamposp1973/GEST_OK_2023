@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useMemo } from 'react';
 import {
   ShoppingCart,
@@ -604,7 +605,7 @@ export const OperativaComercialView: React.FC<OperativaComercialViewProps> = ({
                     </td>
                     <td className="py-3 px-4">
                       <div className="font-semibold text-slate-800">{doc.razonSocialContraparte}</div>
-                      <div className="font-mono text-[10px] text-slate-400">{doc.rutContraparte}</div>
+                      <div className="font-mono text-[10px] text-slate-400">{formatearRut(doc.rutContraparte)}</div>
                     </td>
                     <td className="py-3 px-4">
                       <div className="space-y-0.5">
@@ -767,7 +768,7 @@ export const OperativaComercialView: React.FC<OperativaComercialViewProps> = ({
                       <option value="">-- Buscar en Auxiliares --</option>
                       {auxiliaries.map(aux => (
                         <option key={aux.id} value={aux.id}>
-                          {aux.rut} - {aux.name}
+                          {formatearRut(aux.rut)} - {aux.name}
                         </option>
                       ))}
                     </select>

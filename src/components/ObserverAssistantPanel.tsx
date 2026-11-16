@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Send, X, MessageCircle, Sparkles, Scale, TrendingUp, UserSearch, CalendarClock, Percent, HandCoins, Wallet, CalendarDays } from 'lucide-react';
 import type { Company, Voucher, ChartOfAccount, RCVDocument } from '../types';
@@ -202,7 +203,7 @@ export default function ObserverAssistantPanel({ company, accounts, vouchers, rc
         const d = m.data;
         return card(<>
           <p className="font-bold text-slate-900">{d.contraparte.nombre || 'Sin nombre'}</p>
-          <p className="text-[10px] font-mono text-slate-500 mb-1">{d.contraparte.rut} · al {fechaCL(d.fecha)}</p>
+          <p className="text-[10px] font-mono text-slate-500 mb-1">{formatearRut(d.contraparte.rut)} · al {fechaCL(d.fecha)}</p>
           {d.documentos.length === 0 ? <p className="text-slate-500 italic">No tiene saldos pendientes: todo está compensado.</p> : <>
             <Seccion t="Por cuenta"><Tabla filas={d.porCuenta.map(c => ({ a: c.name, b: c.saldo >= 0 ? 'te debe' : 'le debes', n: Math.abs(c.saldo) }))} /></Seccion>
             <Seccion t="Documentos pendientes"><Tabla filas={d.documentos.map(x => ({ a: x.documento, b: `${fechaCL(x.fecha)}${x.vence ? ` · vence ${fechaCL(x.vence)}` : ''} · ${x.saldo >= 0 ? 'te debe' : 'le debes'}`, n: Math.abs(x.saldo) }))} /></Seccion>
@@ -283,7 +284,7 @@ export default function ObserverAssistantPanel({ company, accounts, vouchers, rc
           <div className="flex flex-wrap gap-1.5">
             {pending.opciones.map(o => (
               <button key={o.rut} onClick={() => { push({ from: 'user', text: o.nombre || o.rut }); mostrarCC(o); }} className="text-left text-[11px] bg-white border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 rounded-xl px-2.5 py-1.5">
-                <span className="font-semibold text-slate-800 block">{o.nombre || 'Sin nombre'}</span><span className="font-mono text-slate-500">{o.rut}</span>
+                <span className="font-semibold text-slate-800 block">{o.nombre || 'Sin nombre'}</span><span className="font-mono text-slate-500">{formatearRut(o.rut)}</span>
               </button>
             ))}
           </div>

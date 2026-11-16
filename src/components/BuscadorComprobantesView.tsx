@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useMemo, useState } from 'react';
 import { Search, X } from 'lucide-react';
 import { Voucher } from '../types';
@@ -51,7 +52,7 @@ export default function BuscadorComprobantesView({ vouchers, onOpenVoucher }: Pr
     const t = norm(q).split(/\s+/).filter(Boolean);
     const lineas = (v.lines || []).filter(l => {
       if (t.length === 0) return false;
-      const s = norm(`${l.documentRef} ${l.auxiliaryName} ${l.auxiliaryRut} ${l.accountName}`);
+      const s = norm(`${l.documentRef} ${l.auxiliaryName} ${formatearRut(l.auxiliaryRut)} ${l.accountName}`);
       return t.some(p => s.includes(p));
     });
     const l = lineas[0] || (v.lines || []).find(x => x.auxiliaryName || x.documentRef);

@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useMemo } from 'react';
 import {
   Clock,
@@ -590,7 +591,7 @@ export const AgingDeudasView: React.FC<AgingDeudasViewProps> = ({
                   {filteredReceivables.length > 0 ? (
                     filteredReceivables.map(item => (
                       <tr key={item.id} className="hover:bg-slate-50/80">
-                        <td className="p-2.5 font-mono text-slate-600">{item.rut}</td>
+                        <td className="p-2.5 font-mono text-slate-600">{formatearRut(item.rut)}</td>
                         <td className="p-2.5 font-bold text-slate-900">{item.razonSocial}</td>
                         <td className="p-2.5 text-slate-600">{item.tipoDocName}</td>
                         <td className="p-2.5 font-mono font-semibold text-indigo-900">#{item.folio}</td>
@@ -675,7 +676,7 @@ export const AgingDeudasView: React.FC<AgingDeudasViewProps> = ({
                   {filteredPayables.length > 0 ? (
                     filteredPayables.map(item => (
                       <tr key={item.id} className="hover:bg-slate-50/80">
-                        <td className="p-2.5 font-mono text-slate-600">{item.rut}</td>
+                        <td className="p-2.5 font-mono text-slate-600">{formatearRut(item.rut)}</td>
                         <td className="p-2.5 font-bold text-slate-900">{item.razonSocial}</td>
                         <td className="p-2.5 text-slate-600">{item.tipoDocName}</td>
                         <td className="p-2.5 font-mono font-semibold text-amber-900">#{item.folio}</td>

@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useEffect, useMemo } from 'react';
 import { db, auth } from '../lib/firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, setDoc } from 'firebase/firestore';
@@ -682,7 +683,7 @@ export default function CobranzaView({
   const handleExportAgingCSV = () => {
     const headers = ['RUT Cliente', 'Razon Social', 'Tipo Doc', 'Folio', 'Fecha Emision', 'Dias Transcurridos', 'Tramo Antiguedad', 'Monto Pendiente'];
     const rows = invoicesWithAging.map(inv => [
-      `"${inv.rutEmisor}"`,
+      `"${formatearRut(inv.rutEmisor)}"`,
       `"${inv.razonSocialEmisor}"`,
       inv.tipoDoc,
       inv.folio,
@@ -1199,7 +1200,7 @@ export default function CobranzaView({
                 <option value="">-- Seleccione un Cliente ({customersList.length} con saldo) --</option>
                 {customersList.map(c => (
                   <option key={c.rut} value={c.rut}>
-                    {c.rut} - {c.razonSocial} (Saldo: ${c.totalPending.toLocaleString('es-CL')})
+                    {formatearRut(c.rut)} - {c.razonSocial} (Saldo: ${c.totalPending.toLocaleString('es-CL')})
                   </option>
                 ))}
               </select>

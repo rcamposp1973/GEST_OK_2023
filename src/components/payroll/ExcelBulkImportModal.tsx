@@ -1,3 +1,4 @@
+import { formatearRut } from '../../utils/rutFormato';
 import React, { useState, useMemo } from 'react';
 import { Employee, PayrollConcept } from '../../types';
 import { 
@@ -160,7 +161,7 @@ export const ExcelBulkImportModal: React.FC<ExcelBulkImportModalProps> = ({
     const header = ['RUT', 'NOMBRE', ...availableCodes].join('\t');
     const rows = activeEmployees.map(emp => {
       const zeros = availableCodes.map(() => '0').join('\t');
-      return `${emp.rut}\t${emp.name}\t${zeros}`;
+      return `${formatearRut(emp.rut)}\t${emp.name}\t${zeros}`;
     });
 
     const tsvContent = [header, ...rows].join('\r\n');
@@ -182,7 +183,7 @@ export const ExcelBulkImportModal: React.FC<ExcelBulkImportModalProps> = ({
     const c1 = concepts[0]?.code || 'BONO_PROD';
     const c2 = concepts[1]?.code || concepts[0]?.code || 'VIATICO_FAENA';
 
-    const sample = `${emp1.rut}\t${c1}\t250000\n${emp1.rut}\t${c2}\t85000\n${emp2.rut}\t${c1}\t180000`;
+    const sample = `${formatearRut(emp1.rut)}\t${c1}\t250000\n${formatearRut(emp1.rut)}\t${c2}\t85000\n${formatearRut(emp2.rut)}\t${c1}\t180000`;
     setInputText(sample);
   };
 

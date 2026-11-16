@@ -1,3 +1,4 @@
+import { formatearRut } from '../../utils/rutFormato';
 import React, { useState, useMemo } from 'react';
 import { 
   FileText, Calculator, Download, Printer, X, CheckCircle2, 
@@ -213,7 +214,7 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
     doc.text('FIRMA EMPLEADOR', 55, y + 5, { align: 'center' });
     doc.text('FIRMA TRABAJADOR', 155, y + 5, { align: 'center' });
 
-    doc.save(`Finiquito_${selectedEmployee.rut}_${fechaCese}.pdf`);
+    doc.save(`Finiquito_${formatearRut(selectedEmployee.rut)}_${fechaCese}.pdf`);
   };
 
   return (

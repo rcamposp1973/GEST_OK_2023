@@ -9,6 +9,13 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.12.3 — 15 de noviembre de 2026 — RUT con puntos en todas las pantallas
+
+- Todas las pantallas que muestran un RUT (auxiliares, libros, informes, DTE, remuneraciones, certificados, cobranza, etc.) ahora lo muestran siempre como 11.111.111-1, aunque el registro antiguo esté guardado sin puntos.
+- Los datos nuevos ya se guardan con esa regla; los antiguos se corrigen en la base con Super Administrador › Datos.
+
+---
+
 ## 1.12.2 — 15 de noviembre de 2026 — RUT con puntos también en Auxiliares
 
 - Análisis de Auxiliares: los RUT siempre se muestran como 11.111.111-1, aunque el registro antiguo esté guardado sin puntos (la corrección definitiva de la base de datos se hace en Super Administrador › Datos).

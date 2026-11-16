@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import { CondicionesVigenciaEditor } from './payroll/CondicionesVigenciaEditor';
 import { subirRespaldo, tamanoLegible, MAX_RESPALDO_BYTES } from '../utils/respaldosPrevisionales';
 import { auth } from '../lib/firebase';
@@ -808,7 +809,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
                         </div>
                         <div>
                           <div className="font-semibold text-slate-900">{emp.name}</div>
-                          <div className="text-xs font-mono text-slate-500">{emp.rut}</div>
+                          <div className="text-xs font-mono text-slate-500">{formatearRut(emp.rut)}</div>
                         </div>
                       </div>
                     </td>
@@ -1020,7 +1021,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
               >
                 {employees.map(emp => (
                   <option key={emp.id} value={emp.id}>
-                    {emp.name} — {emp.rut} ({emp.position}) {emp.contractText ? '✓ Contrato Guardado' : '• Sin Contrato'}
+                    {emp.name} — {formatearRut(emp.rut)} ({emp.position}) {emp.contractText ? '✓ Contrato Guardado' : '• Sin Contrato'}
                   </option>
                 ))}
               </select>
@@ -1407,7 +1408,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
                           <div class="header-box">
                             <h2>SIMULACIÓN DE FINIQUITO DE TRABAJO</h2>
                             <p class="font-bold">${companyName.toUpperCase()} (RUT: ${companyRut})</p>
-                            <p>Trabajador: <strong>${emp.name}</strong> (RUT: ${emp.rut})</p>
+                            <p>Trabajador: <strong>${emp.name}</strong> (RUT: ${formatearRut(emp.rut)})</p>
                             <p>Fecha Ingreso: ${emp.hireDate} &bull; Emisión: ${new Date().toLocaleDateString('es-CL')}</p>
                           </div>
                           <table>
@@ -1577,7 +1578,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
                   </p>
                   <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-1 font-mono text-xs">
                     <div><strong>Nombre:</strong> {emp.name}</div>
-                    <div><strong>RUT:</strong> {emp.rut}</div>
+                    <div><strong>RUT:</strong> {formatearRut(emp.rut)}</div>
                     <div><strong>Cargo:</strong> {emp.position}</div>
                     <div><strong>Fecha de Ingreso:</strong> {emp.hireDate}</div>
                     {certType === 'RENTA' && (

@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useEffect } from 'react';
 import { UserRole, Company, Study } from '../types';
 import { generateOfficialChileanIndicators, syncOnlineChileanIndicators, DailyIndicator } from '../utils/chileanEconomicIndicators';
@@ -176,7 +177,7 @@ export default function ExecutiveHeader({
                 </span>
                 {activeCompany?.rut && (
                   <span className="text-[10px] font-mono font-medium text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200">
-                    {activeCompany.rut}
+                    {formatearRut(activeCompany.rut)}
                   </span>
                 )}
                 {isDemoFerreteriaCompany(activeCompany) && (

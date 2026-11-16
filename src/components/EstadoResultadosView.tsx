@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useMemo, useEffect } from 'react';
 import DetallePivotModal from './DetallePivotModal';
 import { Company, Voucher, ChartOfAccount, FiscalPeriodYear, CostCenterMaster, ExpenseItemMaster } from '../types';
@@ -389,7 +390,7 @@ export default function EstadoResultadosView({
     const totalHeader = limit === 12 ? 'TOTAL AÑO' : `TOTAL ACUM. (Ene - ${monthNames[limit - 1]})`;
     const headers = ['CONCEPTO / CLASIFICACIÓN IFRS', 'CÓDIGO', 'CUENTA', ...visibleMonths, totalHeader];
     const rows = [
-      ['ESTADO DE RESULTADOS POR FUNCIÓN (NIC 1 / FORMATO CMF)', `"${company.name}"`, `RUT: ${company.rut}`, `Año: ${selectedYear} - Corte: ${monthNames[limit - 1]}`],
+      ['ESTADO DE RESULTADOS POR FUNCIÓN (NIC 1 / FORMATO CMF)', `"${company.name}"`, `RUT: ${formatearRut(company.rut)}`, `Año: ${selectedYear} - Corte: ${monthNames[limit - 1]}`],
       [''],
       headers,
       ['1. INGRESOS DE ACTIVIDADES ORDINARIAS / EXPLOTACIÓN', '5101000', '', ...statementData.monthly.opRevenues.slice(0, limit).map(v => v.toString()), statementData.totals.opRevenues.toString()],
@@ -420,7 +421,7 @@ export default function EstadoResultadosView({
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Estado_Resultados_IFRS_${company.rut}_${selectedYear}.csv`);
+    link.setAttribute('download', `Estado_Resultados_IFRS_${formatearRut(company.rut)}_${selectedYear}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -506,7 +507,7 @@ export default function EstadoResultadosView({
                 Estado de Resultados IFRS / Por Función
               </h3>
               <p className="text-xs text-slate-500">
-                Estructura IFRS (NIC 1) con Margen Operacional y Cuentas Padre ({company.name} - RUT: {company.rut})
+                Estructura IFRS (NIC 1) con Margen Operacional y Cuentas Padre ({company.name} - RUT: {formatearRut(company.rut)})
               </p>
             </div>
           </div>

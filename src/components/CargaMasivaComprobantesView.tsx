@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useEffect, useCallback } from 'react';
 import { db, auth } from '../lib/firebase';
 import { collection, doc, writeBatch } from 'firebase/firestore';
@@ -1493,7 +1494,7 @@ export default function CargaMasivaComprobantesView({
                               <div className="flex flex-wrap items-center gap-1">
                                 {l.auxiliaryRut ? (
                                   <span className="px-1.5 py-0.5 bg-slate-100 text-slate-800 rounded text-[10px] font-mono border border-slate-200">
-                                     {l.auxiliaryRut} {l.auxiliaryName ? `(${l.auxiliaryName})` : ''}
+                                     {formatearRut(l.auxiliaryRut)} {l.auxiliaryName ? `(${l.auxiliaryName})` : ''}
                                   </span>
                                 ) : null}
                                 {l.documentRef ? (

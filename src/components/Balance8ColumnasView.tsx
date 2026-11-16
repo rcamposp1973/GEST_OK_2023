@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useMemo, useEffect } from 'react';
 import { periodosParaSelector } from '../utils/periodUtils';
 import { inicioAcumuladoVigente } from '../utils/cierreAnio';
@@ -457,7 +458,7 @@ export default function Balance8ColumnasView({
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Balance_8_Columnas_${company.rut}_${periodFilter !== 'Todos' ? periodFilter : 'General'}.csv`);
+    link.setAttribute('download', `Balance_8_Columnas_${formatearRut(company.rut)}_${periodFilter !== 'Todos' ? periodFilter : 'General'}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

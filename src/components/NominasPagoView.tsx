@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useEffect, useMemo } from 'react';
 import { db, auth } from '../lib/firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, setDoc } from 'firebase/firestore';
@@ -591,7 +592,7 @@ export default function NominasPagoView({
       fileName = `Nomina_Transferencias_${batch.batchNumber}_${batch.date}.csv`;
       const headers = ['RUT', 'Razon Social', 'Tipo Doc', 'Folio', 'Monto a Pagar', 'Banco Destino', 'Tipo Cuenta', 'Numero Cuenta', 'Email Aviso', 'Glosa'];
       const rows = batch.items.map(it => [
-        `"${it.rut}"`,
+        `"${formatearRut(it.rut)}"`,
         `"${it.razonSocial}"`,
         it.tipoDoc,
         it.folio,
@@ -998,7 +999,7 @@ export default function NominasPagoView({
                               )}
                             </td>
                             <td className="py-2 px-2.5 font-bold text-indigo-700">{inv.folio}</td>
-                            <td className="py-2 px-3 font-semibold text-slate-800">{inv.rutEmisor}</td>
+                            <td className="py-2 px-3 font-semibold text-slate-800">{formatearRut(inv.rutEmisor)}</td>
                             <td className="py-2 px-3 font-sans truncate max-w-xs text-slate-900 font-medium">
                               {inv.razonSocialEmisor}
                             </td>
@@ -1038,7 +1039,7 @@ export default function NominasPagoView({
                           <td className="py-2 px-2.5 text-slate-700">{batchDate}</td>
                           <td className="py-2 px-2.5 font-sans font-semibold text-emerald-800">Manual ({c.tipoDoc})</td>
                           <td className="py-2 px-2.5 font-bold text-emerald-700">{c.folio}</td>
-                          <td className="py-2 px-3 font-semibold text-slate-800">{c.rut}</td>
+                          <td className="py-2 px-3 font-semibold text-slate-800">{formatearRut(c.rut)}</td>
                           <td className="py-2 px-3 font-sans text-slate-900 font-medium">{c.razonSocial}</td>
                           <td className="py-2 px-3 text-right font-bold text-slate-900">
                             ${c.montoTotal.toLocaleString('es-CL')}
@@ -1291,7 +1292,7 @@ export default function NominasPagoView({
                   <tbody className="divide-y divide-slate-200 font-mono text-[11px]">
                     {selectedBatch.items && selectedBatch.items.map((it, idx) => (
                       <tr key={idx} className="hover:bg-slate-50">
-                        <td className="py-2 px-3 font-semibold text-slate-800">{it.rut}</td>
+                        <td className="py-2 px-3 font-semibold text-slate-800">{formatearRut(it.rut)}</td>
                         <td className="py-2 px-3 font-sans text-slate-900 font-medium">{it.razonSocial}</td>
                         <td className="py-2 px-2.5">{it.tipoDoc}</td>
                         <td className="py-2 px-2.5 font-bold text-indigo-700">{it.folio}</td>

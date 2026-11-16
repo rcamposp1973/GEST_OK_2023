@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useMemo } from 'react';
 import { 
   Auxiliary, 
@@ -1241,7 +1242,7 @@ export default function AuxiliariesGrid({
               <div className="p-5 space-y-3 text-xs">
                 <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
                   <p className="text-slate-500 text-[10px]">RUT / RAZÓN SOCIAL:</p>
-                  <p className="font-mono font-bold text-slate-900 text-sm">{auxToDelete.rut}</p>
+                  <p className="font-mono font-bold text-slate-900 text-sm">{formatearRut(auxToDelete.rut)}</p>
                   <p className="font-bold text-slate-800 mt-0.5">{auxToDelete.name}</p>
                 </div>
 

@@ -1,3 +1,4 @@
+import { formatearRut } from '../../utils/rutFormato';
 import React, { useState, useMemo, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 import {
@@ -215,7 +216,7 @@ export default function AnalyticsHudDashboard({
 
     // Header 1: Metadata
     wsData.push([`TABLERO ANALÍTICO MULTIDIMENSIONAL - ${company.name}`]);
-    wsData.push([`RUT: ${company.rut} | Fecha Exportación: ${new Date().toLocaleDateString('es-CL')}`]);
+    wsData.push([`RUT: ${formatearRut(company.rut)} | Fecha Exportación: ${new Date().toLocaleDateString('es-CL')}`]);
     wsData.push([]);
 
     // Table Header
@@ -267,7 +268,7 @@ export default function AnalyticsHudDashboard({
     const ws = XLSX.utils.aoa_to_sheet(wsData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Matriz_BI');
-    XLSX.writeFile(wb, `GestOK_AnalyticsHUD_${company.rut}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    XLSX.writeFile(wb, `GestOK_AnalyticsHUD_${formatearRut(company.rut)}_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
   // Hechos correspondientes al nodo seleccionado para inspección atómica
@@ -351,7 +352,7 @@ export default function AnalyticsHudDashboard({
                 }`}
               >
                 <span className="font-semibold text-slate-900 dark:text-slate-200">{company.name}</span>
-                <span className="font-mono text-[11px] opacity-75">RUT: {company.rut}</span>
+                <span className="font-mono text-[11px] opacity-75">RUT: {formatearRut(company.rut)}</span>
                 <span className="text-[11px] opacity-50">•</span>
                 <span className="text-[11px] opacity-80">{vouchers.length} comprobantes cargados</span>
               </div>

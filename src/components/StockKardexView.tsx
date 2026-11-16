@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useMemo } from 'react';
 import {
   Boxes,
@@ -812,7 +813,7 @@ export const StockKardexView: React.FC<StockKardexViewProps> = ({
                         {mov.rutContraparte ? (
                           <div>
                             <div className="font-semibold text-slate-900 truncate max-w-[140px]">{mov.razonSocialContraparte || 'Contraparte'}</div>
-                            <div className="font-mono text-[10px] text-slate-400">{mov.rutContraparte}</div>
+                            <div className="font-mono text-[10px] text-slate-400">{formatearRut(mov.rutContraparte)}</div>
                           </div>
                         ) : (
                           <div className="truncate max-w-[140px] text-slate-500">

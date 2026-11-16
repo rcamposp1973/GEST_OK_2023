@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState } from 'react';
 import { db, auth } from '../lib/firebase';
 import { collection, getDocs, addDoc, setDoc, doc } from 'firebase/firestore';
@@ -370,7 +371,7 @@ export default function ExcelImportCenterModal({
       const worksheet = XLSX.utils.json_to_sheet(sampleData);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Comprobantes');
-      XLSX.writeFile(workbook, `Plantilla_Comprobantes_Contables_${company.rut}.xlsx`);
+      XLSX.writeFile(workbook, `Plantilla_Comprobantes_Contables_${formatearRut(company.rut)}.xlsx`);
     } else {
       downloadTemplate(type);
     }
@@ -385,7 +386,7 @@ export default function ExcelImportCenterModal({
     const customEmptyStr = customCols.length > 0 ? ';' + customCols.map(() => '').join(';') : '';
 
     if (type === 'cuentas') {
-      filename = `Plantilla_Plan_de_Cuentas_${company.rut}.csv`;
+      filename = `Plantilla_Plan_de_Cuentas_${formatearRut(company.rut)}.csv`;
       headers = 'Codigo;Nombre;Tipo;CodigoPadre;RequiereCentroCosto;RequiereAuxiliarRUT;RequiereConciliacionBancaria;RequiereDocumento;Estado' + customHeaderStr;
       sampleRows = [
         '1;ACTIVO;Activo;;NO;NO;NO;NO;Activo' + customEmptyStr,
@@ -408,21 +409,21 @@ export default function ExcelImportCenterModal({
         '5.2.01;Gastos de Administracion;Gasto;5;SI;NO;NO;NO;Activo' + customEmptyStr
       ].join('\n');
     } else if (type === 'clientes') {
-      filename = `Plantilla_Clientes_${company.rut}.csv`;
+      filename = `Plantilla_Clientes_${formatearRut(company.rut)}.csv`;
       headers = 'RUT;RazonSocial;GlosaSugerida;Rol;Email;Telefono;Banco;TipoCuenta;NumeroCuenta;CodigoCuentaCliente;CodigoCuentaIngreso;Estado';
       sampleRows = [
         '76123456-7;DISTRIBUIDORA Y COMERCIAL NORTE SPA;Ventas y Distribución Mayorista;Deudor;contacto@disnorte.cl;+56912345678;Banco de Chile;Corriente;1234567890;1.1.02.001;4.1.01;Activo',
         '77987654-3;AGRICOLA SAN ISIDRO LIMITADA;Venta de Productos Agrícolas;Deudor;pagos@sanisidro.cl;+56987654321;Banco Santander;Vista;987654321;1.1.02.001;4.1.01;Activo'
       ].join('\n');
     } else if (type === 'proveedores') {
-      filename = `Plantilla_Proveedores_${company.rut}.csv`;
+      filename = `Plantilla_Proveedores_${formatearRut(company.rut)}.csv`;
       headers = 'RUT;RazonSocial;GlosaSugerida;Rol;Email;Telefono;Banco;TipoCuenta;NumeroCuenta;CodigoCuentaProveedor;CodigoCuentaGasto;Estado';
       sampleRows = [
         '76543210-K;SERVICIOS INDUSTRIALES DEL SUR SPA;Servicios de Mantención y Soporte Técnico;Acreedor;facturas@serviciosur.cl;+56998765432;Banco Estado;Corriente;456789123;2.1.01.001;5.2.01;Activo',
         '79111222-3;IMPORTADORA GLOBAL CHILE S.A.;Adquisición de Insumos y Repuestos;Acreedor;cobranzas@globalchile.com;+56223334444;Banco BCI;Corriente;888777666;2.1.01.001;5.1.01;Activo'
       ].join('\n');
     } else if (type === 'comprobantes') {
-      filename = `Plantilla_Comprobantes_Contables_${company.rut}.csv`;
+      filename = `Plantilla_Comprobantes_Contables_${formatearRut(company.rut)}.csv`;
       headers = 'NumeroComprobante;Fecha;Periodo;TipoComprobante;GlosaComprobante;CodigoCuenta;NombreCuenta;Debe;Haber;GlosaLinea;RUTAuxiliar;RazonSocialAuxiliar;TipoDocumento;FolioDocumento;FechaVencimiento;CentroCosto;ItemGasto;Proyecto;Producto;RefBancaria' + customHeaderStr;
       sampleRows = [
         `1;2026-01-02;2026-01;Ingreso;Aporte inicial de capital social;${accounts[0]?.code || '1.1.01.002'};${accounts[0]?.name || 'Banco Estado Cta Cte'};10000000;0;Deposito bancario capital;;;;;;;;;;Cartola 0126${customEmptyStr}`,
@@ -1117,7 +1118,7 @@ export default function ExcelImportCenterModal({
               Centro de Carga Masiva de Archivos Excel / CSV
             </h3>
             <p className="text-xs text-slate-400">
-              Empresa: <span className="text-indigo-300 font-bold">{company.name}</span> (RUT: {company.rut})
+              Empresa: <span className="text-indigo-300 font-bold">{company.name}</span> (RUT: {formatearRut(company.rut)})
             </p>
           </div>
           <button

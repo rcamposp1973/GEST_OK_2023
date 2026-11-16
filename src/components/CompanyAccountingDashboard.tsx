@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import HomeModulesView from './HomeModulesView';
 import BuscadorComprobantesView from './BuscadorComprobantesView';
@@ -5211,7 +5212,7 @@ export default function CompanyAccountingDashboard({
           metadata: { rut, name, role, mergedWithId: primaryDoc.id, deletedDuplicatesCount: duplicateClones.length }
         });
 
-        alert(`El auxiliar con RUT ${auxData.rut} ya existía. Se han actualizado y unificado sus datos en una sola ficha limpia.`);
+        alert(`El auxiliar con RUT ${formatearRut(auxData.rut)} ya existía. Se han actualizado y unificado sus datos en una sola ficha limpia.`);
       } else {
         payload.createdBy = userUid;
         payload.createdByUserEmail = userEmail;
@@ -7871,7 +7872,7 @@ export default function CompanyAccountingDashboard({
                               <div className="flex flex-wrap gap-1 max-w-[280px]">
                                 {line.auxiliaryRut && (
                                   <span className="bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.5 rounded text-[10px] font-mono" title={line.auxiliaryName}>
-                                     {line.auxiliaryRut}
+                                     {formatearRut(line.auxiliaryRut)}
                                   </span>
                                 )}
                                 {line.costCenter && (
@@ -8443,8 +8444,8 @@ export default function CompanyAccountingDashboard({
 
                                       {/* Quick preview tag of auxiliary or CC */}
                                       {line.auxiliaryRut ? (
-                                        <span className="text-[10px] font-mono text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded truncate max-w-[110px]" title={`${line.auxiliaryRut} ${line.auxiliaryName || ''}`}>
-                                          {line.auxiliaryRut}
+                                        <span className="text-[10px] font-mono text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded truncate max-w-[110px]" title={`${formatearRut(line.auxiliaryRut)} ${line.auxiliaryName || ''}`}>
+                                          {formatearRut(line.auxiliaryRut)}
                                         </span>
                                       ) : line.costCenter ? (
                                         <span className="text-[10px] font-mono text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded truncate max-w-[100px]" title={line.costCenter}>

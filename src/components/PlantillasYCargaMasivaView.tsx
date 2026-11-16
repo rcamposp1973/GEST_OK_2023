@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState } from 'react';
 import { Company, ChartOfAccount, Auxiliary, Voucher, VoucherLine } from '../types';
 import { db } from '../lib/firebase';
@@ -72,7 +73,7 @@ export default function PlantillasYCargaMasivaView({
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `Plantilla_Plan_Cuentas_${company.rut}.csv`;
+    link.download = `Plantilla_Plan_Cuentas_${formatearRut(company.rut)}.csv`;
     link.click();
   };
 
@@ -166,7 +167,7 @@ export default function PlantillasYCargaMasivaView({
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `Plantilla_Maestro_Auxiliares_${company.rut}.csv`;
+    link.download = `Plantilla_Maestro_Auxiliares_${formatearRut(company.rut)}.csv`;
     link.click();
   };
 
@@ -294,7 +295,7 @@ export default function PlantillasYCargaMasivaView({
     const worksheet = XLSX.utils.json_to_sheet(sampleData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Comprobantes');
-    XLSX.writeFile(workbook, `Plantilla_Comprobantes_Contables_${company.rut}.xlsx`);
+    XLSX.writeFile(workbook, `Plantilla_Comprobantes_Contables_${formatearRut(company.rut)}.xlsx`);
   };
 
   const downloadComprobantesTemplate = () => {
@@ -337,7 +338,7 @@ export default function PlantillasYCargaMasivaView({
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `Plantilla_Comprobantes_Contables_${company.rut}.csv`;
+    link.download = `Plantilla_Comprobantes_Contables_${formatearRut(company.rut)}.csv`;
     link.click();
   };
 

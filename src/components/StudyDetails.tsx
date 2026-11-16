@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import { useState, useEffect } from 'react';
 import { provisionAuthUser } from '../utils/adminApi';
 import { db } from '../lib/firebase';
@@ -761,7 +762,7 @@ export default function StudyDetails({ study: initialStudy, onBack, onCompanyCha
                           </span>
                         )}
                       </div>
-                      {admin.rut && <p className="text-xs font-mono text-slate-500">RUT: {admin.rut}</p>}
+                      {admin.rut && <p className="text-xs font-mono text-slate-500">RUT: {formatearRut(admin.rut)}</p>}
                     </div>
 
                     <span className={`text-[11px] font-bold px-2 py-0.5 rounded ${
@@ -861,7 +862,7 @@ export default function StudyDetails({ study: initialStudy, onBack, onCompanyCha
               <li key={comp.id} className="py-2.5 flex justify-between items-center text-xs">
                 <div>
                   <span className="font-semibold text-slate-900 block">{comp.name}</span>
-                  <span className="text-slate-500 font-mono text-[11px]">RUT: {comp.rut}</span>
+                  <span className="text-slate-500 font-mono text-[11px]">RUT: {formatearRut(comp.rut)}</span>
                 </div>
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
                   comp.estado === 'Inactivo' ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'

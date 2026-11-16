@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import { getNextVoucherNumber } from '../utils/voucherCounter';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { db, auth } from '../lib/firebase';
@@ -785,7 +786,7 @@ export default function LibroBancoColaborativoView({
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Cartola_Bancaria');
       const suffix = selectedPeriod === 'ACUMULADO' ? 'Acumulado_a_Hoy' : selectedPeriod;
-      XLSX.writeFile(wb, `Libro_Banco_Cartola_${company.rut}_${suffix}.xlsx`);
+      XLSX.writeFile(wb, `Libro_Banco_Cartola_${formatearRut(company.rut)}_${suffix}.xlsx`);
     } else {
       if (filteredLedgerEntries.length === 0) {
         alert('No hay movimientos contables para exportar.');
@@ -810,7 +811,7 @@ export default function LibroBancoColaborativoView({
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Libro_Mayor_Banco');
       const suffix = selectedPeriod === 'ACUMULADO' ? 'Acumulado_a_Hoy' : selectedPeriod;
-      XLSX.writeFile(wb, `Libro_Banco_Contable_${company.rut}_${suffix}.xlsx`);
+      XLSX.writeFile(wb, `Libro_Banco_Contable_${formatearRut(company.rut)}_${suffix}.xlsx`);
     }
   };
 
@@ -1339,7 +1340,7 @@ export default function LibroBancoColaborativoView({
                         {entry.auxiliaryName ? (
                           <div>
                             <span className="font-semibold text-slate-900 block truncate max-w-[180px]">{entry.auxiliaryName}</span>
-                            {entry.auxiliaryRut && <span className="font-mono text-[10px] text-slate-400">{entry.auxiliaryRut}</span>}
+                            {entry.auxiliaryRut && <span className="font-mono text-[10px] text-slate-400">{formatearRut(entry.auxiliaryRut)}</span>}
                           </div>
                         ) : '-'}
                       </td>

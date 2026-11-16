@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useMemo } from 'react';
 import { Company, Voucher, ChartOfAccount, FiscalPeriodYear } from '../types';
 import { generateSIIReportPDF } from '../utils/pdfGenerator';
@@ -220,7 +221,7 @@ export default function LibroDiarioView({
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Libro_Diario_${company.rut}_${periodFilter !== 'Todos' ? periodFilter : 'General'}.csv`);
+    link.setAttribute('download', `Libro_Diario_${formatearRut(company.rut)}_${periodFilter !== 'Todos' ? periodFilter : 'General'}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -666,7 +667,7 @@ export default function LibroDiarioView({
                               <td className="py-2 px-3 text-slate-600 font-sans">
                                 {line.auxiliaryRut ? (
                                   <div>
-                                    <span className="font-mono text-slate-900 font-semibold">{line.auxiliaryRut}</span>
+                                    <span className="font-mono text-slate-900 font-semibold">{formatearRut(line.auxiliaryRut)}</span>
                                     {line.auxiliaryName && <span className="block text-[11px] text-slate-500">{line.auxiliaryName}</span>}
                                   </div>
                                 ) : (

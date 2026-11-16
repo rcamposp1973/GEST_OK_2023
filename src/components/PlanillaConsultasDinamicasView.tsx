@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { db, auth } from '../lib/firebase';
 import {
@@ -874,7 +875,7 @@ export default function PlanillaConsultasDinamicasView({
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, `Nomina_${selectedBankFormat}`);
 
-    const fileName = `Nomina_Pagos_${selectedBankFormat}_${company.rut}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    const fileName = `Nomina_Pagos_${selectedBankFormat}_${formatearRut(company.rut)}_${new Date().toISOString().slice(0, 10)}.xlsx`;
     XLSX.writeFile(wb, fileName);
     notify.success(`Nómina de pagos exportada exitosamente (${selectedForPayroll.length} transferencias).`, 'Nómina Bancaria');
   };
@@ -1125,7 +1126,7 @@ export default function PlanillaConsultasDinamicasView({
 
     const header = [
       ['GESTOR CONTABLE - PIZARRA MÁGICA Y PLANILLA DINÁMICA DE CONSULTAS'],
-      [`Empresa: ${company.name} | RUT: ${company.rut}`],
+      [`Empresa: ${company.name} | RUT: ${formatearRut(company.rut)}`],
       [`Fecha de Emisión: ${new Date().toLocaleDateString('es-CL')} | Fecha Corte: ${normalizedCutoffDate}`],
       []
     ];
@@ -1189,7 +1190,7 @@ export default function PlanillaConsultasDinamicasView({
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Planilla Dinamica');
 
-    const fileName = `Planilla_${company.rut}_${normalizedCutoffDate}.xlsx`;
+    const fileName = `Planilla_${formatearRut(company.rut)}_${normalizedCutoffDate}.xlsx`;
     XLSX.writeFile(wb, fileName);
     notify.success(`Archivo Excel "${fileName}" generado exitosamente.`);
   };
@@ -1220,7 +1221,7 @@ export default function PlanillaConsultasDinamicasView({
         </head>
         <body>
           <h1>${company.name} - Planilla Dinámica de Consultas</h1>
-          <div class="sub">RUT: ${company.rut} | Fecha de Corte: ${normalizedCutoffDate} | Fuente: ${sourceType}</div>
+          <div class="sub">RUT: ${formatearRut(company.rut)} | Fecha de Corte: ${normalizedCutoffDate} | Fuente: ${sourceType}</div>
           <table>
             <thead>
               <tr>
@@ -2357,7 +2358,7 @@ export default function PlanillaConsultasDinamicasView({
                       <Building2 className="w-4 h-4 text-slate-400 shrink-0" />
                       <div>
                         <span className="font-bold text-slate-900 block">{c.name}</span>
-                        <span className="font-mono text-[10px] text-slate-500">RUT: {c.rut}</span>
+                        <span className="font-mono text-[10px] text-slate-500">RUT: {formatearRut(c.rut)}</span>
                       </div>
                     </label>
                   );

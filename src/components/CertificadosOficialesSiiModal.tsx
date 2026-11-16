@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useMemo } from 'react';
 import {
   FileText,
@@ -330,7 +331,7 @@ export const CertificadosOficialesSiiModal: React.FC<CertificadosOficialesSiiMod
       const area = document.getElementById('printable-certificates-area');
       if (area) {
         triggerIframePrint({
-          title: `Certificado_SII_${company.rut}_${selectedYear}`,
+          title: `Certificado_SII_${formatearRut(company.rut)}_${selectedYear}`,
           htmlContent: area.innerHTML
         });
       } else {
@@ -378,7 +379,7 @@ export const CertificadosOficialesSiiModal: React.FC<CertificadosOficialesSiiMod
         XLSX.utils.book_append_sheet(wb, wsDetail, `Detalle_${activeEmployeeCert.employee.rut.replace(/[^0-9kK]/g, '')}`);
       }
 
-      XLSX.writeFile(wb, `Certificados_N6_DJ1887_${company.rut}_AT${selectedYear + 1}.xlsx`);
+      XLSX.writeFile(wb, `Certificados_N6_DJ1887_${formatearRut(company.rut)}_AT${selectedYear + 1}.xlsx`);
     } else {
       // Hoja Resumen DJ 1879
       const summaryRows = honorariosCertificatesData.map((c) => ({
@@ -413,7 +414,7 @@ export const CertificadosOficialesSiiModal: React.FC<CertificadosOficialesSiiMod
         XLSX.utils.book_append_sheet(wb, wsDetail, `Detalle_${activeHonorarioCert.rut.replace(/[^0-9kK]/g, '')}`);
       }
 
-      XLSX.writeFile(wb, `Certificados_N2_DJ1879_${company.rut}_AT${selectedYear + 1}.xlsx`);
+      XLSX.writeFile(wb, `Certificados_N2_DJ1879_${formatearRut(company.rut)}_AT${selectedYear + 1}.xlsx`);
     }
   };
 
@@ -572,7 +573,7 @@ export const CertificadosOficialesSiiModal: React.FC<CertificadosOficialesSiiMod
                   <option value="ALL">-- Ver Primer Trabajador --</option>
                   {employeesCertificatesData.map((c) => (
                     <option key={c.employee.id} value={c.employee.id}>
-                      {c.employee.rut} - {c.employee.name}
+                      {formatearRut(c.employee.rut)} - {c.employee.name}
                     </option>
                   ))}
                 </select>
@@ -589,7 +590,7 @@ export const CertificadosOficialesSiiModal: React.FC<CertificadosOficialesSiiMod
                   <option value="ALL">-- Ver Primer Prestador --</option>
                   {honorariosCertificatesData.map((c) => (
                     <option key={c.rut} value={c.rut}>
-                      {c.rut} - {c.name}
+                      {formatearRut(c.rut)} - {c.name}
                     </option>
                   ))}
                 </select>
@@ -724,7 +725,7 @@ const SingleCertificadoN6Sheet: React.FC<SingleCertificadoN6SheetProps> = ({ com
           </div>
           <div>
             <span className="font-bold text-slate-700">RUT Empleador: </span>
-            <span className="font-mono font-bold text-indigo-900">{company.rut}</span>
+            <span className="font-mono font-bold text-indigo-900">{formatearRut(company.rut)}</span>
           </div>
           <div>
             <span className="font-bold text-slate-700">Giro Comercial: </span>
@@ -757,7 +758,7 @@ const SingleCertificadoN6Sheet: React.FC<SingleCertificadoN6SheetProps> = ({ com
           </div>
           <div>
             <span className="font-bold text-slate-700">RUT Trabajador: </span>
-            <span className="font-mono font-bold text-indigo-900">{employee.rut}</span>
+            <span className="font-mono font-bold text-indigo-900">{formatearRut(employee.rut)}</span>
           </div>
           <div>
             <span className="font-bold text-slate-700">Cargo / Función: </span>
@@ -911,7 +912,7 @@ const SingleCertificadoN2Sheet: React.FC<SingleCertificadoN2SheetProps> = ({ com
           </div>
           <div>
             <span className="font-bold text-slate-700">RUT Empresa: </span>
-            <span className="font-mono font-bold text-amber-900">{company.rut}</span>
+            <span className="font-mono font-bold text-amber-900">{formatearRut(company.rut)}</span>
           </div>
           <div>
             <span className="font-bold text-slate-700">Giro Comercial: </span>

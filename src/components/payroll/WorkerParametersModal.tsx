@@ -1,3 +1,4 @@
+import { formatearRut } from '../../utils/rutFormato';
 import React, { useState } from 'react';
 import { 
   Employee, PensionSystem, HealthSystem, HealthPlanType, ContractType 
@@ -102,7 +103,7 @@ export const WorkerParametersModal: React.FC<WorkerParametersModalProps> = ({
                 Modificar Parámetros del Trabajador
               </h2>
               <p className="text-xs text-slate-300">
-                {employee.name} &bull; RUT: <span className="font-mono font-bold text-amber-300">{employee.rut}</span> &bull; {employee.position || 'Colaborador'}
+                {employee.name} &bull; RUT: <span className="font-mono font-bold text-amber-300">{formatearRut(employee.rut)}</span> &bull; {employee.position || 'Colaborador'}
               </p>
             </div>
           </div>

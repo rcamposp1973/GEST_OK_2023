@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useEffect, useMemo } from 'react';
 import { FormattedAmountInput } from './FormattedAmountInput';
 import {
@@ -335,7 +336,7 @@ export default function VoucherLineDistributionModal({
             {sourceLine.auxiliaryRut && (
               <div>
                 <span className="text-slate-500 block text-[10px] uppercase font-bold">Auxiliar:</span>
-                <span className="font-mono text-slate-700 font-semibold">{sourceLine.auxiliaryRut}</span>
+                <span className="font-mono text-slate-700 font-semibold">{formatearRut(sourceLine.auxiliaryRut)}</span>
               </div>
             )}
             {sourceLine.documentRef && (

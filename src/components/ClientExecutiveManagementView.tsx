@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useMemo } from 'react';
 import {
   Company,
@@ -255,7 +256,7 @@ export default function ClientExecutiveManagementView({
             <span>{company.name}</span>
           </h2>
           <p className="text-xs text-slate-400 font-mono mt-0.5">
-            RUT: {company.rut} | Giro: {company.giro || 'Comercio y Servicios'}
+            RUT: {formatearRut(company.rut)} | Giro: {company.giro || 'Comercio y Servicios'}
           </p>
         </div>
 
@@ -660,7 +661,7 @@ export default function ClientExecutiveManagementView({
                       <td className="p-2.5 text-slate-600 font-mono whitespace-nowrap">{doc.fechaEmision}</td>
                       <td className="p-2.5 text-slate-700">{doc.tipoDoc}</td>
                       <td className="p-2.5 font-mono font-bold text-slate-900">{doc.folio}</td>
-                      <td className="p-2.5 font-mono text-slate-700">{doc.rutReceptor}</td>
+                      <td className="p-2.5 font-mono text-slate-700">{formatearRut(doc.rutReceptor)}</td>
                       <td className="p-2.5 font-semibold text-slate-900 truncate max-w-xs">{doc.razonSocialReceptor}</td>
                       <td className="p-2.5 text-right font-mono text-slate-700">${(doc.montoNeto || 0).toLocaleString('es-CL')}</td>
                       <td className="p-2.5 text-right font-mono text-slate-500">${(doc.montoIva || 0).toLocaleString('es-CL')}</td>
@@ -718,7 +719,7 @@ export default function ClientExecutiveManagementView({
                       <td className="p-2.5 text-slate-600 font-mono whitespace-nowrap">{doc.fechaEmision}</td>
                       <td className="p-2.5 text-slate-700">{doc.tipoDoc}</td>
                       <td className="p-2.5 font-mono font-bold text-slate-900">{doc.folio}</td>
-                      <td className="p-2.5 font-mono text-slate-700">{doc.rutEmisor}</td>
+                      <td className="p-2.5 font-mono text-slate-700">{formatearRut(doc.rutEmisor)}</td>
                       <td className="p-2.5 font-semibold text-slate-900 truncate max-w-xs">{doc.razonSocialEmisor}</td>
                       <td className="p-2.5 text-right font-mono text-slate-700">${(doc.montoNeto || 0).toLocaleString('es-CL')}</td>
                       <td className="p-2.5 text-right font-mono text-slate-500">${(doc.montoIva || 0).toLocaleString('es-CL')}</td>
@@ -777,7 +778,7 @@ export default function ClientExecutiveManagementView({
                     <tr key={idx} className="hover:bg-slate-50">
                       <td className="p-2.5 text-slate-600 font-mono">{doc.fechaEmision}</td>
                       <td className="p-2.5 font-mono font-bold text-slate-900">{doc.folio}</td>
-                      <td className="p-2.5 font-mono text-slate-700">{doc.rutReceptor}</td>
+                      <td className="p-2.5 font-mono text-slate-700">{formatearRut(doc.rutReceptor)}</td>
                       <td className="p-2.5 font-semibold text-slate-900">{doc.razonSocialReceptor}</td>
                       <td className="p-2.5 text-right font-mono text-slate-600">${(doc.montoTotal || 0).toLocaleString('es-CL')}</td>
                       <td className="p-2.5 text-right font-mono font-black text-amber-800">${(doc.saldoPendiente || doc.montoTotal || 0).toLocaleString('es-CL')}</td>
@@ -828,7 +829,7 @@ export default function ClientExecutiveManagementView({
                     <tr key={idx} className="hover:bg-slate-50">
                       <td className="p-2.5 text-slate-600 font-mono">{doc.fechaEmision}</td>
                       <td className="p-2.5 font-mono font-bold text-slate-900">{doc.folio}</td>
-                      <td className="p-2.5 font-mono text-slate-700">{doc.rutEmisor}</td>
+                      <td className="p-2.5 font-mono text-slate-700">{formatearRut(doc.rutEmisor)}</td>
                       <td className="p-2.5 font-semibold text-slate-900">{doc.razonSocialEmisor}</td>
                       <td className="p-2.5 text-right font-mono text-slate-600">${(doc.montoTotal || 0).toLocaleString('es-CL')}</td>
                       <td className="p-2.5 text-right font-mono font-black text-purple-800">${(doc.saldoPendiente || doc.montoTotal || 0).toLocaleString('es-CL')}</td>

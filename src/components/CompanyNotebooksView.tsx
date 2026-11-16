@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useEffect } from 'react';
 import { Company, ChartOfAccount, Voucher, RCVDocument, Auxiliary, UserRole } from '../types';
 import { db, auth } from '../lib/firebase';
@@ -91,7 +92,7 @@ export default function CompanyNotebooksView({
           id: 'nb_' + Date.now(),
           title: `Cuaderno Cierre Mensual - ${company.name}`,
           category: 'Tributario',
-          content: `# Cuaderno de Trabajo Inteligente\n\nEmpresa: ${company.name} (RUT: ${company.rut})\n\n### Objetivos del Cuaderno:\n- Revisión y cuadratura de saldos del Balance.\n- Verificación de documentos en RCV.\n- Notas para el cierre de período y reuniones con gerencia.`,
+          content: `# Cuaderno de Trabajo Inteligente\n\nEmpresa: ${company.name} (RUT: ${formatearRut(company.rut)})\n\n### Objetivos del Cuaderno:\n- Revisión y cuadratura de saldos del Balance.\n- Verificación de documentos en RCV.\n- Notas para el cierre de período y reuniones con gerencia.`,
           tasks: [
             { id: 't1', text: 'Validar conciliación bancaria del mes', completed: false },
             { id: 't2', text: 'Revisar cuadratura de auxiliar de clientes y proveedores', completed: true },
@@ -331,7 +332,7 @@ export default function CompanyNotebooksView({
               </span>
             </div>
             <p className="text-xs text-slate-300 mt-0.5">
-              Empresa: <strong className="text-white">{company.name}</strong> (RUT: {company.rut}) • Privado y exclusivo para esta empresa.
+              Empresa: <strong className="text-white">{company.name}</strong> (RUT: {formatearRut(company.rut)}) • Privado y exclusivo para esta empresa.
             </p>
           </div>
         </div>

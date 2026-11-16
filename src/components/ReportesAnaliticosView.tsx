@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { db, auth } from '../lib/firebase';
 import { collection, doc, getDoc, setDoc } from 'firebase/firestore';
@@ -456,7 +457,7 @@ export default function ReportesAnaliticosView({
         const eiInfo = resolveExpenseItemLabel(l.expenseItem);
         const pInfo = l.project ? (projectsMap.get(l.project)?.name ? `${projectsMap.get(l.project)!.code} - ${projectsMap.get(l.project)!.name}` : l.project) : '(Sin Proyecto)';
         const prodInfo = l.product ? (productsMap.get(l.product)?.name ? `${productsMap.get(l.product)!.code} - ${productsMap.get(l.product)!.name}` : l.product) : '(Sin Producto)';
-        const auxLabel = l.auxiliaryRut ? `${l.auxiliaryRut} ${l.auxiliaryName ? '- ' + l.auxiliaryName : ''}` : '(Sin Auxiliar)';
+        const auxLabel = l.auxiliaryRut ? `${formatearRut(l.auxiliaryRut)} ${l.auxiliaryName ? '- ' + l.auxiliaryName : ''}` : '(Sin Auxiliar)';
 
         list.push({
           voucherId: v.id,
@@ -1180,7 +1181,7 @@ export default function ReportesAnaliticosView({
     });
 
     const csvContent = '\uFEFF' + [
-      `"REPORTE MATRIZ DINAMICA DE ANALISIS - ${company.name} (RUT: ${company.rut})"`,
+      `"REPORTE MATRIZ DINAMICA DE ANALISIS - ${company.name} (RUT: ${formatearRut(company.rut)})"`,
       `"AÑO FISCAL: ${selectedYear} | GENERADO: ${new Date().toLocaleDateString('es-CL')}"`,
       '',
       headers.map(h => `"${h}"`).join(';'),
@@ -1190,7 +1191,7 @@ export default function ReportesAnaliticosView({
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `Matriz_Analisis_${company.rut}_${selectedYear}.csv`;
+    link.download = `Matriz_Analisis_${formatearRut(company.rut)}_${selectedYear}.csv`;
     link.click();
   };
 
@@ -1212,7 +1213,7 @@ export default function ReportesAnaliticosView({
     ].join(';'));
 
     const csvContent = '\uFEFF' + [
-      `"REPORTE ANALISIS DINAMICO DE VENTAS - ${company.name} (RUT: ${company.rut})"`,
+      `"REPORTE ANALISIS DINAMICO DE VENTAS - ${company.name} (RUT: ${formatearRut(company.rut)})"`,
       `"AÑO FISCAL: ${selectedYear} | COMPARATIVA: ${salesCompareMode === 'PRIOR_YEAR' ? 'AÑO ANTERIOR' : 'PRESUPUESTO'}"`,
       '',
       headers.map(h => `"${h}"`).join(';'),
@@ -1222,7 +1223,7 @@ export default function ReportesAnaliticosView({
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `Analisis_Ventas_${company.rut}_${selectedYear}.csv`;
+    link.download = `Analisis_Ventas_${formatearRut(company.rut)}_${selectedYear}.csv`;
     link.click();
   };
 
@@ -1270,11 +1271,11 @@ export default function ReportesAnaliticosView({
           <button
             onClick={() => {
               triggerIframePrint({
-                title: `Reporte_Analitico_${company.rut}_${selectedYear}`,
+                title: `Reporte_Analitico_${formatearRut(company.rut)}_${selectedYear}`,
                 htmlContent: `
                   <div class="header-box">
                     <h2>REPORTE ANALÍTICO Y MATRIZ MULTIDIMENSIONAL</h2>
-                    <p class="font-bold">${company.name.toUpperCase()} (RUT: ${company.rut})</p>
+                    <p class="font-bold">${company.name.toUpperCase()} (RUT: ${formatearRut(company.rut)})</p>
                     <p style="color:#64748b;">Ejercicio Fiscal: ${selectedYear} &bull; Emisión: ${new Date().toLocaleString('es-CL')}</p>
                   </div>
                   <p style="margin-top:20px;">Informe generado desde la Matriz de Consultas Analíticas del Sistema ERP Gest_OK.</p>
@@ -2205,7 +2206,7 @@ export default function ReportesAnaliticosView({
                     {salesAnalysisData.clientsList.slice(0, 30).map((c, idx) => (
                       <tr key={c.rut} className="hover:bg-slate-50 transition-colors">
                         <td className="py-2 px-3 text-slate-400 font-mono">{idx + 1}</td>
-                        <td className="py-2 px-3 font-mono font-semibold text-slate-900">{c.rut}</td>
+                        <td className="py-2 px-3 font-mono font-semibold text-slate-900">{formatearRut(c.rut)}</td>
                         <td className="py-2 px-3 font-medium text-slate-800 truncate max-w-xs">{c.name}</td>
                         <td className="py-2 px-3 text-right font-mono font-bold text-indigo-950">
                           ${Math.round(c.netAmount).toLocaleString('es-CL')}

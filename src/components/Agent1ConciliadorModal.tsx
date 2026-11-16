@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useMemo } from 'react';
 import { getNextVoucherNumber } from '../utils/voucherCounter';
 import { 
@@ -248,7 +249,7 @@ export default function Agent1ConciliadorModal({
             <div className="flex items-center gap-2 text-indigo-900">
               <ShieldCheck className="w-4 h-4 text-indigo-600 shrink-0" />
               <span>
-                <strong>Contexto Aislado:</strong> {company.name} (RUT: {company.rut}) | Cuenta: <strong>{bankAccount?.name || 'Banco'}</strong> ({bankAccount?.code}) | Período: <strong>{period}</strong>
+                <strong>Contexto Aislado:</strong> {company.name} (RUT: {formatearRut(company.rut)}) | Cuenta: <strong>{bankAccount?.name || 'Banco'}</strong> ({bankAccount?.code}) | Período: <strong>{period}</strong>
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -431,7 +432,7 @@ export default function Agent1ConciliadorModal({
                               </div>
                               {result.detectedEntity?.rut && (
                                 <div className="text-[10px] text-slate-500 font-mono">
-                                  RUT: {result.detectedEntity.rut}
+                                  RUT: {formatearRut(result.detectedEntity.rut)}
                                 </div>
                               )}
                             </td>

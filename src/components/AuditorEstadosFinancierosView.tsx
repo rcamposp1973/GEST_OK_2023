@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useMemo } from 'react';
 import { Company, Voucher, ChartOfAccount, FiscalPeriodYear, Auxiliary, BankReconciliation } from '../types';
 import { getNaturaleza, getRubroER } from '../utils/ifrsClassification';
@@ -889,7 +890,7 @@ export default function AuditorEstadosFinancierosView({
 
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.text(`EMPRESA: ${company.name.toUpperCase()}  |  RUT: ${company.rut}  |  EJERCICIO: ${selectedYear}`, 14, 18);
+    doc.text(`EMPRESA: ${company.name.toUpperCase()}  |  RUT: ${formatearRut(company.rut)}  |  EJERCICIO: ${selectedYear}`, 14, 18);
     doc.text(`FECHA DE DICTAMEN: ${new Date().toLocaleDateString('es-CL')}  |  SISTEMA DE GESTIÓN CONTABLE Y AUDITORÍA GEST_OK`, 14, 23);
 
     // Caja de Opinión y Score
@@ -1342,7 +1343,7 @@ export default function AuditorEstadosFinancierosView({
                 </span>
               </h3>
               <p className="text-xs text-slate-700 leading-relaxed">
-                Hemos auditado los estados financieros de <strong>{company.name}</strong> (RUT: {company.rut}), que comprenden el <strong>Balance General de 8 Columnas (Tributario)</strong>, el <strong>Estado de Situación Financiera Clasificado (IFRS)</strong> y el <strong>Estado de Resultados</strong> por el período terminado al 31 de diciembre de {selectedYear}.
+                Hemos auditado los estados financieros de <strong>{company.name}</strong> (RUT: {formatearRut(company.rut)}), que comprenden el <strong>Balance General de 8 Columnas (Tributario)</strong>, el <strong>Estado de Situación Financiera Clasificado (IFRS)</strong> y el <strong>Estado de Resultados</strong> por el período terminado al 31 de diciembre de {selectedYear}.
               </p>
               <p className="text-xs text-slate-700 leading-relaxed mt-2">
                 {auditOpinion === 'LIMPIA' && (
@@ -1740,7 +1741,7 @@ export default function AuditorEstadosFinancierosView({
                 Al Directorio y Accionistas de <strong>{company.name}</strong>
               </p>
               <p className="text-xs text-slate-500">
-                RUT: {company.rut} | Giro: {company.giro || 'Servicios Generales'}
+                RUT: {formatearRut(company.rut)} | Giro: {company.giro || 'Servicios Generales'}
               </p>
             </div>
             <div className="text-right text-xs">

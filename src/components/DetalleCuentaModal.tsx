@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useEffect, useMemo, useState } from 'react';
 import { X } from 'lucide-react';
 import { collection, getDocs } from 'firebase/firestore';
@@ -85,7 +86,7 @@ export default function DetalleCuentaModal({ account, cuentasExtra, soloRut, vou
     return Array.from(m.values()).sort((a, b) => Math.abs(b.debe - b.haber) - Math.abs(a.debe - a.haber));
   };
 
-  const porAux = useMemo(() => agrupar(l => l.rut, l => (l.rut ? `${l.rut} ${l.auxiliar}` : SIN)), [lineas]);
+  const porAux = useMemo(() => agrupar(l => l.rut, l => (l.rut ? `${formatearRut(l.rut)} ${l.auxiliar}` : SIN)), [lineas]);
   const porCC = useMemo(() => agrupar(l => l.cc), [lineas]);
   const porItem = useMemo(() => agrupar(l => l.item), [lineas]);
   const porProy = useMemo(() => agrupar(l => l.proyecto), [lineas]);
@@ -218,7 +219,7 @@ export default function DetalleCuentaModal({ account, cuentasExtra, soloRut, vou
                   return (
                     <React.Fragment key={a.rut}>
                       <tr className="border-t border-slate-200 bg-slate-50 cursor-pointer hover:bg-slate-100" onClick={() => setExpandidos(p => ({ ...p, [a.rut]: !abierto }))}>
-                        <td className="px-1.5 py-1 font-bold">{abierto ? '▾' : '▸'} {a.rut === SIN ? SIN : `${a.rut} ${a.nombre}`}</td>
+                        <td className="px-1.5 py-1 font-bold">{abierto ? '▾' : '▸'} {a.rut === SIN ? SIN : `${formatearRut(a.rut)} ${a.nombre}`}</td>
                         <td className="px-1.5 py-1 text-right">{a.docs.length}</td>
                         <td className="px-1.5 py-1 text-right font-mono">{fmt(a.docs.reduce((s, d) => s + d.debe, 0))}</td>
                         <td className="px-1.5 py-1 text-right font-mono">{fmt(a.docs.reduce((s, d) => s + d.haber, 0))}</td>

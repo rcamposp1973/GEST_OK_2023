@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useMemo, useEffect } from 'react';
 import { periodosParaSelector } from '../utils/periodUtils';
 import DetalleCuentaModal from './DetalleCuentaModal';
@@ -329,7 +330,7 @@ export default function BalanceIFRSView({
   // Export CSV
   const handleExportCSV = () => {
     const rows = [
-      ['BALANCE CLASIFICADO IFRS / FECU (ESTADO DE SITUACIÓN FINANCIERA)', `"${company.name}"`, `RUT: ${company.rut}`],
+      ['BALANCE CLASIFICADO IFRS / FECU (ESTADO DE SITUACIÓN FINANCIERA)', `"${company.name}"`, `RUT: ${formatearRut(company.rut)}`],
       ['Período:', periodFilter !== 'Todos' ? periodFilter : 'Todo el Ejercicio'],
       ['Principio Contable:', 'Partida Doble: Activo = Pasivo + Patrimonio Neto'],
       [''],
@@ -375,7 +376,7 @@ export default function BalanceIFRSView({
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Balance_Clasificado_IFRS_${company.rut}_${periodFilter !== 'Todos' ? periodFilter : 'General'}.csv`);
+    link.setAttribute('download', `Balance_Clasificado_IFRS_${formatearRut(company.rut)}_${periodFilter !== 'Todos' ? periodFilter : 'General'}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

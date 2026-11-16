@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useMemo } from 'react';
 import { Company, Voucher, RCVDocument, BankReconciliation, ChartOfAccount } from '../types';
 import { 
@@ -186,7 +187,7 @@ ${f29Stats.impuestoIvaEstimado > 0
 - Estado general: ${auditAnalysis.some(a => a.level === 'CRITICO') ? 'Requiere corrección inmediata antes del cierre' : 'Estructura contable consistente y balanceada'}.`;
       } else {
         ans = ` **Respuesta Agéntica Pulso Contable 2040**:
-La empresa **${company.name}** (RUT: ${company.rut}) cuenta con **${vouchers.length} comprobantes** y **${rcvDocuments.length} documentos RCV**.
+La empresa **${company.name}** (RUT: ${formatearRut(company.rut)}) cuenta con **${vouchers.length} comprobantes** y **${rcvDocuments.length} documentos RCV**.
 - Régimen Tributario: **${company.regimenTributario || 'Pro Pyme General (14 D3)'}**.
 - Tasa PPM configurada: **${company.tasaPpm || 0.25}%**.
 - Todos los cruces de comprobantes y RCV están siendo monitoreados en tiempo real.`;
@@ -484,7 +485,7 @@ La empresa **${company.name}** (RUT: ${company.rut}) cuenta con **${vouchers.len
             <div className="font-bold text-indigo-900 border-b border-slate-200 pb-1">
               INFORME CONTABLE Y TRIBUTARIO MENSUAL - ESTUDIO CONTABLE
             </div>
-            <p><strong>Sociedad:</strong> {company.name} | <strong>RUT:</strong> {company.rut}</p>
+            <p><strong>Sociedad:</strong> {company.name} | <strong>RUT:</strong> {formatearRut(company.rut)}</p>
             <p><strong>Resumen de Actividad:</strong> Se han auditado {vouchers.length} asientos contables y {rcvDocuments.length} documentos tributarios electrónicos emitidos y recibidos ante el SII.</p>
             <p><strong>Diagnóstico de Cuadratura:</strong> {auditAnalysis.length === 0 ? 'Balance 8 Columnas cuadrado al 100% sin partidas pendientes.' : `Se registran ${auditAnalysis.length} partidas en proceso de regularización.`}</p>
             <p><strong>Carga Tributaria Proyectada:</strong> IVA F29 estimado en ${f29Stats.impuestoIvaEstimado.toLocaleString('es-CL')} con PPM sugerido de ${f29Stats.ppmSugerido.toLocaleString('es-CL')}.</p>

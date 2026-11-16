@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useMemo } from 'react';
 import { 
   FileText, Download, CheckCircle2, AlertTriangle, 
@@ -73,9 +74,9 @@ export const DeclaracionesJuradasView: React.FC<DeclaracionesJuradasViewProps> =
 
   // Exportar TXT Estándar SII para DJ 1887
   const handleExportDJ1887Txt = () => {
-    let txt = `1887;${company.rut};${selectedYear + 1};${dj1887Data.length}\n`;
+    let txt = `1887;${formatearRut(company.rut)};${selectedYear + 1};${dj1887Data.length}\n`;
     dj1887Data.forEach((row, idx) => {
-      txt += `${idx + 1};${row.rut};${row.rentasAfectas};${row.impuestoUnico};${row.leyesSociales};${row.noGravadas}\n`;
+      txt += `${idx + 1};${formatearRut(row.rut)};${row.rentasAfectas};${row.impuestoUnico};${row.leyesSociales};${row.noGravadas}\n`;
     });
 
     const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
@@ -131,9 +132,9 @@ export const DeclaracionesJuradasView: React.FC<DeclaracionesJuradasViewProps> =
 
   // Exportar TXT Estándar SII para DJ 1879
   const handleExportDJ1879Txt = () => {
-    let txt = `1879;${company.rut};${selectedYear + 1};${dj1879Data.length}\n`;
+    let txt = `1879;${formatearRut(company.rut)};${selectedYear + 1};${dj1879Data.length}\n`;
     dj1879Data.forEach((row, idx) => {
-      txt += `${idx + 1};${row.rut};${row.bruto};${row.retencion};${row.retPrestamo};${row.liquido}\n`;
+      txt += `${idx + 1};${formatearRut(row.rut)};${row.bruto};${row.retencion};${row.retPrestamo};${row.liquido}\n`;
     });
 
     const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
@@ -308,7 +309,7 @@ export const DeclaracionesJuradasView: React.FC<DeclaracionesJuradasViewProps> =
               <tbody className="divide-y divide-slate-100">
                 {dj1887Data.map((row, idx) => (
                   <tr key={idx} className="hover:bg-slate-50">
-                    <td className="p-2.5 font-mono font-bold text-indigo-900">{row.rut}</td>
+                    <td className="p-2.5 font-mono font-bold text-indigo-900">{formatearRut(row.rut)}</td>
                     <td className="p-2.5 font-medium text-slate-900">{row.nombre}</td>
                     <td className="p-2.5 text-slate-600">{row.cargo}</td>
                     <td className="p-2.5 text-center font-bold">{row.mesesTrabajados}</td>
@@ -421,7 +422,7 @@ export const DeclaracionesJuradasView: React.FC<DeclaracionesJuradasViewProps> =
               <tbody className="divide-y divide-slate-100">
                 {dj1879Data.map((row, idx) => (
                   <tr key={idx} className="hover:bg-slate-50">
-                    <td className="p-2.5 font-mono font-bold text-amber-900">{row.rut}</td>
+                    <td className="p-2.5 font-mono font-bold text-amber-900">{formatearRut(row.rut)}</td>
                     <td className="p-2.5 font-medium text-slate-900">{row.name}</td>
                     <td className="p-2.5 text-center font-bold">{row.count}</td>
                     <td className="p-2.5 text-right font-mono">${row.bruto.toLocaleString('es-CL')}</td>

@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../lib/firebase';
 import { collection, getDocs } from 'firebase/firestore';
@@ -154,7 +155,7 @@ export default function InternalCompanyAccountingCopilot({
     {
       id: 'init-1',
       sender: 'ai',
-      text: ` ¡Hola! Soy **Junior**, tu Asistente y Copiloto Contable para **${company.name}** (RUT: ${company.rut}).\n\nEstoy especializado en **Conciliación Bancaria, Facturas Pendientes por RUT, Normativa Tributaria Chilena (LIR, IVA, F29)** e **IFRS (NIC 1, NIC 2, NIC 16, Partida Doble)**.\n\nPuedo ayudarte a **buscar facturas pendientes de un RUT**, auditar tus libros, guiarte para anular cartolas y conciliar tu banco. ¿En qué te ayudo hoy?`,
+      text: ` ¡Hola! Soy **Junior**, tu Asistente y Copiloto Contable para **${company.name}** (RUT: ${formatearRut(company.rut)}).\n\nEstoy especializado en **Conciliación Bancaria, Facturas Pendientes por RUT, Normativa Tributaria Chilena (LIR, IVA, F29)** e **IFRS (NIC 1, NIC 2, NIC 16, Partida Doble)**.\n\nPuedo ayudarte a **buscar facturas pendientes de un RUT**, auditar tus libros, guiarte para anular cartolas y conciliar tu banco. ¿En qué te ayudo hoy?`,
       time: 'Ahora',
       suggestions: [
         'Buscar facturas pendientes por RUT',

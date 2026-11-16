@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useMemo } from 'react';
 import {
   Company,
@@ -580,7 +581,7 @@ export default function IndicadoresFinancierosView({
                 Tablero de Indicadores Financieros, KPIs & Inteligencia de Negocios
               </h3>
               <p className="text-xs text-slate-500">
-                {company.name} (RUT: {company.rut}) &bull; Análisis de Liquidez, Márgenes, Regla 80/20, Gastos y Rendimiento
+                {company.name} (RUT: {formatearRut(company.rut)}) &bull; Análisis de Liquidez, Márgenes, Regla 80/20, Gastos y Rendimiento
               </p>
             </div>
           </div>
@@ -629,13 +630,13 @@ export default function IndicadoresFinancierosView({
               const formatMoney = (n: number) => '$' + Math.round(n || 0).toLocaleString('es-CL');
 
               triggerIframePrint({
-                title: `Informe_Indicadores_Financieros_${company.rut}_${selectedYear}`,
+                title: `Informe_Indicadores_Financieros_${formatearRut(company.rut)}_${selectedYear}`,
                 htmlContent: `
                   <div class="header-box">
                     <div style="display:flex; justify-between; align-items:flex-start;">
                       <div>
                         <h2>INFORME DE INDICADORES FINANCIEROS Y KPIS DE NEGOCIO</h2>
-                        <p class="font-bold">${company.name.toUpperCase()} (RUT: ${company.rut})</p>
+                        <p class="font-bold">${company.name.toUpperCase()} (RUT: ${formatearRut(company.rut)})</p>
                         <p style="color:#64748b;">Período: Ejercicio ${selectedYear} &bull; Acumulado a ${cutoffName}</p>
                       </div>
                       <div style="text-align:right; font-size:9px; color:#64748b;">
@@ -1050,7 +1051,7 @@ export default function IndicadoresFinancierosView({
                   {(paretoType === 'clients' ? paretoData.clients : paretoData.suppliers).map((item) => (
                     <tr key={item.rut} onClick={() => setDetSaldo({ cuentas: (paretoType === 'clients' ? paretoData.resumen.clients : paretoData.resumen.suppliers).cuentas, rut: item.rut, name: item.name, tipo: paretoType })} title="Ver los documentos abiertos y movimientos de este auxiliar" className={`hover:bg-indigo-100/40 transition-colors cursor-pointer ${item.isCore80 ? 'bg-indigo-50/20' : ''}`}>
                       <td className="p-2.5 text-center font-bold text-slate-600">{item.rank}</td>
-                      <td className="p-2.5 font-mono font-semibold text-slate-900">{item.rut}</td>
+                      <td className="p-2.5 font-mono font-semibold text-slate-900">{formatearRut(item.rut)}</td>
                       <td className="p-2.5 font-medium text-slate-800">{item.name}</td>
                       <td className="p-2.5 text-right font-mono font-bold text-slate-900">
                         ${item.total.toLocaleString('es-CL')}

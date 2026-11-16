@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import { plazoPagoF29 } from '../utils/plazoPagoF29';
 import { ivaCreditoCoherente } from '../utils/rcvIva';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
@@ -1012,7 +1013,7 @@ export default function Formulario29View({
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `F29_${company.rut}_${selectedPeriod}.csv`;
+    link.download = `F29_${formatearRut(company.rut)}_${selectedPeriod}.csv`;
     link.click();
   };
 
@@ -2470,7 +2471,7 @@ export default function Formulario29View({
                       <td className="py-2 px-2.5 text-slate-600">{d.fechaEmision}</td>
                       <td className="py-2 px-2.5 font-sans font-semibold">{d.tipoDoc}</td>
                       <td className="py-2 px-2.5 font-bold text-indigo-700">{d.folio}</td>
-                      <td className="py-2 px-3 font-semibold text-slate-800">{d.rutEmisor}</td>
+                      <td className="py-2 px-3 font-semibold text-slate-800">{formatearRut(d.rutEmisor)}</td>
                       <td className="py-2 px-3 font-sans truncate max-w-xs text-slate-900">{d.razonSocialEmisor}</td>
                       <td className="py-2 px-2.5 text-right text-slate-700">${(d.montoNeto || 0).toLocaleString('es-CL')}</td>
                       <td className="py-2 px-2.5 text-right font-bold text-indigo-700">${(d.montoIva || 0).toLocaleString('es-CL')}</td>
@@ -2866,7 +2867,7 @@ export default function Formulario29View({
                 <div className="border-b pb-3 flex justify-between items-center bg-slate-50 p-3 rounded-lg">
                   <div>
                     <h5 className="font-black text-slate-900 uppercase text-sm tracking-wide">{company.name || company.razonSocial}</h5>
-                    <p className="text-slate-600 text-[11px]">RUT: {company.rut}</p>
+                    <p className="text-slate-600 text-[11px]">RUT: {formatearRut(company.rut)}</p>
                   </div>
                 </div>
 

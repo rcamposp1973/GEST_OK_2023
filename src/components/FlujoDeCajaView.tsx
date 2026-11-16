@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../lib/firebase';
 import { collection, getDocs, addDoc, updateDoc, doc, deleteDoc } from 'firebase/firestore';
@@ -348,7 +349,7 @@ export default function FlujoDeCajaView({
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Flujo_Caja_Hibrido_${company.rut}_${selectedYear}.csv`);
+    link.setAttribute('download', `Flujo_Caja_Hibrido_${formatearRut(company.rut)}_${selectedYear}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

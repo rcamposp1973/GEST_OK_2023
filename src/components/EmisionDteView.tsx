@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
 import { collection, getDocs, addDoc, updateDoc, doc, setDoc, deleteDoc } from 'firebase/firestore';
@@ -198,7 +199,7 @@ export default function EmisionDteView({
           `   Inscríbela en la pestaña "Credenciales & Firma Digital" de la empresa.\n\n` +
           `2. Si descargas tu RCV oficial de sii.cl:\n` +
           `   Ve al menú "CARGA RCV/BH" -> "Plantillas Excel y Cargas Masivas" y arrastra tu archivo .CSV/.TXT real de Impuestos Internos.\n\n` +
-          `3. Verifica que la Clave Tributaria del RUT ${company.rut} o del Representante Legal sea la correcta.`
+          `3. Verifica que la Clave Tributaria del RUT ${formatearRut(company.rut)} o del Representante Legal sea la correcta.`
         );
         return;
       }
@@ -522,9 +523,9 @@ export default function EmisionDteView({
     }));
 
     if (freshRutRep || freshNombreRep) {
-      alert(`Datos rescatados exitosamente desde la Ficha de la Sociedad:\n\n- Representante Legal: ${freshNombreRep} (${freshRutRep})\n- Empresa / RUT: ${company.name} (${company.rut})\n- Comuna / Ciudad: ${freshComuna}, ${freshCiudad}\n\nPuedes ingresar o modificar las Claves SII a continuación si aún no las has ingresado y presionar "Guardar Credenciales Duales".`);
+      alert(`Datos rescatados exitosamente desde la Ficha de la Sociedad:\n\n- Representante Legal: ${freshNombreRep} (${freshRutRep})\n- Empresa / RUT: ${company.name} (${formatearRut(company.rut)})\n- Comuna / Ciudad: ${freshComuna}, ${freshCiudad}\n\nPuedes ingresar o modificar las Claves SII a continuación si aún no las has ingresado y presionar "Guardar Credenciales Duales".`);
     } else {
-      alert(`La Ficha de la Sociedad "${company.name}"no tenía registrado el RUT o Nombre del Representante Legal.\n\nSe han sincronizado la Razón Social y Domicilio (${company.rut}, ${freshComuna}). Por favor ingresa el RUT del Representante en el campo correspondiente.`);
+      alert(`La Ficha de la Sociedad "${company.name}"no tenía registrado el RUT o Nombre del Representante Legal.\n\nSe han sincronizado la Razón Social y Domicilio (${formatearRut(company.rut)}, ${freshComuna}). Por favor ingresa el RUT del Representante en el campo correspondiente.`);
     }
   };
 
@@ -634,7 +635,7 @@ export default function EmisionDteView({
       setClaveCompInput(compClave);
       setClaveCertInput(certClave);
       await onRefreshData();
-      alert(` ¡Credenciales e Integración SII Guardadas con Éxito!\n\n- Modo Emisión: ${updatedConfig.ambiente}\n- Proveedor API: ${updatedConfig.siiApiProvider}\n- URL API: ${updatedConfig.siiApiUrl || 'Por defecto'}\n- API Key: ${updatedConfig.siiApiKey ? '••••' + updatedConfig.siiApiKey.slice(-4) : 'Sin API Key'}\n- Sociedad: ${company.name} (${company.rut})\n- Rep. Legal: ${config.nombreRepresentante} (${config.rutRepresentante})`);
+      alert(` ¡Credenciales e Integración SII Guardadas con Éxito!\n\n- Modo Emisión: ${updatedConfig.ambiente}\n- Proveedor API: ${updatedConfig.siiApiProvider}\n- URL API: ${updatedConfig.siiApiUrl || 'Por defecto'}\n- API Key: ${updatedConfig.siiApiKey ? '••••' + updatedConfig.siiApiKey.slice(-4) : 'Sin API Key'}\n- Sociedad: ${company.name} (${formatearRut(company.rut)})\n- Rep. Legal: ${config.nombreRepresentante} (${config.rutRepresentante})`);
     } catch (err) {
       console.error('Error saving DTE config:', err);
       alert('Error al guardar la configuración de Factura Electrónica.');
@@ -2036,7 +2037,7 @@ export default function EmisionDteView({
                               <td className="p-3 text-slate-600">{doc.fechaEmision}</td>
                               <td className="p-3 font-sans">
                                 <div className="font-semibold text-slate-900">{doc.receptor?.razonSocial}</div>
-                                <div className="text-[11px] text-slate-500 font-mono">{doc.receptor?.rut}</div>
+                                <div className="text-[11px] text-slate-500 font-mono">{formatearRut(doc.receptor?.rut)}</div>
                               </td>
                               <td className="p-3 text-right font-bold text-slate-900">
                                 ${doc.montoTotal?.toLocaleString('es-CL')}
@@ -2077,7 +2078,7 @@ export default function EmisionDteView({
                                     type="button"
                                     onClick={() => {
                                       const xml = generateDteXml(doc, config);
-                                      downloadDteXml(xml, `DTE_T${doc.tipoDTE}_F${doc.folio}_${doc.emisor?.rut}.xml`);
+                                      downloadDteXml(xml, `DTE_T${doc.tipoDTE}_F${doc.folio}_${formatearRut(doc.emisor?.rut)}.xml`);
                                     }}
                                     className="px-2 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border border-emerald-300 text-[11px] font-bold rounded transition-colors cursor-pointer"
                                     title="Descargar XML DTE"
@@ -2547,7 +2548,7 @@ export default function EmisionDteView({
 
                   {/* RED BOX SII DTE */}
                   <div className="border-4 border-red-600 p-4 text-center text-red-600 rounded-lg min-w-[240px] font-mono bg-red-50/20">
-                    <p className="font-bold text-sm">R.U.T.: {previewDoc.emisor?.rut}</p>
+                    <p className="font-bold text-sm">R.U.T.: {formatearRut(previewDoc.emisor?.rut)}</p>
                     <p className="font-black text-xs uppercase tracking-wide my-1">{previewDoc.tipoDTELabel}</p>
                     <p className="font-bold text-base">N° {previewDoc.folio}</p>
                     <p className="text-[10px] text-red-700 font-sans mt-1">S.I.I. - {previewDoc.emisor?.ciudad?.toUpperCase() || 'SANTIAGO'}</p>
@@ -2563,7 +2564,7 @@ export default function EmisionDteView({
                     </div>
                     <div>
                       <span className="font-bold text-slate-700">R.U.T.: </span>
-                      <span className="font-mono font-bold text-slate-900">{previewDoc.receptor?.rut}</span>
+                      <span className="font-mono font-bold text-slate-900">{formatearRut(previewDoc.receptor?.rut)}</span>
                     </div>
                     <div>
                       <span className="font-bold text-slate-700">Giro: </span>
@@ -2654,7 +2655,7 @@ export default function EmisionDteView({
                   type="button"
                   onClick={() => {
                     const xml = generateDteXml(previewDoc, config);
-                    downloadDteXml(xml, `DTE_T${previewDoc.tipoDTE}_F${previewDoc.folio}_${previewDoc.emisor?.rut}.xml`);
+                    downloadDteXml(xml, `DTE_T${previewDoc.tipoDTE}_F${previewDoc.folio}_${formatearRut(previewDoc.emisor?.rut)}.xml`);
                   }}
                   className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5 shadow-xs"
                 >

@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState } from 'react';
 import { Company } from '../types';
 import { IFRSPrintParentRubro, generateBalanceIFRSPDF } from '../utils/balanceIfrsPdfGenerator';
@@ -184,7 +185,7 @@ export const BalanceIFRSPrintModal: React.FC<BalanceIFRSPrintModalProps> = ({
                   ESTADO DE SITUACIÓN FINANCIERA (BALANCE CLASIFICADO IFRS)
                 </h1>
                 <p className="text-xs font-bold text-slate-700 mt-1">{company.name}</p>
-                <p className="text-[11px] text-slate-500">RUT: {company.rut} • {company.giro || 'Servicios'}</p>
+                <p className="text-[11px] text-slate-500">RUT: {formatearRut(company.rut)} • {company.giro || 'Servicios'}</p>
                 <p className="text-[11px] text-slate-500">{company.address || 'Chile'}</p>
               </div>
               <div className="text-right text-[11px] text-slate-500">
@@ -353,7 +354,7 @@ export const BalanceIFRSPrintModal: React.FC<BalanceIFRSPrintModalProps> = ({
               <div>
                 <div className="border-b border-slate-400 w-3/4 mx-auto mb-2"></div>
                 <p className="font-bold text-slate-800">REPRESENTANTE LEGAL</p>
-                <p className="text-[11px] text-slate-500">RUT: {company.rut}</p>
+                <p className="text-[11px] text-slate-500">RUT: {formatearRut(company.rut)}</p>
               </div>
               <div>
                 <div className="border-b border-slate-400 w-3/4 mx-auto mb-2"></div>

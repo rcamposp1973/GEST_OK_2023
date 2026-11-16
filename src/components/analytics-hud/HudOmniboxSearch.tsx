@@ -1,3 +1,4 @@
+import { formatearRut } from '../../utils/rutFormato';
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Search, X, Layers, Users, Building2, Tag, ArrowRight, CornerDownLeft, Sparkles, Filter } from 'lucide-react';
 import { ChartOfAccount, Auxiliary } from '../../types';
@@ -111,7 +112,7 @@ export default function HudOmniboxSearch({
           type: 'auxiliary',
           id: `aux_${aux.id}`,
           title: `Auxiliar: ${aux.name}`,
-          subtitle: `RUT: ${aux.rut}`,
+          subtitle: `RUT: ${formatearRut(aux.rut)}`,
           tag: 'AUXILIAR',
           value: aux.rut
         });

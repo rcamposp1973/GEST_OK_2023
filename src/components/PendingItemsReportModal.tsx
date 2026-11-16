@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React from 'react';
 import { 
   X, 
@@ -83,7 +84,7 @@ export default function PendingItemsReportModal({
   const handleExportCSV = () => {
     const rows = [
       ['INFORME OFICIAL DE PARTIDAS PENDIENTES DE CONCILIACIÓN BANCARIA'],
-      [`Empresa: ${company.name}`, `RUT: ${company.rut}`],
+      [`Empresa: ${company.name}`, `RUT: ${formatearRut(company.rut)}`],
       [`Cuenta Bancaria: ${bankAccount?.code} - ${bankAccount?.name} (${bankAccount?.bankInstitution || 'Banco'})`],
       [`Período Conciliado: ${period}`],
       [''],
@@ -116,7 +117,7 @@ export default function PendingItemsReportModal({
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Partidas_Pendientes_Conciliacion_${company.rut}_${period}.csv`);
+    link.setAttribute('download', `Partidas_Pendientes_Conciliacion_${formatearRut(company.rut)}_${period}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -164,11 +165,11 @@ export default function PendingItemsReportModal({
                 const area = document.getElementById('printable-pending-items-area');
                 if (area) {
                   triggerIframePrint({
-                    title: `Informe_Partidas_Pendientes_${company.rut}_${period}`,
+                    title: `Informe_Partidas_Pendientes_${formatearRut(company.rut)}_${period}`,
                     htmlContent: `
                       <div class="header-box">
                         <h2>INFORME DE CONCILIACIÓN BANCARIA Y PARTIDAS PENDIENTES</h2>
-                        <p class="font-bold">${company.name.toUpperCase()} (RUT: ${company.rut})</p>
+                        <p class="font-bold">${company.name.toUpperCase()} (RUT: ${formatearRut(company.rut)})</p>
                         <p>Cuenta: ${bankAccount?.code} - ${bankAccount?.name} &bull; Período: ${period}</p>
                       </div>
                       ${area.innerHTML}

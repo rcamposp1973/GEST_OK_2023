@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { db, auth } from '../lib/firebase';
 import { collection, getDocs, doc, setDoc, deleteDoc, writeBatch, updateDoc } from 'firebase/firestore';
@@ -1070,7 +1071,7 @@ export default function AnalisisCuentasView({
             debitLines: [d],
             creditLines: [matchingCredit],
             totalAmount: d.debit,
-            rule: `RUT (${d.auxiliaryRut}) + Documento (#${d.documentRef})`
+            rule: `RUT (${formatearRut(d.auxiliaryRut)}) + Documento (#${d.documentRef})`
           });
         }
       }
@@ -1093,7 +1094,7 @@ export default function AnalisisCuentasView({
             debitLines: [d],
             creditLines: [matchingCredit],
             totalAmount: d.debit,
-            rule: `RUT (${d.auxiliaryRut}) + Monto Exacto ($${d.debit.toLocaleString('es-CL')})`
+            rule: `RUT (${formatearRut(d.auxiliaryRut)}) + Monto Exacto ($${d.debit.toLocaleString('es-CL')})`
           });
         }
       }
@@ -1134,7 +1135,7 @@ export default function AnalisisCuentasView({
             debitLines: rutDebits,
             creditLines: rutCredits,
             totalAmount: sumD,
-            rule: `Saldo Total Cuadrado para RUT ${r.rut} (${rutDebits.length} Debes vs ${rutCredits.length} Haberes)`
+            rule: `Saldo Total Cuadrado para RUT ${formatearRut(r.rut)} (${rutDebits.length} Debes vs ${rutCredits.length} Haberes)`
           });
         }
       }
@@ -1250,7 +1251,7 @@ export default function AnalisisCuentasView({
     const htmlContent = `
       <div class="header">
         <h1>ANÁLISIS DE CUENTA CONTABLE: ${selectedAccount.code} - ${selectedAccount.name}</h1>
-        <p>Empresa: <strong>${company.name}</strong> (RUT: ${company.rut}) | Fecha de Emisión: ${dateStr}</p>
+        <p>Empresa: <strong>${company.name}</strong> (RUT: ${formatearRut(company.rut)}) | Fecha de Emisión: ${dateStr}</p>
       </div>
 
       <div style="display: flex; gap: 15px; margin-bottom: 20px;">
@@ -1288,7 +1289,7 @@ export default function AnalisisCuentasView({
               <td>${l.voucherDate}</td>
               <td>#${l.voucherNumber}</td>
               <td>${l.voucherType}</td>
-              <td>${l.auxiliaryRut ? `${l.auxiliaryRut} - ${l.auxiliaryName || ''}` : '-'}</td>
+              <td>${l.auxiliaryRut ? `${formatearRut(l.auxiliaryRut)} - ${l.auxiliaryName || ''}` : '-'}</td>
               <td>${l.documentRef || '-'}</td>
               <td>${l.gloss}</td>
               <td class="text-right">${l.debit > 0 ? '$' + l.debit.toLocaleString('es-CL') : '-'}</td>
@@ -1830,7 +1831,7 @@ export default function AnalisisCuentasView({
                 <option value="__SIN_RUT__">∅ Sin RUT / Genéricos</option>
                 {accountRutsList.map(r => (
                   <option key={r.rut} value={r.rut}>
-                    {r.rut} - {r.name.slice(0, 20)} ({r.pendingCount} pend)
+                    {formatearRut(r.rut)} - {r.name.slice(0, 20)} ({r.pendingCount} pend)
                   </option>
                 ))}
               </select>
@@ -2081,7 +2082,7 @@ export default function AnalisisCuentasView({
                                 <ExternalLink className="w-2.5 h-2.5 text-indigo-500 group-hover:text-indigo-800" />
                               </button>
                             </td>
-                            <td className="p-1.5">{l.auxiliaryRut ? `${l.auxiliaryRut}` : '-'}</td>
+                            <td className="p-1.5">{l.auxiliaryRut ? `${formatearRut(l.auxiliaryRut)}` : '-'}</td>
                             <td className="p-1.5">{l.documentRef || '-'}</td>
                             <td className="p-1.5 text-slate-700 max-w-xs truncate">{l.gloss}</td>
                             <td className="p-1.5 text-right font-mono font-bold text-slate-900">
@@ -2244,7 +2245,7 @@ export default function AnalisisCuentasView({
                                 className="font-mono bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-200 transition-colors text-[10px] font-bold"
                                 title="Filtrar y seleccionar todo este RUT"
                               >
-                                {l.auxiliaryRut}
+                                {formatearRut(l.auxiliaryRut)}
                               </button>
                             ) : (
                               <span className="text-slate-400">-</span>
@@ -2426,7 +2427,7 @@ export default function AnalisisCuentasView({
                                 className="font-mono bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-200 transition-colors text-[10px] font-bold"
                                 title="Filtrar y seleccionar todo este RUT"
                               >
-                                {l.auxiliaryRut}
+                                {formatearRut(l.auxiliaryRut)}
                               </button>
                             ) : (
                               <span className="text-slate-400">-</span>

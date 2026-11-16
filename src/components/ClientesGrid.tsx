@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useMemo, useState } from 'react';
 import { Search, ArrowRight, Settings, KeyRound, Plus, ChevronUp, ChevronDown, ChevronsUpDown, Building2, Eye, X, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { Company, User, Assignment, UserRole } from '../types';
@@ -195,7 +196,7 @@ export default function ClientesGrid({ title = 'Mis clientes', subtitle, compani
                         </div>
                       </div>
                     </td>
-                    <td className="px-3 py-2.5 font-mono text-[11px] text-slate-700 border-b border-r border-slate-200/60 whitespace-nowrap">{f.c.rut}</td>
+                    <td className="px-3 py-2.5 font-mono text-[11px] text-slate-700 border-b border-r border-slate-200/60 whitespace-nowrap">{formatearRut(f.c.rut)}</td>
                     <td className="px-3 py-2.5 text-slate-600 border-b border-r border-slate-200/60 max-w-[220px]"><span className="block truncate" title={f.c.giro}>{f.c.giro || <span className="text-slate-300">—</span>}</span></td>
                     <td className="px-3 py-2.5 border-b border-r border-slate-200/60">
                       {users.length === 0 ? (

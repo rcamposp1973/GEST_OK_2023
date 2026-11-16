@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useMemo } from 'react';
 import { Company, Voucher, ChartOfAccount, FiscalPeriodYear } from '../types';
 import { generateSIIReportPDF } from '../utils/pdfGenerator';
@@ -303,7 +304,7 @@ export default function LibroMayorView({
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Libro_Mayor_${company.rut}_${periodFilter !== 'Todos' ? periodFilter : 'General'}.csv`);
+    link.setAttribute('download', `Libro_Mayor_${formatearRut(company.rut)}_${periodFilter !== 'Todos' ? periodFilter : 'General'}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -684,7 +685,7 @@ export default function LibroMayorView({
                               <td className="py-2 px-3 font-sans text-slate-600">
                                 {mov.auxiliaryRut ? (
                                   <div>
-                                    <span className="font-mono font-semibold text-slate-900">{mov.auxiliaryRut}</span>
+                                    <span className="font-mono font-semibold text-slate-900">{formatearRut(mov.auxiliaryRut)}</span>
                                     {mov.auxiliaryName && <span className="block text-[10px] text-slate-500">{mov.auxiliaryName}</span>}
                                   </div>
                                 ) : (

@@ -1,3 +1,4 @@
+import { formatearRut } from '../../utils/rutFormato';
 import React, { useRef, useState, useEffect } from 'react';
 import { 
   X, Plus, Maximize2, Minimize2, ArrowLeft, Lock, Unlock, 
@@ -227,7 +228,7 @@ export const CockpitTabBar: React.FC<CockpitTabBarProps> = ({
                 {company.name}
               </span>
               <span className="text-[10px] font-mono text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 hidden md:inline">
-                {company.rut}
+                {formatearRut(company.rut)}
               </span>
               {isDemoFerreteriaCompany(company) && (
                 <span className="text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-300 px-1.5 py-0.5 rounded shadow-2xs flex items-center gap-0.5">

@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Search, BookOpen, Users, FileText, Calculator, Building2, 
@@ -131,7 +132,7 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
       .map(a => ({
         type: 'AUXILIARY',
         key: 'AUXILIARES',
-        title: `${a.rut} - ${a.name}`,
+        title: `${formatearRut(a.rut)} - ${a.name}`,
         subtitle: `Auxiliar / Entidad (${a.role || 'General'})`,
         icon: Users,
         rawAuxiliary: a

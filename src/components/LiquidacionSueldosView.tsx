@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useMemo, useEffect } from 'react';
 import { db } from '../lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -1449,7 +1450,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
                           <td className="py-2.5 px-3 font-sans">
                             <div className="font-semibold text-slate-900">{slip.employeeName}</div>
                             <div className="text-[11px] text-slate-500 font-mono flex items-center gap-1.5 mt-0.5">
-                              <span>{slip.employeeRut}</span>
+                              <span>{formatearRut(slip.employeeRut)}</span>
                               <span>•</span>
                               <span>{slip.employeePosition}</span>
                             </div>
@@ -1893,7 +1894,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
               </div>
               <div>
                 <span className="text-[10px] font-bold text-slate-500 uppercase block">RUT</span>
-                <span className="font-mono font-bold text-slate-900">{activeSlip.employeeRut}</span>
+                <span className="font-mono font-bold text-slate-900">{formatearRut(activeSlip.employeeRut)}</span>
               </div>
               <div>
                 <span className="text-[10px] font-bold text-slate-500 uppercase block">Cargo / Función</span>
@@ -2131,7 +2132,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
                 <div className="border-t border-slate-900 pt-2">
                   <p className="font-bold text-slate-900 uppercase">Firma del Trabajador</p>
                   <p className="text-[10px] text-slate-500">{activeSlip.employeeName}</p>
-                  <p className="text-[10px] font-mono text-slate-500">RUT: {activeSlip.employeeRut}</p>
+                  <p className="text-[10px] font-mono text-slate-500">RUT: {formatearRut(activeSlip.employeeRut)}</p>
                 </div>
               </div>
             </div>
@@ -2185,7 +2186,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
               <tbody className="divide-y divide-slate-100">
                 {slipsForPeriod.map(s => (
                   <tr key={s.employeeId} className="hover:bg-slate-50">
-                    <td className="py-2 px-3">{s.employeeRut}</td>
+                    <td className="py-2 px-3">{formatearRut(s.employeeRut)}</td>
                     <td className="py-2 px-3 font-sans font-medium text-slate-800">{s.employeeName}</td>
                     <td className="py-2 px-2 text-right">${s.sueldoBaseProporcional.toLocaleString('es-CL')}</td>
                     <td className="py-2 px-2 text-right">${s.gratificacionLegal.toLocaleString('es-CL')}</td>

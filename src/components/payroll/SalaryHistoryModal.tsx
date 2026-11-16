@@ -1,3 +1,4 @@
+import { formatearRut } from '../../utils/rutFormato';
 import React, { useState } from 'react';
 import { Employee, SalaryHistoryEntry } from '../../types';
 import { 
@@ -125,7 +126,7 @@ export const SalaryHistoryModal: React.FC<SalaryHistoryModalProps> = ({
                 Vigencias y Modificaciones de Sueldo
               </h2>
               <p className="text-xs text-slate-300">
-                {employee.name} &bull; RUT: <span className="font-mono font-bold text-amber-300">{employee.rut}</span>
+                {employee.name} &bull; RUT: <span className="font-mono font-bold text-amber-300">{formatearRut(employee.rut)}</span>
               </p>
             </div>
           </div>

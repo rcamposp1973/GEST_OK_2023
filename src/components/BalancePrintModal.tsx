@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState } from 'react';
 import { Company } from '../types';
 import { BalancePrintRow, BalanceTotals, BalanceResult, generateBalance8ColumnasPDF } from '../utils/balancePdfGenerator';
@@ -201,7 +202,7 @@ export const BalancePrintModal: React.FC<BalancePrintModalProps> = ({
             <div className="flex flex-col sm:flex-row justify-between items-start border-b-2 border-slate-900 pb-4 gap-3">
               <div>
                 <h2 className="text-base font-extrabold text-slate-900 uppercase tracking-tight">{company.name}</h2>
-                <p className="text-xs font-semibold text-slate-700">RUT: <span className="font-mono">{company.rut}</span></p>
+                <p className="text-xs font-semibold text-slate-700">RUT: <span className="font-mono">{formatearRut(company.rut)}</span></p>
                 <p className="text-[11px] text-slate-500">Giro: {company.giro || 'Comercial'}</p>
                 <p className="text-[11px] text-slate-500">Dirección: {company.address || '-'}, {company.comuna || ''}</p>
               </div>

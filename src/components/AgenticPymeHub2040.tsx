@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useMemo } from 'react';
 import { Company, RCVDocument, CommercialDocument, Voucher } from '../types';
 import { 
@@ -252,7 +253,7 @@ export default function AgenticPymeHub2040({
                 <div key={deb.id} className="py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                   <div>
                     <h4 className="text-xs font-bold text-slate-900">{deb.cliente}</h4>
-                    <p className="text-[11px] text-slate-500 font-mono">RUT: {deb.rut} · {deb.diasAtraso} días de atraso</p>
+                    <p className="text-[11px] text-slate-500 font-mono">RUT: {formatearRut(deb.rut)} · {deb.diasAtraso} días de atraso</p>
                   </div>
 
                   <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">

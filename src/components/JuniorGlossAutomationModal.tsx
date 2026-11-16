@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   X, 
@@ -481,7 +482,7 @@ export default function JuniorGlossAutomationModal({
                             <span className="text-slate-800 font-bold">{rule.accountName}</span>
                             {rule.auxiliaryRut && (
                               <span className="text-[11px] text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 font-mono">
-                                Aux: {rule.auxiliaryRut}
+                                Aux: {formatearRut(rule.auxiliaryRut)}
                               </span>
                             )}
                             {rule.costCenter && (
@@ -777,7 +778,7 @@ export default function JuniorGlossAutomationModal({
                       <option value="">-- Sin Auxiliar Específico --</option>
                       {auxiliaries.map(aux => (
                         <option key={aux.id || aux.rut} value={aux.rut}>
-                          {aux.rut} - {aux.name}
+                          {formatearRut(aux.rut)} - {aux.name}
                         </option>
                       ))}
                     </select>

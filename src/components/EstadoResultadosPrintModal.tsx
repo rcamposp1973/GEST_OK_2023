@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState } from 'react';
 import { Company } from '../types';
 import { generateEstadoResultadosPDF, EstadoResultadosPDFOptions } from '../utils/estadoResultadosPdfGenerator';
@@ -178,7 +179,7 @@ export const EstadoResultadosPrintModal: React.FC<EstadoResultadosPrintModalProp
                 Estado de Resultados IFRS / NIC 1 (Vista de Impresión)
               </h2>
               <p className="text-xs text-slate-500">
-                {company.name} &bull; RUT: {company.rut} &bull; {periodLabel}
+                {company.name} &bull; RUT: {formatearRut(company.rut)} &bull; {periodLabel}
               </p>
             </div>
           </div>

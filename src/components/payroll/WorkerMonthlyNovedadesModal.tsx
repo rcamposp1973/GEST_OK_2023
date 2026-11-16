@@ -1,3 +1,4 @@
+import { formatearRut } from '../../utils/rutFormato';
 import React, { useState } from 'react';
 import { Employee, PayrollParameters } from '../../types';
 import { MonthPayrollInput, getLegalWeeklyHours } from '../../utils/payrollCalculator';
@@ -84,7 +85,7 @@ export const WorkerMonthlyNovedadesModal: React.FC<WorkerMonthlyNovedadesModalPr
                 </span>
               </div>
               <p className="text-xs text-slate-300">
-                {employee.name} &bull; RUT: <span className="font-mono font-bold text-amber-300">{employee.rut}</span> &bull; {employee.position}
+                {employee.name} &bull; RUT: <span className="font-mono font-bold text-amber-300">{formatearRut(employee.rut)}</span> &bull; {employee.position}
               </p>
             </div>
           </div>

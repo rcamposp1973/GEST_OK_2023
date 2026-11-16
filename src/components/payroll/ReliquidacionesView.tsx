@@ -1,3 +1,4 @@
+import { formatearRut } from '../../utils/rutFormato';
 import React, { useState, useMemo } from 'react';
 import { 
   Employee, PayrollSlip, AnnualReliquidation, ReliquidationMonthDetail, ChartOfAccount as Account, Voucher 
@@ -216,7 +217,7 @@ export const ReliquidacionesView: React.FC<ReliquidacionesViewProps> = ({
         companyId,
         date: `${activeReliquidation.periodPayment}-28`,
         type: 'TRASPASO',
-        glosa: `Centralización Reliquidación Legal ${activeReliquidation.conceptName} - ${activeReliquidation.employeeName} (${activeReliquidation.employeeRut}) devengo ${activeReliquidation.yearOrigin}`,
+        glosa: `Centralización Reliquidación Legal ${activeReliquidation.conceptName} - ${activeReliquidation.employeeName} (${formatearRut(activeReliquidation.employeeRut)}) devengo ${activeReliquidation.yearOrigin}`,
         lines,
         totalDebit: activeReliquidation.montoTotalBruto,
         totalCredit: activeReliquidation.montoTotalBruto,
@@ -249,7 +250,7 @@ export const ReliquidacionesView: React.FC<ReliquidacionesViewProps> = ({
         <div class="header-box">
           <h2>INFORME DE RELIQUIDACIÓN LEGAL DE REMUNERACIONES (ART. 43 LEY RENTA)</h2>
           <p class="font-bold">${companyName.toUpperCase()} (RUT: ${companyRut})</p>
-          <p>Trabajador: <strong>${selectedEmp.name}</strong> (RUT: ${selectedEmp.rut})</p>
+          <p>Trabajador: <strong>${selectedEmp.name}</strong> (RUT: ${formatearRut(selectedEmp.rut)})</p>
           <p>Concepto: <strong>${reliquidationType}</strong> &bull; Año Devengo: ${yearOrigin}</p>
         </div>
 
@@ -699,7 +700,7 @@ export const ReliquidacionesView: React.FC<ReliquidacionesViewProps> = ({
             <div className="grid grid-cols-2 gap-4 text-xs">
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
                 <p><strong>Trabajador:</strong> {activeReliquidation.employeeName}</p>
-                <p><strong>RUT:</strong> {activeReliquidation.employeeRut}</p>
+                <p><strong>RUT:</strong> {formatearRut(activeReliquidation.employeeRut)}</p>
                 <p><strong>Cargo:</strong> {selectedEmployee?.position || 'Colaborador'}</p>
                 <p><strong>AFP / Salud:</strong> {selectedEmployee?.pensionSystem} / {selectedEmployee?.healthSystem}</p>
               </div>
@@ -738,7 +739,7 @@ export const ReliquidacionesView: React.FC<ReliquidacionesViewProps> = ({
               </div>
               <div className="border-t border-slate-400 pt-2">
                 <p className="font-bold text-slate-900">Firma Trabajador</p>
-                <p className="text-slate-500 text-[11px]">{activeReliquidation.employeeName} - {activeReliquidation.employeeRut}</p>
+                <p className="text-slate-500 text-[11px]">{activeReliquidation.employeeName} - {formatearRut(activeReliquidation.employeeRut)}</p>
               </div>
             </div>
           </div>

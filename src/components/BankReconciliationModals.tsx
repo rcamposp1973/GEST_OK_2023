@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import type { MovementProposal } from '../utils/bankMovementClassifier';
 import { nameMatchesGloss, findDocSubset } from '../utils/bankMovementClassifier';
@@ -2239,8 +2240,8 @@ function QuickVoucherModalContent({
                                 </span>
                               )}
                             </td>
-                            <td className="p-2 font-sans truncate max-w-[200px]" title={`${item.auxiliaryRut} - ${item.auxiliaryName}`}>
-                              <span className="font-bold">{item.auxiliaryRut}</span> {item.auxiliaryName}
+                            <td className="p-2 font-sans truncate max-w-[200px]" title={`${formatearRut(item.auxiliaryRut)} - ${item.auxiliaryName}`}>
+                              <span className="font-bold">{formatearRut(item.auxiliaryRut)}</span> {item.auxiliaryName}
                             </td>
                             <td className="p-2 text-slate-600">{item.issueDate}</td>
                             <td className={`p-2 text-right font-bold ${item.esNotaCredito ? 'text-rose-700' : 'text-slate-900'}`}>

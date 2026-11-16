@@ -1,3 +1,4 @@
+import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useEffect } from 'react';
 import { provisionAuthUser } from '../utils/adminApi';
 import { db } from '../lib/firebase';
@@ -819,7 +820,7 @@ export default function StudyAdminDashboard({
           </div>
           <h3 className="text-lg font-bold text-slate-900">Acceso Restringido por Seguridad</h3>
           <p className="text-xs text-slate-600 leading-relaxed">
-            No tienes asignada la empresa <strong>{selectedCompanyForAccounting.name}</strong> (RUT: {selectedCompanyForAccounting.rut}).
+            No tienes asignada la empresa <strong>{selectedCompanyForAccounting.name}</strong> (RUT: {formatearRut(selectedCompanyForAccounting.rut)}).
           </p>
           <div className="text-xs text-slate-500 bg-slate-50 p-3 rounded-lg border border-slate-100 space-y-1 text-left">
             <p className="font-semibold text-slate-700"> Control de Acceso del Estudio:</p>
@@ -961,7 +962,7 @@ export default function StudyAdminDashboard({
               >
                 <option value="" disabled>Seleccione empresa cliente...</option>
                 {visibleCompanies.map(c => (
-                  <option key={c.id} value={c.id}>{c.name} (RUT: {c.rut})</option>
+                  <option key={c.id} value={c.id}>{c.name} (RUT: {formatearRut(c.rut)})</option>
                 ))}
               </select>
             </div>
@@ -1771,7 +1772,7 @@ export default function StudyAdminDashboard({
                     <span>Empresa</span>
                     <select name="companyId" defaultValue="" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs bg-white">
                       <option value="" disabled>Elige una empresa…</option>
-                      {companies.map(c => <option key={c.id} value={c.id}>{c.name} · {c.rut}</option>)}
+                      {companies.map(c => <option key={c.id} value={c.id}>{c.name} · {formatearRut(c.rut)}</option>)}
                     </select>
                   </label>
                   <button type="submit" className="px-4 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold">Asignar</button>
@@ -1803,7 +1804,7 @@ export default function StudyAdminDashboard({
                               {u?.role === UserRole.OBSERVER ? 'Observador' : u?.role === UserRole.ANALYST ? 'Analista' : 'Contador'}
                             </span>
                           </td>
-                          <td className="px-3 py-2"><p className="font-semibold text-slate-900">{c?.name || 'Empresa eliminada'}</p><p className="text-[10px] font-mono text-slate-500">{c?.rut}</p></td>
+                          <td className="px-3 py-2"><p className="font-semibold text-slate-900">{c?.name || 'Empresa eliminada'}</p><p className="text-[10px] font-mono text-slate-500">{formatearRut(c?.rut)}</p></td>
                           <td className="px-3 py-2 text-right"><button type="button" onClick={() => handleDeleteAssignment(a.id)} className="text-red-600 hover:text-red-800 font-semibold">Quitar</button></td>
                         </tr>
                       );

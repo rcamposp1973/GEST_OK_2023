@@ -9,6 +9,14 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.12.4 — 15 de noviembre de 2026 — Auxiliares respeta la Compensación de Cuentas
+
+- Análisis de Auxiliares: las partidas ya compensadas en "Compensación de Cuentas" se consideran cerradas y se netean entre sí, aunque tengan distinto número de documento, tipo o vencimiento. Un documento compensado aparece como "Compensado ($0)" y, con el filtro "Solo con saldo pendiente", se oculta.
+- Si una partida se compensó solo en parte, el documento muestra únicamente lo que sigue abierto.
+- Los totales de cargos, abonos y saldo por RUT y por cuenta no cambian: solo cambia qué documentos se consideran por cerrar.
+
+---
+
 ## 1.12.3 — 15 de noviembre de 2026 — RUT con puntos en todas las pantallas
 
 - Todas las pantallas que muestran un RUT (auxiliares, libros, informes, DTE, remuneraciones, certificados, cobranza, etc.) ahora lo muestran siempre como 11.111.111-1, aunque el registro antiguo esté guardado sin puntos.

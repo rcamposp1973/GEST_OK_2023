@@ -1,4 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { Company, ChartOfAccount, Auxiliary, RCVDocument, Voucher, FiscalPeriodYear } from '../types';
 import { generateSIIReportPDF } from '../utils/pdfGenerator';
 import { formatearRut } from '../utils/rutFormato';
@@ -64,6 +66,8 @@ export interface AuxiliaryDocumentItem {
   balance: number; // Saldo según naturaleza de la cuenta
   status: 'Saldado' | 'Pendiente' | 'Parcial';
   movements: DocumentMovement[];
+  compDebit?: number;   // parte de los cargos ya compensada (Compensación de Cuentas)
+  compCredit?: number;  // parte de los abonos ya compensada
 }
 
 // Representación de una cuenta contable dentro de la ficha de un Auxiliar (Modo por RUT)
@@ -436,6 +440,24 @@ export function getAccountAuxiliaryCategory(
   return rawCode.startsWith('1') ? 'DEUDOR' : 'ACREEDOR';
 }
 
+/**
+ * Un documento está "cerrado" cuando lo que queda SIN compensar se anula entre sí.
+ * Las partidas compensadas en "Compensación de Cuentas" cuentan como cerradas aunque
+ * tengan distinto número de documento, tipo o vencimiento.
+ */
+function evaluarDocumento(doc: AuxiliaryDocumentItem, isActivo: boolean): { saldado: boolean; saldadoOriginal: boolean } {
+  const abiertoD = doc.totalDebits - (doc.compDebit || 0);
+  const abiertoC = doc.totalCredits - (doc.compCredit || 0);
+  const saldado = Math.abs(abiertoD - abiertoC) < 0.01;
+  const saldadoOriginal = Math.abs(doc.totalDebits - doc.totalCredits) < 0.01;
+  const bruto = isActivo ? (abiertoD - abiertoC) : (abiertoC - abiertoD);
+  doc.balance = saldado ? 0 : bruto;
+  if (saldado) doc.status = 'Saldado';
+  else if (abiertoD > 0.01 && abiertoC > 0.01) doc.status = 'Parcial';
+  else doc.status = 'Pendiente';
+  return { saldado, saldadoOriginal };
+}
+
 export default function AnalisisAuxiliaresView({
   studyId,
   company,
@@ -476,6 +498,37 @@ export default function AnalisisAuxiliaresView({
   const [expandedKeys, setExpandedKeys] = useState<{ [key: string]: boolean }>({});
   const [expandedSubKeys, setExpandedSubKeys] = useState<{ [key: string]: boolean }>({});
   const [expandedDocs, setExpandedDocs] = useState<{ [docId: string]: boolean }>({});
+
+  // Compensaciones hechas en "Compensación de Cuentas" (calces vigentes)
+  const [matches, setMatches] = useState<any[]>([]);
+  useEffect(() => {
+    let vivo = true;
+    (async () => {
+      try {
+        const snap = await getDocs(collection(db, 'studies', studyId, 'companies', company.id, 'accountMatches'));
+        const lista: any[] = [];
+        snap.forEach(d => { const x: any = d.data(); if (x.status !== 'DESCALZADO') lista.push({ ...x, id: d.id }); });
+        if (vivo) setMatches(lista);
+      } catch (e) { console.error('Error cargando compensaciones:', e); }
+    })();
+    return () => { vivo = false; };
+  }, [studyId, company.id, vouchers]);
+
+  // Monto compensado por línea de comprobante (a la fecha de corte, si corresponde)
+  const compMap = useMemo(() => {
+    const m = new Map<string, { debit: number; credit: number }>();
+    matches.forEach(g => {
+      const fechaPareo = (g.matchedLines || []).reduce((mx: string, l: any) => ((l.voucherDate || '') > mx ? (l.voucherDate || '') : mx), '');
+      if (dateFilterMode === 'corte' && cutoffDate && fechaPareo > cutoffDate) return;
+      (g.matchedLines || []).forEach((l: any) => {
+        const k = `${l.voucherId}_${l.lineIndex}`;
+        const e = m.get(k) || { debit: 0, credit: 0 };
+        e.debit += l.debit || 0; e.credit += l.credit || 0;
+        m.set(k, e);
+      });
+    });
+    return m;
+  }, [matches, dateFilterMode, cutoffDate]);
 
   // Account map by ID and Code
   const accountMap = useMemo(() => {
@@ -717,6 +770,7 @@ export default function AnalisisAuxiliaresView({
           accountName: lineName,
           date: vDate,
           voucherId: v.id,
+          lineIndex: lIdx,
           voucherNumber: v.voucherNumber,
           voucherType: v.type,
           gloss: line.gloss || v.gloss || `Comprobante N° ${v.voucherNumber}`,
@@ -775,6 +829,7 @@ export default function AnalisisAuxiliaresView({
         const docItem = rutItem.docsMap.get(docKey)!;
         docItem.totalDebits += m.debit;
         docItem.totalCredits += m.credit;
+        { const c = compMap.get(`${m.voucherId}_${m.lineIndex}`); if (c) { docItem.compDebit = (docItem.compDebit || 0) + Math.min(c.debit, m.debit); docItem.compCredit = (docItem.compCredit || 0) + Math.min(c.credit, m.credit); } }
         docItem.movements.push({
           id: `mv_${m.voucherNumber}_${m.date}_${m.voucherId || ''}`,
           voucherId: m.voucherId,
@@ -802,19 +857,11 @@ export default function AnalisisAuxiliaresView({
           doc.movements.sort((a, b) => a.date.localeCompare(b.date));
           doc.issueDate = doc.movements[0]?.date || doc.issueDate;
 
-          const rawBalance = isActivo ? (doc.totalDebits - doc.totalCredits) : (doc.totalCredits - doc.totalDebits);
-          const isDocSaldado = Math.abs(doc.totalDebits - doc.totalCredits) < 0.01;
-          doc.balance = isDocSaldado ? 0 : rawBalance;
-
-          if (isDocSaldado) {
-            doc.status = 'Saldado';
-          } else if (doc.totalDebits > 0 && doc.totalCredits > 0) {
-            doc.status = 'Parcial';
-          } else {
-            doc.status = 'Pendiente';
-          }
+          const { saldado: isDocSaldado, saldadoOriginal } = evaluarDocumento(doc, isActivo);
 
           if (balanceFilter === 'soloPendientes' && isDocSaldado) {
+            // Si se cerró solo por compensación, sus montos igual cuentan en los totales (el neto no cambia)
+            if (!saldadoOriginal) { rDebits += doc.totalDebits; rCredits += doc.totalCredits; }
             return;
           }
 
@@ -875,6 +922,7 @@ export default function AnalisisAuxiliaresView({
     return result;
   }, [
     vouchers,
+    compMap,
     auxiliaries,
     auxMap,
     accountMap,
@@ -928,7 +976,7 @@ export default function AnalisisAuxiliaresView({
         if (endDate && vDate > endDate) return;
       }
 
-      (v.lines || []).forEach((line) => {
+      (v.lines || []).forEach((line, lIdx) => {
         if (!line.auxiliaryRut) return;
 
         const rut = line.auxiliaryRut.trim();
@@ -997,6 +1045,7 @@ export default function AnalisisAuxiliaresView({
           docNumber: parsed.docNumber,
           date: vDate,
           voucherId: v.id,
+          lineIndex: lIdx,
           voucherNumber: v.voucherNumber,
           voucherType: v.type,
           gloss: line.gloss || v.gloss || `Comprobante N° ${v.voucherNumber}`,
@@ -1052,6 +1101,7 @@ export default function AnalisisAuxiliaresView({
         const docObj = accItem.docsMap.get(docKey)!;
         docObj.totalDebits += m.debit;
         docObj.totalCredits += m.credit;
+        { const c = compMap.get(`${m.voucherId}_${m.lineIndex}`); if (c) { docObj.compDebit = (docObj.compDebit || 0) + Math.min(c.debit, m.debit); docObj.compCredit = (docObj.compCredit || 0) + Math.min(c.credit, m.credit); } }
         docObj.movements.push({
           id: `m_${m.voucherNumber}_${m.date}_${m.voucherId || ''}`,
           voucherId: m.voucherId,
@@ -1084,19 +1134,11 @@ export default function AnalisisAuxiliaresView({
           doc.movements.sort((a, b) => a.date.localeCompare(b.date));
           doc.issueDate = doc.movements[0]?.date || doc.issueDate;
 
-          const rawBalance = isActivo ? (doc.totalDebits - doc.totalCredits) : (doc.totalCredits - doc.totalDebits);
-          const isDocSaldado = Math.abs(doc.totalDebits - doc.totalCredits) < 0.01;
-          doc.balance = isDocSaldado ? 0 : rawBalance;
-
-          if (isDocSaldado) {
-            doc.status = 'Saldado';
-          } else if (doc.totalDebits > 0 && doc.totalCredits > 0) {
-            doc.status = 'Parcial';
-          } else {
-            doc.status = 'Pendiente';
-          }
+          const { saldado: isDocSaldado, saldadoOriginal } = evaluarDocumento(doc, isActivo);
 
           if (balanceFilter === 'soloPendientes' && isDocSaldado) {
+            // Si se cerró solo por compensación, sus montos igual cuentan en los totales (el neto no cambia)
+            if (!saldadoOriginal) { aDebits += doc.totalDebits; aCredits += doc.totalCredits; }
             return;
           }
 
@@ -1158,6 +1200,7 @@ export default function AnalisisAuxiliaresView({
     return result;
   }, [
     vouchers,
+    compMap,
     auxiliaries,
     auxMap,
     accountMap,
@@ -1517,7 +1560,7 @@ export default function AnalisisAuxiliaresView({
         <span className="font-bold text-blue-900">Cómo leer esta pantalla</span>
         <span><b>Cuenta</b> → <b>Persona o empresa (RUT)</b> → <b>Documentos</b>. Pulsa una fila para abrirla.</span>
         <span><b>Cargos</b> = lo anotado en el Debe; <b>Abonos</b> = lo anotado en el Haber.</span>
-        <span><b>Falta por cerrar</b> = lo que aún no se paga o cobra. En <b>$0</b> el documento está al día.</span>
+        <span><b>Falta por cerrar</b> = lo que aún no se paga o cobra. En <b>$0</b> el documento está al día. Lo que ya compensaste en <b>Compensación de Cuentas</b> cuenta como cerrado, aunque tenga otro número de documento.</span>
       </div>
 
       {/* KPI RESUMEN DE MÉTRICAS */}
@@ -1961,7 +2004,7 @@ export default function AnalisisAuxiliaresView({
                                                     ? 'bg-blue-100 text-blue-800 border border-blue-200'
                                                     : 'bg-amber-100 text-amber-800 border border-amber-200'
                                                 }`}>
-                                                  {isDocSaldado ? 'Saldado ($0)' : doc.status}
+                                                  {isDocSaldado ? (((doc.compDebit || 0) + (doc.compCredit || 0)) > 0 ? 'Compensado ($0)' : 'Saldado ($0)') : doc.status}
                                                 </span>
                                               </td>
                                             </tr>
@@ -2261,7 +2304,7 @@ export default function AnalisisAuxiliaresView({
                                                     ? 'bg-blue-100 text-blue-800 border border-blue-200'
                                                     : 'bg-amber-100 text-amber-800 border border-amber-200'
                                                 }`}>
-                                                  {isDocSaldado ? 'Saldado ($0)' : doc.status}
+                                                  {isDocSaldado ? (((doc.compDebit || 0) + (doc.compCredit || 0)) > 0 ? 'Compensado ($0)' : 'Saldado ($0)') : doc.status}
                                                 </span>
                                               </td>
                                             </tr>

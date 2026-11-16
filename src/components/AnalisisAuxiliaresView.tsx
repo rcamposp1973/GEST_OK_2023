@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, doc as fsDoc, updateDoc, deleteField } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Company, ChartOfAccount, Auxiliary, RCVDocument, Voucher, FiscalPeriodYear } from '../types';
 import { generateSIIReportPDF } from '../utils/pdfGenerator';
@@ -337,107 +337,47 @@ export function getAccountAuxiliaryCategory(
   accName: string, 
   accObj?: ChartOfAccount
 ): 'DEUDOR' | 'ACREEDOR' | 'PERSONAL' | 'DEUDOR_VARIO' | 'ACREEDOR_VARIO' | 'OTRO' {
+  // 0. Clasificación definida por el contador en el plan de cuentas (manda sobre cualquier deducción)
+  switch (accObj?.auxiliaryClass) {
+    case 'CLIENTE': return 'DEUDOR';
+    case 'PROVEEDOR': return 'ACREEDOR';
+    case 'EMPLEADO': return 'PERSONAL';
+    case 'DEUDOR_VARIO': return 'DEUDOR_VARIO';
+    case 'ACREEDOR_VARIO': return 'ACREEDOR_VARIO';
+  }
+
   const code = (accCode || '').trim().replace(/[^0-9]/g, '');
   const rawCode = (accCode || '').trim();
   const name = (accName || '').toLowerCase();
+  const esActivo = rawCode.startsWith('1');
 
-  // 1. Personal / Trabajadores (Anticipos 1104009, Préstamos 1104003, Sueldos, Finiquitos, Honorarios)
-  if (
-    rawCode.startsWith('1104') || 
-    rawCode.startsWith('1.1.04') || 
-    code.startsWith('1104') ||
-    rawCode.startsWith('2103') || 
-    rawCode.startsWith('2.1.03') || 
-    name.includes('trabajador') || 
-    name.includes('personal') || 
-    name.includes('anticipo') || 
-    name.includes('prestamo trabajador') || 
-    name.includes('prestamos a trabajador') || 
-    name.includes('sueldo') || 
-    name.includes('remuneracion') || 
-    name.includes('finiquito') || 
-    name.includes('empleado') ||
-    name.includes('honorario')
-  ) {
+  // Deducción automática: PRIMERO por el nombre (los códigos cambian de un plan a otro) y recién después por el código.
+  // 1. Empleados / Personal
+  if (/trabajador|empleado|personal|sueldo|remuneracion|remuneración|finiquito|gratificacion|gratificación|vacaciones/.test(name)) {
     return 'PERSONAL';
   }
-
-  // 2. Deudores / Clientes del giro (1102xxx, 1103xxx, Facturas por cobrar)
+  // 2. Honorarios: son terceros prestadores de servicios, no empleados
+  if (name.includes('honorario')) return esActivo ? 'DEUDOR_VARIO' : 'ACREEDOR';
+  // 3. Clientes / Proveedores por nombre
+  // (un anticipo A proveedores es plata que nos deben; un anticipo DE clientes es plata que debemos)
+  if (name.includes('cliente') || name.includes('deudores por venta') || name.includes('facturas por cobrar')) return esActivo ? 'DEUDOR' : 'ACREEDOR_VARIO';
+  if (name.includes('proveedor') || name.includes('facturas por pagar') || name.includes('factura por pagar') || name.includes('acreedores comerciales')) return esActivo ? 'DEUDOR_VARIO' : 'ACREEDOR';
+  // 4. Varios por nombre
+  if (name.includes('deudores varios') || name.includes('otros deudores') || name.includes('prestamo tercero') || (name.includes('socio') && esActivo)) return 'DEUDOR_VARIO';
   if (
-    rawCode.startsWith('1102') || 
-    rawCode.startsWith('1.1.02') || 
-    code.startsWith('1102') ||
-    rawCode.startsWith('1103') || 
-    rawCode.startsWith('1.1.03') || 
-    code.startsWith('1103') ||
-    name.includes('cliente') || 
-    name.includes('deudores por venta') || 
-    name.includes('facturas por cobrar')
-  ) {
-    return 'DEUDOR';
-  }
+    name.includes('acreedores varios') || name.includes('otros acreedores') || name.includes('instituciones previsionales') ||
+    name.includes('afp') || name.includes('isapre') || name.includes('fonasa') || name.includes('previred') ||
+    name.includes('banco') || (name.includes('socio') && rawCode.startsWith('2')) || name.includes('tgr') || name.includes('tesoreria')
+  ) return 'ACREEDOR_VARIO';
 
-  // 3. Acreedores / Proveedores del giro (2101xxx, 2102xxx, Facturas por pagar)
-  if (
-    rawCode.startsWith('2101') || 
-    rawCode.startsWith('2.1.01') || 
-    code.startsWith('2101') ||
-    rawCode.startsWith('2102') || 
-    rawCode.startsWith('2.1.02') || 
-    code.startsWith('2102') ||
-    name.includes('proveedor') || 
-    name.includes('facturas por pagar') || 
-    name.includes('factura por pagar') ||
-    name.includes('acreedores comerciales')
-  ) {
-    return 'ACREEDOR';
-  }
+  // 5. Por código (solo cuando el nombre no dijo nada)
+  if (rawCode.startsWith('2103') || rawCode.startsWith('2.1.03')) return 'PERSONAL';
+  if (code.startsWith('1102') || code.startsWith('1103') || code.startsWith('1104') || rawCode.startsWith('1.1.02') || rawCode.startsWith('1.1.03') || rawCode.startsWith('1.1.04')) return 'DEUDOR';
+  if (code.startsWith('2101') || code.startsWith('2102') || rawCode.startsWith('2.1.01') || rawCode.startsWith('2.1.02')) return 'ACREEDOR';
+  if (code.startsWith('1105') || code.startsWith('1106') || code.startsWith('1107') || code.startsWith('1108') || rawCode.startsWith('1.1.05') || rawCode.startsWith('1.1.06')) return 'DEUDOR_VARIO';
+  if (code.startsWith('2104') || code.startsWith('2105') || code.startsWith('2106') || code.startsWith('2107') || rawCode.startsWith('2.1.04') || rawCode.startsWith('2.1.05')) return 'ACREEDOR_VARIO';
 
-  // 4. Deudores Varios (no giro: préstamos a terceros, cuentas por cobrar varias, socios activo)
-  if (
-    rawCode.startsWith('1105') || 
-    rawCode.startsWith('1.1.05') || 
-    rawCode.startsWith('1106') || 
-    rawCode.startsWith('1.1.06') || 
-    rawCode.startsWith('1107') || 
-    rawCode.startsWith('1108') || 
-    code.startsWith('1105') ||
-    code.startsWith('1106') ||
-    name.includes('deudores varios') || 
-    name.includes('otros deudores') || 
-    name.includes('prestamo tercero') || 
-    name.includes('cuenta corriente socio (activo)') ||
-    (name.includes('socio') && rawCode.startsWith('1'))
-  ) {
-    return 'DEUDOR_VARIO';
-  }
-
-  // 5. Acreedores Varios (bancos, previsiones, socios pasivo, impuestos por pagar)
-  if (
-    rawCode.startsWith('2104') || 
-    rawCode.startsWith('2.1.04') || 
-    rawCode.startsWith('2105') || 
-    rawCode.startsWith('2.1.05') || 
-    rawCode.startsWith('2106') || 
-    rawCode.startsWith('2107') || 
-    code.startsWith('2104') ||
-    code.startsWith('2105') ||
-    name.includes('acreedores varios') || 
-    name.includes('otros acreedores') || 
-    name.includes('instituciones previsionales') || 
-    name.includes('afp') || 
-    name.includes('isapre') || 
-    name.includes('fonasa') || 
-    name.includes('previred') || 
-    name.includes('banco') || 
-    (name.includes('socio') && rawCode.startsWith('2')) ||
-    name.includes('tgr') || 
-    name.includes('tesoreria')
-  ) {
-    return 'ACREEDOR_VARIO';
-  }
-
-  return rawCode.startsWith('1') ? 'DEUDOR' : 'ACREEDOR';
+  return esActivo ? 'DEUDOR' : 'ACREEDOR';
 }
 
 /**
@@ -461,13 +401,21 @@ function evaluarDocumento(doc: AuxiliaryDocumentItem, isActivo: boolean): { sald
 export default function AnalisisAuxiliaresView({
   studyId,
   company,
-  accounts,
+  accounts: accountsProp,
   auxiliaries,
   rcvDocuments,
   vouchers,
   fiscalYears,
   onOpenVoucher
 }: AnalisisAuxiliaresViewProps) {
+  // Clasificaciones recién guardadas (se ven al instante, sin recargar el plan de cuentas)
+  const [claseLocal, setClaseLocal] = useState<Record<string, string>>({});
+  const accounts = useMemo(
+    () => accountsProp.map(a => (claseLocal[a.id] !== undefined ? { ...a, auxiliaryClass: (claseLocal[a.id] || undefined) as any } : a)),
+    [accountsProp, claseLocal]
+  );
+  const [showClasificar, setShowClasificar] = useState(false);
+  const [guardandoClase, setGuardandoClase] = useState<string | null>(null);
   // Modo de Vista Principal: 'byAccount' (Por Cuenta Contable) vs 'byRut' (Por RUT / Auxiliar)
   const [viewMode, setViewMode] = useState<'byAccount' | 'byRut'>('byAccount');
 
@@ -529,6 +477,22 @@ export default function AnalisisAuxiliaresView({
     });
     return m;
   }, [matches, dateFilterMode, cutoffDate]);
+
+  // Guarda el tipo de auxiliar de una cuenta en el plan de cuentas ('' = que el sistema lo deduzca)
+  const guardarClaseCuenta = async (acc: ChartOfAccount, valor: string) => {
+    setGuardandoClase(acc.id);
+    try {
+      await updateDoc(fsDoc(db, 'studies', studyId, 'companies', company.id, 'chartOfAccounts', acc.id), {
+        auxiliaryClass: valor ? valor : deleteField()
+      });
+      setClaseLocal(prev => ({ ...prev, [acc.id]: valor }));
+    } catch (e: any) {
+      console.error('No se pudo guardar la clasificación', e);
+      window.alert('No se pudo guardar la clasificación de la cuenta: ' + (e?.message || 'error'));
+    } finally {
+      setGuardandoClase(null);
+    }
+  };
 
   // Account map by ID and Code
   const accountMap = useMemo(() => {
@@ -1521,10 +1485,10 @@ export default function AnalisisAuxiliaresView({
                 ? 'bg-emerald-600 text-white shadow-xs'
                 : 'bg-slate-800 text-emerald-300 hover:bg-slate-700 hover:text-white'
             }`}
-            title="Personal y Trabajadores (Anticipos 1104009, Préstamos 1104003, Sueldos 2102xxx)"
+            title="Empleados: cuentas de anticipos, préstamos, sueldos y finiquitos del personal (según la clasificación de cada cuenta)"
           >
             <UserCheck className="w-3.5 h-3.5" />
-            <span> Personal / Trabajadores</span>
+            <span> Empleados</span>
           </button>
 
           <button
@@ -1552,8 +1516,80 @@ export default function AnalisisAuxiliaresView({
             <Landmark className="w-3.5 h-3.5" />
             <span> Acreedores Varios (Socios / Bancos)</span>
           </button>
+
+          <button
+            onClick={() => setShowClasificar(true)}
+            className="px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white border border-white/20"
+            title="Elegir qué tipo de auxiliar es cada cuenta (Cliente, Proveedor, Empleado…)"
+          >
+            <Wrench className="w-3.5 h-3.5" />
+            <span> Clasificar cuentas</span>
+          </button>
         </div>
       </div>
+
+      {showClasificar && (() => {
+        const OPCIONES: { v: string; t: string }[] = [
+          { v: '', t: 'Automático' }, { v: 'CLIENTE', t: 'Cliente' }, { v: 'PROVEEDOR', t: 'Proveedor' },
+          { v: 'EMPLEADO', t: 'Empleado' }, { v: 'DEUDOR_VARIO', t: 'Deudor vario' }, { v: 'ACREEDOR_VARIO', t: 'Acreedor vario' },
+        ];
+        const NOMBRE_CAT: Record<string, string> = { DEUDOR: 'Cliente', ACREEDOR: 'Proveedor', PERSONAL: 'Empleado', DEUDOR_VARIO: 'Deudor vario', ACREEDOR_VARIO: 'Acreedor vario', OTRO: 'Otro' };
+        const auxiliares = accounts.filter(a => isAuxiliaryAccount(a.code, a.name, a)).sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
+        const sinAuxiliar = accounts.filter(a =>
+          !isAuxiliaryAccount(a.code, a.name, a) && !/^[45]/.test(a.code.trim()) &&
+          /trabajador|empleado|personal|sueldo|remuneracion|finiquito|anticipo|prestamo/i.test(a.name)
+        );
+        return (
+          <div className="fixed inset-0 z-[300] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowClasificar(false)}>
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+              <div className="p-5 border-b border-slate-200 flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">Clasificar cuentas de auxiliares</h3>
+                  <p className="text-xs text-slate-600 mt-1">Elige qué tipo de auxiliar es cada cuenta. Los botones de arriba (Clientes, Proveedores, Empleados…) agrupan las cuentas según esto. Con <b>Automático</b> el sistema lo deduce por el nombre de la cuenta.</p>
+                </div>
+                <button onClick={() => setShowClasificar(false)} className="text-slate-500 hover:text-slate-900 text-lg font-bold px-2">×</button>
+              </div>
+              <div className="overflow-y-auto p-5 space-y-4">
+                <table className="w-full text-xs">
+                  <thead className="text-[10px] uppercase text-slate-500">
+                    <tr><th className="text-left py-1.5">Cuenta</th><th className="text-left py-1.5">El sistema entiende</th><th className="text-left py-1.5">Clasificación</th></tr>
+                  </thead>
+                  <tbody>
+                    {auxiliares.map(a => {
+                      const explicita = (a as any).auxiliaryClass as string | undefined;
+                      const deducida = NOMBRE_CAT[getAccountAuxiliaryCategory(a.code, a.name, { ...a, auxiliaryClass: undefined } as any)] || '';
+                      return (
+                        <tr key={a.id} className="border-t border-slate-100">
+                          <td className="py-1.5 pr-2"><span className="font-mono text-[11px] text-indigo-700">{a.code}</span> <span className="font-semibold text-slate-800">{a.name}</span></td>
+                          <td className="py-1.5 pr-2 text-slate-500">{explicita ? NOMBRE_CAT[getAccountAuxiliaryCategory(a.code, a.name, a)] : `${deducida} (automático)`}</td>
+                          <td className="py-1.5">
+                            <select
+                              value={explicita || ''}
+                              disabled={guardandoClase === a.id}
+                              onChange={e => guardarClaseCuenta(a, e.target.value)}
+                              className="border border-slate-300 rounded-lg px-2 py-1 text-xs bg-white"
+                            >
+                              {OPCIONES.map(o => <option key={o.v} value={o.v}>{o.t}</option>)}
+                            </select>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {auxiliares.length === 0 && <tr><td colSpan={3} className="py-6 text-center text-slate-500 italic">No hay cuentas que pidan auxiliar (RUT).</td></tr>}
+                  </tbody>
+                </table>
+                {sinAuxiliar.length > 0 && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900">
+                    <p className="font-bold mb-1">Ojo: estas cuentas parecen de personal o anticipos, pero no piden auxiliar (RUT), por eso no aparecen en esta pantalla:</p>
+                    <p>{sinAuxiliar.map(a => `${a.code} ${a.name}`).join(' · ')}</p>
+                    <p className="mt-1">Para que aparezcan, activa "Requiere auxiliar (RUT)" en el Plan de Cuentas. Los comprobantes antiguos tendrían que tener el RUT en cada línea.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* GUÍA DE LECTURA EN LENGUAJE SIMPLE */}
       <div className="bg-blue-50/70 border border-blue-100 rounded-2xl px-4 py-3 text-xs text-slate-700 flex flex-wrap gap-x-6 gap-y-1.5 items-start">
@@ -1840,7 +1876,7 @@ export default function AnalisisAuxiliaresView({
                                 ? 'bg-cyan-50 text-cyan-800 border-cyan-200'
                                 : 'bg-orange-50 text-orange-800 border-orange-200'
                             }`}>
-                              {accGroup.accountCategory === 'PERSONAL' && 'Personal / Trabajadores'}
+                              {accGroup.accountCategory === 'PERSONAL' && 'Empleados'}
                               {accGroup.accountCategory === 'DEUDOR' && 'Clientes (Giro)'}
                               {accGroup.accountCategory === 'ACREEDOR' && 'Proveedores (Giro)'}
                               {accGroup.accountCategory === 'DEUDOR_VARIO' && 'Deudores Varios'}

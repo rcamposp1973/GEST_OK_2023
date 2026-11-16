@@ -239,6 +239,8 @@ export interface ChartOfAccount {
   isImputable?: boolean; // IMPUTABLE (SI/NO) - por defecto true
   moneda?: 'CLP' | 'USD' | 'EUR' | 'UF' | string; // MONEDA (CLP, USD, EUR, UF)
   requiereAuxiliarRUT: boolean; // REQUIERE AUXILIAR (SI/NO)
+  /** Tipo de auxiliar de la cuenta (lo define el contador en Auxiliares › Clasificar cuentas). Si falta, el sistema lo deduce por nombre/código. */
+  auxiliaryClass?: 'CLIENTE' | 'PROVEEDOR' | 'EMPLEADO' | 'DEUDOR_VARIO' | 'ACREEDOR_VARIO';
   requiereConciliacionBancaria: boolean; // REQUIERE CONCILIACION (SI/NO)
   requiereDocumento: boolean; // REQUIERE DOCUMENTO (SI/NO)
   requiereVencimiento?: boolean; // REQUIERE VENCIMIENTO (SI/NO)

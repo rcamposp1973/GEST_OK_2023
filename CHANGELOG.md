@@ -9,6 +9,15 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.13.0 — 16 de noviembre de 2026 — Auxiliares: clasificación "Empleados" por cuenta
+
+- Auxiliares: el botón "Personal / Trabajadores" pasa a llamarse "Empleados" y agrupa todas las cuentas clasificadas como empleado (anticipos, préstamos, sueldos, finiquitos…).
+- Nuevo botón "Clasificar cuentas": el contador elige para cada cuenta de auxiliares si es Cliente, Proveedor, Empleado, Deudor vario o Acreedor vario (o "Automático"). Se guarda en el Plan de Cuentas (campo nuevo y opcional `auxiliaryClass`; no cambia ningún dato existente).
+- Mejor deducción automática (cuando una cuenta está en "Automático"): ahora se guía primero por el nombre y después por el código. Antes todo lo que empezaba con 1104 se trataba como personal, aunque fuera "Clientes por ventas". Honorarios ya no se consideran empleados. "Anticipo a proveedores" cuenta como deudor y "Anticipo de clientes" como acreedor.
+- Aviso en la ventana: lista las cuentas que parecen de personal pero no piden auxiliar (RUT), y por eso no aparecen en Auxiliares.
+
+---
+
 ## 1.12.5 — 15 de noviembre de 2026 — Una partida compensada no se compensa dos veces
 
 - Pizarra Dinámica: si entre las partidas elegidas hay una que ya está compensada, el sistema no permite compensar y avisa que primero hay que descompensar la anterior. (Compensación de Cuentas ya tenía esta protección.)

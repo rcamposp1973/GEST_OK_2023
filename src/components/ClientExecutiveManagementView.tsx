@@ -1,3 +1,4 @@
+import ResumenVentasMensual from './ResumenVentasMensual';
 import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useMemo } from 'react';
 import {
@@ -406,6 +407,8 @@ export default function ClientExecutiveManagementView({
       {/* 1. RESUMEN EJECUTIVO (KPIs) */}
       {activeTab === 'RESUMEN' && (
         <div className="space-y-6">
+          <ResumenVentasMensual company={{ name: company.name, rut: company.rut }} rcvDocuments={rcvDocuments} year={parseInt(String(selectedPeriod || '').slice(0, 4), 10) || undefined} />
+
           
           {/* Top 4 KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

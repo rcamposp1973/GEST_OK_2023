@@ -9,6 +9,14 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.13.1 — 17 de noviembre de 2026 — Resumen de ventas por mes para enviar por correo
+
+- Nuevo informe "Resumen de ventas por mes": nombre y RUT de la empresa, y una tabla mes a mes con el monto neto del año elegido contra el año anterior, más el total. Se ve en Indicadores Financieros › KPIs (contador) y en el Resumen del cliente observador.
+- Botón "Copiar para correo": copia la tabla con su formato (colores y filas) para pegarla directo en un mail.
+- Fuente: Registro de Ventas del SII. Monto neto = neto afecto + exento; las notas de crédito restan.
+
+---
+
 ## 1.13.0 — 16 de noviembre de 2026 — Auxiliares: clasificación "Empleados" por cuenta
 
 - Auxiliares: el botón "Personal / Trabajadores" pasa a llamarse "Empleados" y agrupa todas las cuentas clasificadas como empleado (anticipos, préstamos, sueldos, finiquitos…).

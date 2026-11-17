@@ -12,6 +12,7 @@ import {
   ExpenseItemMaster
 } from '../types';
 import { triggerIframePrint } from '../utils/printUtils';
+import ResumenVentasMensual from './ResumenVentasMensual';
 import KpiPanel from './KpiPanel';
 import { calcularFiguras } from '../utils/kpiEngine';
 import { getNaturaleza, getRubroESF } from '../utils/ifrsClassification';
@@ -795,6 +796,10 @@ export default function IndicadoresFinancierosView({
 
       {activeTab === 'kpis' && (
         <KpiPanel company={company} vouchers={vouchers} accounts={accounts} year={selectedYear} cutoffMonth={cutoffMonth} canConfigure={canConfigureKpis} costCenters={costCenters} expenseItems={expenseItems} onOpenVoucher={onOpenVoucher} />
+      )}
+
+      {activeTab === 'kpis' && (
+        <ResumenVentasMensual company={{ name: company.name, rut: company.rut }} rcvDocuments={rcvDocuments} year={selectedYear} />
       )}
 
       {/* CONTENIDO TAB 1: RESUMEN OVERVIEW */}

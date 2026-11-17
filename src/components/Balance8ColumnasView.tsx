@@ -20,6 +20,8 @@ interface Balance8ColumnasViewProps {
   onOpenVoucher?: (voucherRef: Voucher | string | number) => void;
   onNavigateToLibroDiario?: () => void;
   onFixCeecVouchers?: () => Promise<void>;
+  puedeCompensar?: boolean;
+  onCompensado?: () => void;
 }
 
 interface BalanceRow {
@@ -47,7 +49,9 @@ export default function Balance8ColumnasView({
   onCambiarPeriodoGlobal,
   onOpenAuditor,
   onNavigateToLibroDiario,
-  onFixCeecVouchers
+  onFixCeecVouchers,
+  puedeCompensar,
+  onCompensado
 }: Balance8ColumnasViewProps) {
   const [periodFilter, setPeriodFilter] = useState<string>('Todos');
   const [dateFrom, setDateFrom] = useState<string>('');
@@ -942,6 +946,8 @@ export default function Balance8ColumnasView({
             desde={desde || undefined}
             hasta={hasta || undefined}
             empresa={{ studyId: company.studyId, id: company.id }}
+            puedeCompensar={puedeCompensar}
+            onCompensado={onCompensado}
             onOpenVoucher={onOpenVoucher}
             titulo="Balance de 8 columnas · detalle de cuenta"
             onClose={() => setDetalleCuenta(null)}

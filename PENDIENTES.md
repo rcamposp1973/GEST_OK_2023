@@ -56,3 +56,6 @@ Lista viva. Cada punto se pasa al CHANGELOG cuando se hace.
 - Cierre de diferencias abiertas en Facturas por Recibir con un asiento de ajuste guiado.
 - Recepción con inventario: mover Kardex/bodega al recibir productos.
 - Notas de crédito del proveedor referenciadas a la O/C.
+
+## Agentes (a futuro)
+- Cuando trabajemos con agentes, estos deberán poder operar desde todas las pestañas/módulos del sistema (no solo un módulo): leer, proponer y ejecutar acciones (por ejemplo compensar, contabilizar, aprobar O/C) con los mismos permisos y reglas del usuario, dejando todo en la auditoría.

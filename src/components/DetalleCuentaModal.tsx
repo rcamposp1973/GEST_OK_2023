@@ -1,10 +1,11 @@
 import { formatearRut } from '../utils/rutFormato';
 import React, { useEffect, useMemo, useState } from 'react';
 import { X } from 'lucide-react';
-import { collection, getDocs } from 'firebase/firestore';
-import { db } from '../lib/firebase';
-import type { AccountMatch, ChartOfAccount, Voucher } from '../types';
-import { pareadoPorLinea } from '../utils/pareoParcial';
+import { collection, doc, getDocs, setDoc } from 'firebase/firestore';
+import { auth, db } from '../lib/firebase';
+import { logAuditEvent } from '../utils/auditLogger';
+import type { AccountMatch, ChartOfAccount, MatchedLineRef, Voucher } from '../types';
+import { pareadoPorLinea, repartoParcial } from '../utils/pareoParcial';
 
 interface Props {
   account: ChartOfAccount;
@@ -20,9 +21,13 @@ interface Props {
   onOpenVoucher?: (voucherRef: Voucher | string | number) => void;
   /** Si se entrega, los documentos abiertos descuentan lo pareado en Análisis de Cuentas (a la fecha de corte). */
   empresa?: { studyId: string; id: string };
+  /** Permite compensar partidas desde la pestaña Documentos abiertos (requiere `empresa`). */
+  puedeCompensar?: boolean;
+  onCompensado?: () => void;
 }
 
 type Linea = {
+  key: string; voucherId: string; lineIdx: number; accountId: string; accountCode: string;
   fecha: string; numero: number; voucher: Voucher; glosa: string; debe: number; haber: number;
   rut: string; auxiliar: string; doc: string; cc: string; item: string; proyecto: string; producto: string;
   debeAb: number; haberAb: number; // lo que sigue abierto después de descontar pareos
@@ -31,7 +36,7 @@ type Linea = {
 const fmt = (n: number) => Math.round(n).toLocaleString('es-CL');
 const SIN = '(sin dato)';
 
-export default function DetalleCuentaModal({ account, cuentasExtra, soloRut, vouchers, desde, hasta, titulo, onClose, onOpenVoucher, empresa }: Props) {
+export default function DetalleCuentaModal({ account, cuentasExtra, soloRut, vouchers, desde, hasta, titulo, onClose, onOpenVoucher, empresa, puedeCompensar, onCompensado }: Props) {
   // Pareos de Análisis de Cuentas (solo si se conoce la empresa)
   const [matches, setMatches] = useState<AccountMatch[]>([]);
   useEffect(() => {
@@ -47,6 +52,7 @@ export default function DetalleCuentaModal({ account, cuentasExtra, soloRut, vou
     const fp = m.fechaPareo || m.matchedLines.reduce((mx, l) => ((l.voucherDate || '') > mx ? (l.voucherDate || '') : mx), '');
     return !hasta || fp <= hasta;
   })), [matches, hasta]);
+  const pareadoTotal = useMemo(() => pareadoPorLinea(matches), [matches]);
   const lineas = useMemo<Linea[]>(() => {
     const out: Linea[] = [];
     vouchers.forEach(v => {
@@ -61,6 +67,7 @@ export default function DetalleCuentaModal({ account, cuentasExtra, soloRut, vou
         if (!enCuentas) return;
         if (soloRut !== undefined && (l.auxiliaryRut || '').trim() !== soloRut) return;
         out.push({
+          key: `${v.id}_${idx}`, voucherId: v.id, lineIdx: idx, accountId: l.accountId, accountCode: l.accountCode,
           fecha: f, numero: Number(v.voucherNumber || 0), voucher: v, glosa: l.gloss || v.gloss || '',
           debe: l.debit || 0, haber: l.credit || 0,
           debeAb: Math.max(0, (l.debit || 0) - (pareado.get(`${v.id}_${idx}`)?.debit || 0)),
@@ -94,7 +101,7 @@ export default function DetalleCuentaModal({ account, cuentasExtra, soloRut, vou
   // Documentos abiertos agrupados por auxiliar. El documento se reconoce por tipo (dígitos) + número,
   // así "33 #2540" y "DTE 33 N° 33 #2540" se compensan como el mismo documento.
   const abiertosPorAux = useMemo(() => {
-    type Doc = { clave: string; etiqueta: string; debe: number; haber: number; n: number };
+    type Doc = { clave: string; etiqueta: string; debe: number; haber: number; n: number; partidas: Linea[] };
     type Aux = { rut: string; nombre: string; debe: number; haber: number; docs: Doc[] };
     const auxs = new Map<string, Aux>();
     lineas.forEach(l => {
@@ -106,8 +113,9 @@ export default function DetalleCuentaModal({ account, cuentasExtra, soloRut, vou
       const kAux = l.rut || SIN;
       const a = auxs.get(kAux) || { rut: kAux, nombre: l.auxiliar, debe: 0, haber: 0, docs: [] };
       let d = a.docs.find(x => x.clave === clave);
-      if (!d) { d = { clave, etiqueta, debe: 0, haber: 0, n: 0 }; a.docs.push(d); }
+      if (!d) { d = { clave, etiqueta, debe: 0, haber: 0, n: 0, partidas: [] }; a.docs.push(d); }
       d.debe += l.debeAb; d.haber += l.haberAb; d.n += 1;
+      if (l.debeAb + l.haberAb > 0.004) d.partidas.push(l);
       a.debe += l.debeAb; a.haber += l.haberAb;
       auxs.set(kAux, a);
     });
@@ -118,6 +126,87 @@ export default function DetalleCuentaModal({ account, cuentasExtra, soloRut, vou
   }, [lineas]);
   const nDocsAbiertos = abiertosPorAux.reduce((s, a) => s + a.docs.length, 0);
   const [expandidos, setExpandidos] = useState<Record<string, boolean>>({});
+  const [docsAbiertos, setDocsAbiertos] = useState<Record<string, boolean>>({});
+
+  // ── Compensar desde aquí ──
+  const compensable = !!(puedeCompensar && empresa);
+  const [sel, setSel] = useState<Set<string>>(new Set());
+  const [notas, setNotas] = useState('');
+  const [guardando, setGuardando] = useState(false);
+  const [msg, setMsg] = useState<{ tipo: 'ok' | 'error'; texto: string } | null>(null);
+  const porKey = useMemo(() => {
+    const m = new Map<string, Linea>();
+    abiertosPorAux.forEach(a => a.docs.forEach(d => d.partidas.forEach(l => m.set(l.key, l))));
+    return m;
+  }, [abiertosPorAux]);
+  const selLineas = Array.from(sel).map(k => porKey.get(k)).filter((l): l is Linea => !!l);
+  const selDebe = selLineas.reduce((s, l) => s + l.debeAb, 0);
+  const selHaber = selLineas.reduce((s, l) => s + l.haberAb, 0);
+  const selDif = Math.round((selDebe - selHaber) * 100) / 100;
+  const selRuts = new Set(selLineas.map(l => l.rut || SIN));
+  const reparto = useMemo(() => repartoParcial(
+    selLineas.filter(l => l.debeAb > 0).map(l => ({ key: l.key, voucherDate: l.fecha, voucherNumber: l.numero, debit: l.debeAb, credit: 0 })),
+    selLineas.filter(l => l.haberAb > 0).map(l => ({ key: l.key, voucherDate: l.fecha, voucherNumber: l.numero, debit: 0, credit: l.haberAb }))
+  ), [sel, porKey]); // eslint-disable-line
+  const alternar = (keys: string[]) => setSel(prev => {
+    const n = new Set(prev);
+    const todas = keys.every(k => n.has(k));
+    keys.forEach(k => (todas ? n.delete(k) : n.add(k)));
+    return n;
+  });
+  const motivoBloqueo = (): string => {
+    if (selLineas.length === 0) return 'Marca las partidas a compensar.';
+    if (selDebe <= 0 || selHaber <= 0) return 'Marca al menos un cargo (Debe) y un abono (Haber).';
+    if (selRuts.size > 1) return 'Las partidas son de auxiliares distintos. Compensa de a un auxiliar.';
+    return '';
+  };
+  const compensar = async () => {
+    if (!empresa) return;
+    const bloqueo = motivoBloqueo();
+    if (bloqueo) { setMsg({ tipo: 'error', texto: bloqueo }); return; }
+    // una partida pareada con fecha posterior al corte se ve abierta aquí, pero ya está compensada
+    const yaPareada = selLineas.find(l => {
+      const tot = pareadoTotal.get(l.key); const cor = pareado.get(l.key);
+      return ((tot?.debit || 0) - (cor?.debit || 0)) > 0.004 || ((tot?.credit || 0) - (cor?.credit || 0)) > 0.004;
+    });
+    if (yaPareada) { setMsg({ tipo: 'error', texto: `La partida del comprobante N° ${yaPareada.numero} ya fue compensada con una fecha posterior al corte. Descompénsala primero en Análisis de Cuentas.` }); return; }
+    setGuardando(true); setMsg(null);
+    try {
+      const montoPor = new Map<string, number>();
+      [...reparto.debitos, ...reparto.creditos].forEach(a => montoPor.set(a.key, a.monto));
+      const refs: MatchedLineRef[] = selLineas.filter(l => montoPor.has(l.key)).map(l => ({
+        voucherId: l.voucherId, voucherNumber: l.numero, voucherDate: l.fecha, voucherPeriod: l.voucher.period,
+        lineIndex: l.lineIdx, accountId: l.accountId, accountCode: l.accountCode,
+        debit: l.debeAb > 0 ? montoPor.get(l.key)! : 0, credit: l.haberAb > 0 ? montoPor.get(l.key)! : 0,
+        gloss: l.glosa, documentRef: l.doc || undefined, auxiliaryRut: l.rut || undefined, auxiliaryName: l.auxiliar || undefined,
+      }));
+      const matchId = `match_det_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+      const ahora = new Date().toISOString();
+      const parcial = Math.abs(selDif) > 0.004;
+      const nuevo: AccountMatch = {
+        id: matchId, accountId: account.id, accountCode: account.code, accountName: account.name,
+        matchedLines: JSON.parse(JSON.stringify(refs)), totalAmount: reparto.monto, matchDate: ahora,
+        fechaPareo: refs.reduce((mx, l) => ((l.voucherDate || '') > mx ? (l.voucherDate || '') : mx), ''),
+        matchedBy: auth.currentUser?.email || 'Usuario Contable',
+        notes: notas.trim() || (parcial ? `Pareo parcial por $${Math.round(reparto.monto).toLocaleString('es-CL')} desde detalle de cuenta` : 'Compensación desde detalle de cuenta'),
+        creationMode: 'MANUAL', status: 'CALZADO',
+      };
+      await setDoc(doc(db, 'studies', empresa.studyId, 'companies', empresa.id, 'accountMatches', matchId), nuevo);
+      setMatches(prev => [...prev, nuevo]);
+      setSel(new Set()); setNotas('');
+      setMsg({ tipo: 'ok', texto: parcial
+        ? `Compensado por $${fmt(reparto.monto)}. Quedan abiertos $${fmt(Math.abs(selDif))} del lado mayor.`
+        : `Compensado por $${fmt(reparto.monto)}. Las partidas salieron de la lista.` });
+      logAuditEvent({
+        userId: auth.currentUser?.uid || 'user', userEmail: auth.currentUser?.email || '', studyId: empresa.studyId, companyId: empresa.id,
+        action: 'CONTABILIZAR', module: 'PLAN_CUENTAS',
+        details: `Compensación desde detalle de cuenta en ${account.code} por $${Math.round(reparto.monto)} (${refs.length} líneas)`,
+      } as any);
+      onCompensado?.();
+    } catch (e: any) {
+      setMsg({ tipo: 'error', texto: 'No se pudo guardar la compensación: ' + (e?.message || e) });
+    } finally { setGuardando(false); }
+  };
 
   const hay = (arr: { clave: string }[]) => arr.some(g => g.clave !== SIN);
   const tabs = [
@@ -209,31 +298,55 @@ export default function DetalleCuentaModal({ account, cuentasExtra, soloRut, vou
                 Descuenta los pareos de Análisis de Cuentas vigentes a la fecha de corte ({pareado.size} partida(s) con pareo total o parcial).
               </p>
             )}
+            {compensable && <p className="text-[10px] text-indigo-700 mb-1.5">Para compensar: abre un documento (▸), marca los cargos y abonos que se anulan entre sí y pulsa “Compensar”. Casilla del auxiliar o del documento = marcar todas sus partidas.</p>}
             <table className="w-full text-xs">
               <thead className="bg-slate-50 text-slate-500 sticky top-0">
-                <tr><th className="text-left p-1.5">Auxiliar / Documento</th><th className="text-right p-1.5">Docs</th><th className="text-right p-1.5">Debe</th><th className="text-right p-1.5">Haber</th><th className="text-right p-1.5">Saldo abierto</th></tr>
+                <tr>{compensable && <th className="w-6" />}<th className="text-left p-1.5">Auxiliar / Documento</th><th className="text-right p-1.5">Docs</th><th className="text-right p-1.5">Debe</th><th className="text-right p-1.5">Haber</th><th className="text-right p-1.5">Saldo abierto</th></tr>
               </thead>
               <tbody>
                 {abiertosPorAux.map(a => {
                   const abierto = expandidos[a.rut] ?? abiertosPorAux.length === 1;
+                  const keysAux = a.docs.flatMap(d => d.partidas.map(l => l.key));
                   return (
                     <React.Fragment key={a.rut}>
                       <tr className="border-t border-slate-200 bg-slate-50 cursor-pointer hover:bg-slate-100" onClick={() => setExpandidos(p => ({ ...p, [a.rut]: !abierto }))}>
+                        {compensable && <td className="pl-1.5" onClick={e => e.stopPropagation()}><input type="checkbox" className="accent-indigo-600" checked={keysAux.length > 0 && keysAux.every(k => sel.has(k))} onChange={() => alternar(keysAux)} /></td>}
                         <td className="px-1.5 py-1 font-bold">{abierto ? '▾' : '▸'} {a.rut === SIN ? SIN : `${formatearRut(a.rut)} ${a.nombre}`}</td>
                         <td className="px-1.5 py-1 text-right">{a.docs.length}</td>
                         <td className="px-1.5 py-1 text-right font-mono">{fmt(a.docs.reduce((s, d) => s + d.debe, 0))}</td>
                         <td className="px-1.5 py-1 text-right font-mono">{fmt(a.docs.reduce((s, d) => s + d.haber, 0))}</td>
                         <td className="px-1.5 py-1 text-right font-mono font-bold">{fmt(a.docs.reduce((s, d) => s + d.debe - d.haber, 0))}</td>
                       </tr>
-                      {abierto && a.docs.map(d => (
-                        <tr key={d.clave} className="border-t border-slate-100">
-                          <td className="pl-6 pr-1.5 py-0.5">{d.etiqueta}</td>
-                          <td className="px-1.5 py-0.5 text-right">{d.n}</td>
-                          <td className="px-1.5 py-0.5 text-right font-mono">{d.debe ? fmt(d.debe) : ''}</td>
-                          <td className="px-1.5 py-0.5 text-right font-mono">{d.haber ? fmt(d.haber) : ''}</td>
-                          <td className="px-1.5 py-0.5 text-right font-mono">{fmt(d.debe - d.haber)}</td>
-                        </tr>
-                      ))}
+                      {abierto && a.docs.map(d => {
+                        const kDoc = `${a.rut}|${d.clave}`;
+                        const docAb = !!docsAbiertos[kDoc];
+                        const keysDoc = d.partidas.map(l => l.key);
+                        return (
+                          <React.Fragment key={d.clave}>
+                            <tr className="border-t border-slate-100">
+                              {compensable && <td className="pl-1.5"><input type="checkbox" className="accent-indigo-600" checked={keysDoc.length > 0 && keysDoc.every(k => sel.has(k))} onChange={() => alternar(keysDoc)} /></td>}
+                              <td className="pl-6 pr-1.5 py-0.5">
+                                {compensable
+                                  ? <button className="hover:underline" onClick={() => setDocsAbiertos(p => ({ ...p, [kDoc]: !docAb }))}>{docAb ? '▾' : '▸'} {d.etiqueta}</button>
+                                  : d.etiqueta}
+                              </td>
+                              <td className="px-1.5 py-0.5 text-right">{d.n}</td>
+                              <td className="px-1.5 py-0.5 text-right font-mono">{d.debe ? fmt(d.debe) : ''}</td>
+                              <td className="px-1.5 py-0.5 text-right font-mono">{d.haber ? fmt(d.haber) : ''}</td>
+                              <td className="px-1.5 py-0.5 text-right font-mono">{fmt(d.debe - d.haber)}</td>
+                            </tr>
+                            {compensable && docAb && d.partidas.map(l => (
+                              <tr key={l.key} className="bg-indigo-50/40 text-[11px]">
+                                <td className="pl-3"><input type="checkbox" className="accent-indigo-600" checked={sel.has(l.key)} onChange={() => alternar([l.key])} /></td>
+                                <td className="pl-10 pr-1.5 py-0.5 text-slate-600" colSpan={2}>{l.fecha} · <span className="text-indigo-700">#{l.numero}</span> · <span title={l.glosa}>{l.glosa.slice(0, 40)}</span></td>
+                                <td className="px-1.5 py-0.5 text-right font-mono">{l.debeAb ? fmt(l.debeAb) : ''}</td>
+                                <td className="px-1.5 py-0.5 text-right font-mono">{l.haberAb ? fmt(l.haberAb) : ''}</td>
+                                <td />
+                              </tr>
+                            ))}
+                          </React.Fragment>
+                        );
+                      })}
                     </React.Fragment>
                   );
                 })}
@@ -246,6 +359,29 @@ export default function DetalleCuentaModal({ account, cuentasExtra, soloRut, vou
           {activa === 'proy' && tablaGrupo(porProy, 'Proyecto')}
           {activa === 'prod' && tablaGrupo(porProd, 'Producto')}
         </div>
+
+        {compensable && activa === 'abiertos' && (msg || sel.size > 0) && (
+          <div className="border-t border-slate-200 bg-slate-50 px-4 py-2 space-y-1.5">
+            {msg && <div className={`text-xs rounded px-2 py-1 ${msg.tipo === 'ok' ? 'bg-emerald-50 text-emerald-800' : 'bg-rose-50 text-rose-800'}`}>{msg.texto}</div>}
+            {sel.size > 0 && (
+              <div className="flex flex-wrap items-center gap-3 text-xs">
+                <span>Marcadas: <b>{sel.size}</b></span>
+                <span>Debe <b className="font-mono">{fmt(selDebe)}</b></span>
+                <span>Haber <b className="font-mono">{fmt(selHaber)}</b></span>
+                <span className={Math.abs(selDif) < 0.005 ? 'text-emerald-700 font-bold' : 'text-amber-700 font-bold'}>
+                  {Math.abs(selDif) < 0.005 ? 'Cuadra en $0' : `Diferencia ${fmt(Math.abs(selDif))} (${selDif > 0 ? 'sobra Debe' : 'sobra Haber'})`}
+                </span>
+                <input className="border border-slate-300 rounded px-2 py-1 flex-1 min-w-[140px]" placeholder="Nota (opcional)" value={notas} onChange={e => setNotas(e.target.value)} />
+                <button className="text-slate-500 hover:underline" onClick={() => { setSel(new Set()); setMsg(null); }}>Limpiar</button>
+                <button disabled={guardando || !!motivoBloqueo()} title={motivoBloqueo()} onClick={compensar}
+                  className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white font-bold px-3 py-1.5 rounded-lg">
+                  {Math.abs(selDif) < 0.005 ? 'Compensar' : `Compensar parcial por ${fmt(reparto.monto)}`}
+                </button>
+              </div>
+            )}
+            {sel.size > 0 && motivoBloqueo() && <div className="text-[11px] text-slate-500">{motivoBloqueo()}</div>}
+          </div>
+        )}
       </div>
     </div>
   );

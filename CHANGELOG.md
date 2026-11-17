@@ -9,6 +9,14 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.15.0 — 17 de noviembre de 2026 — Compensar desde el detalle de cuenta
+
+- En el detalle de cuenta (Balance de 8 columnas › Documentos abiertos) ahora se puede compensar sin salir de la pantalla: se abre el documento, se marcan los cargos y abonos y se pulsa "Compensar". Hay casillas por partida, por documento y por auxiliar.
+- Si cargos y abonos cuadran en $0, se compensan completos. Si no cuadran, se ofrece el pareo parcial (hasta el monto menor; el resto queda abierto), igual que en Análisis de Cuentas.
+- Reglas: solo partidas de un mismo auxiliar a la vez; una partida ya compensada no se vuelve a usar mientras no se descompense; no disponible para perfiles Analista ni Observador. Queda registrado en la auditoría y se ve igual en Análisis de Cuentas y Auxiliares.
+
+---
+
 ## 1.14.0 — 17 de noviembre de 2026 — Módulo opcional de Compras (Orden de Compra → Recepción → Factura)
 
 - Se activa por empresa en el panel del estudio: ficha de la empresa › casilla "Módulo de Compras". Si no está marcada, no aparece nada y la empresa trabaja las compras como siempre.

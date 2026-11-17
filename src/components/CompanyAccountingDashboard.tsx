@@ -9145,6 +9145,7 @@ export default function CompanyAccountingDashboard({
           accounts={accounts}
           fiscalYears={fiscalYears}
           onFixCeecVouchers={handleAutoFixCeecVouchers}
+          puedeCompensar={!isAnalyst && !isReadOnly}
           onNavigateToLibroDiario={() => {
             setActiveTab('libroDiario');
             setActiveRibbonGroup('FINANZAS');

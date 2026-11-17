@@ -47,6 +47,8 @@ import AuditorEstadosFinancierosView from './AuditorEstadosFinancierosView';
 import CompanyNotebooksView from './CompanyNotebooksView';
 import { ProductsServicesView } from './ProductsServicesView';
 import { OperativaComercialView } from './OperativaComercialView';
+import ComprasView from './ComprasView';
+import { getNextVoucherNumber } from '../utils/voucherCounter';
 import { StockKardexView } from './StockKardexView';
 import { WarehousesView } from './WarehousesView';
 import ReportesAnaliticosView from './ReportesAnaliticosView';
@@ -116,6 +118,7 @@ const QUICK_ACCESS_ITEMS = [
   { id: 'controlFolios', label: 'Timbraje y Folios SII', group: 'IMPUESTOS', icon: Printer, tab: 'controlFolios' },
   { id: 'rendicionGastos', label: 'Rendición de Gastos & Viáticos', group: 'OPERACIONES', icon: Receipt, tab: 'rendicionGastos' },
   { id: 'operativaComercial', label: 'Gestión Comercial', group: 'OPERACIONES', icon: ShoppingCart, tab: 'operativaComercial' },
+  { id: 'compras', label: 'Compras · Órdenes de Compra', group: 'OPERACIONES', icon: ShoppingBag, tab: 'compras' },
   { id: 'emisionDte', label: 'Emisión DTE / Facturas', group: 'OPERACIONES', icon: FileSpreadsheet, tab: 'emisionDte' },
   { id: 'stockKardex', label: 'Control de Stock & Kardex', group: 'OPERACIONES', icon: Package, tab: 'stockKardex' },
   { id: 'warehouses', label: 'Bodegas y Almacenes', group: 'OPERACIONES', icon: WarehouseIcon, tab: 'warehouses' },
@@ -179,7 +182,7 @@ export default function CompanyAccountingDashboard({
   const { withProcess } = useProcess();
   type RibbonGroup = 'FINANZAS' | 'OPERACIONES' | 'TESORERIA' | 'PERSONAL' | 'IMPORTACIONES' | 'IMPUESTOS' | 'INDICADORES' | 'CONFIGURACIONES' | 'FAVORITOS';
   const [activeRibbonGroup, setActiveRibbonGroup] = useState<RibbonGroup>('FINANZAS');
-  const [activeTab, setActiveTab] = useState<'accounts' | 'auxiliaries' | 'periods' | 'rcv' | 'exchange' | 'rcvParams' | 'centralizaciones' | 'f29Codes' | 'vouchers' | 'libroDiario' | 'libroMayor' | 'balance8' | 'balanceIFRS' | 'analisisAuxiliares' | 'analisisCuentas' | 'planillaConsultas' | 'analyticsHud' | 'reportesAnaliticos' | 'estadoResultados' | 'indicadoresFinancieros' | 'auditorEstadosFinancieros' | 'smartNotebooks' | 'flujoDeCaja' | 'agingDeudas' | 'nominasPago' | 'cobranza' | 'conciliacionBancaria' | 'libroBancoColaborativo' | 'cargaMasiva' | 'formulario29' | 'plantillasCarga' | 'importacionInteligente' | 'cierreAnio' | 'informeMensual' | 'rendicionGastos' | 'emisionDte' | 'tablasAnalisis' | 'controlFolios' | 'productsServices' | 'operativaComercial' | 'stockKardex' | 'warehouses' | 'employees' | 'liquidaciones' | 'activoFijo' | 'ddjj' | 'agenticStudy2040' | 'agenticPyme2040' | 'home' | 'buscadorComprobantes'>('home');
+  const [activeTab, setActiveTab] = useState<'compras' | 'accounts' | 'auxiliaries' | 'periods' | 'rcv' | 'exchange' | 'rcvParams' | 'centralizaciones' | 'f29Codes' | 'vouchers' | 'libroDiario' | 'libroMayor' | 'balance8' | 'balanceIFRS' | 'analisisAuxiliares' | 'analisisCuentas' | 'planillaConsultas' | 'analyticsHud' | 'reportesAnaliticos' | 'estadoResultados' | 'indicadoresFinancieros' | 'auditorEstadosFinancieros' | 'smartNotebooks' | 'flujoDeCaja' | 'agingDeudas' | 'nominasPago' | 'cobranza' | 'conciliacionBancaria' | 'libroBancoColaborativo' | 'cargaMasiva' | 'formulario29' | 'plantillasCarga' | 'importacionInteligente' | 'cierreAnio' | 'informeMensual' | 'rendicionGastos' | 'emisionDte' | 'tablasAnalisis' | 'controlFolios' | 'productsServices' | 'operativaComercial' | 'stockKardex' | 'warehouses' | 'employees' | 'liquidaciones' | 'activoFijo' | 'ddjj' | 'agenticStudy2040' | 'agenticPyme2040' | 'home' | 'buscadorComprobantes'>('home');
   const [auxSubTab, setAuxSubTab] = useState<'deudores' | 'acreedores'>('deudores');
   const [employeeSubTab, setEmployeeSubTab] = useState<'employees' | 'contracts' | 'attendance' | 'advances' | 'severance' | 'certificates'>('employees');
   const [payrollTab, setPayrollTab] = useState<'NOMINA' | 'LIQUIDACION_INDIVIDUAL' | 'LRD_DT' | 'PREVIRED' | 'PARAMETROS' | 'CONCEPTOS' | 'RELIQUIDACIONES'>('NOMINA');
@@ -3362,14 +3365,28 @@ export default function CompanyAccountingDashboard({
         }
       } else {
         // Facturas y documentos regulares de Compra
-        if (finalNetoDebit > 0) {
+        // Módulo Compras: si la factura referencia una O/C, la parte recibida netea Facturas por Recibir (el resto va a gasto)
+        const fxrNetoDoc = Math.min(Math.max(0, Number(docItem.purchaseFxrNeto) || 0), finalNetoDebit);
+        const fxrAccDoc = fxrNetoDoc > 0 && docItem.purchaseFxrAccountId ? accounts.find(a => a.id === docItem.purchaseFxrAccountId) : undefined;
+        if (fxrAccDoc && fxrNetoDoc > 0) {
+          const refOc = `OC-${docItem.purchaseOrderNumber}`;
+          lines.push({
+            accountId: fxrAccDoc.id, accountCode: fxrAccDoc.code, accountName: fxrAccDoc.name,
+            debit: fxrNetoDoc, credit: 0,
+            auxiliaryRut: docItem.rutEmisor, auxiliaryName: docItem.razonSocialEmisor,
+            documentType: 'OC', documentRef: refOc,
+            gloss: `Factura ${docRefStr} contra ${refOc} - ${docItem.razonSocialEmisor}`
+          });
+        }
+        const finalNetoGasto = fxrAccDoc ? finalNetoDebit - fxrNetoDoc : finalNetoDebit;
+        if (finalNetoGasto > 0) {
           const baseGastoGloss = otrosImpuestosAmount > 0 && !hasConfiguredOtrosAcc 
             ? `Gasto e Impuestos Adicionales ${docRefStr} - ${docItem.razonSocialEmisor}`
             : `Gasto ${docRefStr} - ${docItem.razonSocialEmisor}`;
           const glossStr = aux?.defaultGloss 
             ? `${baseGastoGloss} - ${aux.defaultGloss.trim()}`
             : baseGastoGloss;
-          lines.push(makeLine(expenseAcc, finalNetoDebit, 0, glossStr, docItem.rutEmisor, docItem.razonSocialEmisor, docRefStr));
+          lines.push(makeLine(expenseAcc, finalNetoGasto, 0, glossStr, docItem.rutEmisor, docItem.razonSocialEmisor, docRefStr));
         }
 
         if (hasConfiguredOtrosAcc && otrosImpuestosAmount > 0) {
@@ -3685,6 +3702,36 @@ export default function CompanyAccountingDashboard({
       lastModifiedBy: userUid,
       lastModifiedAt: nowIso
     };
+  };
+
+  // ── Módulo Compras: comprobantes de recepción (y su reverso) ──
+  const crearComprobanteCompras = async (v: { date: string; gloss: string; lines: VoucherLine[] }): Promise<{ id: string; voucherNumber: number }> => {
+    const periodo = v.date.slice(0, 7);
+    const chequeo = checkIsPeriodClosed(periodo);
+    if (chequeo.isClosed) throw new Error(chequeo.errorMsg || `El período ${periodo} está cerrado.`);
+    const maxLocal = vouchers.reduce((m, x) => Math.max(m, x.voucherNumber || 0), 0);
+    const voucherNumber = await getNextVoucherNumber(studyId, company.id, 0, maxLocal);
+    const lines = sanitizeVoucherLines(v.lines, accounts);
+    const totalDebit = lines.reduce((acc, l) => acc + (Number(l.debit) || 0), 0);
+    const totalCredit = lines.reduce((acc, l) => acc + (Number(l.credit) || 0), 0);
+    if (Math.abs(totalDebit - totalCredit) >= 0.01) throw new Error('El asiento de la recepción no cuadra.');
+    const nowIso = new Date().toISOString();
+    const data: Omit<Voucher, 'id'> = {
+      voucherNumber, date: v.date, period: periodo, type: 'Traspaso', gloss: v.gloss, lines,
+      totalDebit, totalCredit, status: 'Valido', origin: 'COMPRAS',
+      createdBy: auth.currentUser?.uid || 'compras', createdByUserEmail: auth.currentUser?.email || '',
+      creationMode: 'SISTEMA', createdAt: nowIso, lastModifiedBy: auth.currentUser?.uid || 'compras', lastModifiedAt: nowIso
+    };
+    const ref = await addDoc(collection(companyRef, 'vouchers'), data);
+    return { id: ref.id, voucherNumber };
+  };
+
+  const reversarComprobanteCompras = async (voucherId: string, gloss: string, date: string): Promise<{ id: string; voucherNumber: number }> => {
+    const snap = await getDoc(doc(companyRef, 'vouchers', voucherId));
+    if (!snap.exists()) throw new Error('No se encontró el comprobante original de la recepción.');
+    const orig = snap.data() as Voucher;
+    const lines = (orig.lines || []).map(l => ({ ...l, debit: l.credit || 0, credit: l.debit || 0, gloss: `Reverso: ${l.gloss || ''}` }));
+    return crearComprobanteCompras({ date, gloss, lines });
   };
 
   // Comprobante que respalda a un documento del RCV (por enlace directo o por origen)
@@ -7340,6 +7387,7 @@ export default function CompanyAccountingDashboard({
             onOpenModule={handleOpenModuleInTab}
             pinnedIds={pinnedQuickAccessIds}
             periodLabel={selectedRcvPeriod}
+            comprasHabilitado={!!company.comprasHabilitado}
             stats={[
               { label: 'Comprobantes del período', value: n(delPeriodo.length), hint: `${n(vouchers.length)} en total` },
               { label: 'Movimiento del período', value: '$' + n(Math.round(delPeriodo.reduce((s, v) => s + (v.totalDebit || 0), 0))), hint: 'suma del debe' },
@@ -9544,6 +9592,30 @@ export default function CompanyAccountingDashboard({
         />
       )}
 
+      {/* TAB: COMPRAS (módulo opcional) */}
+      {activeTab === 'compras' && (
+        company.comprasHabilitado ? (
+          <ComprasView
+            studyId={studyId}
+            company={company}
+            accounts={accounts}
+            auxiliaries={auxiliaries}
+            products={products}
+            rcvDocuments={rcvDocuments}
+            currentUserEmail={currentUserEmail}
+            isAdmin={isSuperUser || currentUserRole === UserRole.STUDY_ADMIN}
+            isReadOnly={isAnalyst || isReadOnly}
+            onCreateVoucher={crearComprobanteCompras}
+            onReverseVoucher={reversarComprobanteCompras}
+            onRefresh={fetchData}
+          />
+        ) : (
+          <div className="bg-white border border-slate-200 rounded-xl p-6 text-sm text-slate-600">
+            El módulo de Compras no está habilitado para esta empresa. Se activa en el panel del estudio, ficha de la empresa → “Módulo de Compras”.
+          </div>
+        )
+      )}
+
       {/* TAB: CONTROL DE INVENTARIO & KARDEX PMP */}
       {activeTab === 'stockKardex' && (
         <StockKardexView
@@ -9834,7 +9906,7 @@ export default function CompanyAccountingDashboard({
               </p>
 
               <div className="space-y-1.5 pt-1">
-                {QUICK_ACCESS_ITEMS.map((item) => {
+                {QUICK_ACCESS_ITEMS.filter(it => it.id !== 'compras' || company.comprasHabilitado).map((item) => {
                   const IconComp = item.icon;
                   const isPinned = pinnedQuickAccessIds.includes(item.id);
                   return (

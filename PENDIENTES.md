@@ -49,3 +49,10 @@ Lista viva. Cada punto se pasa al CHANGELOG cuando se hace.
 - Compensación de partidas, etapa 2: automática al registrar pagos, cobros, NC y ND.
 - Revisar impresión con estilos en certificados SII, balance y pendientes.
 - Empresa de pruebas: cambiar nombre a "Cliente de Prueba SPA", RUT 76.123.456-0, y revisar nombres reales de proveedores y clientes en sus datos.
+
+## Módulo de Compras (siguientes etapas)
+- Enviar la O/C por correo al proveedor desde el sistema (hoy se imprime o guarda en PDF).
+- Aviso por correo a los aprobadores cuando una O/C queda esperando su aprobación.
+- Cierre de diferencias abiertas en Facturas por Recibir con un asiento de ajuste guiado.
+- Recepción con inventario: mover Kardex/bodega al recibir productos.
+- Notas de crédito del proveedor referenciadas a la O/C.

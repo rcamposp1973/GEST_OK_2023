@@ -186,6 +186,8 @@ export interface DTEDocument {
 
 export interface Company {
   id: string;
+  comprasHabilitado?: boolean; // Módulo opcional de Compras (O/C, recepción, factura por recibir)
+  purchasesConfig?: PurchasesConfig;
   studyId: string;
   name: string; // Razón Social
   razonSocial?: string; // Alias Razón Social
@@ -352,6 +354,10 @@ export interface RCVDocument {
   nombreTipoDoc?: string;
   folio: string;
   fechaEmision: string; // YYYY-MM-DD
+  purchaseOrderId?: string; // Módulo Compras: O/C a la que hace referencia esta factura
+  purchaseOrderNumber?: number;
+  purchaseFxrNeto?: number; // Parte del neto que netea Facturas por Recibir
+  purchaseFxrAccountId?: string;
   date?: string; // Compatibilidad YYYY-MM-DD
   fechaVencimiento?: string; // YYYY-MM-DD
   montoNeto: number; // Para Compras/Ventas: Neto afecto. Para Honorarios: Bruto
@@ -893,6 +899,7 @@ export interface ProductService {
   description?: string; // Compatibilidad ProductMaster
   salesPrice: number; // Neto
   purchaseCost: number; // Neto / PMP
+  contabilizaEnRecepcion?: boolean; // Módulo Compras: true/omitido = la recepción contabiliza contra Facturas por Recibir; false = se contabiliza solo con la factura
   
   // Imputación contable y operativa
   salesAccountId?: string; // Cuenta Ingreso (ej: 410101 Ventas Servicios)
@@ -1323,10 +1330,98 @@ export interface LandingPricingPlan {
   status?: 'active' | 'draft' | 'inactive';
 }
 
+// ===== MÓDULO DE COMPRAS (opcional) =====
+export interface PurchasesConfig {
+  facturasPorRecibirAccountId?: string; // Cuenta del plan de cuentas "Facturas por Recibir" (la elige el usuario, el sistema no la crea)
+  approvalRequired: boolean; // Si la O/C necesita aprobación antes de enviarse
+  level1Emails: string[]; // Aprobadores nivel 1
+  level2Emails: string[]; // Aprobadores nivel 2
+  level2MinAmount: number; // Total desde el cual se exige también el nivel 2 (0 = siempre ambos niveles)
+  defaultPaymentTerms?: string;
+  defaultDeliveryPlace?: string;
+  footerNotes?: string; // Texto al pie de la O/C impresa
+}
 
+export type PurchaseOrderStatus =
+  | 'BORRADOR' | 'PENDIENTE_N1' | 'PENDIENTE_N2' | 'APROBADA' | 'RECHAZADA'
+  | 'RECIBIDA_PARCIAL' | 'RECIBIDA' | 'CERRADA' | 'ANULADA';
 
+export interface PurchaseOrderLine {
+  id: string;
+  productId?: string;
+  code: string;
+  name: string;
+  type: 'PRODUCT' | 'SERVICE';
+  unit: string;
+  quantity: number;
+  unitPriceNeto: number;
+  exento?: boolean;
+  contabilizaEnRecepcion: boolean; // Copiado del producto al crear la línea
+  accountId?: string; // Cuenta de débito para la recepción (gasto o inventario)
+  receivedQty: number;
+}
 
+export interface PurchaseApproval {
+  level: 1 | 2;
+  decision: 'APROBADA' | 'RECHAZADA';
+  by: string;
+  at: string;
+  comment?: string;
+}
 
+export interface PurchaseReceiptLine {
+  lineId: string;
+  quantity: number;
+  amountNeto: number; // Monto contabilizado en esta recepción (0 si la línea no contabiliza)
+}
 
+export interface PurchaseReceipt {
+  id: string;
+  number: string; // Ej: OC-12-R1
+  date: string; // YYYY-MM-DD
+  notes?: string;
+  lines: PurchaseReceiptLine[];
+  totalNeto: number; // Total contabilizado contra Facturas por Recibir
+  voucherId?: string;
+  voucherNumber?: number;
+  reversalVoucherId?: string;
+  anulada?: boolean;
+  createdBy?: string;
+  createdAt: string;
+}
 
+export interface PurchaseInvoiceLink {
+  rcvId: string;
+  tipoDoc: string;
+  folio: string;
+  date: string;
+  montoNeto: number;
+  fxrNeto: number; // Parte del neto que netea Facturas por Recibir
+}
 
+export interface PurchaseOrder {
+  id: string;
+  number: number;
+  date: string;
+  supplierRut: string;
+  supplierName: string;
+  supplierAddress?: string;
+  supplierEmail?: string;
+  supplierContact?: string;
+  paymentTerms?: string;
+  deliveryDate?: string;
+  deliveryPlace?: string;
+  notes?: string;
+  lines: PurchaseOrderLine[];
+  neto: number;
+  exento: number;
+  iva: number;
+  total: number;
+  status: PurchaseOrderStatus;
+  approvals: PurchaseApproval[];
+  receipts: PurchaseReceipt[];
+  invoices: PurchaseInvoiceLink[];
+  createdBy?: string;
+  createdAt: string;
+  updatedAt?: string;
+}

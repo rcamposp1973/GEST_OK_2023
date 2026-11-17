@@ -9,6 +9,17 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.14.0 — 17 de noviembre de 2026 — Módulo opcional de Compras (Orden de Compra → Recepción → Factura)
+
+- Se activa por empresa en el panel del estudio: ficha de la empresa › casilla "Módulo de Compras". Si no está marcada, no aparece nada y la empresa trabaja las compras como siempre.
+- Órdenes de Compra con productos o servicios, numeración correlativa, condiciones de pago y entrega, neto/exento/IVA/total. Se imprimen o guardan como PDF en formato estándar (datos de la empresa, proveedor, líneas, totales, observaciones, firmas).
+- Aprobación en dos niveles (correos de aprobadores y monto desde el cual se exige el nivel 2, ambos configurables) o sin aprobación si se desmarca.
+- Recepciones totales o parciales. Cada producto/servicio tiene la casilla "Contabilizar al recibir": si está marcada, la recepción genera el comprobante (Debe gasto o existencia, Haber Facturas por Recibir, por el neto). La cuenta Facturas por Recibir la elige el contador entre las del plan de cuentas; el sistema no crea ninguna.
+- La factura del proveedor se asocia a la O/C desde la misma pantalla y, al contabilizarla en RCV, netea Facturas por Recibir con la misma referencia (OC-N). Si el monto facturado difiere de lo recibido, la diferencia queda abierta en esa cuenta y se muestra como saldo abierto.
+- Anular una recepción genera un comprobante de reverso; no se borra nada.
+
+---
+
 ## 1.13.1 — 17 de noviembre de 2026 — Resumen de ventas por mes para enviar por correo
 
 - Nuevo informe "Resumen de ventas por mes": nombre y RUT de la empresa, y una tabla mes a mes con el monto neto del año elegido contra el año anterior, más el total. Se ve en Indicadores Financieros › KPIs (contador) y en el Resumen del cliente observador.

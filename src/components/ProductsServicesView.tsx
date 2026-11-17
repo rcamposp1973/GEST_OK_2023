@@ -636,6 +636,20 @@ export const ProductsServicesView: React.FC<ProductsServicesViewProps> = ({
                       ))}
                     </select>
                   </div>
+                  <div className="sm:col-span-2">
+                    <label className="flex items-start gap-2 text-slate-700">
+                      <input
+                        type="checkbox"
+                        className="mt-1 accent-indigo-600"
+                        checked={(formData as any).contabilizaEnRecepcion !== false}
+                        onChange={e => setFormData({ ...formData, contabilizaEnRecepcion: e.target.checked } as any)}
+                      />
+                      <span>
+                        <span className="font-semibold">Contabilizar al recibir (módulo Compras)</span>
+                        <span className="block text-xs text-slate-500">Si está marcado, la recepción de la orden de compra registra el gasto/existencia contra Facturas por Recibir. Si no, se contabiliza recién con la factura.</span>
+                      </span>
+                    </label>
+                  </div>
                   <div>
                     <label className="block font-semibold text-slate-700 mb-1">Centro de Costo por Defecto</label>
                     <select

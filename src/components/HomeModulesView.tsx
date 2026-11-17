@@ -9,6 +9,7 @@ interface Props {
   stats?: HomeStat[];
   pinnedIds?: string[];
   periodLabel?: string;
+  comprasHabilitado?: boolean;
 }
 
 const AREAS: { cat: ModuleCategory; titulo: string; desc: string; icon: any; tono: string }[] = [
@@ -22,11 +23,12 @@ const AREAS: { cat: ModuleCategory; titulo: string; desc: string; icon: any; ton
   { cat: 'CONFIGURACIONES', titulo: 'Configuración', desc: 'Plan de cuentas y maestros', icon: Settings, tono: '#475569' },
 ];
 
-export default function HomeModulesView({ onOpenModule, stats = [], pinnedIds = [], periodLabel }: Props) {
+export default function HomeModulesView({ onOpenModule, stats = [], pinnedIds = [], periodLabel, comprasHabilitado = false }: Props) {
   const [q, setQ] = useState('');
   const [abierta, setAbierta] = useState<ModuleCategory>('FINANZAS');
 
-  const porId = useMemo(() => new Map(COCKPIT_MODULE_CATALOG.map(m => [m.id, m])), []);
+  const catalogo = useMemo(() => COCKPIT_MODULE_CATALOG.filter(m => m.requiere !== 'compras' || comprasHabilitado), [comprasHabilitado]);
+  const porId = useMemo(() => new Map(catalogo.map(m => [m.id, m])), [catalogo]);
   const frecuentes = useMemo(
     () => pinnedIds.map(id => porId.get(id)).filter((m): m is NonNullable<typeof m> => !!m && m.id !== 'calculator').slice(0, 8),
     [pinnedIds, porId]
@@ -34,10 +36,10 @@ export default function HomeModulesView({ onOpenModule, stats = [], pinnedIds = 
   const resultados = useMemo(() => {
     const t = q.trim().toLowerCase();
     if (!t) return [];
-    return COCKPIT_MODULE_CATALOG.filter(m => `${m.label} ${m.shortLabel} ${m.description}`.toLowerCase().includes(t)).slice(0, 10);
-  }, [q]);
+    return catalogo.filter(m => `${m.label} ${m.shortLabel} ${m.description}`.toLowerCase().includes(t)).slice(0, 10);
+  }, [q, catalogo]);
   const areaAbierta = AREAS.find(a => a.cat === abierta)!;
-  const modulosAbiertos = COCKPIT_MODULE_CATALOG.filter(m => m.category === abierta);
+  const modulosAbiertos = catalogo.filter(m => m.category === abierta);
   const card = 'bg-white border border-slate-200 shadow-sm';
 
   return (

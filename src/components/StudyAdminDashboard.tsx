@@ -164,6 +164,7 @@ export default function StudyAdminDashboard({
     certificadoNombre: '',
     certificadoB64: '',
     hasCertificadoDigital: false,
+    comprasHabilitado: false,
   };
   const [companyFormData, setCompanyFormData] = useState(emptyCompanyFormData);
 
@@ -217,6 +218,7 @@ export default function StudyAdminDashboard({
         certificadoNombre: dte.certificadoNombre || '',
         certificadoB64: dte.certificadoB64 || '',
         hasCertificadoDigital: !!(dte.hasCertificadoDigital || dte.certificadoB64),
+        comprasHabilitado: !!editingCompany.comprasHabilitado,
       });
     } else {
       setCompanyFormData(emptyCompanyFormData);
@@ -556,6 +558,7 @@ export default function StudyAdminDashboard({
         assignedAccountantEmails,
         dteConfig: dteConfigPayload,
         dteModuleEnabled: true,
+        comprasHabilitado: !!companyFormData.comprasHabilitado,
         updatedAt: new Date()
       };
 
@@ -1368,6 +1371,19 @@ export default function StudyAdminDashboard({
                           />
                         </div>
                       </div>
+
+                      <label className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={!!companyFormData.comprasHabilitado}
+                          onChange={(e) => setCompanyFormData(prev => ({ ...prev, comprasHabilitado: e.target.checked }))}
+                          className="mt-1 h-4 w-4 accent-indigo-600"
+                        />
+                        <span>
+                          <span className="block text-sm font-semibold text-slate-800">Módulo de Compras (opcional)</span>
+                          <span className="block text-xs text-slate-500">Órdenes de compra, aprobación, recepción de lo comprado y factura referenciada a la O/C. Si no se marca, la empresa trabaja las compras como hasta hoy.</span>
+                        </span>
+                      </label>
 
                       <div className="flex justify-between items-center pt-4 border-t border-slate-100">
                         <button

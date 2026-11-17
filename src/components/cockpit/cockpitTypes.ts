@@ -28,6 +28,7 @@ export interface CockpitModuleItem {
   colorScheme: 'indigo' | 'emerald' | 'amber' | 'rose' | 'cyan' | 'purple' | 'blue' | 'slate';
   shortcut?: string;
   description: string;
+  requiere?: 'compras'; // Módulo opcional que la empresa debe tener habilitado para ver este ítem
 }
 
 export interface WorkspaceTab {
@@ -287,6 +288,16 @@ export const COCKPIT_MODULE_CATALOG: CockpitModuleItem[] = [
     icon: ShoppingCart,
     colorScheme: 'emerald',
     description: 'Cotizaciones, órdenes de venta y notas de pedido'
+  },
+  {
+    id: 'compras',
+    label: 'Compras · Órdenes de Compra',
+    shortLabel: 'Compras',
+    category: 'OPERACIONES',
+    icon: ShoppingCart,
+    colorScheme: 'emerald',
+    description: 'Órdenes de compra, aprobación, recepción y factura por recibir',
+    requiere: 'compras'
   },
   {
     id: 'emisionDte',

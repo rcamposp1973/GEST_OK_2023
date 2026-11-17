@@ -52,65 +52,7 @@ export const ProductsServicesView: React.FC<ProductsServicesViewProps> = ({
   isReadOnly = false
 }) => {
   // Mock/Local initial state for demo & Firestore sync
-  const [items, setItems] = useState<ProductService[]>(initialProducts && initialProducts.length > 0 ? initialProducts : [
-    {
-      id: 'prod-1',
-      companyId,
-      code: 'SRV-CONS-01',
-      name: 'Asesoría y Consultoría Contable Mensual',
-      type: 'SERVICE',
-      unitOfMeasure: 'HRS',
-      salesPrice: 250000,
-      purchaseCost: 0,
-      salesAccountId: accounts.find(a => a.code.startsWith('41') || a.name.toLowerCase().includes('servicio'))?.id || '',
-      purchaseAccountId: accounts.find(a => a.code.startsWith('51') || a.name.toLowerCase().includes('honorario'))?.id || '',
-      defaultCostCenterId: 'CC-ADM',
-      defaultItemGastoId: 'SERV-PROF',
-      currentStock: 0,
-      minStock: 0,
-      allowNegativeStock: true,
-      category: 'Servicios Profesionales',
-      estado: 'Activo'
-    },
-    {
-      id: 'prod-2',
-      companyId,
-      code: 'PROD-RES-01',
-      name: 'Resma Papel Carta 75g (Caja 5 unidades)',
-      type: 'PRODUCT',
-      unitOfMeasure: 'UN',
-      salesPrice: 24990,
-      purchaseCost: 16500,
-      salesAccountId: accounts.find(a => a.code.startsWith('41') || a.name.toLowerCase().includes('venta'))?.id || '',
-      purchaseAccountId: accounts.find(a => a.code.startsWith('1106') || a.code.startsWith('51') || a.name.toLowerCase().includes('mercader'))?.id || '',
-      defaultCostCenterId: 'CC-OP',
-      defaultItemGastoId: 'INSUMOS-OF',
-      currentStock: 38,
-      minStock: 15,
-      allowNegativeStock: false,
-      category: 'Librería & Oficina',
-      estado: 'Activo'
-    },
-    {
-      id: 'prod-3',
-      companyId,
-      code: 'PROD-TON-BLK',
-      name: 'Toner Láser Negro Alta Capacidad',
-      type: 'PRODUCT',
-      unitOfMeasure: 'UN',
-      salesPrice: 79900,
-      purchaseCost: 52000,
-      salesAccountId: accounts.find(a => a.code.startsWith('41'))?.id || '',
-      purchaseAccountId: accounts.find(a => a.code.startsWith('1106') || a.code.startsWith('51'))?.id || '',
-      defaultCostCenterId: 'CC-OP',
-      defaultItemGastoId: 'INSUMOS-COMP',
-      currentStock: 4,
-      minStock: 10,
-      allowNegativeStock: false,
-      category: 'Insumos Computación',
-      estado: 'Activo'
-    }
-  ]);
+  const [items, setItems] = useState<ProductService[]>(initialProducts || []);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'ALL' | 'PRODUCT' | 'SERVICE'>('ALL');

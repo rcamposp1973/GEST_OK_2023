@@ -1479,51 +1479,8 @@ export default function CompanyAccountingDashboard({
       setWarehouses(fetchedWh);
 
       // PRODUCTOS Y SERVICIOS
-      if (prodSnap.empty) {
-        const defaultWhId = fetchedWh[0]?.id || 'wh-central';
-        const initialProducts: ProductService[] = [
-          {
-            id: 'prod-srv-1',
-            companyId: company.id,
-            code: 'SRV-CONS-01',
-            name: 'Asesoría y Consultoría Contable Mensual',
-            type: 'SERVICE',
-            unitOfMeasure: 'MES',
-            salesPrice: 450000,
-            purchaseCost: 0,
-            currentStock: 0,
-            minStock: 0,
-            allowNegativeStock: true,
-            category: 'Servicios Profesionales',
-            estado: 'Activo',
-            createdAt: new Date().toISOString()
-          },
-          {
-            id: 'prod-merc-1',
-            companyId: company.id,
-            code: 'PROD-RESM-01',
-            name: 'Resma Papel Carta 75g (Caja 10 unidades)',
-            type: 'PRODUCT',
-            unitOfMeasure: 'CAJA',
-            salesPrice: 42900,
-            purchaseCost: 28500,
-            currentStock: 35,
-            minStock: 10,
-            defaultWarehouseId: defaultWhId,
-            stocksByWarehouse: { [defaultWhId]: 35 },
-            allowNegativeStock: false,
-            category: 'Artículos de Oficina',
-            estado: 'Activo',
-            createdAt: new Date().toISOString()
-          }
-        ];
-        initialProducts.forEach(p => {
-          setDoc(doc(companyRef, 'products', p.id), p).catch(console.warn);
-        });
-        setProducts(initialProducts);
-      } else {
-        setProducts(prodSnap.docs.map(d => ({ ...d.data(), id: d.id } as ProductService)));
-      }
+      // Ya no se crean productos de ejemplo: el catálogo parte vacío y solo contiene lo que el usuario cree.
+      setProducts(prodSnap.docs.map(d => ({ ...d.data(), id: d.id } as ProductService)));
 
       setCustomAnalysisItems(customItemsSnap.docs.map(d => ({ ...d.data(), id: d.id } as CustomAnalysisTableItem)));
 

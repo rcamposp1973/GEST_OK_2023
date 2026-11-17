@@ -9,6 +9,13 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.15.1 — 17 de noviembre de 2026 — Se acabaron los productos de ejemplo automáticos
+
+- Corregido: cuando una empresa no tenía productos, el sistema creaba solos dos de ejemplo ("Asesoría y Consultoría Contable Mensual" y "Resma Papel Carta") y los guardaba en la base de datos. Por eso aparecían productos que nadie había creado (caso Mundo Call). Ya no se crean.
+- El catálogo de Productos / Servicios parte vacío y solo muestra lo que el usuario crea. Los dos ejemplos ya guardados en empresas existentes no se tocan: se eliminan desde el Catálogo y ya no vuelven.
+
+---
+
 ## 1.15.0 — 17 de noviembre de 2026 — Compensar desde el detalle de cuenta
 
 - En el detalle de cuenta (Balance de 8 columnas › Documentos abiertos) ahora se puede compensar sin salir de la pantalla: se abre el documento, se marcan los cargos y abonos y se pulsa "Compensar". Hay casillas por partida, por documento y por auxiliar.

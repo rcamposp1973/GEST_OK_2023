@@ -8,6 +8,12 @@ Lista viva. Cada punto se pasa al CHANGELOG cuando se hace.
   - Etapa 2: acciones con confirmación del contador (por ejemplo, preparar el informe mensual).
   - Modelo de cobro: interruptor por estudio activado por el Super Administrador, con verificación en el servidor; complemento de precio fijo en UF más un cupo mensual de preguntas, con paquetes adicionales. Medir el costo real antes de fijar precios.
   - Antes de construirlo: elegir proveedor con plan de pago y condiciones de privacidad que no usen los datos para entrenar modelos; definir qué datos se envían y avisarlo en los contratos; respetar permisos y separación entre estudios; que nunca invente cifras; mostrar el consumo por estudio en el panel del Super Administrador.
+- **Agentes de IA** (etapa posterior al asistente): un agente recibe un objetivo y usa las funciones del sistema como herramientas, desde cualquier pestaña, con los permisos del usuario y todo en la auditoría. Orden previo necesario:
+  - Funciones únicas por acción (compensar, contabilizar, aprobar, crear O/C), con sus reglas dentro y no repetidas en cada pantalla. Hoy la compensación está en tres lugares.
+  - El agente actúa "como" un usuario: mismos permisos, mismas reglas de períodos cerrados, misma auditoría.
+  - Al comienzo propone y el contador aprueba; las acciones que no se pueden deshacer (cerrar períodos, eliminar) siempre piden confirmación.
+  - Primeras tareas sugeridas, por tener resultado verificable: sugerir compensaciones y conciliación bancaria.
+  - Costo por uso de la IA, privacidad de datos y elección de proveedor, como en el asistente.
 
 ## Panel del Super Administrador
 - **Clave API del SII al servidor.** Hoy se guarda solo en el navegador de quien la ingresa; la consulta automática del RCV funciona únicamente desde ese equipo. Mover la clave a una variable segura del servidor y hacer que las consultas al SII pasen por el servidor (así sirve a todos los estudios y la clave no llega a ningún navegador).

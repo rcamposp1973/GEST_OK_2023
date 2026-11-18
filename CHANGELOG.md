@@ -9,6 +9,16 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.15.2 — 17 de noviembre de 2026 — El sistema ya no crea ni borra datos por su cuenta (solo Pruebas)
+
+- Bodega Central: ya no se guarda sola en la base; se muestra una bodega virtual hasta que el usuario cree o edite una.
+- Cuadernos: ya no se crea el "Cuaderno Cierre Mensual" de ejemplo (traía tareas marcadas como hechas).
+- RCV: al abrir una empresa ya no se borran ni modifican documentos "duplicados" en la base de datos; solo se ocultan en pantalla. Borrar duplicados queda solo en el botón Depurar duplicados.
+- Super Administradores: ya no se crea un usuario de ejemplo (con clave de prueba) ni se borran usuarios al abrir la pantalla.
+- Centro de entrenamiento Junior: ya no se precarga conocimiento por defecto.
+
+---
+
 ## 1.15.1 — 17 de noviembre de 2026 — Se acabaron los productos de ejemplo automáticos
 
 - Corregido: cuando una empresa no tenía productos, el sistema creaba solos dos de ejemplo ("Asesoría y Consultoría Contable Mensual" y "Resma Papel Carta") y los guardaba en la base de datos. Por eso aparecían productos que nadie había creado (caso Mundo Call). Ya no se crean.

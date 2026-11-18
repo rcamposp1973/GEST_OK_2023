@@ -160,15 +160,8 @@ export default function JuniorAITrainingCenter() {
       const globalSnap = await getDocs(collection(db, 'system_junior_knowledge'));
       let loadedKnowledge: CopilotKnowledgeItem[] = [];
 
-      if (globalSnap.empty) {
-        // Seed default initial knowledge
-        for (const item of DEFAULT_GLOBAL_KNOWLEDGE) {
-          const docRef = await addDoc(collection(db, 'system_junior_knowledge'), item);
-          loadedKnowledge.push({ id: docRef.id, ...item });
-        }
-      } else {
-        loadedKnowledge = globalSnap.docs.map(d => ({ id: d.id, ...d.data() } as CopilotKnowledgeItem));
-      }
+      // Ya no se precarga conocimiento por defecto: solo se muestra lo que existe en la base.
+      loadedKnowledge = globalSnap.docs.map(d => ({ id: d.id, ...d.data() } as CopilotKnowledgeItem));
 
       // 4. Company Specific Knowledge
       const compKnowledgeSnap = await getDocs(collectionGroup(db, 'copilotCompanyKnowledge'));

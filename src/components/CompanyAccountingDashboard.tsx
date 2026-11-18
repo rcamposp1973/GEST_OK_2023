@@ -1082,21 +1082,7 @@ export default function CompanyAccountingDashboard({
         const toDelete = sorted.slice(1);
         toDelete.forEach(d => obsoleteIds.add(d.id));
 
-        if (companyRef) {
-          Promise.all(toDelete.map(d => deleteDoc(doc(companyRef, 'rcvDocuments', d.id)))).catch(e => console.warn(e));
-          const cleanCompRut = (company.rut || '').replace(/[^0-9kK]/g, '').toUpperCase();
-          const cleanReceptorRut = (keepDoc.rutReceptor || '').replace(/[^0-9kK]/g, '').toUpperCase();
-          if (!keepDoc.rutReceptor || cleanReceptorRut === cleanCompRut || keepDoc.razonSocialReceptor === keepDoc.razonSocialEmisor) {
-            updateDoc(doc(companyRef, 'rcvDocuments', keepDoc.id), {
-              rutReceptor: '66.666.666-6',
-              razonSocialReceptor: String(keepDoc.folio).includes('RESUMEN')
-                ? `Clientes Varios (${String(keepDoc.folio).replace(/[^0-9]/g, '') || ''} Boletas)`
-                : 'Clientes Varios (Boletas de Venta)',
-              rutEmisor: company.rut,
-              razonSocialEmisor: company.name
-            }).catch(e => console.warn(e));
-          }
-        }
+        // Solo se ocultan en pantalla; ya no se borran ni modifican en la base de datos sin que el usuario lo pida (Depurar duplicados).
       }
     }
 
@@ -1124,19 +1110,7 @@ export default function CompanyAccountingDashboard({
         const toDelete = sorted.slice(1);
         toDelete.forEach(d => obsoleteIds.add(d.id));
 
-        if (companyRef) {
-          Promise.all(toDelete.map(d => deleteDoc(doc(companyRef, 'rcvDocuments', d.id)))).catch(e => console.warn('Error purgando DTE duplicado:', e));
-
-          // Estandarizar RUT del documento conservado
-          const formattedEmisor = keepDoc.rutEmisor ? formatRut(keepDoc.rutEmisor) : keepDoc.rutEmisor;
-          const formattedReceptor = keepDoc.rutReceptor ? formatRut(keepDoc.rutReceptor) : keepDoc.rutReceptor;
-          if (formattedEmisor !== keepDoc.rutEmisor || formattedReceptor !== keepDoc.rutReceptor) {
-            updateDoc(doc(companyRef, 'rcvDocuments', keepDoc.id), {
-              rutEmisor: formattedEmisor,
-              rutReceptor: formattedReceptor
-            }).catch(e => console.warn(e));
-          }
-        }
+        // Solo se ocultan en pantalla; no se borra nada automáticamente.
       }
     }
 
@@ -1473,7 +1447,7 @@ export default function CompanyAccountingDashboard({
           estado: 'Activo',
           createdAt: new Date().toISOString()
         };
-        setDoc(doc(companyRef, 'warehouses', 'wh-central'), defaultWh).catch(console.warn);
+        // Bodega virtual: solo en memoria. Ya no se guarda sola en la base de datos; se guarda si el usuario la edita o crea otra.
         fetchedWh = [defaultWh];
       }
       setWarehouses(fetchedWh);

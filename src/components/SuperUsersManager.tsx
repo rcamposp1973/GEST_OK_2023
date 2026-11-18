@@ -26,37 +26,7 @@ export default function SuperUsersManager() {
   });
 
   useEffect(() => {
-    // 1. Ensure seed/initial super users exist in superUsers collection if empty
-    const ensureSeedSuperUsers = async () => {
-      try {
-        const snap = await getDocs(collection(db, 'superUsers'));
-        if (snap.empty) {
-          // Seed the initial root super admin
-          await addDoc(collection(db, 'superUsers'), {
-            name: 'Ramón Campos (Pulso Contable)',
-            email: 'rcampos@pulsocontable.cl',
-            rut: '12.345.678-9',
-            phone: '+56 9 8765 4321',
-            password: 'password123',
-            estado: 'Activo',
-            createdAt: new Date().toISOString(),
-          });
-        } else {
-          // Clean up any incorrect superUser doc with study admin emails
-          for (const sDoc of snap.docs) {
-            const dData = sDoc.data();
-            if (dData.email?.toLowerCase() === 'campos.ramon@gmail.com') {
-              console.log("Removing study admin from superUsers collection:", sDoc.id);
-              await deleteDoc(doc(db, 'superUsers', sDoc.id));
-            }
-          }
-        }
-      } catch (e) {
-        console.warn("SuperUsers seed warning:", e);
-      }
-    };
-
-    ensureSeedSuperUsers();
+    // Ya no se crea ni se borra ningún super administrador automáticamente al abrir esta pantalla.
 
     // 2. Realtime listener on superUsers collection
     const unsubscribe = onSnapshot(collection(db, 'superUsers'), (snapshot) => {

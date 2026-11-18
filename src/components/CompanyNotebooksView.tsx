@@ -86,23 +86,7 @@ export default function CompanyNotebooksView({
         list.push({ id: d.id, ...d.data() } as NotebookItem);
       });
 
-      if (list.length === 0) {
-        // Create default notebook
-        const defaultNb: NotebookItem = {
-          id: 'nb_' + Date.now(),
-          title: `Cuaderno Cierre Mensual - ${company.name}`,
-          category: 'Tributario',
-          content: `# Cuaderno de Trabajo Inteligente\n\nEmpresa: ${company.name} (RUT: ${formatearRut(company.rut)})\n\n### Objetivos del Cuaderno:\n- Revisión y cuadratura de saldos del Balance.\n- Verificación de documentos en RCV.\n- Notas para el cierre de período y reuniones con gerencia.`,
-          tasks: [
-            { id: 't1', text: 'Validar conciliación bancaria del mes', completed: false },
-            { id: 't2', text: 'Revisar cuadratura de auxiliar de clientes y proveedores', completed: true },
-            { id: 't3', text: 'Emitir borrador de F29 y validar retenciones', completed: false }
-          ],
-          updatedAt: new Date().toISOString()
-        };
-        await setDoc(doc(companyNotebooksRef, defaultNb.id), defaultNb);
-        list.push(defaultNb);
-      }
+      // Ya no se crea un cuaderno de ejemplo: la lista parte vacía y solo tiene lo que el usuario cree.
 
       setNotebooks(list);
       setActiveNotebook(list[0]);

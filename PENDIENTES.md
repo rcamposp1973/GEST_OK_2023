@@ -65,3 +65,9 @@ Lista viva. Cada punto se pasa al CHANGELOG cuando se hace.
 
 ## Agentes (a futuro)
 - Cuando trabajemos con agentes, estos deberán poder operar desde todas las pestañas/módulos del sistema (no solo un módulo): leer, proponer y ejecutar acciones (por ejemplo compensar, contabilizar, aprobar O/C) con los mismos permisos y reglas del usuario, dejando todo en la auditoría.
+
+## Módulo de Ventas (siguientes etapas)
+- Costo de venta y salida de inventario (Kardex) al entregar productos.
+- Nota de crédito referenciada a la orden de venta.
+- Conectar un facturador electrónico: emitir la factura desde la O/V y traer folio y PDF automáticamente.
+- Superposición con Gestión Comercial (cotización/orden de venta/factura que ya existe): decidir si se unifica o se reemplaza.

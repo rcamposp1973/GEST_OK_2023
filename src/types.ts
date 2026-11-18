@@ -208,6 +208,8 @@ export interface Company {
   id: string;
   comprasHabilitado?: boolean; // Módulo opcional de Compras (O/C, recepción, factura por recibir)
   purchasesConfig?: PurchasesConfig;
+  ventasHabilitado?: boolean; // Módulo opcional de Ventas (O/V, entrega, factura por emitir)
+  salesConfig?: SalesConfig;
   studyId: string;
   name: string; // Razón Social
   razonSocial?: string; // Alias Razón Social
@@ -398,6 +400,10 @@ export interface RCVDocument {
   purchaseOrderNumber?: number;
   purchaseFxrNeto?: number; // Parte del neto que netea Facturas por Recibir
   purchaseFxrAccountId?: string;
+  salesOrderId?: string; // Módulo Ventas: O/V a la que hace referencia esta factura emitida
+  salesOrderNumber?: number;
+  salesFxeNeto?: number; // Parte del neto que netea Facturas por Emitir
+  salesFxeAccountId?: string;
   date?: string; // Compatibilidad YYYY-MM-DD
   fechaVencimiento?: string; // YYYY-MM-DD
   montoNeto: number; // Para Compras/Ventas: Neto afecto. Para Honorarios: Bruto
@@ -1156,6 +1162,7 @@ export interface ProductService {
   salesPrice: number; // Neto
   purchaseCost: number; // Neto / PMP
   contabilizaEnRecepcion?: boolean; // Módulo Compras: true/omitido = la recepción contabiliza contra Facturas por Recibir; false = se contabiliza solo con la factura
+  contabilizaEnEntrega?: boolean; // Módulo Ventas: true/omitido = la entrega devenga el ingreso contra Facturas por Emitir; false = se contabiliza solo con la factura
   
   // Imputación contable y operativa
   salesAccountId?: string; // Cuenta Ingreso (ej: 410101 Ventas Servicios)
@@ -1726,6 +1733,101 @@ export interface PurchaseOrder {
   approvals: PurchaseApproval[];
   receipts: PurchaseReceipt[];
   invoices: PurchaseInvoiceLink[];
+  createdBy?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+// ===== MÓDULO DE VENTAS (opcional) — orden de venta → entrega → factura (la factura electrónica se emite fuera del sistema) =====
+export interface SalesConfig {
+  facturasPorEmitirAccountId?: string; // Cuenta "Facturas por Emitir" del plan de cuentas (la elige el usuario; el sistema no la crea)
+  approvalRequired: boolean;
+  level1Emails: string[];
+  level2Emails: string[];
+  level2MinAmount: number;
+  defaultPaymentTerms?: string;
+  defaultDeliveryPlace?: string;
+  footerNotes?: string;
+}
+
+export type SalesOrderStatus =
+  | 'BORRADOR' | 'PENDIENTE_N1' | 'PENDIENTE_N2' | 'APROBADA' | 'RECHAZADA'
+  | 'ENTREGADA_PARCIAL' | 'ENTREGADA' | 'CERRADA' | 'ANULADA';
+
+export interface SalesOrderLine {
+  id: string;
+  productId?: string;
+  code: string;
+  name: string;
+  type: 'PRODUCT' | 'SERVICE';
+  unit: string;
+  quantity: number;
+  unitPriceNeto: number;
+  exento?: boolean;
+  contabilizaEnEntrega: boolean; // Copiado del producto: true = la entrega devenga el ingreso contra Facturas por Emitir
+  accountId?: string; // Cuenta de ingreso que se acredita en la entrega
+  deliveredQty: number;
+}
+
+export interface SalesApproval {
+  level: 1 | 2;
+  decision: 'APROBADA' | 'RECHAZADA';
+  by: string;
+  at: string;
+  comment?: string;
+}
+
+export interface SalesDeliveryLine {
+  lineId: string;
+  quantity: number;
+  amountNeto: number;
+}
+
+export interface SalesDelivery {
+  id: string;
+  number: string; // Ej: OV-12-E1
+  date: string;
+  notes?: string; // Guía de despacho u observaciones
+  lines: SalesDeliveryLine[];
+  totalNeto: number;
+  voucherId?: string;
+  voucherNumber?: number;
+  reversalVoucherId?: string;
+  anulada?: boolean;
+  createdBy?: string;
+  createdAt: string;
+}
+
+export interface SalesInvoiceLink {
+  rcvId: string;
+  tipoDoc: string;
+  folio: string;
+  date: string;
+  montoNeto: number;
+  fxeNeto: number;
+}
+
+export interface SalesOrder {
+  id: string;
+  number: number;
+  date: string;
+  customerRut: string;
+  customerName: string;
+  customerAddress?: string;
+  customerEmail?: string;
+  paymentTerms?: string;
+  deliveryDate?: string;
+  deliveryPlace?: string;
+  notes?: string;
+  lines: SalesOrderLine[];
+  neto: number;
+  exento: number;
+  iva: number;
+  total: number;
+  status: SalesOrderStatus;
+  approvals: SalesApproval[];
+  deliveries: SalesDelivery[];
+  invoices: SalesInvoiceLink[];
   createdBy?: string;
   createdAt: string;
   updatedAt?: string;

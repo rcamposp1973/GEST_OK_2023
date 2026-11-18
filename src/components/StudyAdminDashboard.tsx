@@ -165,6 +165,7 @@ export default function StudyAdminDashboard({
     certificadoB64: '',
     hasCertificadoDigital: false,
     comprasHabilitado: false,
+    ventasHabilitado: false,
   };
   const [companyFormData, setCompanyFormData] = useState(emptyCompanyFormData);
 
@@ -219,6 +220,7 @@ export default function StudyAdminDashboard({
         certificadoB64: dte.certificadoB64 || '',
         hasCertificadoDigital: !!(dte.hasCertificadoDigital || dte.certificadoB64),
         comprasHabilitado: !!editingCompany.comprasHabilitado,
+        ventasHabilitado: !!editingCompany.ventasHabilitado,
       });
     } else {
       setCompanyFormData(emptyCompanyFormData);
@@ -559,6 +561,7 @@ export default function StudyAdminDashboard({
         dteConfig: dteConfigPayload,
         dteModuleEnabled: true,
         comprasHabilitado: !!companyFormData.comprasHabilitado,
+        ventasHabilitado: !!companyFormData.ventasHabilitado,
         updatedAt: new Date()
       };
 
@@ -1382,6 +1385,19 @@ export default function StudyAdminDashboard({
                         <span>
                           <span className="block text-sm font-semibold text-slate-800">Módulo de Compras (opcional)</span>
                           <span className="block text-xs text-slate-500">Órdenes de compra, aprobación, recepción de lo comprado y factura referenciada a la O/C. Si no se marca, la empresa trabaja las compras como hasta hoy.</span>
+                        </span>
+                      </label>
+
+                      <label className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={!!companyFormData.ventasHabilitado}
+                          onChange={(e) => setCompanyFormData(prev => ({ ...prev, ventasHabilitado: e.target.checked }))}
+                          className="mt-1 h-4 w-4 accent-indigo-600"
+                        />
+                        <span>
+                          <span className="block text-sm font-semibold text-slate-800">Módulo de Ventas (opcional)</span>
+                          <span className="block text-xs text-slate-500">Órdenes de venta, aprobación, entrega y factura emitida asociada a la O/V. No emite facturas electrónicas: la factura se emite por fuera y se asocia desde el RCV.</span>
                         </span>
                       </label>
 

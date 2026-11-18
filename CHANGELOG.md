@@ -9,6 +9,18 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.16.0 — 17 de noviembre de 2026 — Módulo opcional de Ventas (Orden de Venta → Entrega → Factura) [solo Pruebas]
+
+- Se activa por empresa: ficha de la empresa › casilla "Módulo de Ventas". Sin la casilla no aparece nada.
+- Es un módulo de ventas, no de facturación: el sistema no emite facturas electrónicas. La factura se emite por fuera (o con el facturador que se contrate después) y se asocia a la orden desde el RCV de ventas.
+- Orden de Venta con productos o servicios, cliente, condiciones de pago y entrega, neto/exento/IVA/total, aprobación opcional en dos niveles e impresión en formato estándar (indica que no es documento tributario).
+- Entregas totales o parciales: si el producto tiene marcada "Devengar ingreso al entregar", la entrega genera el comprobante (Debe Facturas por Emitir, Haber ingreso). La cuenta Facturas por Emitir la elige el contador del plan de cuentas.
+- Al contabilizar en RCV la factura de venta asociada, el ingreso ya devengado se netea contra Facturas por Emitir con la referencia OV-N; si el monto facturado difiere de lo entregado, la diferencia queda abierta en esa cuenta.
+- Anular una entrega genera comprobante de reverso.
+- Pendiente (anotado): el costo de venta y la salida de inventario al entregar, y la nota de crédito referenciada a la O/V.
+
+---
+
 ## 1.15.2 — 17 de noviembre de 2026 — El sistema ya no crea ni borra datos por su cuenta (solo Pruebas)
 
 - Bodega Central: ya no se guarda sola en la base; se muestra una bodega virtual hasta que el usuario cree o edite una.

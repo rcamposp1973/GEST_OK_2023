@@ -112,6 +112,23 @@ export const SYSTEM_MODULES_CATALOG: SystemModuleMetadata[] = [
     icon: '',
     isAddonForBasic: true
   },
+  // 5b. Módulos adicionales de gestión (se contratan aparte; ningún plan los incluye por defecto)
+  {
+    key: 'compras',
+    label: 'Módulo adicional: Compras (O/C, recepción, Facturas por Recibir)',
+    category: 'GESTION_COMERCIAL',
+    description: 'Órdenes de compra con aprobación, recepciones parciales contabilizadas y factura referenciada a la O/C. Adicional con costo; se activa por empresa.',
+    icon: '',
+    isAddonForBasic: true
+  },
+  {
+    key: 'ventas',
+    label: 'Módulo adicional: Ventas (O/V, entrega, Facturas por Emitir)',
+    category: 'GESTION_COMERCIAL',
+    description: 'Órdenes de venta con aprobación, entregas parciales contabilizadas y factura asociada a la O/V (no emite facturas electrónicas). Adicional con costo; se activa por empresa.',
+    icon: '',
+    isAddonForBasic: true
+  },
   // 6. Personal & Remuneraciones
   {
     key: 'remuneraciones',

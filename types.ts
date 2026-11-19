@@ -30,6 +30,8 @@ export interface StudyModulePermissions {
   remuneraciones?: boolean; // Personal, Liquidaciones, Previred, LRD DT
   visorClientes?: boolean; // Portal / Visor seguro para clientes del estudio
   copilotoIA?: boolean; // Cuadernos inteligentes y Copiloto IA
+  compras?: boolean; // Módulo adicional: Órdenes de Compra, recepción y Facturas por Recibir (se contrata aparte)
+  ventas?: boolean; // Módulo adicional: Órdenes de Venta, entrega y Facturas por Emitir (se contrata aparte)
   [key: string]: boolean | undefined;
 }
 

@@ -9,6 +9,14 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.16.1 — 19 de noviembre de 2026 — Compras y Ventas son módulos adicionales por plan [solo Pruebas]
+
+- Compras y Ventas ahora se contratan aparte: aparecen en la matriz de módulos del estudio (Super Administrador) y ningún plan los incluye por defecto.
+- La casilla de la ficha de la empresa solo se puede marcar si el estudio tiene contratado el módulo. Si el estudio deja de tenerlo, el módulo se oculta aunque la empresa lo tuviera marcado.
+- Ajuste: en órdenes con líneas que "se contabilizan solo con la factura", la factura sugiere aplicar contra Facturas por Recibir/Emitir solo lo pendiente en la cuenta puente.
+
+---
+
 ## 1.16.0 — 17 de noviembre de 2026 — Módulo opcional de Ventas (Orden de Venta → Entrega → Factura) [solo Pruebas]
 
 - Se activa por empresa: ficha de la empresa › casilla "Módulo de Ventas". Sin la casilla no aparece nada.

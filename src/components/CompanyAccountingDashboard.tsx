@@ -184,6 +184,9 @@ export default function CompanyAccountingDashboard({
   const { withProcess } = useProcess();
   type RibbonGroup = 'FINANZAS' | 'OPERACIONES' | 'TESORERIA' | 'PERSONAL' | 'IMPORTACIONES' | 'IMPUESTOS' | 'INDICADORES' | 'CONFIGURACIONES' | 'FAVORITOS';
   const [activeRibbonGroup, setActiveRibbonGroup] = useState<RibbonGroup>('FINANZAS');
+  const [studyModulesCompany, setStudyModulesCompany] = useState<Record<string, boolean | undefined>>({});
+  const comprasActivo = !!company.comprasHabilitado && studyModulesCompany.compras === true;
+  const ventasActivo = !!company.ventasHabilitado && studyModulesCompany.ventas === true;
   const [activeTab, setActiveTab] = useState<'ventas' | 'compras' | 'accounts' | 'auxiliaries' | 'periods' | 'rcv' | 'exchange' | 'rcvParams' | 'centralizaciones' | 'f29Codes' | 'vouchers' | 'libroDiario' | 'libroMayor' | 'balance8' | 'balanceIFRS' | 'analisisAuxiliares' | 'analisisCuentas' | 'planillaConsultas' | 'analyticsHud' | 'reportesAnaliticos' | 'estadoResultados' | 'indicadoresFinancieros' | 'auditorEstadosFinancieros' | 'smartNotebooks' | 'flujoDeCaja' | 'agingDeudas' | 'nominasPago' | 'cobranza' | 'conciliacionBancaria' | 'libroBancoColaborativo' | 'cargaMasiva' | 'formulario29' | 'plantillasCarga' | 'importacionInteligente' | 'cierreAnio' | 'informeMensual' | 'rendicionGastos' | 'emisionDte' | 'tablasAnalisis' | 'controlFolios' | 'productsServices' | 'operativaComercial' | 'stockKardex' | 'warehouses' | 'employees' | 'liquidaciones' | 'activoFijo' | 'ddjj' | 'agenticStudy2040' | 'agenticPyme2040' | 'home' | 'buscadorComprobantes'>('home');
   const [auxSubTab, setAuxSubTab] = useState<'deudores' | 'acreedores'>('deudores');
   const [employeeSubTab, setEmployeeSubTab] = useState<'employees' | 'contracts' | 'attendance' | 'advances' | 'severance' | 'certificates'>('employees');
@@ -1455,6 +1458,10 @@ export default function CompanyAccountingDashboard({
       setWarehouses(fetchedWh);
 
       // PRODUCTOS Y SERVICIOS
+      try {
+        const stSnap = await getDoc(doc(db, 'studies', studyId));
+        setStudyModulesCompany(((stSnap.data() as any)?.modules) || {});
+      } catch { setStudyModulesCompany({}); }
       // Ya no se crean productos de ejemplo: el catálogo parte vacío y solo contiene lo que el usuario cree.
       setProducts(prodSnap.docs.map(d => ({ ...d.data(), id: d.id } as ProductService)));
 
@@ -7334,8 +7341,8 @@ export default function CompanyAccountingDashboard({
             onOpenModule={handleOpenModuleInTab}
             pinnedIds={pinnedQuickAccessIds}
             periodLabel={selectedRcvPeriod}
-            comprasHabilitado={!!company.comprasHabilitado}
-            ventasHabilitado={!!company.ventasHabilitado}
+            comprasHabilitado={!!comprasActivo}
+            ventasHabilitado={!!ventasActivo}
             stats={[
               { label: 'Comprobantes del período', value: n(delPeriodo.length), hint: `${n(vouchers.length)} en total` },
               { label: 'Movimiento del período', value: '$' + n(Math.round(delPeriodo.reduce((s, v) => s + (v.totalDebit || 0), 0))), hint: 'suma del debe' },
@@ -9543,7 +9550,7 @@ export default function CompanyAccountingDashboard({
 
       {/* TAB: COMPRAS (módulo opcional) */}
       {activeTab === 'compras' && (
-        company.comprasHabilitado ? (
+        comprasActivo ? (
           <ComprasView
             studyId={studyId}
             company={company}
@@ -9567,7 +9574,7 @@ export default function CompanyAccountingDashboard({
 
       {/* TAB: VENTAS (módulo opcional) */}
       {activeTab === 'ventas' && (
-        company.ventasHabilitado ? (
+        ventasActivo ? (
           <VentasView
             studyId={studyId}
             company={company}
@@ -9879,7 +9886,7 @@ export default function CompanyAccountingDashboard({
               </p>
 
               <div className="space-y-1.5 pt-1">
-                {QUICK_ACCESS_ITEMS.filter(it => (it.id !== 'compras' || company.comprasHabilitado) && (it.id !== 'ventas' || company.ventasHabilitado)).map((item) => {
+                {QUICK_ACCESS_ITEMS.filter(it => (it.id !== 'compras' || comprasActivo) && (it.id !== 'ventas' || ventasActivo)).map((item) => {
                   const IconComp = item.icon;
                   const isPinned = pinnedQuickAccessIds.includes(item.id);
                   return (

@@ -93,8 +93,12 @@ export function fxrAbierto(oc: PurchaseOrder): number {
 
 /** Neto de la factura que va contra Facturas por Recibir; el resto (líneas que solo contabilizan con la factura) va a gasto. */
 export function sugerirFxrNeto(oc: PurchaseOrder, netoFactura: number): number {
-  const sinRecepcion = oc.lines.filter(l => !l.contabilizaEnRecepcion).reduce((s, l) => s + importeLinea(l), 0);
-  return Math.min(Math.max(0, r0(netoFactura) - sinRecepcion), Math.max(0, r0(netoFactura)));
+  const neto = Math.max(0, r0(netoFactura));
+  const sinContabilizar = oc.lines.filter(l => !l.contabilizaEnRecepcion).reduce((s, l) => s + importeLinea(l), 0);
+  // Todas las líneas se contabilizan al recibir: toda la factura va contra la cuenta puente y la diferencia queda abierta.
+  if (sinContabilizar === 0) return neto;
+  // Orden mixta: solo se aplica lo que está pendiente en la cuenta puente; el resto va directo a gasto.
+  return Math.min(neto, Math.max(0, fxrAbierto(oc)));
 }
 
 export function referenciaOC(numero: number): string {

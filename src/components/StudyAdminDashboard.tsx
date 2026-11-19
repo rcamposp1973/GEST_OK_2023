@@ -62,6 +62,8 @@ export default function StudyAdminDashboard({
   const [studyData, setStudyData] = useState<Study | null>(null);
 
   const isCurrentStudyTest = isTestStudy(studyId, studyData?.name);
+  const comprasContratado = studyData?.modules?.compras === true;
+  const ventasContratado = studyData?.modules?.ventas === true;
 
   // Test Study Purge states
   const [isTestPurging, setIsTestPurging] = useState(false);
@@ -560,8 +562,8 @@ export default function StudyAdminDashboard({
         assignedAccountantEmails,
         dteConfig: dteConfigPayload,
         dteModuleEnabled: true,
-        comprasHabilitado: !!companyFormData.comprasHabilitado,
-        ventasHabilitado: !!companyFormData.ventasHabilitado,
+        comprasHabilitado: !!companyFormData.comprasHabilitado && comprasContratado,
+        ventasHabilitado: !!companyFormData.ventasHabilitado && ventasContratado,
         updatedAt: new Date()
       };
 
@@ -1378,12 +1380,14 @@ export default function StudyAdminDashboard({
                       <label className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer">
                         <input
                           type="checkbox"
-                          checked={!!companyFormData.comprasHabilitado}
+                          checked={!!companyFormData.comprasHabilitado && comprasContratado}
+                          disabled={!comprasContratado}
                           onChange={(e) => setCompanyFormData(prev => ({ ...prev, comprasHabilitado: e.target.checked }))}
                           className="mt-1 h-4 w-4 accent-indigo-600"
                         />
                         <span>
-                          <span className="block text-sm font-semibold text-slate-800">Módulo de Compras (opcional)</span>
+                          <span className="block text-sm font-semibold text-slate-800">Módulo de Compras (adicional)</span>
+                          {!comprasContratado && <span className="block text-xs font-semibold text-amber-700">No está contratado en el plan de este estudio. Se contrata con el administrador del sistema.</span>}
                           <span className="block text-xs text-slate-500">Órdenes de compra, aprobación, recepción de lo comprado y factura referenciada a la O/C. Si no se marca, la empresa trabaja las compras como hasta hoy.</span>
                         </span>
                       </label>
@@ -1391,12 +1395,14 @@ export default function StudyAdminDashboard({
                       <label className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer">
                         <input
                           type="checkbox"
-                          checked={!!companyFormData.ventasHabilitado}
+                          checked={!!companyFormData.ventasHabilitado && ventasContratado}
+                          disabled={!ventasContratado}
                           onChange={(e) => setCompanyFormData(prev => ({ ...prev, ventasHabilitado: e.target.checked }))}
                           className="mt-1 h-4 w-4 accent-indigo-600"
                         />
                         <span>
-                          <span className="block text-sm font-semibold text-slate-800">Módulo de Ventas (opcional)</span>
+                          <span className="block text-sm font-semibold text-slate-800">Módulo de Ventas (adicional)</span>
+                          {!ventasContratado && <span className="block text-xs font-semibold text-amber-700">No está contratado en el plan de este estudio. Se contrata con el administrador del sistema.</span>}
                           <span className="block text-xs text-slate-500">Órdenes de venta, aprobación, entrega y factura emitida asociada a la O/V. No emite facturas electrónicas: la factura se emite por fuera y se asocia desde el RCV.</span>
                         </span>
                       </label>

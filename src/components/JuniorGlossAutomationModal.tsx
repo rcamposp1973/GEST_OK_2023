@@ -337,7 +337,7 @@ export default function JuniorGlossAutomationModal({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-black tracking-tight">Junior: Contabilizador Automático por Glosa</h3>
-                <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-black px-2 py-0.5 rounded-full border border-emerald-400/30 uppercase tracking-wider">
+                <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-black px-2 py-0.5 rounded-full border border-emerald-400/30">
                   Motor de IA
                 </span>
               </div>
@@ -575,7 +575,7 @@ export default function JuniorGlossAutomationModal({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Texto / Glosa a buscar */}
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-black uppercase tracking-wider text-slate-700">
+                  <label className="block text-xs font-black text-slate-700">
                     1. Texto o Glosa en Cartola:
                   </label>
                   <input
@@ -592,7 +592,7 @@ export default function JuniorGlossAutomationModal({
 
                 {/* Tipo de Movimiento */}
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-black uppercase tracking-wider text-slate-700">
+                  <label className="block text-xs font-black text-slate-700">
                     2. Tipo de Movimiento:
                   </label>
                   <div className="grid grid-cols-3 gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
@@ -635,7 +635,7 @@ export default function JuniorGlossAutomationModal({
 
               {/* Cuenta Contable de Contrapartida */}
               <div className="space-y-1.5">
-                <label className="block text-xs font-black uppercase tracking-wider text-slate-700">
+                <label className="block text-xs font-black text-slate-700">
                   3. Cuenta Contable de Contrapartida (Plan de Cuentas):
                 </label>
                 <div className="space-y-2">
@@ -667,7 +667,7 @@ export default function JuniorGlossAutomationModal({
 
               {/* 4. Dimensiones y Atributos de Análisis Contable */}
               <div className="space-y-3 pt-2 border-t border-slate-100">
-                <label className="block text-xs font-black uppercase tracking-wider text-slate-700">
+                <label className="block text-xs font-black text-slate-700">
                   4. Dimensiones de Análisis Contable (Centro de Costos, Ítem de Gasto, Proyecto, Auxiliar):
                 </label>
 

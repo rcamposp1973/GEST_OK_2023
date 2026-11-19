@@ -9,6 +9,11 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## [1.17.2] - Pantallas más limpias
+- Etiquetas pequeñas ya no van en MAYÚSCULAS con espaciado (287 lugares en 64 archivos); se mantienen en las cabeceras de tabla.
+- Las frases explicativas largas bajo los títulos (21 pantallas) pasaron a un cuadro de ayuda: aparecen al dejar el mouse sobre el título. Los avisos de módulo restringido/deshabilitado se dejan visibles.
+- Sin cambios en datos ni en contabilidad.
+
 ## [1.17.1] - Página de bienvenida
 - Pie de página con la autoría: pensado y desarrollado por Ramón Campos, con el apoyo de Claude, de Anthropic.
 

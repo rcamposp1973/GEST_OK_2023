@@ -125,8 +125,7 @@ export default function ComprasView({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold text-slate-900">Compras · Órdenes de Compra</h2>
-          <p className="text-sm text-slate-500">Orden de compra → recepción → factura. Lo recibido sin factura queda en Facturas por Recibir.</p>
+          <h2 className="text-xl font-bold text-slate-900" title="Orden de compra → recepción → factura. Lo recibido sin factura queda en Facturas por Recibir.">Compras · Órdenes de Compra</h2>
         </div>
         <div className="flex gap-2">
           <button className={btnSec} onClick={() => setVista(vista === 'config' ? 'lista' : 'config')}>

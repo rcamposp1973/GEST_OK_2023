@@ -5531,7 +5531,7 @@ export default function CompanyAccountingDashboard({
           {isDemoCompany && (
             <div className="mb-2.5 bg-amber-500/15 border border-amber-500/40 p-2.5 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs shrink-0 shadow-2xs">
               <div className="flex items-center gap-2.5 flex-wrap">
-                <span className="px-2 py-0.5 rounded-md bg-amber-500 text-white font-black text-[10px] tracking-wide uppercase flex items-center gap-1 shadow-2xs">
+                <span className="px-2 py-0.5 rounded-md bg-amber-500 text-white font-black text-[10px] flex items-center gap-1 shadow-2xs">
                   <Sparkles className="w-3 h-3 text-amber-200" />
                   <span> Modo Showroom Activo</span>
                 </span>
@@ -5833,7 +5833,7 @@ export default function CompanyAccountingDashboard({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Bloque 1: Impuestos Centralizados */}
               <div className="space-y-4 bg-slate-50/70 p-4 rounded-xl border border-slate-200">
-                <h4 className="text-xs font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
+                <h4 className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
                   <span>Impuestos Centralizados</span>
                 </h4>
                 
@@ -5913,7 +5913,7 @@ export default function CompanyAccountingDashboard({
 
               {/* Bloque 2: Cuentas y Contrapartidas por Defecto (Fallback) */}
               <div className="space-y-4 bg-slate-50/70 p-4 rounded-xl border border-slate-200">
-                <h4 className="text-xs font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
+                <h4 className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
                   <span>Cuentas y Contrapartidas por Defecto (Fallback)</span>
                 </h4>
                 
@@ -5970,7 +5970,7 @@ export default function CompanyAccountingDashboard({
             {/* Bloque 3: Parámetros de Análisis por Defecto (Fallback si el auxiliar no tiene configurado) */}
             <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200 space-y-4">
               <div className="flex items-center gap-2">
-                <h4 className="text-xs font-bold text-indigo-900 uppercase tracking-wider">
+                <h4 className="text-xs font-bold text-indigo-900">
                   Parámetros de Análisis por Defecto (Fallback Empresa)
                 </h4>
               </div>
@@ -6085,7 +6085,7 @@ export default function CompanyAccountingDashboard({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Sección IVA Débito y Crédito */}
             <div className="space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
-              <h4 className="text-xs font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
+              <h4 className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
                 <span>Secciones I y II: Débito y Crédito Fiscal IVA</span>
               </h4>
 
@@ -6144,7 +6144,7 @@ export default function CompanyAccountingDashboard({
 
             {/* Sección Retenciones, PPM y Otros */}
             <div className="space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
-              <h4 className="text-xs font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
+              <h4 className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
                 <span>Secciones IV, V y VI: Retenciones, PPM y Otros</span>
               </h4>
 
@@ -6288,7 +6288,7 @@ export default function CompanyAccountingDashboard({
           <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <div className="flex items-center gap-2">
-                <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
                   Sincronización Oficial SII
                 </span>
                 <h3 className="text-base font-bold text-slate-900">
@@ -6392,7 +6392,7 @@ export default function CompanyAccountingDashboard({
           {showManualUpload && (
             <div className="bg-slate-50 border border-slate-200 p-5 rounded-xl space-y-3 animate-in fade-in duration-150">
               <div className="flex items-center justify-between">
-                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                   <span> Carga de Archivos Oficiales del SII (Período: {selectedRcvPeriod})</span>
                 </h4>
                 <span className="text-[11px] text-slate-500">Formatos admitidos: .xlsx, .xls, .csv o .txt descargados del portal del SII</span>
@@ -8247,7 +8247,7 @@ export default function CompanyAccountingDashboard({
                     {/* Table of Lines */}
                     <div className="space-y-2">
                       <div className="flex justify-between items-center">
-                        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Líneas Contables ({voucherForm.lines.length})</h4>
+                        <h4 className="text-xs font-bold text-slate-800">Líneas Contables ({voucherForm.lines.length})</h4>
                         <div className="flex items-center gap-2 flex-wrap">
                           <button
                             type="button"

@@ -2556,7 +2556,7 @@ export default function EmisionDteView({
                   {/* RED BOX SII DTE */}
                   <div className="border-4 border-red-600 p-4 text-center text-red-600 rounded-lg min-w-[240px] font-mono bg-red-50/20">
                     <p className="font-bold text-sm">R.U.T.: {formatearRut(previewDoc.emisor?.rut)}</p>
-                    <p className="font-black text-xs uppercase tracking-wide my-1">{previewDoc.tipoDTELabel}</p>
+                    <p className="font-black text-xs my-1">{previewDoc.tipoDTELabel}</p>
                     <p className="font-bold text-base">N° {previewDoc.folio}</p>
                     <p className="text-[10px] text-red-700 font-sans mt-1">S.I.I. - {previewDoc.emisor?.ciudad?.toUpperCase() || 'SANTIAGO'}</p>
                   </div>

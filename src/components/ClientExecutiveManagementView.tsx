@@ -247,7 +247,7 @@ export default function ClientExecutiveManagementView({
       <div className="bg-slate-900 text-white p-5 rounded-2xl shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="bg-indigo-500/20 text-indigo-300 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-indigo-500/30 uppercase tracking-wider">
+            <span className="bg-indigo-500/20 text-indigo-300 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-indigo-500/30">
               Portal de Observador Ejecutivo
             </span>
             <span className="text-xs text-slate-400 font-mono">Solo Consulta y Gestión</span>
@@ -416,7 +416,7 @@ export default function ClientExecutiveManagementView({
             {/* Ventas Netas */}
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs hover:border-emerald-300 transition-all">
               <div className="flex justify-between items-start mb-2">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Ventas Totales</span>
+                <span className="text-xs font-bold text-slate-500">Ventas Totales</span>
                 <span className="p-2 bg-emerald-100 text-emerald-700 rounded-lg">
                   <TrendingUp className="w-4 h-4" />
                 </span>
@@ -433,7 +433,7 @@ export default function ClientExecutiveManagementView({
             {/* Gastos / Compras */}
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs hover:border-rose-300 transition-all">
               <div className="flex justify-between items-start mb-2">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Gastos / Compras</span>
+                <span className="text-xs font-bold text-slate-500">Gastos / Compras</span>
                 <span className="p-2 bg-rose-100 text-rose-700 rounded-lg">
                   <TrendingDown className="w-4 h-4" />
                 </span>
@@ -450,7 +450,7 @@ export default function ClientExecutiveManagementView({
             {/* Margen Bruto */}
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs hover:border-indigo-300 transition-all">
               <div className="flex justify-between items-start mb-2">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Margen Bruto</span>
+                <span className="text-xs font-bold text-slate-500">Margen Bruto</span>
                 <span className="p-2 bg-indigo-100 text-indigo-700 rounded-lg">
                   <DollarSign className="w-4 h-4" />
                 </span>
@@ -469,7 +469,7 @@ export default function ClientExecutiveManagementView({
             {/* Saldo Bancos */}
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs hover:border-blue-300 transition-all">
               <div className="flex justify-between items-start mb-2">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Disponible Bancos</span>
+                <span className="text-xs font-bold text-slate-500">Disponible Bancos</span>
                 <span className="p-2 bg-blue-100 text-blue-700 rounded-lg">
                   <Landmark className="w-4 h-4" />
                 </span>

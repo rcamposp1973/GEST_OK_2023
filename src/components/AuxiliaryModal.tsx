@@ -273,7 +273,7 @@ export default function AuxiliaryModal({
 
           {/* SECCIÓN 1: DATOS IDENTIFICATORIOS */}
           <div className="space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100 flex items-center gap-2">
+            <h3 className="text-xs font-bold text-indigo-700 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100 flex items-center gap-2">
               <User className="w-4 h-4 text-indigo-600" />
               1. Identificación del Auxiliar
             </h3>
@@ -365,7 +365,7 @@ export default function AuxiliaryModal({
 
           {/* SECCIÓN 2: CUENTAS CONTABLES Y TESORERÍA */}
           <div className="space-y-4 pt-2 border-t border-slate-200">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 flex items-center gap-2">
+            <h3 className="text-xs font-bold text-slate-800 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 flex items-center gap-2">
               <CreditCard className="w-4 h-4 text-slate-600" />
               2. Cuentas Contables Asignadas & Datos Bancarios
             </h3>
@@ -523,7 +523,7 @@ export default function AuxiliaryModal({
               {/* Sugerencias Rápidas */}
               {!isReadOnly && (
                 <div className="space-y-1.5 pt-1">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                  <span className="text-[10px] font-bold text-slate-500 block">
                     Sugerencias rápidas (haz clic para insertar):
                   </span>
                   <div className="flex flex-wrap gap-1.5">
@@ -604,7 +604,7 @@ export default function AuxiliaryModal({
           {/* SECCIÓN 3: CAMPOS DE ANÁLISIS AUTOMÁTICO (DINÁMICO SEGÚN PLAN DE CUENTAS) */}
           <div className="space-y-4 pt-2 border-t border-slate-200">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-amber-900 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200 flex items-center gap-2">
+              <h3 className="text-xs font-bold text-amber-900 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200 flex items-center gap-2">
                 <Layers className="w-4 h-4 text-amber-600" />
                 3. Campos de Análisis por Defecto
               </h3>
@@ -754,7 +754,7 @@ export default function AuxiliaryModal({
             {/* TABLAS ADICIONALES DE ANÁLISIS PERSONALIZADAS */}
             {customAccountColumns.length > 0 && (
               <div className="pt-2 space-y-3">
-                <h4 className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                <h4 className="text-[11px] font-bold text-slate-600">
                   Columnas de Análisis Personalizadas
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

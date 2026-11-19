@@ -147,12 +147,9 @@ export default function AgenticPymeHub2040({
                 Gestión Autónoma 24/7 
               </span>
             </div>
-            <h2 className="text-xl md:text-2xl font-black tracking-tight text-white">
+            <h2 className="text-xl md:text-2xl font-black tracking-tight text-white" title="Automatiza la cobranza a clientes, detecta sobrecostos de proveedores y monitorea la salud financiera de tu empresa en tiempo real.">
               CFO Virtual Autónomo & Asistente de Negocio
             </h2>
-            <p className="text-xs text-cyan-200/90 max-w-2xl">
-              Automatiza la cobranza a clientes, detecta sobrecostos de proveedores y monitorea la salud financiera de tu empresa en tiempo real.
-            </p>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">

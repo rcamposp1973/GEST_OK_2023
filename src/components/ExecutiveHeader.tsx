@@ -212,7 +212,7 @@ export default function ExecutiveHeader({
                   const valStr = formatVal(key, latestRate);
                   return (
                     <div key={key} className="bg-white px-2 py-0.5 rounded border border-slate-200/90 text-right min-w-[68px]">
-                      <div className="text-[9px] text-slate-400 font-sans font-medium uppercase tracking-wider leading-tight">
+                      <div className="text-[9px] text-slate-400 font-sans font-medium leading-tight">
                         {info.label}
                       </div>
                       <div className="text-xs font-mono font-bold text-slate-900 leading-tight tabular-nums">
@@ -239,7 +239,7 @@ export default function ExecutiveHeader({
                 <div className="text-xs font-mono font-medium text-slate-900 truncate max-w-[160px] leading-tight" title={currentUserEmail || ''}>
                   {currentUserEmail || 'usuario'}
                 </div>
-                <div className="text-[9px] font-semibold uppercase text-slate-500 leading-tight tracking-wider">
+                <div className="text-[9px] font-semibold text-slate-500 leading-tight">
                   {getRoleLabel()}
                 </div>
               </div>

@@ -710,7 +710,7 @@ export default function CobranzaView({
       <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border-b border-slate-200">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-black text-slate-800 uppercase tracking-wider">Antigüedad de Saldos (Aging)</span>
+            <span className="text-xs font-black text-slate-800">Antigüedad de Saldos (Aging)</span>
             <span className="text-[11px] font-mono font-bold text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200">
               Total Cartera: ${agingStats.totalPending.toLocaleString('es-CL')} ({agingStats.totalCount} docs)
             </span>
@@ -729,7 +729,7 @@ export default function CobranzaView({
         {!isAgingCollapsed && (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 p-3">
             <div className="bg-slate-900 text-white p-2.5 rounded-lg shadow-2xs">
-              <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Cartera Total</span>
+              <span className="text-[9px] text-slate-400 font-bold block">Cartera Total</span>
               <span className="text-base font-black font-mono text-emerald-400 block mt-0.5">
                 ${agingStats.totalPending.toLocaleString('es-CL')}
               </span>
@@ -742,7 +742,7 @@ export default function CobranzaView({
                 agingFilter === '0-30' ? 'bg-emerald-100 border-emerald-500 ring-2 ring-emerald-400' : 'bg-emerald-50/70 border-emerald-200 hover:bg-emerald-100/60'
               }`}
             >
-              <span className="text-[9px] text-emerald-900 font-bold uppercase tracking-wider block">0 - 30 Días (Vigente)</span>
+              <span className="text-[9px] text-emerald-900 font-bold block">0 - 30 Días (Vigente)</span>
               <span className="text-sm font-black font-mono text-emerald-900 block mt-0.5">
                 ${agingStats.sum0_30.toLocaleString('es-CL')}
               </span>
@@ -755,7 +755,7 @@ export default function CobranzaView({
                 agingFilter === '31-60' ? 'bg-blue-100 border-blue-500 ring-2 ring-blue-400' : 'bg-blue-50/70 border-blue-200 hover:bg-blue-100/60'
               }`}
             >
-              <span className="text-[9px] text-blue-900 font-bold uppercase tracking-wider block">31 - 60 Días</span>
+              <span className="text-[9px] text-blue-900 font-bold block">31 - 60 Días</span>
               <span className="text-sm font-black font-mono text-blue-900 block mt-0.5">
                 ${agingStats.sum31_60.toLocaleString('es-CL')}
               </span>
@@ -768,7 +768,7 @@ export default function CobranzaView({
                 agingFilter === '61-90' ? 'bg-amber-100 border-amber-500 ring-2 ring-amber-400' : 'bg-amber-50/70 border-amber-200 hover:bg-amber-100/60'
               }`}
             >
-              <span className="text-[9px] text-amber-900 font-bold uppercase tracking-wider block">61 - 90 Días</span>
+              <span className="text-[9px] text-amber-900 font-bold block">61 - 90 Días</span>
               <span className="text-sm font-black font-mono text-amber-900 block mt-0.5">
                 ${agingStats.sum61_90.toLocaleString('es-CL')}
               </span>
@@ -781,7 +781,7 @@ export default function CobranzaView({
                 agingFilter === '+90' ? 'bg-rose-100 border-rose-500 ring-2 ring-rose-400' : 'bg-rose-50/70 border-rose-200 hover:bg-rose-100/60'
               }`}
             >
-              <span className="text-[9px] text-rose-900 font-bold uppercase tracking-wider block">+90 Días (Vencido)</span>
+              <span className="text-[9px] text-rose-900 font-bold block">+90 Días (Vencido)</span>
               <span className="text-sm font-black font-mono text-rose-900 block mt-0.5">
                 ${agingStats.sumOver90.toLocaleString('es-CL')}
               </span>

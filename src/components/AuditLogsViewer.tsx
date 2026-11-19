@@ -294,27 +294,27 @@ export default function AuditLogsViewer({ studies = [], restrictedStudyId }: Aud
         {/* KPI stats grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 pt-1 border-t border-slate-100">
           <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200/80">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Filtrados</p>
+            <p className="text-[10px] font-bold text-slate-400">Total Filtrados</p>
             <p className="text-lg font-black text-slate-800 font-mono mt-0.5">{stats.total}</p>
           </div>
           <div className="bg-indigo-50/60 p-2.5 rounded-xl border border-indigo-200/60">
-            <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">Eventos Hoy</p>
+            <p className="text-[10px] font-bold text-indigo-500">Eventos Hoy</p>
             <p className="text-lg font-black text-indigo-700 font-mono mt-0.5">{stats.today}</p>
           </div>
           <div className="bg-emerald-50/60 p-2.5 rounded-xl border border-emerald-200/60">
-            <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Creaciones / RCV</p>
+            <p className="text-[10px] font-bold text-emerald-600">Creaciones / RCV</p>
             <p className="text-lg font-black text-emerald-700 font-mono mt-0.5">{stats.creates}</p>
           </div>
           <div className="bg-amber-50/60 p-2.5 rounded-xl border border-amber-200/60">
-            <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Modificaciones</p>
+            <p className="text-[10px] font-bold text-amber-600">Modificaciones</p>
             <p className="text-lg font-black text-amber-700 font-mono mt-0.5">{stats.updates}</p>
           </div>
           <div className="bg-rose-50/60 p-2.5 rounded-xl border border-rose-200/60">
-            <p className="text-[10px] font-bold text-rose-600 uppercase tracking-wider">Bajas / Purgas</p>
+            <p className="text-[10px] font-bold text-rose-600">Bajas / Purgas</p>
             <p className="text-lg font-black text-rose-700 font-mono mt-0.5">{stats.deletes}</p>
           </div>
           <div className="bg-purple-50/60 p-2.5 rounded-xl border border-purple-200/60">
-            <p className="text-[10px] font-bold text-purple-600 uppercase tracking-wider">Sesiones / Login</p>
+            <p className="text-[10px] font-bold text-purple-600">Sesiones / Login</p>
             <p className="text-lg font-black text-purple-700 font-mono mt-0.5">{stats.logins}</p>
           </div>
         </div>

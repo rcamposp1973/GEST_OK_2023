@@ -598,10 +598,7 @@ export default function StudyDetails({ study: initialStudy, onBack, onCompanyCha
           <div className="flex items-center gap-2">
             <CreditCard className="w-5 h-5 text-indigo-700" />
             <div>
-              <h3 className="text-base font-bold text-slate-900">2. Plan Contratado & Grilla Predefinida de Módulos</h3>
-              <p className="text-xs text-slate-500">
-                Parametriza el plan asignado, estado de suscripción y habilita/deshabilita módulos individuales para este estudio.
-              </p>
+              <h3 className="text-base font-bold text-slate-900" title="Parametriza el plan asignado, estado de suscripción y habilita/deshabilita módulos individuales para este estudio.">2. Plan Contratado & Grilla Predefinida de Módulos</h3>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -617,7 +614,7 @@ export default function StudyDetails({ study: initialStudy, onBack, onCompanyCha
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-indigo-800/60 pb-2">
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-amber-300" />
-              <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+              <h4 className="text-xs font-bold text-white">
                 Formato de Plataforma Asignado al Estudio / Suscripción
               </h4>
             </div>
@@ -712,10 +709,7 @@ export default function StudyDetails({ study: initialStudy, onBack, onCompanyCha
           <div className="flex items-center gap-2">
             <Shield className="w-5 h-5 text-indigo-700" />
             <div>
-              <h3 className="text-base font-bold text-slate-900">3. Administradores del Estudio (Super Usuarios de Estudio)</h3>
-              <p className="text-xs text-slate-500">
-                Supervisores con facultades de administración sobre contadores, empresas y parametrización.
-              </p>
+              <h3 className="text-base font-bold text-slate-900" title="Supervisores con facultades de administración sobre contadores, empresas y parametrización.">3. Administradores del Estudio (Super Usuarios de Estudio)</h3>
             </div>
           </div>
 

@@ -644,7 +644,7 @@ export default function NominasPagoView({
             >
               <span>← Volver al Listado</span>
             </button>
-            <span className="text-xs font-extrabold text-slate-800 uppercase tracking-wide">
+            <span className="text-xs font-extrabold text-slate-800">
               Generar Nueva Nómina de Pago
             </span>
           </div>
@@ -759,7 +759,7 @@ export default function NominasPagoView({
           <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
             <div className="p-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center flex-wrap gap-2">
               <div>
-                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+                <h4 className="text-xs font-bold text-slate-800">
                   Facturas y Honorarios Pendientes de Pago ({pendingInvoices.length} disponibles)
                 </h4>
                 <p className="text-[11px] text-slate-500">Marque las casillas para incluir los documentos en la nómina de transferencias.</p>

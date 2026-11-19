@@ -466,7 +466,7 @@ export default function BalanceIFRSView({
                 <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase">
                   Balance Clasificado IFRS / FECU
                 </h3>
-                <span className="text-[10px] bg-indigo-50 border border-indigo-200 text-indigo-700 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                <span className="text-[10px] bg-indigo-50 border border-indigo-200 text-indigo-700 font-bold px-2 py-0.5 rounded-full">
                   Acumulativo al Corte
                 </span>
               </div>
@@ -632,7 +632,7 @@ export default function BalanceIFRSView({
       {/* KPI Cards de Resumen */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="bg-white px-3 py-2 rounded-xl border border-indigo-200 shadow-2xs">
-          <div className="flex justify-between items-center text-[11px] font-bold uppercase tracking-wider text-indigo-700">
+          <div className="flex justify-between items-center text-[11px] font-bold text-indigo-700">
             <span>1. Total Activos</span>
             <span className="px-1.5 py-0.5 bg-indigo-50 rounded text-indigo-900 font-mono">1000000</span>
           </div>
@@ -644,7 +644,7 @@ export default function BalanceIFRSView({
         </div>
 
         <div className="bg-white px-3 py-2 rounded-xl border border-rose-200 shadow-2xs">
-          <div className="flex justify-between items-center text-[11px] font-bold uppercase tracking-wider text-rose-700">
+          <div className="flex justify-between items-center text-[11px] font-bold text-rose-700">
             <span>2. Total Pasivos</span>
             <span className="px-1.5 py-0.5 bg-rose-50 rounded text-rose-900 font-mono">2000000</span>
           </div>
@@ -656,7 +656,7 @@ export default function BalanceIFRSView({
         </div>
 
         <div className="bg-white px-3 py-2 rounded-xl border border-emerald-200 shadow-2xs">
-          <div className="flex justify-between items-center text-[11px] font-bold uppercase tracking-wider text-emerald-700">
+          <div className="flex justify-between items-center text-[11px] font-bold text-emerald-700">
             <span>3. Patrimonio Neto</span>
             <span className="px-1.5 py-0.5 bg-emerald-50 rounded text-emerald-900 font-mono">2300000</span>
           </div>
@@ -673,7 +673,7 @@ export default function BalanceIFRSView({
         {/* COLUMNA 1: ACTIVOS */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden flex flex-col justify-between">
           <div className="divide-y divide-slate-200 text-xs">
-            <div className="bg-indigo-900 text-white p-3 font-bold uppercase tracking-wider text-xs flex justify-between items-center">
+            <div className="bg-indigo-900 text-white p-3 font-bold text-xs flex justify-between items-center">
               <span className="flex items-center gap-1.5">
                 <FolderTree className="w-4 h-4 text-indigo-300" />
                 <span>1. ESTRUCTURA DE ACTIVOS (IFRS)</span>
@@ -684,7 +684,7 @@ export default function BalanceIFRSView({
             {/* 1.1 Activos Corrientes */}
             <div className="p-2 bg-slate-50/50">
               <div className="flex justify-between items-center font-bold text-slate-900 mb-1 border-b border-indigo-200 pb-1.5">
-                <span className="text-indigo-900 uppercase font-black tracking-wide text-xs">1.1. ACTIVOS CORRIENTES (CIRCULANTES)</span>
+                <span className="text-indigo-900 font-black text-xs">1.1. ACTIVOS CORRIENTES (CIRCULANTES)</span>
                 <span className="font-mono text-indigo-900 font-bold text-xs">${totalActivosCorrientes.toLocaleString('es-CL')}</span>
               </div>
               
@@ -700,7 +700,7 @@ export default function BalanceIFRSView({
             {/* 1.2 Activos No Corrientes */}
             <div className="p-2 bg-slate-50/50">
               <div className="flex justify-between items-center font-bold text-slate-900 mb-1 border-b border-slate-300 pb-1.5">
-                <span className="text-slate-800 uppercase font-black tracking-wide text-xs">1.2. ACTIVOS NO CORRIENTES (FIJOS E INTANGIBLES)</span>
+                <span className="text-slate-800 font-black text-xs">1.2. ACTIVOS NO CORRIENTES (FIJOS E INTANGIBLES)</span>
                 <span className="font-mono text-slate-800 font-bold text-xs">${totalActivosNoCorrientes.toLocaleString('es-CL')}</span>
               </div>
               
@@ -714,7 +714,7 @@ export default function BalanceIFRSView({
             </div>
           </div>
 
-          <div className="bg-indigo-950 text-white p-3 font-black text-xs flex justify-between items-center uppercase tracking-wider">
+          <div className="bg-indigo-950 text-white p-3 font-black text-xs flex justify-between items-center">
             <span>TOTAL ACTIVOS (1.1 + 1.2)</span>
             <span className="font-mono text-base text-amber-300">${totalActivos.toLocaleString('es-CL')}</span>
           </div>
@@ -723,7 +723,7 @@ export default function BalanceIFRSView({
         {/* COLUMNA 2: PASIVOS Y PATRIMONIO NETO */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden flex flex-col justify-between">
           <div className="divide-y divide-slate-200 text-xs">
-            <div className="bg-slate-900 text-white p-3 font-bold uppercase tracking-wider text-xs flex justify-between items-center">
+            <div className="bg-slate-900 text-white p-3 font-bold text-xs flex justify-between items-center">
               <span className="flex items-center gap-1.5">
                 <Layers className="w-4 h-4 text-emerald-300" />
                 <span>2. PASIVOS Y PATRIMONIO NETO (IFRS)</span>
@@ -734,7 +734,7 @@ export default function BalanceIFRSView({
             {/* 2.1 Pasivos Corrientes */}
             <div className="p-2 bg-slate-50/50">
               <div className="flex justify-between items-center font-bold text-slate-900 mb-1 border-b border-rose-200 pb-1.5">
-                <span className="text-rose-900 uppercase font-black tracking-wide text-xs">2.1. PASIVOS CORRIENTES (CORTO PLAZO)</span>
+                <span className="text-rose-900 font-black text-xs">2.1. PASIVOS CORRIENTES (CORTO PLAZO)</span>
                 <span className="font-mono text-rose-900 font-bold text-xs">${totalPasivosCorrientes.toLocaleString('es-CL')}</span>
               </div>
               
@@ -750,7 +750,7 @@ export default function BalanceIFRSView({
             {/* 2.2 Pasivos No Corrientes */}
             <div className="p-2 bg-slate-50/50">
               <div className="flex justify-between items-center font-bold text-slate-900 mb-1 border-b border-slate-300 pb-1.5">
-                <span className="text-slate-800 uppercase font-black tracking-wide text-xs">2.2. PASIVOS NO CORRIENTES (LARGO PLAZO)</span>
+                <span className="text-slate-800 font-black text-xs">2.2. PASIVOS NO CORRIENTES (LARGO PLAZO)</span>
                 <span className="font-mono text-slate-800 font-bold text-xs">${totalPasivosNoCorrientes.toLocaleString('es-CL')}</span>
               </div>
               
@@ -766,7 +766,7 @@ export default function BalanceIFRSView({
             {/* 3. Patrimonio Neto */}
             <div className="p-3 bg-emerald-50/30">
               <div className="flex justify-between items-center font-bold text-slate-900 mb-1 border-b border-emerald-300 pb-1.5">
-                <span className="text-emerald-950 uppercase font-black tracking-wide text-xs">3. PATRIMONIO NETO</span>
+                <span className="text-emerald-950 font-black text-xs">3. PATRIMONIO NETO</span>
                 <span className="font-mono text-emerald-950 font-bold text-xs">${totalPatrimonioNeto.toLocaleString('es-CL')}</span>
               </div>
               
@@ -789,7 +789,7 @@ export default function BalanceIFRSView({
             </div>
           </div>
 
-          <div className="bg-slate-950 text-white p-3 font-black text-xs flex justify-between items-center uppercase tracking-wider">
+          <div className="bg-slate-950 text-white p-3 font-black text-xs flex justify-between items-center">
             <span>TOTAL PASIVO + PATRIMONIO (2 + 3)</span>
             <span className="font-mono text-base text-amber-300">${totalPasivoMasPatrimonio.toLocaleString('es-CL')}</span>
           </div>

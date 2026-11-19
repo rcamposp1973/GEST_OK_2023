@@ -703,19 +703,19 @@ export default function Balance8ColumnasView({
       {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-2xs">
-          <span className="text-[11px] font-medium uppercase tracking-wider text-slate-500">Total Sumas (Debe/Haber)</span>
+          <span className="text-[11px] font-medium text-slate-500">Total Sumas (Debe/Haber)</span>
           <p className="text-lg font-bold font-mono text-slate-900 mt-0.5 tabular-nums">${subtotals.sumDebit.toLocaleString('es-CL')}</p>
         </div>
         <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-2xs">
-          <span className="text-[11px] font-medium uppercase tracking-wider text-slate-500">Total Saldos (Deudor/Acreedor)</span>
+          <span className="text-[11px] font-medium text-slate-500">Total Saldos (Deudor/Acreedor)</span>
           <p className="text-lg font-bold font-mono text-slate-900 mt-0.5 tabular-nums">${subtotals.balDebit.toLocaleString('es-CL')}</p>
         </div>
         <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-2xs">
-          <span className="text-[11px] font-medium uppercase tracking-wider text-slate-500">Total Activos</span>
+          <span className="text-[11px] font-medium text-slate-500">Total Activos</span>
           <p className="text-lg font-bold font-mono text-slate-900 mt-0.5 tabular-nums">${subtotals.invAsset.toLocaleString('es-CL')}</p>
         </div>
         <div className={`p-3.5 rounded-lg border shadow-2xs ${result.isUtilidad ? 'bg-emerald-50/60 border-emerald-200 text-emerald-900' : 'bg-rose-50/60 border-rose-200 text-rose-900'}`}>
-          <span className="text-[11px] font-medium uppercase tracking-wider">{result.label}</span>
+          <span className="text-[11px] font-medium">{result.label}</span>
           <p className="text-lg font-bold font-mono mt-0.5 tabular-nums">${result.amount.toLocaleString('es-CL')}</p>
         </div>
       </div>
@@ -726,14 +726,14 @@ export default function Balance8ColumnasView({
           <table className="w-full text-left text-xs border-collapse">
             {/* Super Header */}
             <thead>
-              <tr className="bg-slate-100 text-slate-800 text-[11px] uppercase tracking-wider text-center font-bold border-b border-slate-200">
+              <tr className="bg-slate-100 text-slate-800 text-[11px] text-center font-bold border-b border-slate-200">
                 <th colSpan={3} className="py-2.5 px-3 border-r border-slate-200">Identificación de Cuenta</th>
                 <th colSpan={2} className="py-2.5 px-3 border-r border-slate-200 bg-slate-50 text-slate-900">1. Sumas</th>
                 <th colSpan={2} className="py-2.5 px-3 border-r border-slate-200 bg-slate-100/80 text-slate-900">2. Saldos</th>
                 <th colSpan={2} className="py-2.5 px-3 border-r border-slate-200 bg-slate-50 text-slate-900">3. Inventario / Balance</th>
                 <th colSpan={2} className="py-2.5 px-3 bg-slate-100/80 text-slate-900">4. Resultados</th>
               </tr>
-              <tr className="bg-slate-100 text-slate-700 font-bold text-[10px] uppercase tracking-wider border-b-2 border-slate-300">
+              <tr className="bg-slate-100 text-slate-700 font-bold text-[10px] border-b-2 border-slate-300">
                 <th className="py-2 px-2.5 w-24 border-r border-slate-200">Código</th>
                 <th className="py-2 px-3 border-r border-slate-200">Cuenta Contable</th>
                 <th className="py-2 px-2 w-20 border-r border-slate-200 text-center">Tipo</th>

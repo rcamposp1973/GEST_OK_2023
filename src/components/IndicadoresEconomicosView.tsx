@@ -188,7 +188,7 @@ export default function IndicadoresEconomicosView({ studyId, selectedYear }: Ind
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full font-mono uppercase tracking-wide">
+            <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full font-mono">
               Módulo Oficial SII & Banco Central
             </span>
             <span className="text-[10px] font-bold bg-indigo-100 text-indigo-800 px-2.5 py-0.5 rounded-full font-mono">
@@ -269,7 +269,7 @@ export default function IndicadoresEconomicosView({ studyId, selectedYear }: Ind
         {/* UF */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
           <div className="flex justify-between items-center text-slate-500 mb-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider">UF al Cierre Mes</span>
+            <span className="text-[11px] font-bold">UF al Cierre Mes</span>
             <span className="text-[10px] font-mono bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded font-bold">SII</span>
           </div>
           <p className="text-lg font-bold text-slate-900 font-mono">
@@ -284,7 +284,7 @@ export default function IndicadoresEconomicosView({ studyId, selectedYear }: Ind
         {/* DÓLAR */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
           <div className="flex justify-between items-center text-slate-500 mb-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider">Dólar Observado</span>
+            <span className="text-[11px] font-bold">Dólar Observado</span>
             <span className="text-[10px] font-mono bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded font-bold">BCCh</span>
           </div>
           <p className="text-lg font-bold text-slate-900 font-mono">
@@ -299,7 +299,7 @@ export default function IndicadoresEconomicosView({ studyId, selectedYear }: Ind
         {/* EURO */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
           <div className="flex justify-between items-center text-slate-500 mb-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider">Euro (EUR)</span>
+            <span className="text-[11px] font-bold">Euro (EUR)</span>
             <span className="text-[10px] font-mono bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded font-bold">BCCh</span>
           </div>
           <p className="text-lg font-bold text-slate-900 font-mono">
@@ -314,7 +314,7 @@ export default function IndicadoresEconomicosView({ studyId, selectedYear }: Ind
         {/* UTM */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
           <div className="flex justify-between items-center text-slate-500 mb-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider">UTM del Mes</span>
+            <span className="text-[11px] font-bold">UTM del Mes</span>
             <span className="text-[10px] font-mono bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded font-bold">SII</span>
           </div>
           <p className="text-lg font-bold text-slate-900 font-mono">
@@ -329,7 +329,7 @@ export default function IndicadoresEconomicosView({ studyId, selectedYear }: Ind
         {/* IPC */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs col-span-2 sm:col-span-1">
           <div className="flex justify-between items-center text-slate-500 mb-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider">Variación IPC</span>
+            <span className="text-[11px] font-bold">Variación IPC</span>
             <span className="text-[10px] font-mono bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded font-bold">INE</span>
           </div>
           <p className={`text-lg font-bold font-mono ${currentIpc >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>
@@ -711,7 +711,7 @@ export default function IndicadoresEconomicosView({ studyId, selectedYear }: Ind
 
           {/* RESULTADOS DEL CÁLCULO */}
           <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-4">
-            <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wider">
+            <h4 className="font-bold text-slate-800 text-xs">
               Resultados de la Corrección / Reajuste
             </h4>
 

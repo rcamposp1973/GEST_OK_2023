@@ -1656,7 +1656,7 @@ export default function Formulario29View({
         {/* Card 1: Débito Fiscal */}
         <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
           <div className="flex justify-between items-start">
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Débito Fiscal (IVA Ventas)</span>
+            <span className="text-[10px] font-bold text-slate-500">Débito Fiscal (IVA Ventas)</span>
             <span className="text-xs bg-indigo-50 text-indigo-700 px-1.5 py-0.2 rounded font-mono font-bold">Cód. 538</span>
           </div>
           <span className="text-xl font-black font-mono text-slate-900 block mt-1">
@@ -1672,7 +1672,7 @@ export default function Formulario29View({
           creditoFiscalData.totalCreditoFiscal < 0 ? 'bg-rose-50/50 border-rose-200' : 'bg-white border-slate-200'
         }`}>
           <div className="flex justify-between items-start">
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Crédito Fiscal (IVA Compras)</span>
+            <span className="text-[10px] font-bold text-slate-500">Crédito Fiscal (IVA Compras)</span>
             <span className={`text-xs px-1.5 py-0.2 rounded font-mono font-bold ${
               creditoFiscalData.totalCreditoFiscal < 0 ? 'bg-rose-100 text-rose-800' : 'bg-indigo-50 text-indigo-700'
             }`}>Cód. 537</span>
@@ -1693,7 +1693,7 @@ export default function Formulario29View({
         {/* Card 3: PPM & Retenciones */}
         <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
           <div className="flex justify-between items-start">
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">PPM + Retenciones</span>
+            <span className="text-[10px] font-bold text-slate-500">PPM + Retenciones</span>
             <span className="text-xs bg-amber-50 text-amber-700 px-1.5 py-0.2 rounded font-mono font-bold">PPM {taxSettings.ppmRate}%</span>
           </div>
           <span className="text-xl font-black font-mono text-amber-700 block mt-1">
@@ -1711,7 +1711,7 @@ export default function Formulario29View({
             : 'bg-emerald-50 border-emerald-300'
         }`}>
           <div className="flex justify-between items-start">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-700">
+            <span className="text-[10px] font-bold text-slate-700">
               {resumenF29.totalPagarF29 > 0 ? 'Total a Pagar en F29' : 'Remanente a Favor'}
             </span>
             <span className="text-xs bg-slate-900 text-white px-1.5 py-0.2 rounded font-mono font-bold">
@@ -1789,7 +1789,7 @@ export default function Formulario29View({
           {f29CodeSettings.debito !== false && (
             <div className="space-y-2">
               <div className="flex items-center justify-between bg-slate-100 px-3 py-2 rounded-lg border border-slate-200">
-                <span className="font-bold text-xs text-slate-800 uppercase tracking-wide">
+                <span className="font-bold text-xs text-slate-800">
                   I. Débito Fiscal IVA y Ventas / Servicios (Líneas 1 a 15)
                 </span>
                 <span className="font-mono text-xs font-black text-slate-900">
@@ -1878,7 +1878,7 @@ export default function Formulario29View({
           {f29CodeSettings.credito !== false && (
             <div className="space-y-2">
               <div className="flex items-center justify-between bg-slate-100 px-3 py-2 rounded-lg border border-slate-200">
-                <span className="font-bold text-xs text-slate-800 uppercase tracking-wide">
+                <span className="font-bold text-xs text-slate-800">
                   II. Crédito Fiscal IVA y Compras / Gastos (Líneas 16 a 35)
                 </span>
                 <span className={`font-mono text-xs font-black ${
@@ -2082,7 +2082,7 @@ export default function Formulario29View({
           {(f29CodeSettings.honorarios151 !== false || f29CodeSettings.impuestoUnico48 !== false || f29CodeSettings.retencionTerceros !== false) && (
             <div className="space-y-2">
               <div className="flex items-center justify-between bg-slate-100 px-3 py-2 rounded-lg border border-slate-200">
-                <span className="font-bold text-xs text-slate-800 uppercase tracking-wide">
+                <span className="font-bold text-xs text-slate-800">
                   IV. Retenciones de Impuesto a la Renta (Honorarios, Sueldos y Cambio de Sujeto)
                 </span>
                 <span className="font-mono text-xs font-black text-slate-900">
@@ -2180,7 +2180,7 @@ export default function Formulario29View({
           {f29CodeSettings.ppm062 !== false && (
             <div className="space-y-2">
               <div className="flex items-center justify-between bg-slate-100 px-3 py-2 rounded-lg border border-slate-200">
-                <span className="font-bold text-xs text-slate-800 uppercase tracking-wide">
+                <span className="font-bold text-xs text-slate-800">
                   V. Pagos Provisionales Mensuales (PPM)
                 </span>
                 <span className="font-mono text-xs font-black text-slate-900">
@@ -2226,7 +2226,7 @@ export default function Formulario29View({
           {customCodes.some(c => c.active) && (
             <div className="space-y-2">
               <div className="flex items-center justify-between bg-slate-100 px-3 py-2 rounded-lg border border-slate-200">
-                <span className="font-bold text-xs text-slate-800 uppercase tracking-wide">
+                <span className="font-bold text-xs text-slate-800">
                   Códigos Adicionales por Giro de la Empresa (ILA, Retenciones Específicas, etc.)
                 </span>
                 <span className="font-mono text-xs font-black text-slate-900">
@@ -2327,7 +2327,7 @@ export default function Formulario29View({
           {/* SECCIÓN VI: TOTAL A PAGAR EN GIRO */}
           <div className="p-4 bg-slate-900 text-white rounded-xl flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
-              <span className="text-xs text-slate-400 font-bold uppercase tracking-wider block">
+              <span className="text-xs text-slate-400 font-bold block">
                 Total a Pagar en Caja / Banco / TGR
               </span>
               <span className="text-sm font-sans text-slate-300">
@@ -2946,7 +2946,7 @@ export default function Formulario29View({
                     {/* Card 4: Resumen General / Total a Pagar F29 (Cód. 91) */}
                     <div className="bg-slate-900 text-white rounded-xl p-4 shadow-md space-y-3">
                       <div className="flex justify-between items-center border-b border-slate-800 pb-2">
-                        <span className="font-black text-xs uppercase tracking-wider text-slate-300">TOTAL A PAGAR F29</span>
+                        <span className="font-black text-xs text-slate-300">TOTAL A PAGAR F29</span>
                         <span className="font-mono text-xl font-black text-emerald-400">${resumenF29.totalPagarF29.toLocaleString('es-CL')}</span>
                       </div>
                       <div className="text-xs space-y-1 text-slate-400">

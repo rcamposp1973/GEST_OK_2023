@@ -1287,7 +1287,7 @@ export default function PlanillaConsultasDinamicasView({
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-base font-bold tracking-tight">Planilla dinámica de consultas y análisis</h2>
-              <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-mono px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+              <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-mono px-2 py-0.5 rounded-full font-bold">
                 Motor Multidimensional
               </span>
             </div>

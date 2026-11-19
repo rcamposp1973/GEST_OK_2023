@@ -177,7 +177,7 @@ export default function KpiPanel({ company, vouchers, accounts, year, cutoffMont
 
       {grupos.filter(g => visibles.some(k => k.grupo === g)).map(g => (
         <div key={g}>
-          <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">{g}</div>
+          <div className="text-[11px] font-bold text-slate-500 mb-2">{g}</div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {visibles.filter(k => k.grupo === g).map(k => {
               const v = k.calcular(figuras);

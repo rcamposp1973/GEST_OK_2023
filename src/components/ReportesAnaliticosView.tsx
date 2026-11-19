@@ -1366,7 +1366,7 @@ export default function ReportesAnaliticosView({
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
                 <Sliders className="w-4 h-4 text-indigo-600" />
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                <span className="text-xs font-bold text-slate-700">
                   Configuración de la Matriz Dinámica
                 </span>
               </div>
@@ -1811,7 +1811,7 @@ export default function ReportesAnaliticosView({
                 {matrixData.rows.length > 0 && (
                   <tfoot className="bg-slate-100 text-slate-900 font-bold border-t-2 border-slate-300 sticky bottom-0 z-20">
                     <tr>
-                      <td className="py-3 px-3.5 uppercase tracking-wider text-[11px] sticky left-0 bg-slate-100 border-r border-slate-200 z-30">
+                      <td className="py-3 px-3.5 text-[11px] sticky left-0 bg-slate-100 border-r border-slate-200 z-30">
                         TOTAL GENERAL ({selectedYear})
                       </td>
 
@@ -1935,7 +1935,7 @@ export default function ReportesAnaliticosView({
             {/* KPI 1: Venta Total Neta */}
             <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs relative overflow-hidden">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Ventas Netas del Año</span>
+                <span className="text-xs font-bold text-slate-500">Ventas Netas del Año</span>
                 <span className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
                   <DollarSign className="w-4 h-4" />
                 </span>
@@ -1962,7 +1962,7 @@ export default function ReportesAnaliticosView({
             {/* KPI 2: Cumplimiento o Crecimiento */}
             <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs relative overflow-hidden">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                <span className="text-xs font-bold text-slate-500">
                   {salesCompareMode === 'PRIOR_YEAR' ? 'Variación Absoluta' : 'Cumplimiento Presupuesto'}
                 </span>
                 <span className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
@@ -1990,7 +1990,7 @@ export default function ReportesAnaliticosView({
             {/* KPI 3: Promedio Mensual */}
             <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs relative overflow-hidden">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Promedio Mensual</span>
+                <span className="text-xs font-bold text-slate-500">Promedio Mensual</span>
                 <span className="p-2 bg-purple-50 text-purple-600 rounded-xl">
                   <Calendar className="w-4 h-4" />
                 </span>
@@ -2006,7 +2006,7 @@ export default function ReportesAnaliticosView({
             {/* KPI 4: Ticket Promedio por Factura */}
             <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs relative overflow-hidden">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Ticket Promedio</span>
+                <span className="text-xs font-bold text-slate-500">Ticket Promedio</span>
                 <span className="p-2 bg-amber-50 text-amber-600 rounded-xl">
                   <Users className="w-4 h-4" />
                 </span>
@@ -2060,7 +2060,7 @@ export default function ReportesAnaliticosView({
           {/* TABLA MENSUAL COMPARATIVA DETALLADA */}
           <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
             <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+              <h3 className="text-xs font-bold text-slate-700">
                 Matriz Mensual de Ventas Comparativas (Año {selectedYear})
               </h3>
               <span className="text-xs text-slate-500">Cifras Netas en CLP</span>
@@ -2118,7 +2118,7 @@ export default function ReportesAnaliticosView({
                 </tbody>
                 <tfoot className="bg-slate-100 font-bold border-t-2 border-slate-300 text-slate-900">
                   <tr>
-                    <td className="py-3 px-3.5 uppercase tracking-wider text-[11px]">TOTAL ANUAL</td>
+                    <td className="py-3 px-3.5 text-[11px]">TOTAL ANUAL</td>
                     <td className="py-3 px-3 text-right font-mono text-indigo-900 font-black">
                       ${Math.round(salesAnalysisData.totalActualYear).toLocaleString('es-CL')}
                     </td>
@@ -2322,7 +2322,7 @@ export default function ReportesAnaliticosView({
             <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
               {/* HERRAMIENTAS RÁPIDAS DE CÁLCULO */}
               <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
                   Herramientas Rápidas de Generación
                 </span>
@@ -2381,7 +2381,7 @@ export default function ReportesAnaliticosView({
 
               {/* GRILLA DE LOS 12 MESES */}
               <div className="space-y-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                <span className="text-xs font-bold text-slate-700">
                   Presupuesto Mensual Desglosado (Neto CLP)
                 </span>
 

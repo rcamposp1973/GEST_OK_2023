@@ -984,8 +984,7 @@ ${facebookGroupPost}
                   <MessageCircle className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-white">Presentación para Grupos de WhatsApp & Contactos Directos</h3>
-                  <p className="text-xs text-slate-400">Mensaje con formato visual en negritas, emoticones y tarjeta publicitaria adjunta.</p>
+                  <h3 className="text-sm font-bold text-white" title="Mensaje con formato visual en negritas, emoticones y tarjeta publicitaria adjunta.">Presentación para Grupos de WhatsApp & Contactos Directos</h3>
                 </div>
               </div>
 
@@ -1155,8 +1154,7 @@ ${facebookGroupPost}
                   <Instagram className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-white">Presentación para Instagram (Feed & Reels/Stories)</h3>
-                  <p className="text-xs text-slate-400">Selecciona entre carrusel de diapositivas deslizables o video reel vertical.</p>
+                  <h3 className="text-sm font-bold text-white" title="Selecciona entre carrusel de diapositivas deslizables o video reel vertical.">Presentación para Instagram (Feed & Reels/Stories)</h3>
                 </div>
               </div>
 
@@ -1424,7 +1422,7 @@ ${facebookGroupPost}
 
                     {/* CENTRO: SUBTÍTULOS GIGANTES VIRALES (ESTILO MRBEAST / HORMOZI) */}
                     <div className="relative z-10 p-5 text-center space-y-3 my-auto">
-                      <div className="inline-block px-3 py-1 bg-amber-400 text-slate-950 font-black text-xs rounded-lg uppercase tracking-wider shadow-lg transform -rotate-1">
+                      <div className="inline-block px-3 py-1 bg-amber-400 text-slate-950 font-black text-xs rounded-lg shadow-lg transform -rotate-1">
                         ESCENA {activeReelIdx + 1} de {reelScenes.length}
                       </div>
 
@@ -1553,8 +1551,7 @@ ${facebookGroupPost}
                   <Facebook className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-white">Publicación de Alto Impacto para Grupos de Facebook</h3>
-                  <p className="text-xs text-slate-400">Diseñado con estructura persuasiva: Problema &rarr; Solución &rarr; Oferta de lanzamiento.</p>
+                  <h3 className="text-sm font-bold text-white" title="Diseñado con estructura persuasiva: Problema &rarr; Solución &rarr; Oferta de lanzamiento.">Publicación de Alto Impacto para Grupos de Facebook</h3>
                 </div>
               </div>
 
@@ -1697,7 +1694,7 @@ ${facebookGroupPost}
                   className="absolute inset-0 w-full h-full object-cover opacity-25 filter blur-xs"
                 />
                 <div className="relative z-10 max-w-2xl text-center space-y-4">
-                  <span className="px-3 py-1 bg-emerald-500 text-slate-950 font-black text-xs rounded-full uppercase tracking-wider">
+                  <span className="px-3 py-1 bg-emerald-500 text-slate-950 font-black text-xs rounded-full">
                     {currentReel.badge}
                   </span>
                   <h1 className="text-3xl md:text-5xl font-black text-white leading-tight">

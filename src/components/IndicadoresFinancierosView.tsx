@@ -821,7 +821,7 @@ export default function IndicadoresFinancierosView({
 
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
               <div className="bg-slate-800/80 p-3 rounded-lg border border-slate-700/80">
-                <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">
+                <span className="text-[10px] text-slate-400 font-semibold block">
                   1. Saldo en Contabilidad
                 </span>
                 <p className="text-lg font-bold text-white font-mono tabular-nums mt-1">
@@ -833,7 +833,7 @@ export default function IndicadoresFinancierosView({
               </div>
 
               <div className="bg-slate-800/80 p-3 rounded-lg border border-slate-700/80">
-                <span className="text-[10px] text-indigo-300 font-semibold uppercase tracking-wider block">
+                <span className="text-[10px] text-indigo-300 font-semibold block">
                   2. Saldo Cartolas Bancarias
                 </span>
                 <p className="text-lg font-bold text-indigo-200 font-mono tabular-nums mt-1">
@@ -845,7 +845,7 @@ export default function IndicadoresFinancierosView({
               </div>
 
               <div className="bg-slate-800/80 p-3 rounded-lg border border-slate-700/80">
-                <span className="text-[10px] text-amber-300 font-semibold uppercase tracking-wider block">
+                <span className="text-[10px] text-amber-300 font-semibold block">
                   3. Partidas Pendientes
                 </span>
                 <div className="text-[11px] font-mono tabular-nums mt-1 space-y-0.5">
@@ -861,7 +861,7 @@ export default function IndicadoresFinancierosView({
               </div>
 
               <div className="bg-slate-800 p-3 rounded-lg border border-indigo-500/50 shadow-xs">
-                <span className="text-[10px] text-indigo-300 font-bold uppercase tracking-wider block">
+                <span className="text-[10px] text-indigo-300 font-bold block">
                   4. DISPONIBLE REAL CONCILIADO
                 </span>
                 <p className="text-xl font-bold text-emerald-400 font-mono tabular-nums mt-1">
@@ -1234,7 +1234,7 @@ export default function IndicadoresFinancierosView({
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* MRR / ARR */}
               <div className="p-4 rounded-xl border border-slate-200 bg-purple-50/40">
-                <span className="text-[10px] font-bold uppercase text-purple-700 block tracking-wider">
+                <span className="text-[10px] font-bold text-purple-700 block">
                   Ingreso Recurrente Mensual (MRR)
                 </span>
                 <p className="text-xl font-bold font-mono text-slate-900 mt-1">
@@ -1248,7 +1248,7 @@ export default function IndicadoresFinancierosView({
 
               {/* MoM Growth */}
               <div className="p-4 rounded-xl border border-slate-200 bg-indigo-50/40">
-                <span className="text-[10px] font-bold uppercase text-indigo-700 block tracking-wider">
+                <span className="text-[10px] font-bold text-indigo-700 block">
                   Tasa Crecimiento Mensual (MoM)
                 </span>
                 <p className={`text-xl font-bold font-mono mt-1 ${unitEconomics.momGrowthPct >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
@@ -1261,7 +1261,7 @@ export default function IndicadoresFinancierosView({
 
               {/* Monthly Burn Rate */}
               <div className="p-4 rounded-xl border border-slate-200 bg-amber-50/40">
-                <span className="text-[10px] font-bold uppercase text-amber-700 block tracking-wider">
+                <span className="text-[10px] font-bold text-amber-700 block">
                   Consumo Neto de Caja (Burn Rate)
                 </span>
                 <p className="text-xl font-bold font-mono text-slate-900 mt-1">
@@ -1274,7 +1274,7 @@ export default function IndicadoresFinancierosView({
 
               {/* Runway */}
               <div className="p-4 rounded-xl border border-slate-200 bg-emerald-50/40">
-                <span className="text-[10px] font-bold uppercase text-emerald-700 block tracking-wider">
+                <span className="text-[10px] font-bold text-emerald-700 block">
                   Autonomía Financiera (Runway)
                 </span>
                 <p className="text-xl font-bold font-mono text-emerald-800 mt-1">
@@ -1338,7 +1338,7 @@ export default function IndicadoresFinancierosView({
             <div className="bg-slate-900 text-white p-4 rounded-xl mb-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
+                  <span className="text-[10px] text-slate-400 font-bold block">
                     Ventas para Punto de Equilibrio
                   </span>
                   <p className="text-2xl font-bold font-mono text-emerald-400 mt-1">
@@ -1350,7 +1350,7 @@ export default function IndicadoresFinancierosView({
                 </div>
 
                 <div>
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
+                  <span className="text-[10px] text-slate-400 font-bold block">
                     Cobertura Actual de Ventas
                   </span>
                   <p className="text-2xl font-bold font-mono text-indigo-300 mt-1">
@@ -1362,7 +1362,7 @@ export default function IndicadoresFinancierosView({
                 </div>
 
                 <div>
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
+                  <span className="text-[10px] text-slate-400 font-bold block">
                     Superávit / Déficit Operacional
                   </span>
                   <p className={`text-2xl font-bold font-mono mt-1 ${breakEven.superavitDeficit >= 0 ? 'text-emerald-300' : 'text-rose-400'}`}>

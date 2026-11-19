@@ -217,7 +217,7 @@ export const ProductsServicesView: React.FC<ProductsServicesViewProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Productos Físicos</span>
+            <span className="text-xs font-semibold text-slate-500">Productos Físicos</span>
             <Package className="w-5 h-5 text-blue-600" />
           </div>
           <div className="text-2xl font-bold text-slate-800 mt-2">{stats.totalProducts}</div>
@@ -226,7 +226,7 @@ export const ProductsServicesView: React.FC<ProductsServicesViewProps> = ({
 
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Servicios / Intangibles</span>
+            <span className="text-xs font-semibold text-slate-500">Servicios / Intangibles</span>
             <Wrench className="w-5 h-5 text-indigo-600" />
           </div>
           <div className="text-2xl font-bold text-slate-800 mt-2">{stats.totalServices}</div>
@@ -235,7 +235,7 @@ export const ProductsServicesView: React.FC<ProductsServicesViewProps> = ({
 
         <div className={`p-4 rounded-xl border shadow-2xs ${stats.lowStockCount > 0 ? 'bg-amber-50/70 border-amber-200' : 'bg-white border-slate-200'}`}>
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-amber-800 uppercase tracking-wider">Alerta Stock Bajo</span>
+            <span className="text-xs font-semibold text-amber-800">Alerta Stock Bajo</span>
             <AlertTriangle className={`w-5 h-5 ${stats.lowStockCount > 0 ? 'text-amber-600 animate-pulse' : 'text-slate-400'}`} />
           </div>
           <div className="text-2xl font-bold text-amber-900 mt-2">{stats.lowStockCount}</div>
@@ -244,7 +244,7 @@ export const ProductsServicesView: React.FC<ProductsServicesViewProps> = ({
 
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Valorización de Stock (PMP)</span>
+            <span className="text-xs font-semibold text-slate-500">Valorización de Stock (PMP)</span>
             <DollarSign className="w-5 h-5 text-emerald-600" />
           </div>
           <div className="text-xl font-bold text-emerald-700 mt-2">{formatCLP(stats.inventoryValuation)}</div>

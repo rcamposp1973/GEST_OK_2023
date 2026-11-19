@@ -100,7 +100,7 @@ export default function ModuleAccessMatrix({
       <div>
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+            <h3 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
               <Layers className="w-4 h-4 text-indigo-600" />
               <span>Planes de Suscripción Oficiales</span>
             </h3>
@@ -233,7 +233,7 @@ export default function ModuleAccessMatrix({
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
         <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
+            <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
               <span>Grilla de Accesos a Módulos del Sistema (Feature Matrix)</span>
             </h4>
             <p className="text-[11px] text-slate-500">

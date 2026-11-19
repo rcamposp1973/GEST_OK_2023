@@ -364,8 +364,7 @@ export default function SiiFolioControlView({
               <div className="flex items-center gap-2">
                 <BookOpen className="w-5 h-5 text-indigo-600" />
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 uppercase">Trazabilidad de Folios por Libro Impreso</h3>
-                  <p className="text-[11px] text-slate-500">Historial de folios consumidos para auditoría y declaraciones juradas (DDJJ)</p>
+                  <h3 className="text-sm font-bold text-slate-900 uppercase" title="Historial de folios consumidos para auditoría y declaraciones juradas (DDJJ)">Trazabilidad de Folios por Libro Impreso</h3>
                 </div>
               </div>
 
@@ -440,7 +439,7 @@ export default function SiiFolioControlView({
           <div className="bg-amber-50 p-4 rounded-xl border border-amber-200 text-amber-900 text-xs flex items-start gap-3 shadow-xs">
             <Info className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
             <div className="space-y-1">
-              <span className="font-bold block uppercase tracking-wider text-[11px]">Normativa de Hojas Timbradas y Libros de Contabilidad (SII)</span>
+              <span className="font-bold block text-[11px]">Normativa de Hojas Timbradas y Libros de Contabilidad (SII)</span>
               <p className="text-[11px] text-amber-800 leading-relaxed">
                 Según la Circular N° 19 y Resolución Exenta N° 2301 del SII, los contribuyentes autorizados a llevar contabilidad en hojas sueltas deben emitir sus libros cronológicos con el número de resolución y folio timbrado en cada hoja. El sistema registra cada rango emitido para que al confeccionar la RLI, Capital Propio Tributario y la Declaración Jurada 1847, se declare exactamente el folio del Libro Diario o Mayor donde consta la información.
               </p>

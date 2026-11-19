@@ -1230,7 +1230,7 @@ export default function CargaMasivaComprobantesView({
         <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-xs">
           <div>
             <div className="flex items-center gap-2">
-              <h4 className="text-xs font-black text-slate-900 uppercase tracking-wide">
+              <h4 className="text-xs font-black text-slate-900">
                 Asignación de Folios de Comprobantes
               </h4>
             </div>
@@ -1270,7 +1270,7 @@ export default function CargaMasivaComprobantesView({
           <div className="flex items-center gap-2.5">
             <div>
               <div className="flex items-center gap-2">
-                <h4 className="text-xs font-black text-emerald-950 uppercase tracking-wide">
+                <h4 className="text-xs font-black text-emerald-950">
                   Conversión de Moneda Extranjera (USD / UF)
                 </h4>
                 {foreignLinesDetectedCount > 0 && (
@@ -1309,7 +1309,7 @@ export default function CargaMasivaComprobantesView({
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start gap-2.5">
               <div>
-                <h4 className="font-black text-amber-900 text-xs uppercase tracking-wide">
+                <h4 className="font-black text-amber-900 text-xs">
                   Falta Configuración: Cuentas Inexistentes en Plan de Cuentas ({missingAccountCodes.length})
                 </h4>
                 <p className="text-xs text-amber-800 mt-1">
@@ -1353,7 +1353,7 @@ export default function CargaMasivaComprobantesView({
           <div className="flex justify-between items-center flex-wrap gap-3 pb-3 border-b border-slate-200">
             <div>
               <div className="flex items-center gap-2">
-                <h4 className="text-xs font-black text-slate-900 uppercase tracking-wide">
+                <h4 className="text-xs font-black text-slate-900">
                   Vista Previa y Validación de Comprobantes ({parsedVouchers.length} asientos)
                 </h4>
               </div>

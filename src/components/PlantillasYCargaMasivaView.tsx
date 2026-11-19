@@ -676,7 +676,7 @@ export default function PlantillasYCargaMasivaView({
       {activeTab === 'descargas' && (
         <div className="bg-white rounded-b-xl border border-slate-200 shadow-xs p-6 space-y-6">
           <div>
-            <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 mb-1">
+            <h4 className="text-xs font-black text-slate-800 mb-1">
               Formatos Oficiales de Importación Masiva (Excel / CSV)
             </h4>
             <p className="text-xs text-slate-500">
@@ -791,7 +791,7 @@ export default function PlantillasYCargaMasivaView({
         <div className="bg-white rounded-b-xl border border-slate-200 shadow-xs p-6 space-y-5">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div>
-              <h4 className="text-xs font-black uppercase tracking-wider text-slate-900">
+              <h4 className="text-xs font-black text-slate-900">
                 Importación Masiva de Plan de Cuentas
               </h4>
               <p className="text-xs text-slate-500">
@@ -869,7 +869,7 @@ export default function PlantillasYCargaMasivaView({
         <div className="bg-white rounded-b-xl border border-slate-200 shadow-xs p-6 space-y-5">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div>
-              <h4 className="text-xs font-black uppercase tracking-wider text-slate-900">
+              <h4 className="text-xs font-black text-slate-900">
                 Importación y Upgrade Masivo de Auxiliares (Clientes, Proveedores y Empleados)
               </h4>
               <p className="text-xs text-slate-500">

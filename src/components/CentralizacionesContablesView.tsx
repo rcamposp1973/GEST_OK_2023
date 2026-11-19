@@ -795,7 +795,7 @@ export const CentralizacionesContablesView: React.FC<CentralizacionesContablesVi
                 <h1 className="text-xl font-bold text-slate-900">
                   Motor de Centralizaciones & Parametrización Contable
                 </h1>
-                <span className="px-2.5 py-0.5 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-full text-[11px] font-bold uppercase tracking-wider">
+                <span className="px-2.5 py-0.5 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-full text-[11px] font-bold">
                   Capa 2 ERP
                 </span>
               </div>
@@ -892,7 +892,7 @@ export const CentralizacionesContablesView: React.FC<CentralizacionesContablesVi
                 <Sparkles className="w-5 h-5 text-indigo-300" />
               </div>
               <div>
-                <h3 className="text-xs font-bold text-indigo-200 uppercase tracking-wider">
+                <h3 className="text-xs font-bold text-indigo-200">
                   Flujo de Centralización Periódica
                 </h3>
                 <p className="text-xs text-slate-300 mt-0.5">
@@ -1368,7 +1368,7 @@ export const CentralizacionesContablesView: React.FC<CentralizacionesContablesVi
             {(activeParamSection === 'ALL' || activeParamSection === 'VENTAS') && (
               <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
                 <div className="border-b border-slate-200 pb-3 flex items-center justify-between">
-                  <h3 className="text-xs font-bold text-emerald-900 uppercase tracking-wider flex items-center gap-2">
+                  <h3 className="text-xs font-bold text-emerald-900 flex items-center gap-2">
                     <TrendingUp className="w-4 h-4 text-emerald-600" />
                     <span>Módulo de Ventas & Facturación</span>
                   </h3>
@@ -1441,7 +1441,7 @@ export const CentralizacionesContablesView: React.FC<CentralizacionesContablesVi
             {(activeParamSection === 'ALL' || activeParamSection === 'COMPRAS') && (
               <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
                 <div className="border-b border-slate-200 pb-3 flex items-center justify-between">
-                  <h3 className="text-xs font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-2">
+                  <h3 className="text-xs font-bold text-indigo-900 flex items-center gap-2">
                     <FileText className="w-4 h-4 text-indigo-600" />
                     <span>Módulo de Compras & Proveedores</span>
                   </h3>
@@ -1514,7 +1514,7 @@ export const CentralizacionesContablesView: React.FC<CentralizacionesContablesVi
             {(activeParamSection === 'ALL' || activeParamSection === 'REMUNERACIONES') && (
               <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
                 <div className="border-b border-slate-200 pb-3 flex items-center justify-between">
-                  <h3 className="text-xs font-bold text-blue-900 uppercase tracking-wider flex items-center gap-2">
+                  <h3 className="text-xs font-bold text-blue-900 flex items-center gap-2">
                     <Users className="w-4 h-4 text-blue-600" />
                     <span>Módulo de Remuneraciones & RRHH</span>
                   </h3>
@@ -1599,7 +1599,7 @@ export const CentralizacionesContablesView: React.FC<CentralizacionesContablesVi
             {(activeParamSection === 'ALL' || activeParamSection === 'ACTIVO_FIJO') && (
               <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
                 <div className="border-b border-slate-200 pb-3 flex items-center justify-between">
-                  <h3 className="text-xs font-bold text-purple-900 uppercase tracking-wider flex items-center gap-2">
+                  <h3 className="text-xs font-bold text-purple-900 flex items-center gap-2">
                     <Building2 className="w-4 h-4 text-purple-600" />
                     <span>Módulo de Activo Fijo & Depreciación</span>
                   </h3>
@@ -1648,7 +1648,7 @@ export const CentralizacionesContablesView: React.FC<CentralizacionesContablesVi
             {(activeParamSection === 'ALL' || activeParamSection === 'TESORERIA') && (
               <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
                 <div className="border-b border-slate-200 pb-3 flex items-center justify-between">
-                  <h3 className="text-xs font-bold text-cyan-900 uppercase tracking-wider flex items-center gap-2">
+                  <h3 className="text-xs font-bold text-cyan-900 flex items-center gap-2">
                     <CreditCard className="w-4 h-4 text-cyan-600" />
                     <span>Módulo de Tesorería, Bancos & Divisas</span>
                   </h3>
@@ -1697,7 +1697,7 @@ export const CentralizacionesContablesView: React.FC<CentralizacionesContablesVi
             {(activeParamSection === 'ALL' || activeParamSection === 'RENDICIONES') && (
               <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
                 <div className="border-b border-slate-200 pb-3 flex items-center justify-between">
-                  <h3 className="text-xs font-bold text-emerald-900 uppercase tracking-wider flex items-center gap-2">
+                  <h3 className="text-xs font-bold text-emerald-900 flex items-center gap-2">
                     <Layers className="w-4 h-4 text-emerald-600" />
                     <span>Módulo de Rendiciones de Gastos & Existencias</span>
                   </h3>
@@ -1787,7 +1787,7 @@ export const CentralizacionesContablesView: React.FC<CentralizacionesContablesVi
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {/* Checklist 1: Partida Doble */}
             <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/50 space-y-2">
-              <div className="flex items-center gap-2 text-emerald-800 font-bold text-xs uppercase tracking-wider">
+              <div className="flex items-center gap-2 text-emerald-800 font-bold text-xs">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                 <span>1. Partida Doble</span>
               </div>
@@ -1801,7 +1801,7 @@ export const CentralizacionesContablesView: React.FC<CentralizacionesContablesVi
 
             {/* Checklist 2: Moneda Extranjera */}
             <div className="p-4 rounded-xl border border-indigo-200 bg-indigo-50/50 space-y-2">
-              <div className="flex items-center gap-2 text-indigo-800 font-bold text-xs uppercase tracking-wider">
+              <div className="flex items-center gap-2 text-indigo-800 font-bold text-xs">
                 <DollarSign className="w-4 h-4 text-indigo-600" />
                 <span>2. Dólar y Divisas</span>
               </div>
@@ -1815,7 +1815,7 @@ export const CentralizacionesContablesView: React.FC<CentralizacionesContablesVi
 
             {/* Checklist 3: Conciliación Bancaria */}
             <div className="p-4 rounded-xl border border-cyan-200 bg-cyan-50/50 space-y-2">
-              <div className="flex items-center gap-2 text-cyan-800 font-bold text-xs uppercase tracking-wider">
+              <div className="flex items-center gap-2 text-cyan-800 font-bold text-xs">
                 <CreditCard className="w-4 h-4 text-cyan-600" />
                 <span>3. Estado Bancario</span>
               </div>

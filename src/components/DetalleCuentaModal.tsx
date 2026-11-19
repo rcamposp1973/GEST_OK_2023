@@ -248,7 +248,7 @@ export default function DetalleCuentaModal({ account, cuentasExtra, soloRut, vou
       <div className="bg-white w-full max-w-3xl h-full shadow-2xl flex flex-col text-slate-800" onClick={e => e.stopPropagation()}>
         <div className="px-4 py-2 border-b border-slate-200 flex items-start justify-between gap-3">
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{titulo || 'Detalle de cuenta'}</div>
+            <div className="text-[10px] font-bold text-slate-500">{titulo || 'Detalle de cuenta'}</div>
             <div className="text-sm font-bold">{account.code} · {account.name}</div>
             <div className="text-[11px] text-slate-500">
               {desde ? `Desde ${desde}` : 'Desde el inicio'} {hasta ? `hasta ${hasta}` : ''} · Debe {fmt(totalDebe)} · Haber {fmt(totalHaber)} · Saldo <b>{fmt(totalDebe - totalHaber)}</b>

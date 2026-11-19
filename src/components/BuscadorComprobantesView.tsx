@@ -65,8 +65,7 @@ export default function BuscadorComprobantesView({ vouchers, onOpenVoucher }: Pr
   return (
     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
       <div>
-        <h2 className="text-lg font-bold text-slate-900">Buscador de Comprobantes</h2>
-        <p className="text-xs text-slate-500">Busca por N° de comprobante, N° de factura o documento, proveedor o cliente (nombre o RUT), glosa, cuenta o monto. Haz clic en una fila para abrir el comprobante.</p>
+        <h2 className="text-lg font-bold text-slate-900" title="Busca por N° de comprobante, N° de factura o documento, proveedor o cliente (nombre o RUT), glosa, cuenta o monto. Haz clic en una fila para abrir el comprobante.">Buscador de Comprobantes</h2>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-2">

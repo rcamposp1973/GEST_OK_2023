@@ -529,19 +529,19 @@ export default function VoucherDocumentCorrectorModal({
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Registros Detectados</span>
+              <span className="text-xs font-semibold text-slate-500">Registros Detectados</span>
               <div className="text-2xl font-black text-slate-800 dark:text-slate-100 mt-1">{items.length}</div>
               <span className="text-xs text-slate-500">Con "Doc. Interno" / "OTRO"</span>
             </div>
 
             <div className="p-4 rounded-xl border border-emerald-200 dark:border-emerald-800/50 bg-emerald-50/50 dark:bg-emerald-950/20">
-              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Coincidencias RCV</span>
+              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">Coincidencias RCV</span>
               <div className="text-2xl font-black text-emerald-700 dark:text-emerald-400 mt-1">{highConfidenceCount}</div>
               <span className="text-xs text-emerald-600/80 dark:text-emerald-400/80">Facturas 100% asociadas</span>
             </div>
 
             <div className="p-4 rounded-xl border border-blue-200 dark:border-blue-800/50 bg-blue-50/50 dark:bg-blue-950/20">
-              <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Monto a Conciliar</span>
+              <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">Monto a Conciliar</span>
               <div className="text-2xl font-black text-blue-700 dark:text-blue-400 mt-1">
                 ${totalAmount.toLocaleString('es-CL')}
               </div>
@@ -549,7 +549,7 @@ export default function VoucherDocumentCorrectorModal({
             </div>
 
             <div className="p-4 rounded-xl border border-indigo-200 dark:border-indigo-800/50 bg-indigo-50/50 dark:bg-indigo-950/20">
-              <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Seleccionados</span>
+              <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">Seleccionados</span>
               <div className="text-2xl font-black text-indigo-700 dark:text-indigo-400 mt-1">{selectedCount}</div>
               <span className="text-xs text-indigo-600/80 dark:text-indigo-400/80">Listos para actualización</span>
             </div>

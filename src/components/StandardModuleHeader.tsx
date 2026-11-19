@@ -224,7 +224,7 @@ export const StandardModuleHeader: React.FC<StandardModuleHeaderProps> = ({
                 className={`${style.bg} p-4 rounded-xl border ${style.border} shadow-2xs transition-all hover:shadow-xs flex flex-col justify-between`}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider line-clamp-1">
+                  <span className="text-[11px] font-bold text-slate-500 line-clamp-1">
                     {kpi.label}
                   </span>
                   {KpiIcon && (

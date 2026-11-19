@@ -95,8 +95,7 @@ export default function ResumenVentasMensual({ company, rcvDocuments, year }: Pr
     <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="text-sm font-extrabold text-slate-900">Resumen de ventas por mes</h3>
-          <p className="text-xs text-slate-500">Monto neto del Registro de Ventas (incluye exentas; las notas de crédito restan). Pulsa Copiar y pégalo en tu correo.</p>
+          <h3 className="text-sm font-extrabold text-slate-900" title="Monto neto del Registro de Ventas (incluye exentas; las notas de crédito restan). Pulsa Copiar y pégalo en tu correo.">Resumen de ventas por mes</h3>
         </div>
         <div className="flex items-center gap-2">
           <select value={anioSel} onChange={e => setAnioSel(parseInt(e.target.value, 10))} className="border border-slate-300 rounded-lg px-2 py-1.5 text-xs bg-white font-semibold">

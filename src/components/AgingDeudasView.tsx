@@ -455,7 +455,7 @@ export const AgingDeudasView: React.FC<AgingDeudasViewProps> = ({
           <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
             <div className="p-4 border-b border-slate-200 bg-slate-50/60 flex justify-between items-center">
               <div>
-                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                <h3 className="text-xs font-bold text-slate-800">
                   Matriz Comparativa de Antigüedad y Brecha de Liquidez
                 </h3>
                 <p className="text-[11px] text-slate-500 mt-0.5">

@@ -777,7 +777,7 @@ export const RendicionGastosView: React.FC<RendicionGastosViewProps> = ({
                 {/* Desglose de ítems (Colapsable) */}
                 {isExpanded && (
                   <div className="p-4 border-t border-slate-200 bg-white">
-                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                    <h4 className="text-xs font-bold text-slate-700 mb-2">
                       Detalle de Comprobantes y Boletas Rendidas
                     </h4>
                     <div className="overflow-x-auto">

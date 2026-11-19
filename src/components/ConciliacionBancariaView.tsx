@@ -2739,7 +2739,7 @@ export default function ConciliacionBancariaView({
                   onClick={() => setIsActionsDropdownOpen(false)} 
                 />
                 <div className="absolute right-0 mt-1.5 w-72 rounded-xl bg-white shadow-xl border border-slate-200 py-1.5 z-50 text-xs divide-y divide-slate-100">
-                  <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  <div className="px-3 py-1 text-[10px] font-bold text-slate-400">
                     Importación & Plantillas
                   </div>
                   <div className="py-1">
@@ -2782,7 +2782,7 @@ export default function ConciliacionBancariaView({
                     </button>
                   </div>
 
-                  <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  <div className="px-3 py-1 text-[10px] font-bold text-slate-400">
                     Automatización & Agentes IA
                   </div>
                   <div className="py-1">
@@ -2827,7 +2827,7 @@ export default function ConciliacionBancariaView({
                     )}
                   </div>
 
-                  <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  <div className="px-3 py-1 text-[10px] font-bold text-slate-400">
                     Reportes & Mantenimiento
                   </div>
                   <div className="py-1">
@@ -2982,7 +2982,7 @@ export default function ConciliacionBancariaView({
       {/* WORKSPACE CONTROLS BAR & QUICK STATUS */}
       <div className="flex flex-wrap items-center justify-between gap-2.5 bg-slate-100/90 border border-slate-200 px-3.5 py-2 rounded-xl text-xs">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-bold text-slate-700 uppercase text-[11px] tracking-wide">
+          <span className="font-bold text-slate-700 text-[11px]">
             Vista de Ventanas:
           </span>
           <div className="inline-flex rounded-lg border border-slate-300 bg-white p-0.5 shadow-2xs">
@@ -3087,7 +3087,7 @@ export default function ConciliacionBancariaView({
           {/* Top Header */}
           <div className="p-3 bg-slate-50 text-slate-900 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-bold text-xs uppercase tracking-wide flex items-center gap-1.5 text-slate-900">
+              <span className="font-bold text-xs flex items-center gap-1.5 text-slate-900">
                 Cartola Bancaria ({displayLines.length} de {unifiedHistoricalCartola.length > 0 ? unifiedHistoricalCartola.length : statementLines.length})
               </span>
 
@@ -3186,7 +3186,7 @@ export default function ConciliacionBancariaView({
 
                     {/* Presets */}
                     <div className="space-y-1">
-                      <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wide">Accesos Rápidos:</span>
+                      <span className="text-[10px] font-bold text-slate-600">Accesos Rápidos:</span>
                       <div className="grid grid-cols-2 gap-1 text-[10.5px]">
                         <button
                           type="button"
@@ -3607,7 +3607,7 @@ export default function ConciliacionBancariaView({
         <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden flex flex-col">
           <div className="p-3 bg-slate-50 text-slate-900 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-xs uppercase tracking-wide flex items-center gap-1.5 text-slate-900">
+              <span className="font-bold text-xs flex items-center gap-1.5 text-slate-900">
                 Asientos en Libros ({filteredBankVouchers.length})
               </span>
               {selectedVoucherKeys.size > 0 && (
@@ -3842,7 +3842,7 @@ export default function ConciliacionBancariaView({
         {/* Panel Top Header */}
         <div className="p-3 bg-slate-50 text-slate-900 flex items-center justify-between gap-2 border-b border-slate-200">
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className="font-bold text-xs uppercase tracking-wide truncate text-slate-900">
+            <span className="font-bold text-xs truncate text-slate-900">
                Resumen Conciliación
             </span>
             <span className="text-[10px] text-slate-500 font-mono font-medium">({selectedPeriod})</span>
@@ -3881,7 +3881,7 @@ export default function ConciliacionBancariaView({
                 : 'bg-rose-50 text-rose-900 border-rose-300'
             }`}
           >
-            <div className="text-[11px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5">
+            <div className="text-[11px] font-black flex items-center justify-center gap-1.5">
               <span>{reconciliationSummary.isBalanced ? '✓' : ''}</span>
               <span>
                 {reconciliationSummary.isBalanced
@@ -4188,7 +4188,7 @@ export default function ConciliacionBancariaView({
               <ArrowRightLeft className="w-5 h-5 text-indigo-300" />
             </div>
             <div>
-              <div className="text-[11px] uppercase tracking-wider text-slate-400 font-bold flex items-center gap-1.5">
+              <div className="text-[11px] text-slate-400 font-bold flex items-center gap-1.5">
                 <span> Cartola:</span>
                 <strong className="text-white text-xs">{selectedCartolaLines.length} selecc.</strong>
               </div>
@@ -4239,7 +4239,7 @@ export default function ConciliacionBancariaView({
           {/* Lado Derecho: Resumen Libros y Botones de Acción */}
           <div className="flex items-center gap-3">
             <div className="text-right">
-              <div className="text-[11px] uppercase tracking-wider text-slate-400 font-bold flex items-center justify-end gap-1.5">
+              <div className="text-[11px] text-slate-400 font-bold flex items-center justify-end gap-1.5">
                 <span> Libros:</span>
                 <strong className="text-white text-xs">{selectedVoucherItems.length} selecc.</strong>
               </div>

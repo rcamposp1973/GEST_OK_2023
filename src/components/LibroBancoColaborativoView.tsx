@@ -925,7 +925,7 @@ export default function LibroBancoColaborativoView({
           className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs space-y-2 cursor-pointer hover:border-indigo-300 transition-colors"
         >
           <div className="flex justify-between items-start">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Estado a Hoy</span>
+            <span className="text-[11px] font-bold text-slate-500">Estado a Hoy</span>
             <span className={`text-[11px] font-black px-2 py-0.5 rounded-full ${
               metrics.percent === 100 ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
             }`}>
@@ -956,7 +956,7 @@ export default function LibroBancoColaborativoView({
           }`}
         >
           <div className="flex justify-between items-start">
-            <span className="text-[11px] font-bold text-rose-700 uppercase tracking-wider">Pendientes de Contabilizar</span>
+            <span className="text-[11px] font-bold text-rose-700">Pendientes de Contabilizar</span>
             <span className="p-1 rounded-lg bg-rose-100 text-rose-700">
               <AlertCircle className="w-4 h-4" />
             </span>
@@ -980,7 +980,7 @@ export default function LibroBancoColaborativoView({
           }`}
         >
           <div className="flex justify-between items-start">
-            <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wider">Aclarados por Cliente</span>
+            <span className="text-[11px] font-bold text-amber-700">Aclarados por Cliente</span>
             <span className="p-1 rounded-lg bg-amber-100 text-amber-700">
               <Clock className="w-4 h-4" />
             </span>
@@ -1000,7 +1000,7 @@ export default function LibroBancoColaborativoView({
           className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs space-y-1 cursor-pointer hover:border-indigo-300 transition-colors"
         >
           <div className="flex justify-between items-start">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Saldo Cartola vs Mayor</span>
+            <span className="text-[11px] font-bold text-slate-500">Saldo Cartola vs Mayor</span>
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
               metrics.isCuadrado ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
             }`}>

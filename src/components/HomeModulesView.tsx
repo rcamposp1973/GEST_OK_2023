@@ -47,7 +47,7 @@ export default function HomeModulesView({ onOpenModule, stats = [], pinnedIds = 
     <div className="rounded-2xl border border-slate-200 bg-gradient-to-b from-sky-50 to-slate-50 p-5 sm:p-7 space-y-6">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <p className="text-[11px] uppercase tracking-[0.2em] text-sky-700 font-semibold">Centro de control{periodLabel ? ` · ${periodLabel}` : ''}</p>
+          <p className="text-[11px] tracking-[0.2em] text-sky-700 font-semibold">Centro de control{periodLabel ? ` · ${periodLabel}` : ''}</p>
           <h2 className="text-2xl font-semibold text-slate-900 mt-1">¿Qué quieres hacer hoy?</h2>
         </div>
         <div className="relative w-full md:w-96">
@@ -80,7 +80,7 @@ export default function HomeModulesView({ onOpenModule, stats = [], pinnedIds = 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {stats.map(s => (
             <div key={s.label} className={`rounded-xl p-4 ${card}`}>
-              <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">{s.label}</p>
+              <p className="text-[10px] text-slate-500 font-semibold">{s.label}</p>
               <p className="text-2xl font-semibold text-slate-900 mt-1 tabular-nums">{s.value}</p>
               {s.hint && <p className="text-[11px] text-slate-500 mt-0.5">{s.hint}</p>}
             </div>
@@ -90,7 +90,7 @@ export default function HomeModulesView({ onOpenModule, stats = [], pinnedIds = 
 
       {frecuentes.length > 0 && (
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-2">Accesos frecuentes</p>
+          <p className="text-[10px] text-slate-500 font-semibold mb-2">Accesos frecuentes</p>
           <div className="flex flex-wrap gap-2">
             {frecuentes.map(m => {
               const Icon = m.icon;
@@ -107,7 +107,7 @@ export default function HomeModulesView({ onOpenModule, stats = [], pinnedIds = 
       )}
 
       <div>
-        <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-2">Áreas</p>
+        <p className="text-[10px] text-slate-500 font-semibold mb-2">Áreas</p>
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
           {AREAS.map(a => {
             const Icon = a.icon;

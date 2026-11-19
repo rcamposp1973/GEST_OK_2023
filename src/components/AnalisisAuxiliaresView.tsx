@@ -1602,7 +1602,7 @@ export default function AnalisisAuxiliaresView({
       {/* KPI RESUMEN DE MÉTRICAS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs space-y-1">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+          <span className="text-[11px] font-bold text-slate-500">
             {viewMode === 'byAccount' ? 'Cuentas con Movimiento' : 'Auxiliares con Movimiento'}
           </span>
           <p className="text-xl font-mono font-black text-slate-900">
@@ -1614,19 +1614,19 @@ export default function AnalisisAuxiliaresView({
         </div>
 
         <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs space-y-1">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">Total Débitos (Cargos / Debe)</span>
+          <span className="text-[11px] font-bold text-slate-600">Total Débitos (Cargos / Debe)</span>
           <p className="text-xl font-mono font-black text-slate-800">${summaryMetrics.totalDebits.toLocaleString('es-CL')}</p>
           <span className="text-[10px] text-slate-400">Total acumulado en el Debe</span>
         </div>
 
         <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs space-y-1">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">Total Créditos (Abonos / Haber)</span>
+          <span className="text-[11px] font-bold text-slate-600">Total Créditos (Abonos / Haber)</span>
           <p className="text-xl font-mono font-black text-slate-800">${summaryMetrics.totalCredits.toLocaleString('es-CL')}</p>
           <span className="text-[10px] text-slate-400">Total acumulado en el Haber</span>
         </div>
 
         <div className="bg-indigo-900 text-white p-4 rounded-xl shadow-md space-y-1">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-200">Saldo Pendiente Neto Total</span>
+          <span className="text-[11px] font-bold text-indigo-200">Saldo Pendiente Neto Total</span>
           <p className="text-xl font-mono font-black text-emerald-300">${summaryMetrics.totalPendingBalance.toLocaleString('es-CL')}</p>
           <span className="text-[10px] text-indigo-300">
             {balanceFilter === 'soloPendientes' ? 'Mostrando solo registros con saldo pendiente' : 'Histórico completo (incluye saldados $0)'}

@@ -218,7 +218,7 @@ export default function DetallePivotModal({ cuentas, naturaleza, vouchers, anio,
       <div className="bg-white w-full max-w-6xl h-full shadow-2xl flex flex-col text-slate-800" onClick={e => e.stopPropagation()}>
         <div className="px-4 py-2 border-b border-slate-200 flex items-start justify-between gap-3">
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{tipoInforme} · detalle {anio} (ene–{MESES[nMeses - 1].toLowerCase()})</div>
+            <div className="text-[10px] font-bold text-slate-500">{tipoInforme} · detalle {anio} (ene–{MESES[nMeses - 1].toLowerCase()})</div>
             <div className="text-sm font-bold">{titulo}</div>
             <div className="text-[11px] text-slate-500">{etiquetaTotal === 'Saldo al corte' ? 'Saldo al corte' : 'Total de la selección'}: <b>{fmt(totalGeneral)}</b> · {filtradas.length} movimientos</div>
           </div>

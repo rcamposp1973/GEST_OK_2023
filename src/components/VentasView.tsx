@@ -125,8 +125,7 @@ export default function VentasView({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold text-slate-900">Ventas · Órdenes de Venta</h2>
-          <p className="text-sm text-slate-500">Orden de venta → entrega → factura. Lo entregado sin facturar queda en Facturas por Emitir. La factura electrónica se emite fuera del sistema y aquí solo se asocia.</p>
+          <h2 className="text-xl font-bold text-slate-900" title="Orden de venta → entrega → factura. Lo entregado sin facturar queda en Facturas por Emitir. La factura electrónica se emite fuera del sistema y aquí solo se asocia.">Ventas · Órdenes de Venta</h2>
         </div>
         <div className="flex gap-2">
           <button className={btnSec} onClick={() => setVista(vista === 'config' ? 'lista' : 'config')}>

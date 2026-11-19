@@ -1272,7 +1272,7 @@ export default function ExcelImportCenterModal({
           {previewData.length > 0 && (
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <h5 className="font-bold text-slate-800 text-xs uppercase tracking-wide">
+                <h5 className="font-bold text-slate-800 text-xs">
                   Vista Previa de Filas a Importar (Primeros registros)
                 </h5>
                 <span className="text-slate-500 text-[11px] font-mono">Total {previewData.length} filas detectadas en muestra</span>

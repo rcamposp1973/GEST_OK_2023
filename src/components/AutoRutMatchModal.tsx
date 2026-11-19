@@ -669,7 +669,7 @@ function AutoRutMatchModalContent({
                 <h3 className="text-base sm:text-lg font-black tracking-tight text-amber-200 uppercase flex items-center gap-1.5">
                   Contabilización por RUT
                 </h3>
-                <span className="text-[10px] bg-amber-400 text-amber-950 font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+                <span className="text-[10px] bg-amber-400 text-amber-950 font-black px-2 py-0.5 rounded-full">
                   APRENDIZAJE JUNIOR ACTIVO
                 </span>
               </div>

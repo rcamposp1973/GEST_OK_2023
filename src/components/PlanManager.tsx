@@ -127,7 +127,7 @@ export default function PlanManager() {
               >
                 {plan.badge && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="bg-indigo-600 text-white text-[10px] font-black uppercase px-3 py-0.5 rounded-full shadow-sm tracking-wide">
+                    <span className="bg-indigo-600 text-white text-[10px] font-black px-3 py-0.5 rounded-full shadow-sm">
                       {plan.badge}
                     </span>
                   </div>
@@ -135,7 +135,7 @@ export default function PlanManager() {
 
                 <div className="p-5 flex-1">
                   <div className="mb-4">
-                    <span className="text-[10px] font-bold text-slate-400 font-mono uppercase tracking-wider">{plan.code}</span>
+                    <span className="text-[10px] font-bold text-slate-400 font-mono">{plan.code}</span>
                     <h3 className="text-base font-black text-slate-900 mt-0.5">{plan.name}</h3>
                     <p className="text-xs text-slate-500 mt-1 min-h-[32px]">{plan.subtitle}</p>
                   </div>
@@ -170,7 +170,7 @@ export default function PlanManager() {
 
                   {/* Features List */}
                   <div className="space-y-2 border-t border-slate-100 pt-3">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Características:</span>
+                    <span className="text-[10px] font-bold text-slate-400 block">Características:</span>
                     {plan.features.map((feat, idx) => (
                       <div key={idx} className="flex items-start gap-2 text-xs text-slate-700">
                         <Check className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0 mt-0.5" />
@@ -196,8 +196,7 @@ export default function PlanManager() {
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="p-5 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
             <div>
-              <h3 className="font-bold text-slate-900 text-sm">Matriz de Acceso por Módulo y Plan</h3>
-              <p className="text-xs text-slate-500">Comprueba qué funcionalidades están disponibles por defecto en cada plan de suscripción.</p>
+              <h3 className="font-bold text-slate-900 text-sm" title="Comprueba qué funcionalidades están disponibles por defecto en cada plan de suscripción.">Matriz de Acceso por Módulo y Plan</h3>
             </div>
             <span className="text-xs bg-indigo-100 text-indigo-800 font-bold px-3 py-1 rounded-full">
               {SYSTEM_MODULES_CATALOG.length} Módulos del Sistema

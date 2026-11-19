@@ -1141,7 +1141,7 @@ export default function AuditorEstadosFinancierosView({
             : 'bg-slate-100 border-slate-300 text-slate-900'
         }`}>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            <span className="text-[11px] font-bold text-slate-500">
               Dictamen del Auditor
             </span>
             {auditOpinion === 'LIMPIA' ? (
@@ -1169,7 +1169,7 @@ export default function AuditorEstadosFinancierosView({
         {/* Card 2: Confiabilidad Contable */}
         <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-2xs">
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            <span className="text-[11px] font-bold text-slate-500">
               Score de Confiabilidad
             </span>
             <Award className="w-5 h-5 text-indigo-600" />
@@ -1195,7 +1195,7 @@ export default function AuditorEstadosFinancierosView({
         {/* Card 3: Hallazgos & Alertas */}
         <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-2xs">
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            <span className="text-[11px] font-bold text-slate-500">
               Hallazgos Detectados
             </span>
             <AlertOctagon className="w-5 h-5 text-amber-500" />
@@ -1217,7 +1217,7 @@ export default function AuditorEstadosFinancierosView({
         {/* Card 4: Cuadratura Patrimonial */}
         <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-2xs">
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            <span className="text-[11px] font-bold text-slate-500">
               Partida Doble & Balance
             </span>
             <Scale className="w-5 h-5 text-indigo-600" />
@@ -1333,7 +1333,7 @@ export default function AuditorEstadosFinancierosView({
                 ? 'bg-amber-50/50 border-amber-200'
                 : 'bg-rose-50/50 border-rose-200'
             }`}>
-              <h3 className="text-xs font-black uppercase tracking-wide text-slate-900 mb-1 flex items-center gap-1.5">
+              <h3 className="text-xs font-black text-slate-900 mb-1 flex items-center gap-1.5">
                 <span>Opinión del Auditor:</span>
                 <span className={auditOpinion === 'LIMPIA' ? 'text-emerald-700' : auditOpinion === 'SALVEDADES' ? 'text-amber-700' : 'text-rose-700'}>
                   {auditOpinion === 'LIMPIA' && 'Favorable / Sin Salvedades'}
@@ -1637,7 +1637,7 @@ export default function AuditorEstadosFinancierosView({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
             {/* Liquidez Corriente */}
             <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-2xs space-y-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              <span className="text-[11px] font-bold text-slate-500">
                 Liquidez Corriente (Razón Corriente)
               </span>
               <div className="text-2xl font-black text-slate-900">
@@ -1659,7 +1659,7 @@ export default function AuditorEstadosFinancierosView({
 
             {/* Prueba Ácida */}
             <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-2xs space-y-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              <span className="text-[11px] font-bold text-slate-500">
                 Prueba Ácida (Quick Ratio)
               </span>
               <div className="text-2xl font-black text-slate-900">
@@ -1679,7 +1679,7 @@ export default function AuditorEstadosFinancierosView({
 
             {/* Capital de Trabajo */}
             <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-2xs space-y-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              <span className="text-[11px] font-bold text-slate-500">
                 Capital de Trabajo Neto
               </span>
               <div className={`text-2xl font-black ${auditData.netWorkingCapital >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>

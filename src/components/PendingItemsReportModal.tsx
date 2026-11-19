@@ -219,7 +219,7 @@ export default function PendingItemsReportModal({
             <div className="flex items-center gap-2">
               {isBalanced ? <CheckCircle2 className="w-5 h-5 text-emerald-600" /> : <AlertTriangle className="w-5 h-5 text-rose-600" />}
               <div>
-                <span className="font-bold text-xs uppercase tracking-wide">
+                <span className="font-bold text-xs">
                   {isBalanced ? 'Cuadratura Aritmética de Partidas en Conciliación Conforme' : 'Diferencia en Conciliación Bancaria'}
                 </span>
                 <p className="text-[11px] opacity-80">

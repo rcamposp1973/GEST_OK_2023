@@ -568,7 +568,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Colaboradores</p>
+            <p className="text-xs font-medium text-slate-500">Total Colaboradores</p>
             <p className="text-2xl font-bold text-slate-900 mt-1">{employees.length}</p>
           </div>
           <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
@@ -578,7 +578,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
 
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Contratos Activos</p>
+            <p className="text-xs font-medium text-slate-500">Contratos Activos</p>
             <p className="text-2xl font-bold text-emerald-600 mt-1">
               {employees.filter(e => e.active).length}
             </p>
@@ -590,7 +590,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
 
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Indefinidos / Plazo Fijo</p>
+            <p className="text-xs font-medium text-slate-500">Indefinidos / Plazo Fijo</p>
             <p className="text-2xl font-bold text-indigo-900 mt-1">
               {employees.filter(e => e.contractType === 'INDEFINIDO').length} / {employees.filter(e => e.contractType !== 'INDEFINIDO').length}
             </p>
@@ -602,7 +602,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
 
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Masa Salarial Base</p>
+            <p className="text-xs font-medium text-slate-500">Masa Salarial Base</p>
             <p className="text-2xl font-bold text-slate-900 font-mono mt-1">
               ${employees.reduce((sum, e) => sum + (e.active ? e.baseSalary : 0), 0).toLocaleString('es-CL')}
             </p>
@@ -788,7 +788,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                <tr className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-bold text-slate-500">
                   <th className="py-3 px-4">RUT & Colaborador</th>
                   <th className="py-3 px-4">Cargo & Departamento</th>
                   <th className="py-3 px-4">Tipo Contrato</th>
@@ -1065,7 +1065,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
                   {companyAddress && <p className="text-xs text-slate-500">{companyAddress}</p>}
                 </div>
                 <div className="text-right">
-                  <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-slate-900 text-white rounded">
+                  <span className="px-2.5 py-1 text-[10px] font-bold bg-slate-900 text-white rounded">
                     Instrumento Privado Laboral
                   </span>
                   <p className="text-[11px] text-slate-400 mt-1 font-mono">
@@ -1100,7 +1100,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
                   </div>
                   <p className="text-xs font-bold text-slate-900 uppercase">{companyName}</p>
                   <p className="text-[11px] text-slate-500 font-mono">R.U.T. {companyRut}</p>
-                  <p className="text-[10px] text-slate-400 uppercase tracking-wider">Por el Empleador</p>
+                  <p className="text-[10px] text-slate-400">Por el Empleador</p>
                 </div>
 
                 <div className="space-y-2">
@@ -1113,7 +1113,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
                   <p className="text-[11px] text-slate-500 font-mono">
                     R.U.T. {employees.find(e => e.id === selectedContractEmpId)?.rut || ''}
                   </p>
-                  <p className="text-[10px] text-slate-400 uppercase tracking-wider">Firma del Trabajador</p>
+                  <p className="text-[10px] text-slate-400">Firma del Trabajador</p>
                 </div>
               </div>
             </div>
@@ -1124,8 +1124,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
         <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-6">
           <div className="flex justify-between items-center border-b border-slate-100 pb-4">
             <div>
-              <h3 className="text-base font-bold text-slate-900">Control de Asistencia, Vacaciones y Licencias Médicas</h3>
-              <p className="text-xs text-slate-500">Registro de ausencias, licencias Fonasa/Isapre y feriados legales para el cálculo de remuneraciones</p>
+              <h3 className="text-base font-bold text-slate-900" title="Registro de ausencias, licencias Fonasa/Isapre y feriados legales para el cálculo de remuneraciones">Control de Asistencia, Vacaciones y Licencias Médicas</h3>
             </div>
           </div>
 
@@ -1236,8 +1235,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
         <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-6">
           <div className="flex justify-between items-center border-b border-slate-100 pb-4">
             <div>
-              <h3 className="text-base font-bold text-slate-900">Anticipos de Quincena y Préstamos de Personal</h3>
-              <p className="text-xs text-slate-500">Control de desembolsos a cuenta de remuneraciones para descuento automático en la liquidación mensual</p>
+              <h3 className="text-base font-bold text-slate-900" title="Control de desembolsos a cuenta de remuneraciones para descuento automático en la liquidación mensual">Anticipos de Quincena y Préstamos de Personal</h3>
             </div>
           </div>
 
@@ -1340,8 +1338,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
       {activeSubTab === 'severance' && (
         <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-6">
           <div className="border-b border-slate-100 pb-4">
-            <h3 className="text-base font-bold text-slate-900">Módulo de Cálculo de Finiquitos (Código del Trabajo)</h3>
-            <p className="text-xs text-slate-500">Cálculo de indemnización por años de servicio, aviso previo y feriado proporcional</p>
+            <h3 className="text-base font-bold text-slate-900" title="Cálculo de indemnización por años de servicio, aviso previo y feriado proporcional">Módulo de Cálculo de Finiquitos (Código del Trabajo)</h3>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
@@ -1479,8 +1476,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
       {activeSubTab === 'certificates' && (
         <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-6">
           <div className="border-b border-slate-100 pb-4">
-            <h3 className="text-base font-bold text-slate-900">Emisor de Certificados de Antigüedad y Renta</h3>
-            <p className="text-xs text-slate-500">Generación de certificados oficiales con membrete para trámites bancarios, arriendos o instituciones</p>
+            <h3 className="text-base font-bold text-slate-900" title="Generación de certificados oficiales con membrete para trámites bancarios, arriendos o instituciones">Emisor de Certificados de Antigüedad y Renta</h3>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
@@ -1635,7 +1631,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
             <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6 flex-1 text-sm">
               {/* SECCIÓN 1: DATOS PERSONALES */}
               <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-900 border-b border-indigo-100 pb-1 mb-3 flex items-center gap-2">
+                <h4 className="text-xs font-bold text-indigo-900 border-b border-indigo-100 pb-1 mb-3 flex items-center gap-2">
                   <Users className="w-4 h-4 text-indigo-600" />
                   1. Identificación y Datos Personales
                 </h4>
@@ -1701,7 +1697,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
 
               {/* SECCIÓN 2: CONTRATO Y DATOS LABORALES */}
               <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-900 border-b border-indigo-100 pb-1 mb-3 flex items-center gap-2">
+                <h4 className="text-xs font-bold text-indigo-900 border-b border-indigo-100 pb-1 mb-3 flex items-center gap-2">
                   <Briefcase className="w-4 h-4 text-indigo-600" />
                   2. Contrato y Cargo
                 </h4>
@@ -1801,7 +1797,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
               {/* SECCIÓN 3: REMUNERACIÓN Y HABERES PACTADOS */}
               <div>
                 <div className="flex items-center justify-between border-b border-indigo-100 pb-1 mb-3">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-900 flex items-center gap-2">
+                  <h4 className="text-xs font-bold text-indigo-900 flex items-center gap-2">
                     <DollarSign className="w-4 h-4 text-emerald-600" />
                     3. Remuneraciones y Haberes Pactados
                   </h4>
@@ -1918,7 +1914,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
 
               {/* SECCIÓN ADICIONAL: DESCUENTOS PACTADOS Y PRÉSTAMOS */}
               <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-900 border-b border-indigo-100 pb-1 mb-3 flex items-center gap-2">
+                <h4 className="text-xs font-bold text-indigo-900 border-b border-indigo-100 pb-1 mb-3 flex items-center gap-2">
                   <CreditCard className="w-4 h-4 text-rose-600" />
                   3.1. Descuentos Recurrentes Pactados (Cuota Préstamos, Bienestar, Seguros)
                 </h4>
@@ -1987,7 +1983,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
 
               {/* SECCIÓN 4: PREVISIÓN, SALUD Y CARGAS FAMILIARES */}
               <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-900 border-b border-indigo-100 pb-1 mb-3 flex items-center gap-2">
+                <h4 className="text-xs font-bold text-indigo-900 border-b border-indigo-100 pb-1 mb-3 flex items-center gap-2">
                   <Shield className="w-4 h-4 text-indigo-600" />
                   4. Régimen Previsional (AFP), Salud e Impuestos
                 </h4>
@@ -2112,7 +2108,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
 
               {/* SECCIÓN 5: DATOS DE PAGO BANCARIO */}
               <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-900 border-b border-indigo-100 pb-1 mb-3 flex items-center gap-2">
+                <h4 className="text-xs font-bold text-indigo-900 border-b border-indigo-100 pb-1 mb-3 flex items-center gap-2">
                   <CreditCard className="w-4 h-4 text-indigo-600" />
                   5. Cuenta Bancaria para Pago de Sueldos
                 </h4>

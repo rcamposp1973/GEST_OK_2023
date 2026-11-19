@@ -439,7 +439,7 @@ export default function FlujoDeCajaView({
           {/* KPI Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="bg-emerald-50/70 p-3.5 rounded-xl border border-emerald-200 shadow-2xs">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 flex items-center gap-1">
+              <span className="text-[11px] font-bold text-emerald-800 flex items-center gap-1">
                 Saldo Real en Caja (T &le; Tcorte)
               </span>
               <p className="text-xl font-black text-emerald-950 mt-1 font-mono">
@@ -449,7 +449,7 @@ export default function FlujoDeCajaView({
             </div>
 
             <div className="bg-blue-50/70 p-3.5 rounded-xl border border-blue-200 shadow-2xs">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-blue-800 flex items-center gap-1">
+              <span className="text-[11px] font-bold text-blue-800 flex items-center gap-1">
                 Total Proyección Ingresos
               </span>
               <p className="text-xl font-black text-blue-950 mt-1 font-mono">
@@ -459,7 +459,7 @@ export default function FlujoDeCajaView({
             </div>
 
             <div className="bg-amber-50/70 p-3.5 rounded-xl border border-amber-200 shadow-2xs">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800 flex items-center gap-1">
+              <span className="text-[11px] font-bold text-amber-800 flex items-center gap-1">
                 Total Proyección Egresos
               </span>
               <p className="text-xl font-black text-amber-950 mt-1 font-mono">
@@ -469,7 +469,7 @@ export default function FlujoDeCajaView({
             </div>
 
             <div className="bg-indigo-900 text-white p-3.5 rounded-xl border border-indigo-950 shadow-2xs">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-200 flex items-center gap-1">
+              <span className="text-[11px] font-bold text-indigo-200 flex items-center gap-1">
                 Saldo Final Estimado ({selectedYear})
               </span>
               <p className="text-xl font-black text-white mt-1 font-mono">
@@ -494,7 +494,7 @@ export default function FlujoDeCajaView({
             <div className="overflow-auto max-h-[550px] relative shadow-2xs">
               <table className="w-full text-xs text-left border-collapse">
                 <thead className="sticky top-0 z-10 shadow-2xs">
-                  <tr className="bg-slate-900 text-white font-bold uppercase text-[11px] tracking-wider">
+                  <tr className="bg-slate-900 text-white font-bold text-[11px]">
                     <th className="p-2.5 min-w-[220px] border-r border-slate-700 bg-slate-900 sticky left-0 z-20">Concepto Financiero / Tesorería</th>
                     {monthNames.map(m => (
                       <th key={m} className="p-2 text-right border-r border-slate-700 font-mono min-w-[90px]">{m}</th>

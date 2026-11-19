@@ -1303,7 +1303,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
           <div className="w-16 h-16 bg-amber-500/20 text-amber-400 rounded-2xl flex items-center justify-center mx-auto border border-amber-500/40 text-3xl shadow-inner">
           </div>
           <div className="space-y-2">
-            <span className="px-3 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-bold rounded-full uppercase tracking-wider inline-block">
+            <span className="px-3 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-bold rounded-full inline-block">
               Regla de Control de Remuneraciones
             </span>
             <h3 className="text-xl font-black text-slate-100 uppercase tracking-wide">
@@ -1335,7 +1335,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
                 setSelectedYear(y);
                 setSelectedMonth(m);
               }}
-              className="w-full sm:w-auto px-6 py-3 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
+              className="w-full sm:w-auto px-6 py-3 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-950 font-black text-xs rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
             >
               <Sparkles className="w-4 h-4 fill-current" />
               Ir al Período Activo Abierto: {getPeriodFormattedName(activeOpenPeriod)}
@@ -1425,7 +1425,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
               <div className="overflow-x-auto max-h-[620px] overflow-y-auto relative rounded-xl border border-slate-200 shadow-2xs">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead className="sticky top-0 z-20 bg-slate-100 shadow-xs">
-                    <tr className="bg-slate-100 border-b border-slate-300 text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                    <tr className="bg-slate-100 border-b border-slate-300 text-[11px] font-bold text-slate-700">
                       <th className="py-3 px-3">Colaborador</th>
                       <th className="py-3 px-2 text-center">Días</th>
                       <th className="py-3 px-2 text-center">H. Extras</th>
@@ -1877,7 +1877,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
               </div>
 
               <div className="text-right">
-                <div className="bg-slate-900 text-white px-3 py-1 text-xs font-black uppercase tracking-wider rounded-md inline-block">
+                <div className="bg-slate-900 text-white px-3 py-1 text-xs font-black rounded-md inline-block">
                   Liquidación de Sueldo
                 </div>
                 <p className="text-xs font-bold text-slate-800 mt-1 uppercase">
@@ -1934,7 +1934,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
 
                   {/* A. Haberes Imponibles */}
                   <div className="space-y-2 mb-4">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">A. Haberes Imponibles y Tributables</p>
+                    <p className="text-[10px] font-bold text-slate-500">A. Haberes Imponibles y Tributables</p>
                     <div className="flex justify-between py-1 border-b border-slate-100">
                       <span>Sueldo Base ({activeSlip.diasTrabajados} días)</span>
                       <span className="font-mono font-semibold">${activeSlip.sueldoBaseProporcional.toLocaleString('es-CL')}</span>
@@ -1976,7 +1976,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
 
                   {/* B. Haberes No Imponibles */}
                   <div className="space-y-2">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">B. Haberes No Imponibles</p>
+                    <p className="text-[10px] font-bold text-slate-500">B. Haberes No Imponibles</p>
                     {activeSlip.asignacionColacion > 0 && (
                       <div className="flex justify-between py-1 border-b border-slate-100">
                         <span>Asignación de Colación</span>
@@ -2027,7 +2027,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
 
                   {/* A. Descuentos Previsionales */}
                   <div className="space-y-2 mb-4">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">A. Descuentos Previsionales Obligatorios</p>
+                    <p className="text-[10px] font-bold text-slate-500">A. Descuentos Previsionales Obligatorios</p>
                     <div className="flex justify-between py-1 border-b border-slate-100">
                       <span>Cotización Previsional AFP ({activeSlip.pensionSystem} {activeSlip.afpTasa}%)</span>
                       <span className="font-mono font-semibold text-rose-700">${activeSlip.afpMonto.toLocaleString('es-CL')}</span>
@@ -2062,7 +2062,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
 
                   {/* B. Descuentos Tributarios y Otros */}
                   <div className="space-y-2">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">B. Impuesto y Otros Descuentos</p>
+                    <p className="text-[10px] font-bold text-slate-500">B. Impuesto y Otros Descuentos</p>
                     <div className="flex justify-between py-1 border-b border-slate-100">
                       <span>Impuesto Único 2da Categoría ({activeSlip.tramoImpuestoUnico || 'Exento'})</span>
                       <span className="font-mono font-semibold text-amber-700">${activeSlip.impuestoUnicoSegundaCategoria.toLocaleString('es-CL')}</span>
@@ -2101,7 +2101,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
             {/* Resumen Final: Alcance Líquido y Líquido a Pagar */}
             <div className="bg-slate-900 text-white p-5 rounded-xl mb-6 flex flex-col sm:flex-row justify-between items-center gap-3">
               <div>
-                <span className="text-[11px] font-bold uppercase tracking-widest text-emerald-400 block">
+                <span className="text-[11px] font-bold text-emerald-400 block">
                   Total Líquido a Pagar (Monto Recibido Conforme)
                 </span>
                 <p className="text-xs text-slate-300">
@@ -2323,7 +2323,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
           {/* Tarjetas de Indicadores Económicos Clave del Mes */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Unidad de Fomento (UF)</span>
+              <span className="text-[11px] font-bold text-slate-500 block">Unidad de Fomento (UF)</span>
               <p className="text-2xl font-bold font-mono text-emerald-700 mt-1">
                 ${periodParams.uf.toLocaleString('es-CL', { minimumFractionDigits: 2 })}
               </p>
@@ -2331,7 +2331,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
             </div>
 
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Unidad Tributaria Mensual (UTM)</span>
+              <span className="text-[11px] font-bold text-slate-500 block">Unidad Tributaria Mensual (UTM)</span>
               <p className="text-2xl font-bold font-mono text-indigo-700 mt-1">
                 ${periodParams.utm.toLocaleString('es-CL')}
               </p>
@@ -2339,7 +2339,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
             </div>
 
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Sueldo Mínimo Legal (IMM)</span>
+              <span className="text-[11px] font-bold text-slate-500 block">Sueldo Mínimo Legal (IMM)</span>
               <p className="text-2xl font-bold font-mono text-slate-800 mt-1">
                 ${periodParams.imm.toLocaleString('es-CL')}
               </p>
@@ -2347,7 +2347,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
             </div>
 
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Tope Gratificación Art. 50</span>
+              <span className="text-[11px] font-bold text-slate-500 block">Tope Gratificación Art. 50</span>
               <p className="text-2xl font-bold font-mono text-amber-700 mt-1">
                 ${Math.round((4.75 * periodParams.imm) / 12).toLocaleString('es-CL')}
               </p>
@@ -2577,7 +2577,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-0.5 text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-full flex items-center gap-1 uppercase tracking-wider">
+                  <span className="px-2.5 py-0.5 text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-full flex items-center gap-1">
                     <BookOpen className="w-3 h-3 text-amber-400" />
                     Cuaderno Previred & SII Conectado
                   </span>
@@ -2663,7 +2663,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
           {/* Grilla de Conceptos Configurados */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
             <div className="p-4 border-b border-slate-200 bg-slate-50/70 flex justify-between items-center">
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+              <h3 className="text-xs font-bold text-slate-900">
                 Catálogo de Conceptos ({companyConcepts.length} activos)
               </h3>
               <span className="text-xs text-slate-500 font-mono">
@@ -2886,7 +2886,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
             <form onSubmit={handleSavePeriodIndicators} className="flex-1 overflow-y-auto p-6 space-y-6">
               {/* Sección 1: Indicadores Económicos Clave */}
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
-                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
                   <DollarSign className="w-4 h-4 text-emerald-600" />
                   1. Indicadores Económicos Clave del Mes
                 </h3>
@@ -2943,7 +2943,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
 
               {/* Sección 2: Topes Imponibles Previsionales */}
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
-                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
                   <Shield className="w-4 h-4 text-indigo-600" />
                   2. Topes Imponibles Previsionales Oficiales (en UF)
                 </h3>
@@ -2986,7 +2986,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
 
               {/* Sección 3: Aportes Patronales y Protección Social */}
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
-                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
                   <HeartPulse className="w-4 h-4 text-rose-600" />
                   3. Aportes Patronales y Protección Social (% a Cargo del Empleador)
                 </h3>
@@ -3045,7 +3045,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
 
               {/* Sección 4: Tasas de AFP */}
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
-                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
                   <Building2 className="w-4 h-4 text-indigo-600" />
                   4. Tasas Totales de Cotización AFP (%) (10% Fondo Obligatorio + Comisión)
                 </h3>

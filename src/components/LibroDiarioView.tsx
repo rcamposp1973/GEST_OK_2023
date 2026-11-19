@@ -486,22 +486,22 @@ export default function LibroDiarioView({
       {/* Summary KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-white p-3 rounded-md border border-slate-200 shadow-2xs">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 block">Asientos Registrados</span>
+          <span className="text-[10px] font-semibold text-slate-500 block">Asientos Registrados</span>
           <p className="text-lg font-bold text-slate-900 font-mono tabular-nums mt-0.5">
             {filteredVouchers.length} <span className="text-xs font-normal text-slate-500 font-sans">comprobantes</span>
           </p>
         </div>
         <div className="bg-white p-3 rounded-md border border-slate-200 shadow-2xs">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-indigo-700 block">Total Débitos (Debe)</span>
+          <span className="text-[10px] font-semibold text-indigo-700 block">Total Débitos (Debe)</span>
           <p className="text-lg font-bold text-indigo-950 font-mono tabular-nums mt-0.5">${totals.totalDebit.toLocaleString('es-CL')}</p>
         </div>
         <div className="bg-white p-3 rounded-md border border-slate-200 shadow-2xs">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 block">Total Créditos (Haber)</span>
+          <span className="text-[10px] font-semibold text-emerald-700 block">Total Créditos (Haber)</span>
           <p className="text-lg font-bold text-emerald-950 font-mono tabular-nums mt-0.5">${totals.totalCredit.toLocaleString('es-CL')}</p>
         </div>
         <div className={`p-3 rounded-md border shadow-2xs ${totals.difference === 0 ? 'bg-emerald-50/50 border-emerald-200 text-emerald-900' : 'bg-rose-50/50 border-rose-200 text-rose-900'}`}>
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-semibold uppercase tracking-wider block">Cuadratura Período</span>
+            <span className="text-[10px] font-semibold block">Cuadratura Período</span>
             {totalDescuadradosPeriodo > 0 && statusFilter !== 'Descuadrado' && (
               <button
                 type="button"
@@ -695,7 +695,7 @@ export default function LibroDiarioView({
                     </tbody>
                     <tfoot className="bg-slate-50/80 border-t border-slate-200 font-mono tabular-nums font-semibold text-xs">
                       <tr>
-                        <td colSpan={5} className="py-2 px-3 text-right font-sans uppercase tracking-wider text-slate-500 text-[10px]">
+                        <td colSpan={5} className="py-2 px-3 text-right font-sans text-slate-500 text-[10px]">
                           Totales Asiento N° {v.voucherNumber}:
                         </td>
                         <td className="py-2 px-3 text-right text-slate-900 font-bold">${vDebit.toLocaleString('es-CL')}</td>
@@ -746,7 +746,7 @@ export default function LibroDiarioView({
       {filteredVouchers.length > 0 && (
         <div className="bg-slate-900 text-white p-3.5 rounded-lg shadow-xs flex flex-col md:flex-row justify-between items-center gap-3 text-xs font-mono tabular-nums">
           <div className="flex items-center gap-3">
-            <span className="text-slate-200 font-bold font-sans uppercase tracking-wider text-[11px]">Total Libro Diario:</span>
+            <span className="text-slate-200 font-bold font-sans text-[11px]">Total Libro Diario:</span>
             <span>{filteredVouchers.length} asientos</span>
             <span className="text-slate-600">•</span>
             <span>{totals.validCount} válidos</span>

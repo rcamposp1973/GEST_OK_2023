@@ -555,19 +555,19 @@ export default function LibroMayorView({
       {/* KPI Global Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-2xs">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Cuentas Activas con Movimiento</span>
+          <span className="text-[11px] font-bold text-slate-500">Cuentas Activas con Movimiento</span>
           <p className="text-lg font-black text-slate-900 mt-0.5">{globalSummary.accountsCount} <span className="text-xs font-normal text-slate-500 font-sans">cuentas</span></p>
         </div>
         <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-2xs">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-600">Suma Total Débitos (Debe)</span>
+          <span className="text-[11px] font-bold text-indigo-600">Suma Total Débitos (Debe)</span>
           <p className="text-lg font-black text-indigo-900 mt-0.5">${globalSummary.totalDebit.toLocaleString('es-CL')}</p>
         </div>
         <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-2xs">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600">Suma Total Créditos (Haber)</span>
+          <span className="text-[11px] font-bold text-emerald-600">Suma Total Créditos (Haber)</span>
           <p className="text-lg font-black text-emerald-900 mt-0.5">${globalSummary.totalCredit.toLocaleString('es-CL')}</p>
         </div>
         <div className={`p-3 rounded-lg border shadow-2xs ${globalSummary.difference === 0 ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-rose-50 border-rose-200 text-rose-900'}`}>
-          <span className="text-[11px] font-bold uppercase tracking-wider">Cuadratura General Mayor</span>
+          <span className="text-[11px] font-bold">Cuadratura General Mayor</span>
           <p className="text-lg font-black mt-0.5">
             {globalSummary.difference === 0 ? '✓ Cuadrado ($0)' : `Descuadre: $${globalSummary.difference.toLocaleString('es-CL')}`}
           </p>
@@ -598,7 +598,7 @@ export default function LibroMayorView({
                     <h4 className="text-base font-bold text-white tracking-tight">
                       {ledger.account.name}
                     </h4>
-                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-slate-700/80 text-slate-300 border border-slate-600">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-700/80 text-slate-300 border border-slate-600">
                       {ledger.account.type}
                     </span>
                   </div>

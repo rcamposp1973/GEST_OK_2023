@@ -342,7 +342,7 @@ export default function JuniorAITrainingCenter() {
               <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">
                 Centro de Entrenamiento de Junior (IA Contable)
               </h2>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300">
                 Super Admin Only
               </span>
             </div>
@@ -645,7 +645,7 @@ export default function JuniorAITrainingCenter() {
           <div className="bg-slate-900 text-white p-4 rounded-xl shadow-md border border-slate-800 flex flex-col justify-between space-y-4">
             <div>
               <div className="flex justify-between items-center border-b border-slate-800 pb-2 mb-3">
-                <span className="text-xs font-black uppercase tracking-wide text-amber-300 flex items-center gap-1.5">
+                <span className="text-xs font-black text-amber-300 flex items-center gap-1.5">
                   <BrainCircuit className="w-4 h-4" />
                   <span>Consola de Respuesta de Junior</span>
                 </span>

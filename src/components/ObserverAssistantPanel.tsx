@@ -60,7 +60,7 @@ const Tabla = ({ filas, vacio }: { filas: { a: string; b?: string; n: number; fu
 );
 
 const Seccion = ({ t, children }: { t: string; children: React.ReactNode }) => (
-  <div className="mt-2 first:mt-0"><p className="text-[10px] font-bold uppercase tracking-wide text-indigo-700 mb-0.5">{t}</p>{children}</div>
+  <div className="mt-2 first:mt-0"><p className="text-[10px] font-bold text-indigo-700 mb-0.5">{t}</p>{children}</div>
 );
 
 export default function ObserverAssistantPanel({ company, accounts, vouchers, rcvDocuments, selectedPeriod }: Props) {

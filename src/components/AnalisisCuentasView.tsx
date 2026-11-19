@@ -1410,7 +1410,7 @@ export default function AnalisisCuentasView({
           
           {/* Selector principal de cuenta contable */}
           <div className="md:col-span-5">
-            <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+            <label className="block text-[11px] font-bold text-slate-700 mb-1">
               Cuenta Contable a Compensar / Analizar
             </label>
             <div className="relative">
@@ -1434,7 +1434,7 @@ export default function AnalisisCuentasView({
 
           {/* Filtro rápido por tipo de cuenta */}
           <div className="md:col-span-4">
-            <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+            <label className="block text-[11px] font-bold text-slate-700 mb-1">
               Grupo de Cuenta
             </label>
             <div className="flex items-center gap-1 overflow-x-auto">
@@ -1456,7 +1456,7 @@ export default function AnalisisCuentasView({
 
           {/* Buscador de código o nombre de cuenta */}
           <div className="md:col-span-3">
-            <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+            <label className="block text-[11px] font-bold text-slate-700 mb-1">
               Buscar en Catálogo
             </label>
             <div className="relative">
@@ -1548,7 +1548,7 @@ export default function AnalisisCuentasView({
           <div className="bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs">
             <div className="flex justify-between items-start">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Saldo Libro Mayor</span>
+                <span className="text-[10px] font-bold text-slate-500">Saldo Libro Mayor</span>
                 <div className="text-lg font-bold text-slate-900 mt-0.5 font-mono">
                   ${accountStats.netLedgerBalance.toLocaleString('es-CL')}
                 </div>
@@ -1567,7 +1567,7 @@ export default function AnalisisCuentasView({
           <div className="bg-white px-3 py-1.5 rounded-xl border border-amber-200 bg-amber-50/20 shadow-2xs">
             <div className="flex justify-between items-start">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Saldo Partidas Abiertas</span>
+                <span className="text-[10px] font-bold text-amber-800">Saldo Partidas Abiertas</span>
                 <div className="text-lg font-bold text-amber-900 mt-0.5 font-mono">
                   ${accountStats.netPendingBalance.toLocaleString('es-CL')}
                 </div>
@@ -1585,7 +1585,7 @@ export default function AnalisisCuentasView({
           <div className="bg-white px-3 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50/20 shadow-2xs">
             <div className="flex justify-between items-start">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800">Monto Compensado (Pareado)</span>
+                <span className="text-[10px] font-bold text-emerald-800">Monto Compensado (Pareado)</span>
                 <div className="text-lg font-bold text-emerald-900 mt-0.5 font-mono">
                   ${accountStats.totalMatchedAmount.toLocaleString('es-CL')}
                 </div>
@@ -1603,7 +1603,7 @@ export default function AnalisisCuentasView({
           <div className="bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs">
             <div className="flex justify-between items-start">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Nivel de Compensación</span>
+                <span className="text-[10px] font-bold text-slate-500">Nivel de Compensación</span>
                 <div className="text-lg font-bold text-indigo-700 mt-0.5 font-mono">
                   {accountStats.matchPercentage}%
                 </div>
@@ -1812,7 +1812,7 @@ export default function AnalisisCuentasView({
             
             {/* Filtro 1: Selector de RUT / Auxiliar */}
             <div>
-              <label className="block text-[10px] font-bold text-slate-700 uppercase tracking-wider mb-1 flex items-center gap-1">
+              <label className="block text-[10px] font-bold text-slate-700 mb-1 flex items-center gap-1">
                 <User className="w-3 h-3 text-indigo-600" />
                 <span>RUT / Auxiliar</span>
               </label>
@@ -1839,7 +1839,7 @@ export default function AnalisisCuentasView({
 
             {/* Filtro 2: Búsqueda libre RUT o Razón Social */}
             <div>
-              <label className="block text-[10px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+              <label className="block text-[10px] font-bold text-slate-700 mb-1">
                 Buscar RUT / Nombre
               </label>
               <div className="relative">
@@ -1856,7 +1856,7 @@ export default function AnalisisCuentasView({
 
             {/* Filtro 3: Documento / Folio / Factura */}
             <div>
-              <label className="block text-[10px] font-bold text-slate-700 uppercase tracking-wider mb-1 flex items-center gap-1">
+              <label className="block text-[10px] font-bold text-slate-700 mb-1 flex items-center gap-1">
                 <Hash className="w-3 h-3 text-emerald-600" />
                 <span>N° Documento / Folio</span>
               </label>
@@ -1871,7 +1871,7 @@ export default function AnalisisCuentasView({
 
             {/* Filtro 4: Monto / Cantidad */}
             <div>
-              <label className="block text-[10px] font-bold text-slate-700 uppercase tracking-wider mb-1 flex items-center gap-1">
+              <label className="block text-[10px] font-bold text-slate-700 mb-1 flex items-center gap-1">
                 <DollarSign className="w-3 h-3 text-amber-600" />
                 <span>Monto ($)</span>
               </label>
@@ -1886,7 +1886,7 @@ export default function AnalisisCuentasView({
 
             {/* Filtro 5: N° Comprobante Contable */}
             <div>
-              <label className="block text-[10px] font-bold text-slate-700 uppercase tracking-wider mb-1 flex items-center gap-1">
+              <label className="block text-[10px] font-bold text-slate-700 mb-1 flex items-center gap-1">
                 <FileText className="w-3 h-3 text-indigo-600" />
                 <span>N° Comprobante</span>
               </label>
@@ -1901,7 +1901,7 @@ export default function AnalisisCuentasView({
 
             {/* Filtro 6: Tipo de Comprobante */}
             <div>
-              <label className="block text-[10px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+              <label className="block text-[10px] font-bold text-slate-700 mb-1">
                 Tipo Comprobante
               </label>
               <select
@@ -1972,7 +1972,7 @@ export default function AnalisisCuentasView({
       {selectedAccount && hayIdentificadores && (
         <div className="bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">Posiciones por identificador ({posiciones.length})</span>
+            <span className="text-[11px] font-bold text-slate-700">Posiciones por identificador ({posiciones.length})</span>
             <button onClick={() => setVerPosiciones(v => !v)} className="text-[11px] text-indigo-600 hover:underline">{verPosiciones ? 'Ocultar' : 'Mostrar'}</button>
           </div>
           {verPosiciones && (
@@ -2483,7 +2483,7 @@ export default function AnalisisCuentasView({
             {/* Resumen matemático de la selección */}
             <div className="space-y-1">
               <div className="flex items-center gap-3 flex-wrap">
-                <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                <span className="text-xs font-bold text-slate-300">
                   Compensación Activa
                 </span>
                 <span className="px-2.5 py-0.5 bg-slate-800 text-emerald-300 rounded-md text-xs font-mono font-bold border border-slate-700">

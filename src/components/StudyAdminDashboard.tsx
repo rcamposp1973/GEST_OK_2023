@@ -926,7 +926,7 @@ export default function StudyAdminDashboard({
               <span className="text-[10px] font-mono font-semibold bg-slate-100 text-slate-700 px-1.5 py-0.2 rounded border border-slate-200">
                 ERP
               </span>
-              <span className="text-[10px] px-2 py-0.5 rounded font-mono font-semibold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200">
+              <span className="text-[10px] px-2 py-0.5 rounded font-mono font-semibold bg-slate-100 text-slate-700 border border-slate-200">
                 {isAnalyst ? 'Analista' : isObserver ? 'Cliente Observador' : isAccountant ? 'Contador' : isSuperUser ? 'Super Admin (Lectura)' : 'Administración Estudio'}
               </span>
               <span className={`text-[10px] font-medium px-2 py-0.5 rounded font-mono flex items-center gap-1 border ${
@@ -957,7 +957,7 @@ export default function StudyAdminDashboard({
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
           <div className="bg-slate-50 p-2 rounded-lg border border-slate-200 flex items-center gap-2 flex-1 sm:flex-initial">
             <div className="flex-1">
-              <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">
+              <label className="block text-[10px] font-bold text-slate-500 mb-1">
                 {isRestrictedWorker ? 'Ingresar a Empresa' : 'Selector de Empresa Activa'}
               </label>
               <select
@@ -1052,7 +1052,7 @@ export default function StudyAdminDashboard({
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-bold text-xs uppercase tracking-wider text-slate-900 font-mono">
+                <span className="font-bold text-xs text-slate-900 font-mono">
                   {formatInfo.title}
                 </span>
                 <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 text-[9px] font-semibold px-2 py-0.2 rounded-md">
@@ -1428,7 +1428,7 @@ export default function StudyAdminDashboard({
                   {companySection === 'legal' && (
                     <div className="space-y-4 animate-fadeIn">
                       <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
-                        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">1. Representante Legal</h4>
+                        <h4 className="text-xs font-bold text-slate-800 mb-2">1. Representante Legal</h4>
                         <div className="space-y-3">
                           <div>
                             <label className="block text-xs font-medium text-slate-700 mb-1">Nombre Completo Rep. Legal</label>
@@ -1468,7 +1468,7 @@ export default function StudyAdminDashboard({
                       </div>
 
                       <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
-                        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">2. Contacto Operativo</h4>
+                        <h4 className="text-xs font-bold text-slate-800 mb-2">2. Contacto Operativo</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           <div>
                             <label className="block text-xs font-medium text-slate-700 mb-1">Persona de Contacto</label>
@@ -1627,7 +1627,7 @@ export default function StudyAdminDashboard({
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <FileText className="w-4 h-4 text-indigo-600" />
-                            <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                            <h4 className="text-xs font-bold text-slate-900">
                               Certificado Digital de Firma Electrónica (.pfx / .p12)
                             </h4>
                           </div>
@@ -1793,8 +1793,7 @@ export default function StudyAdminDashboard({
             <div className="space-y-5">
               <form onSubmit={handleSaveAssignment} className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm space-y-3">
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900">Asignar una empresa a un usuario</h3>
-                  <p className="text-xs text-slate-500">Sirve para contadores, analistas y observadores. Un observador solo verá las empresas que le asignes aquí.</p>
+                  <h3 className="text-sm font-bold text-slate-900" title="Sirve para contadores, analistas y observadores. Un observador solo verá las empresas que le asignes aquí.">Asignar una empresa a un usuario</h3>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 items-end">
                   <label className="text-xs font-semibold text-slate-600 space-y-1 block">
@@ -1860,19 +1859,16 @@ export default function StudyAdminDashboard({
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-500 text-white uppercase tracking-wider">
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-500 text-white">
                         Sociedad Demo Exclusiva
                       </span>
                       <span className="text-xs font-mono font-bold text-amber-900">
                         RUT: 77.654.321-K
                       </span>
                     </div>
-                    <h3 className="text-xl font-black text-slate-900">
+                    <h3 className="text-xl font-black text-slate-900" title="Diseñada especialmente para realizar demostraciones comerciales de alto nivel a potenciales clientes. Contiene 10 transacciones diarias por todo 2026 (ventas, compras, honorarios, gastos), nómina de 10 trabajadores con cálculo de Impuesto Único de Segunda Categoría (IUSC), cartolas bancarias 100% conciliables, formularios de IVA F29 mensuales, declaraciones juradas de renta, F.22 y RLI.">
                       FERRETERIA DON ALI KT LTDA (Ejercicio 2026)
                     </h3>
-                    <p className="text-xs text-slate-600 max-w-2xl">
-                      Diseñada especialmente para realizar demostraciones comerciales de alto nivel a potenciales clientes. Contiene 10 transacciones diarias por todo 2026 (ventas, compras, honorarios, gastos), nómina de 10 trabajadores con cálculo de Impuesto Único de Segunda Categoría (IUSC), cartolas bancarias 100% conciliables, formularios de IVA F29 mensuales, declaraciones juradas de renta, F.22 y RLI.
-                    </p>
                   </div>
 
                   <button
@@ -1912,12 +1908,9 @@ export default function StudyAdminDashboard({
                     <Trash2 className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-slate-900">
+                    <h3 className="text-base font-bold text-slate-900" title="Elimina únicamente los documentos contables y transaccionales del estudio de prueba para reiniciar el ambiente sin tocar empresas ni usuarios.">
                       Purga Segura de Datos de Demostración
                     </h3>
-                    <p className="text-xs text-slate-500">
-                      Elimina únicamente los documentos contables y transaccionales del estudio de prueba para reiniciar el ambiente sin tocar empresas ni usuarios.
-                    </p>
                   </div>
                 </div>
 

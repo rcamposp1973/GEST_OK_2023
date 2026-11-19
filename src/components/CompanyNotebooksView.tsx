@@ -323,7 +323,7 @@ export default function CompanyNotebooksView({
 
         <div className="flex items-center gap-3">
           <div className="text-right">
-            <span className="text-[11px] uppercase tracking-wider text-slate-400 block font-mono">Estado de Licencia</span>
+            <span className="text-[11px] text-slate-400 block font-mono">Estado de Licencia</span>
             <span className={`text-xs font-bold px-2.5 py-1 rounded-md border ${
               trialData.isSubscribed 
                 ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' 
@@ -374,7 +374,7 @@ export default function CompanyNotebooksView({
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Sidebar: Notebooks List */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-3 lg:col-span-1">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 px-1">Cuadernos de la Empresa</h3>
+          <h3 className="text-xs font-bold text-slate-500 px-1">Cuadernos de la Empresa</h3>
           <div className="space-y-1.5 max-h-[500px] overflow-y-auto pr-1">
             {notebooks.map(nb => {
               const isActive = activeNotebook?.id === nb.id;
@@ -504,7 +504,7 @@ export default function CompanyNotebooksView({
                 {/* Notes / Markdown Section */}
                 <div className="md:col-span-2 space-y-4">
                   <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 flex items-center gap-1.5">
+                    <h3 className="text-xs font-bold text-slate-500 mb-2 flex items-center gap-1.5">
                       <FileText className="w-3.5 h-3.5 text-indigo-600" /> Notas y Minutas de Trabajo
                     </h3>
                     {isEditing ? (
@@ -572,7 +572,7 @@ export default function CompanyNotebooksView({
                 {/* Checklist & Tasks Sidebar */}
                 <div className="space-y-4">
                   <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                    <h3 className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                       <CheckSquare className="w-3.5 h-3.5 text-indigo-600" /> Tareas & Checklist
                     </h3>
                     
@@ -624,7 +624,7 @@ export default function CompanyNotebooksView({
 
                   {/* Summary Stats */}
                   <div className="bg-indigo-900 text-white rounded-xl p-4 space-y-2">
-                    <h4 className="text-[11px] uppercase tracking-wider font-mono text-indigo-300">Resumen de Empresa</h4>
+                    <h4 className="text-[11px] font-mono text-indigo-300">Resumen de Empresa</h4>
                     <div className="space-y-1 text-xs">
                       <div className="flex justify-between">
                         <span className="text-indigo-200">Cuentas Contables:</span>

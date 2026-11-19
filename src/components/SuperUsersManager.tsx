@@ -190,10 +190,7 @@ export default function SuperUsersManager() {
               <ShieldCheck className="w-6 h-6" />
             </span>
             <div>
-              <h2 className="text-xl font-bold tracking-tight">Gestión de Super Administradores Globales</h2>
-              <p className="text-slate-400 text-xs mt-0.5">
-                Control jerárquico global y gobernanza de accesos con privilegios de plataforma.
-              </p>
+              <h2 className="text-xl font-bold tracking-tight" title="Control jerárquico global y gobernanza de accesos con privilegios de plataforma.">Gestión de Super Administradores Globales</h2>
             </div>
           </div>
         </div>

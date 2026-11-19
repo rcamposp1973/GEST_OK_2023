@@ -130,7 +130,7 @@ export const DemoFerreteriaManagerModal: React.FC<DemoFerreteriaManagerModalProp
 
           {/* Feature Highlights Grid */}
           <div className="space-y-3">
-            <h3 className="font-bold text-slate-800 text-xs uppercase tracking-wider text-slate-500">
+            <h3 className="font-bold text-slate-800 text-xs text-slate-500">
               Contenido y Módulos Cargados para Presentaciones
             </h3>
             

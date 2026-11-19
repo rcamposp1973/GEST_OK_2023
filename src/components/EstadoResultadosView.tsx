@@ -669,14 +669,14 @@ export default function EstadoResultadosView({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
         {/* Ingresos Operacionales */}
         <div className="bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-2xs">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">1. Ventas / Ingresos Operacionales</span>
+          <span className="text-[11px] font-bold text-slate-600">1. Ventas / Ingresos Operacionales</span>
           <p className="text-lg font-black leading-tight text-slate-900 mt-1 font-mono">${statementData.totals.opRevenues.toLocaleString('es-CL')}</p>
         </div>
 
         {/* Margen Operacional (Ganancia Bruta) */}
         <div className="bg-indigo-50 px-3 py-2 rounded-xl border border-indigo-200 shadow-2xs">
           <div className="flex justify-between items-center">
-            <span className="text-[11px] font-black uppercase tracking-wider text-indigo-900">Margen Operacional (Bruto)</span>
+            <span className="text-[11px] font-black text-indigo-900">Margen Operacional (Bruto)</span>
             <span className="px-1.5 py-0.5 bg-indigo-200 text-indigo-900 rounded text-[10px] font-bold">{statementData.totals.grossMarginPercent}%</span>
           </div>
           <p className="text-lg font-black leading-tight text-indigo-950 mt-1 font-mono">${statementData.totals.grossMargin.toLocaleString('es-CL')}</p>
@@ -685,7 +685,7 @@ export default function EstadoResultadosView({
         {/* Resultado Operacional (EBIT) */}
         <div className="bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-2xs">
           <div className="flex justify-between items-center">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">Resultado Operacional (EBIT)</span>
+            <span className="text-[11px] font-bold text-slate-700">Resultado Operacional (EBIT)</span>
             <span className="px-1.5 py-0.5 bg-slate-100 text-slate-800 rounded text-[10px] font-bold">{statementData.totals.operatingMarginPercent}%</span>
           </div>
           <p className="text-lg font-black leading-tight text-slate-900 mt-1 font-mono">${statementData.totals.operatingResult.toLocaleString('es-CL')}</p>
@@ -742,7 +742,7 @@ export default function EstadoResultadosView({
           <div className="p-2.5 space-y-1.5">
             {/* BLOQUE 1: INGRESOS OPERACIONALES */}
             <div>
-              <div className="flex justify-between items-center text-xs font-bold text-slate-800 uppercase tracking-wide border-b border-slate-200 pb-1 mb-2">
+              <div className="flex justify-between items-center text-xs font-bold text-slate-800 border-b border-slate-200 pb-1 mb-2">
                 <span>1. Ingresos de Actividades Ordinarias / Explotación</span>
                 <span className="font-mono text-emerald-700">${statementData.totals.opRevenues.toLocaleString('es-CL')}</span>
               </div>
@@ -751,7 +751,7 @@ export default function EstadoResultadosView({
 
             {/* BLOQUE 2: COSTO DE VENTAS */}
             <div>
-              <div className="flex justify-between items-center text-xs font-bold text-slate-800 uppercase tracking-wide border-b border-slate-200 pb-1 mb-2">
+              <div className="flex justify-between items-center text-xs font-bold text-slate-800 border-b border-slate-200 pb-1 mb-2">
                 <span>2. Costos de Ventas / Explotación</span>
                 <span className="font-mono text-rose-700">-${statementData.totals.costOfSales.toLocaleString('es-CL')}</span>
               </div>
@@ -763,7 +763,7 @@ export default function EstadoResultadosView({
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-amber-300" />
                 <div>
-                  <span className="text-xs font-black uppercase tracking-wider">(=) MARGEN OPERACIONAL (GANANCIA BRUTA)</span>
+                  <span className="text-xs font-black">(=) MARGEN OPERACIONAL (GANANCIA BRUTA)</span>
                   <p className="text-[11px] text-indigo-200">Ingresos Operacionales menos Costos de Venta ({statementData.totals.grossMarginPercent}% sobre ventas)</p>
                 </div>
               </div>
@@ -774,7 +774,7 @@ export default function EstadoResultadosView({
 
             {/* BLOQUE 3: GASTOS DE ADMINISTRACIÓN Y VENTAS */}
             <div>
-              <div className="flex justify-between items-center text-xs font-bold text-slate-800 uppercase tracking-wide border-b border-slate-200 pb-1 mb-2">
+              <div className="flex justify-between items-center text-xs font-bold text-slate-800 border-b border-slate-200 pb-1 mb-2">
                 <span>3. Gastos de Administración y Ventas</span>
                 <span className="font-mono text-rose-700">-${statementData.totals.opExpenses.toLocaleString('es-CL')}</span>
               </div>
@@ -796,7 +796,7 @@ export default function EstadoResultadosView({
 
             {/* BLOQUE 4: RESULTADOS FUERA DE EXPLOTACIÓN */}
             <div>
-              <div className="flex justify-between items-center text-xs font-bold text-slate-800 uppercase tracking-wide border-b border-slate-200 pb-1 mb-2">
+              <div className="flex justify-between items-center text-xs font-bold text-slate-800 border-b border-slate-200 pb-1 mb-2">
                 <span>4. Resultados Fuera de la Explotación (Otras Ganancias, Ingresos y Costos Financieros, Otras Pérdidas)</span>
                 <span className="font-mono text-slate-700">
                   ${(statementData.totals.otherInc + statementData.totals.finInc - statementData.totals.finCosts - statementData.totals.otherExp).toLocaleString('es-CL')}
@@ -821,7 +821,7 @@ export default function EstadoResultadosView({
 
             {/* BLOQUE 5: IMPUESTO A LA RENTA */}
             <div>
-              <div className="flex justify-between items-center text-xs font-bold text-slate-800 uppercase tracking-wide border-b border-slate-200 pb-1 mb-2">
+              <div className="flex justify-between items-center text-xs font-bold text-slate-800 border-b border-slate-200 pb-1 mb-2">
                 <span>5. Gasto por Impuesto a las Ganancias</span>
                 <span className="font-mono text-rose-700">-${statementData.totals.incomeTax.toLocaleString('es-CL')}</span>
               </div>
@@ -835,7 +835,7 @@ export default function EstadoResultadosView({
                 : 'bg-rose-950 text-white border-rose-500'
             }`}>
               <div>
-                <span className="text-xs font-black uppercase tracking-wider text-amber-300">
+                <span className="text-xs font-black text-amber-300">
                   (=) RESULTADO NETO DEL EJERCICIO ({statementData.totals.isProfit ? 'UTILIDAD' : 'PÉRDIDA'})
                 </span>
                 <p className="text-[11px] text-slate-300">
@@ -857,7 +857,7 @@ export default function EstadoResultadosView({
         const fmt = (v: number) => `${v < 0 ? '-' : ''}$${Math.abs(v).toLocaleString('es-CL')}`;
         const Bloque = ({ titulo, valor, children }: { titulo: string; valor: number; children?: React.ReactNode }) => (
           <div>
-            <div className="flex justify-between items-center text-xs font-bold text-slate-800 uppercase tracking-wide border-b border-slate-200 pb-1 mb-2">
+            <div className="flex justify-between items-center text-xs font-bold text-slate-800 border-b border-slate-200 pb-1 mb-2">
               <span>{titulo}</span>
               <span className="font-mono text-slate-800">{fmt(valor)}</span>
             </div>
@@ -867,7 +867,7 @@ export default function EstadoResultadosView({
         const Subtotal = ({ titulo, nota, valor, fuerte }: { titulo: string; nota?: string; valor: number; fuerte?: boolean }) => (
           <div className={`${fuerte ? 'bg-indigo-900 text-white' : 'bg-slate-100 border border-slate-300 text-slate-900'} p-3 rounded-xl flex justify-between items-center`}>
             <div>
-              <span className="text-xs font-black uppercase tracking-wide">{titulo}</span>
+              <span className="text-xs font-black">{titulo}</span>
               {nota && <p className={`text-[11px] ${fuerte ? 'text-indigo-200' : 'text-slate-500'}`}>{nota}</p>}
             </div>
             <div className="font-mono font-black text-base">{fmt(valor)}</div>

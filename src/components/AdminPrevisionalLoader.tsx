@@ -188,7 +188,7 @@ export const AdminPrevisionalLoader: React.FC = () => {
         {/* Columna 1: Índices Monetarios & Topes Imponibles */}
         <div className="space-y-4">
           <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-4 space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5 border-b border-slate-800 pb-2">
+            <h3 className="text-xs font-bold text-amber-400 flex items-center gap-1.5 border-b border-slate-800 pb-2">
               <DollarSign className="w-3.5 h-3.5" />
               1. Índices & Sueldo Mínimo (IMM)
             </h3>
@@ -231,7 +231,7 @@ export const AdminPrevisionalLoader: React.FC = () => {
           </div>
 
           <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-4 space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-1.5 border-b border-slate-800 pb-2">
+            <h3 className="text-xs font-bold text-indigo-400 flex items-center gap-1.5 border-b border-slate-800 pb-2">
               <TrendingUp className="w-3.5 h-3.5" />
               2. Rentas Topes Imponibles (UF)
             </h3>
@@ -277,7 +277,7 @@ export const AdminPrevisionalLoader: React.FC = () => {
         {/* Columna 2: Tasas de AFP */}
         <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5 border-b border-slate-800 pb-2 mb-3">
+            <h3 className="text-xs font-bold text-emerald-400 flex items-center gap-1.5 border-b border-slate-800 pb-2 mb-3">
               <Shield className="w-3.5 h-3.5" />
               3. Tasas Cotización AFP (Fondo 10% + Comisión)
             </h3>
@@ -338,7 +338,7 @@ export const AdminPrevisionalLoader: React.FC = () => {
         {/* Columna 3: Tramos de Asignación Familiar */}
         <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-rose-400 flex items-center gap-1.5 border-b border-slate-800 pb-2 mb-3">
+            <h3 className="text-xs font-bold text-rose-400 flex items-center gap-1.5 border-b border-slate-800 pb-2 mb-3">
               <Layers className="w-3.5 h-3.5" />
               4. Asignación Familiar (Tramos & Límites)
             </h3>
@@ -445,7 +445,7 @@ export const AdminPrevisionalLoader: React.FC = () => {
               type="button"
               onClick={handleSave}
               disabled={loading}
-              className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/40 cursor-pointer disabled:opacity-50"
+              className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/40 cursor-pointer disabled:opacity-50"
             >
               {saveSuccess ? (
                 <>

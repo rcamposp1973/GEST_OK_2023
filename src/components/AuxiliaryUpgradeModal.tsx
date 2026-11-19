@@ -896,7 +896,7 @@ export default function AuxiliaryUpgradeModal({
                   onClick={() => setStatusFilter('ALL')}
                   className={`p-3 rounded-xl border text-left transition-all ${statusFilter === 'ALL' ? 'bg-slate-900 text-white border-slate-900 shadow-md' : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'}`}
                 >
-                  <div className="text-[11px] uppercase tracking-wider font-semibold opacity-70">Total Leídos</div>
+                  <div className="text-[11px] font-semibold opacity-70">Total Leídos</div>
                   <div className="text-xl font-black">{parsedRows.length}</div>
                 </button>
 
@@ -904,7 +904,7 @@ export default function AuxiliaryUpgradeModal({
                   onClick={() => setStatusFilter('UPDATE')}
                   className={`p-3 rounded-xl border text-left transition-all ${statusFilter === 'UPDATE' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-indigo-50/60 hover:bg-indigo-100 text-indigo-900 border-indigo-200'}`}
                 >
-                  <div className="text-[11px] uppercase tracking-wider font-semibold opacity-80 flex items-center gap-1">
+                  <div className="text-[11px] font-semibold opacity-80 flex items-center gap-1">
                     <RefreshCw className="w-3 h-3" />
                     <span>Para Actualizar</span>
                   </div>
@@ -915,7 +915,7 @@ export default function AuxiliaryUpgradeModal({
                   onClick={() => setStatusFilter('NEW')}
                   className={`p-3 rounded-xl border text-left transition-all ${statusFilter === 'NEW' ? 'bg-emerald-600 text-white border-emerald-600 shadow-md' : 'bg-emerald-50/60 hover:bg-emerald-100 text-emerald-900 border-emerald-200'}`}
                 >
-                  <div className="text-[11px] uppercase tracking-wider font-semibold opacity-80 flex items-center gap-1">
+                  <div className="text-[11px] font-semibold opacity-80 flex items-center gap-1">
                     <Sparkles className="w-3 h-3" />
                     <span>Nuevos Auxiliares</span>
                   </div>
@@ -926,7 +926,7 @@ export default function AuxiliaryUpgradeModal({
                   onClick={() => setStatusFilter('UNCHANGED')}
                   className={`p-3 rounded-xl border text-left transition-all ${statusFilter === 'UNCHANGED' ? 'bg-slate-700 text-white border-slate-700 shadow-md' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'}`}
                 >
-                  <div className="text-[11px] uppercase tracking-wider font-semibold opacity-80">Sin Cambios</div>
+                  <div className="text-[11px] font-semibold opacity-80">Sin Cambios</div>
                   <div className="text-xl font-black">{summaryResults.unchanged}</div>
                 </button>
               </div>

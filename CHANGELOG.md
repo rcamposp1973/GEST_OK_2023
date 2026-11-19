@@ -9,6 +9,11 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## [1.16.3] - Etapa 1 del orden técnico: red de seguridad
+- Nuevo `npm test`: pruebas automáticas de asientos de compras/ventas, aprobación y compensación parcial.
+- Nuevo `npm run typecheck`: revisa tipos en cada despliegue y falla solo si aparecen errores NUEVOS (los 50 antiguos quedan en `scripts/tsc-baseline.txt` y se irán eliminando).
+- Sin cambios visibles para el usuario ni en la contabilidad.
+
 ## 1.16.2 — 19 de noviembre de 2026 — Aprobación de Compras y Ventas: sin aprobación por defecto, 1 o 2 niveles a elección [solo Pruebas]
 
 - Las órdenes de compra y de venta parten sin aprobación: al emitirlas quedan aprobadas.

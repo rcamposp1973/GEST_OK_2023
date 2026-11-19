@@ -1,0 +1,50 @@
+App.tsx: error TS2307: Cannot find module './components/AuditLogsViewer' or its corresponding type declarations.
+App.tsx: error TS2307: Cannot find module './components/CreateStudy' or its corresponding type declarations.
+App.tsx: error TS2307: Cannot find module './components/ExecutiveHeader' or its corresponding type declarations.
+App.tsx: error TS2307: Cannot find module './components/GlobalProcessIndicator' or its corresponding type declarations.
+App.tsx: error TS2307: Cannot find module './components/IndicadoresEconomicosView' or its corresponding type declarations.
+App.tsx: error TS2307: Cannot find module './components/LandingHome' or its corresponding type declarations.
+App.tsx: error TS2307: Cannot find module './components/Login' or its corresponding type declarations.
+App.tsx: error TS2307: Cannot find module './components/MarketingPromoManager' or its corresponding type declarations.
+App.tsx: error TS2307: Cannot find module './components/PlanManager' or its corresponding type declarations.
+App.tsx: error TS2307: Cannot find module './components/PresentationView' or its corresponding type declarations.
+App.tsx: error TS2307: Cannot find module './components/PricingManager' or its corresponding type declarations.
+App.tsx: error TS2307: Cannot find module './components/Register' or its corresponding type declarations.
+App.tsx: error TS2307: Cannot find module './components/StudyAdminDashboard' or its corresponding type declarations.
+App.tsx: error TS2307: Cannot find module './components/StudyDetails' or its corresponding type declarations.
+App.tsx: error TS2307: Cannot find module './components/SuperAdminSystemMonitor' or its corresponding type declarations.
+App.tsx: error TS2307: Cannot find module './components/SuperUsersManager' or its corresponding type declarations.
+App.tsx: error TS2307: Cannot find module './components/TestimonialManager' or its corresponding type declarations.
+App.tsx: error TS2307: Cannot find module './constants/version' or its corresponding type declarations.
+App.tsx: error TS2307: Cannot find module './context/AuthContext' or its corresponding type declarations.
+App.tsx: error TS2307: Cannot find module './context/ProcessContext' or its corresponding type declarations.
+App.tsx: error TS2307: Cannot find module './lib/firebase' or its corresponding type declarations.
+App.tsx: error TS2307: Cannot find module './utils/auditLogger' or its corresponding type declarations.
+App.tsx: error TS2307: Cannot find module './utils/diagonPurge' or its corresponding type declarations.
+main.tsx: error TS2307: Cannot find module './components/ErrorBoundary.tsx' or its corresponding type declarations.
+src/components/ActivoFijoView.tsx: error TS2307: Cannot find module 'xlsx' or its corresponding type declarations.
+src/components/AgingDeudasView.tsx: error TS2307: Cannot find module 'xlsx' or its corresponding type declarations.
+src/components/AnalisisAuxiliaresView.tsx: error TS2339: Property 'lineIndex' does not exist on type 'TempAuxMovement'.
+src/components/AnalisisAuxiliaresView.tsx: error TS2339: Property 'lineIndex' does not exist on type 'TempMovementItem'.
+src/components/AnalisisAuxiliaresView.tsx: error TS2353: Object literal may only specify known properties, and 'lineIndex' does not exist in type 'TempAuxMovement'.
+src/components/AnalisisAuxiliaresView.tsx: error TS2353: Object literal may only specify known properties, and 'lineIndex' does not exist in type 'TempMovementItem'.
+src/components/AuditorEstadosFinancierosView.tsx: error TS2307: Cannot find module 'xlsx' or its corresponding type declarations.
+src/components/AuxiliariesGrid.tsx: error TS2307: Cannot find module 'xlsx' or its corresponding type declarations.
+src/components/AuxiliaryUpgradeModal.tsx: error TS2307: Cannot find module 'xlsx' or its corresponding type declarations.
+src/components/BankCartolaSmartImportModal.tsx: error TS2307: Cannot find module 'xlsx' or its corresponding type declarations.
+src/components/CargaMasivaComprobantesView.tsx: error TS2307: Cannot find module 'xlsx' or its corresponding type declarations.
+src/components/CertificadosOficialesSiiModal.tsx: error TS2307: Cannot find module 'xlsx' or its corresponding type declarations.
+src/components/CompanyAccountingDashboard.tsx: error TS2307: Cannot find module 'xlsx' or its corresponding type declarations.
+src/components/CompanyAccountingDashboard.tsx: error TS2322: Type '{ onOpenVoucher: (v: string | number | Voucher) => void; periodoGlobal: string; onCambiarPeriodoGlobal: (p: string) => void; company: Company; vouchers: Voucher[]; ... 5 more ...; onOpenEstadoResultados: () => void; }' is not assignable to type 'IntrinsicAttributes & BalanceIFRSViewProps'.
+src/components/DeclaracionesJuradasView.tsx: error TS2307: Cannot find module 'xlsx' or its corresponding type declarations.
+src/components/ExcelImportCenterModal.tsx: error TS2307: Cannot find module 'xlsx' or its corresponding type declarations.
+src/components/ImportacionInteligenteView.tsx: error TS2307: Cannot find module 'xlsx' or its corresponding type declarations.
+src/components/LibroBancoColaborativoView.tsx: error TS2307: Cannot find module 'xlsx' or its corresponding type declarations.
+src/components/PeriodsGrid.tsx: error TS2307: Cannot find module 'xlsx' or its corresponding type declarations.
+src/components/PlanDeCuentasGrid.tsx: error TS2307: Cannot find module 'xlsx' or its corresponding type declarations.
+src/components/PlanillaConsultasDinamicasView.tsx: error TS2307: Cannot find module 'xlsx' or its corresponding type declarations.
+src/components/PlantillasYCargaMasivaView.tsx: error TS2307: Cannot find module 'xlsx' or its corresponding type declarations.
+src/components/RendicionGastosView.tsx: error TS2307: Cannot find module 'xlsx' or its corresponding type declarations.
+src/components/analytics-hud/AnalyticsHudDashboard.tsx: error TS2307: Cannot find module 'xlsx' or its corresponding type declarations.
+src/utils/bankCartolaParser.ts: error TS2307: Cannot find module 'xlsx' or its corresponding type declarations.
+src/utils/importacionInteligente.ts: error TS2365: Operator '<' cannot be applied to types 'string | number' and 'number'.

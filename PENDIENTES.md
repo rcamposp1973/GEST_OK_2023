@@ -79,3 +79,7 @@ Lista viva. Cada punto se pasa al CHANGELOG cuando se hace.
 - Reducir de a poco `scripts/tsc-baseline.txt` (50 errores antiguos).
 - Diseño comercial (decidido por Ramón): un solo Módulo Comercial con dos submódulos, Ventas y Compras (Adquisiciones). Gestión Comercial actual se integrará ahí (etapa 5). A futuro: empresas que transforman (producción), compran para revender.
 - Etapa 2, restan: Emisión DTE, Agent1 Conciliador, interbankTransferEngine, Importación Excel, Conciliación (usan el contador pero crean el comprobante por su cuenta).
+
+## Facturación electrónica: preparar el sistema para facturadores externos
+Hallazgos (nov 2026): el módulo "Emisión DTE" es una simulación (firma `SIMULATED_RSA_DIGITAL_SIGNATURE`, timbre simulado, test de conexión simulado) y guarda en la base de datos las claves SII del representante y de la empresa (`claveRepLegalSii`, `claveEmpresaSii`) sin cifrar.
+Propuesta: (1) marcar Emisión DTE como "Demostración" y no guardar claves; (2) campo `origenDocumento` en documentos RCV (DIGITADO, RCV_SII, FACTURADOR:<nombre>); (3) importar XML/CSV de DTE de cualquier facturador (Bsale, Nubox, Haulmer, SimpleFactura...) hacia RCV y enlazarlo a la O/V; (4) más adelante, conector API a un facturador elegido.

@@ -1,4 +1,6 @@
 import { formatearRut } from '../utils/rutFormato';
+import { getNextVoucherNumber } from '../utils/voucherCounter';
+import { exigirCuadre } from '../utils/capaContable';
 import React, { useState, useEffect, useMemo } from 'react';
 import { db, auth } from '../lib/firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, setDoc } from 'firebase/firestore';
@@ -400,7 +402,7 @@ export default function CobranzaView({
     setIsSubmitting(true);
     try {
       const nextRecordNumber = (collectionRecords.length > 0 ? Math.max(...collectionRecords.map(r => r.recordNumber || 0)) : 0) + 1;
-      const nextVoucherNumber = (vouchers.length > 0 ? Math.max(...vouchers.map(v => v.voucherNumber || 0)) : 0) + 1;
+      const nextVoucherNumber = await getNextVoucherNumber(studyId, company.id, 0, vouchers.reduce((m, v) => Math.max(m, v.voucherNumber || 0), 0));
 
       // Buscar cuenta de Clientes por Cobrar
       const customerReceivableAcc = accounts.find(a => 
@@ -515,6 +517,7 @@ export default function CobranzaView({
         createdAt: new Date().toISOString()
       };
 
+      exigirCuadre(newVoucherData.lines as any);
       const vRef = await addDoc(collection(companyRef, 'vouchers'), newVoucherData);
 
       // 5. Crear Registro de Cobranza / Compensación

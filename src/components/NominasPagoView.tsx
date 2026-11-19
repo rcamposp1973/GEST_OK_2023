@@ -1,4 +1,6 @@
 import { formatearRut } from '../utils/rutFormato';
+import { getNextVoucherNumber } from '../utils/voucherCounter';
+import { exigirCuadre } from '../utils/capaContable';
 import React, { useState, useEffect, useMemo } from 'react';
 import { db, auth } from '../lib/firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, setDoc } from 'firebase/firestore';
@@ -327,7 +329,7 @@ export default function NominasPagoView({
     setIsSubmitting(true);
     try {
       const nextBatchNumber = (paymentBatches.length > 0 ? Math.max(...paymentBatches.map(b => b.batchNumber || 0)) : 0) + 1;
-      const nextVoucherNumber = (vouchers.length > 0 ? Math.max(...vouchers.map(v => v.voucherNumber || 0)) : 0) + 1;
+      const nextVoucherNumber = await getNextVoucherNumber(studyId, company.id, 0, vouchers.reduce((m, v) => Math.max(m, v.voucherNumber || 0), 0));
 
       // 1. Prepare Voucher Lines for Egreso/Traspaso (Individual lines per document with RUT, Name and DocumentRef)
       const supplierAcc = accounts.find(a => a.code.startsWith('2.1.01') || a.code.startsWith('2-1-01') || a.name.toLowerCase().includes('proveedor')) || {
@@ -404,6 +406,7 @@ export default function NominasPagoView({
         createdAt: new Date().toISOString()
       };
 
+      exigirCuadre(newVoucherData.lines as any);
       const voucherDocRef = await addDoc(collection(companyRef, 'vouchers'), newVoucherData);
 
       // 3. Create Payment Batch in Firestore

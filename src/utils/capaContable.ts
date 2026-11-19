@@ -25,6 +25,12 @@ export function sumasComprobante(lines: VoucherLine[]) {
   return { totalDebit, totalCredit };
 }
 
+/** Para módulos que aún arman su propio comprobante: exige que cuadre antes de guardar. */
+export function exigirCuadre(lines: VoucherLine[]): void {
+  const { totalDebit, totalCredit } = sumasComprobante(lines);
+  if (Math.abs(totalDebit - totalCredit) >= TOLERANCIA) throw new Error(`El comprobante no cuadra: Debe ${totalDebit} y Haber ${totalCredit}.`);
+}
+
 /** Valida y arma el comprobante listo para guardar. Lanza Error en español si no cumple. */
 export function armarComprobante(
   e: EntradaComprobante, numero: number, usuario: UsuarioComprobante, ahoraIso: string = new Date().toISOString()

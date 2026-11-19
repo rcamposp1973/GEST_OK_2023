@@ -3697,7 +3697,7 @@ export default function CompanyAccountingDashboard({
         return;
       }
 
-      const nextVoucherNum = (vouchers.reduce((max, v) => Math.max(max, v.voucherNumber || 0), 0)) + 1;
+      const nextVoucherNum = await siguienteNumeroComprobante();
 
       await withProcess(
         `Contabilizando documento Doc ${docItem.tipoDoc || 'DTE'} Folio #${docItem.folio}...`,

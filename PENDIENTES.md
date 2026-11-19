@@ -77,3 +77,5 @@ Lista viva. Cada punto se pasa al CHANGELOG cuando se hace.
 - Etapas 1 y 3 hechas (v1.16.3 y v1.16.4). Etapa 2 en curso (v1.16.5): faltan por migrar a `capaContable.ts` los lugares que aún crean comprobantes directo: RCV (contabilizar), Conciliación bancaria, Emisión DTE, Nóminas de pago, Formulario 29, Cobranza, Libro Banco, Agent1 Conciliador, interbankTransferEngine, Importación Excel. De a uno, con prueba antes/después.
 - Etapas 4 a 6 (partir el dashboard de 10.000 líneas, unificar Compras/Ventas, archivos grandes) quedan después. Gestión Comercial: se mantiene tal cual por ahora.
 - Reducir de a poco `scripts/tsc-baseline.txt` (50 errores antiguos).
+- Diseño comercial (decidido por Ramón): un solo Módulo Comercial con dos submódulos, Ventas y Compras (Adquisiciones). Gestión Comercial actual se integrará ahí (etapa 5). A futuro: empresas que transforman (producción), compran para revender.
+- Etapa 2, restan: Emisión DTE, Agent1 Conciliador, interbankTransferEngine, Importación Excel, Conciliación (usan el contador pero crean el comprobante por su cuenta).

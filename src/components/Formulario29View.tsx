@@ -1,4 +1,6 @@
 import { formatearRut } from '../utils/rutFormato';
+import { getNextVoucherNumber } from '../utils/voucherCounter';
+import { exigirCuadre } from '../utils/capaContable';
 import { plazoPagoF29 } from '../utils/plazoPagoF29';
 import { ivaCreditoCoherente } from '../utils/rcvIva';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
@@ -731,7 +733,7 @@ export default function Formulario29View({
 
     setIsSubmitting(true);
     try {
-      const nextVoucherNumber = (vouchers.length > 0 ? Math.max(...vouchers.map(v => v.voucherNumber || 0)) : 0) + 1;
+      const nextVoucherNumber = await getNextVoucherNumber(studyId, company.id, 0, vouchers.reduce((m, v) => Math.max(m, v.voucherNumber || 0), 0));
 
       // Helper para buscar cuenta asignada en parámetros o sugerida del plan de cuentas
       const getAccountByIdOrPrefix = (accId: string | undefined, defaultPrefix: string, fallbackName: string) => {
@@ -964,6 +966,7 @@ export default function Formulario29View({
         createdAt: new Date().toISOString()
       };
 
+      exigirCuadre(voucherData.lines as any);
       const vRef = await addDoc(collection(companyRef, 'vouchers'), voucherData);
       const voucherId = vRef.id;
 

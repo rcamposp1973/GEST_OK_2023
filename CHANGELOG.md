@@ -9,6 +9,11 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## [1.16.6] - Orden técnico: más módulos con numeración única
+- Cobranza, Nóminas de pago, Formulario 29 y la contabilización de documentos del RCV ahora numeran con el contador único (antes "mayor número + 1", que podía repetirse si dos personas guardaban a la vez).
+- Cobranza, Nóminas y F29 rechazan un comprobante descuadrado con un mensaje claro.
+- Se deja sin tocar lo más delicado (Conciliación, DTE, importaciones masivas) para hacerlo de a uno con pruebas.
+
 ## [1.16.5] - Etapa 2 del orden técnico: capa contable única (primera parte)
 - Nuevo `src/utils/capaContable.ts`: un solo lugar que valida que el comprobante cuadre, calcula período y totales, revisa período cerrado y pide el número al contador único.
 - Ya la usan: Compras/Ventas (recepciones, entregas y reversos), Kardex, Activo fijo y Rendición de gastos.

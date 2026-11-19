@@ -9,6 +9,12 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## [1.16.5] - Etapa 2 del orden técnico: capa contable única (primera parte)
+- Nuevo `src/utils/capaContable.ts`: un solo lugar que valida que el comprobante cuadre, calcula período y totales, revisa período cerrado y pide el número al contador único.
+- Ya la usan: Compras/Ventas (recepciones, entregas y reversos), Kardex, Activo fijo y Rendición de gastos.
+- Efecto visible: un comprobante descuadrado ahora se rechaza con un mensaje claro en esos módulos (antes se guardaba).
+- Pendiente (siguientes entregas): migrar RCV, Conciliación, DTE, Nóminas, F29, Cobranza, Libro Banco, Importaciones.
+
 ## [1.16.4] - Etapa 3 del orden técnico: numeración única
 - Kardex, Activo fijo, Rendición de gastos y Gestión Comercial ya no inventan el número del comprobante al azar: usan el contador único de la empresa (no repite ni retrocede respecto de los existentes).
 - Ajustes de Kardex y operaciones comerciales también pasan por ese contador.

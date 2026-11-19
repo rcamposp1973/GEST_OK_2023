@@ -71,3 +71,9 @@ Lista viva. Cada punto se pasa al CHANGELOG cuando se hace.
 - Nota de crédito referenciada a la orden de venta.
 - Conectar un facturador electrónico: emitir la factura desde la O/V y traer folio y PDF automáticamente.
 - Superposición con Gestión Comercial (cotización/orden de venta/factura que ya existe): decidir si se unifica o se reemplaza.
+
+
+## Orden técnico previo a 2.0.0 (plan aprobado)
+- Etapas 1 y 3 hechas (v1.16.3 y v1.16.4). Etapa 2 en curso (v1.16.5): faltan por migrar a `capaContable.ts` los lugares que aún crean comprobantes directo: RCV (contabilizar), Conciliación bancaria, Emisión DTE, Nóminas de pago, Formulario 29, Cobranza, Libro Banco, Agent1 Conciliador, interbankTransferEngine, Importación Excel. De a uno, con prueba antes/después.
+- Etapas 4 a 6 (partir el dashboard de 10.000 líneas, unificar Compras/Ventas, archivos grandes) quedan después. Gestión Comercial: se mantiene tal cual por ahora.
+- Reducir de a poco `scripts/tsc-baseline.txt` (50 errores antiguos).

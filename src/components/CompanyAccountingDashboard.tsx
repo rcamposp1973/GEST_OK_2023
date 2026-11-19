@@ -50,6 +50,7 @@ import { OperativaComercialView } from './OperativaComercialView';
 import ComprasView from './ComprasView';
 import VentasView from './VentasView';
 import { getNextVoucherNumber } from '../utils/voucherCounter';
+import { crearComprobante, reversarLineas, type ContextoContable } from '../utils/capaContable';
 import { StockKardexView } from './StockKardexView';
 import { WarehousesView } from './WarehousesView';
 import ReportesAnaliticosView from './ReportesAnaliticosView';
@@ -3655,33 +3656,25 @@ export default function CompanyAccountingDashboard({
   };
 
   // ── Módulo Compras: comprobantes de recepción (y su reverso) ──
-  const crearComprobanteCompras = async (v: { date: string; gloss: string; lines: VoucherLine[]; origin?: string }): Promise<{ id: string; voucherNumber: number }> => {
-    const periodo = v.date.slice(0, 7);
-    const chequeo = checkIsPeriodClosed(periodo);
-    if (chequeo.isClosed) throw new Error(chequeo.errorMsg || `El período ${periodo} está cerrado.`);
-    const maxLocal = vouchers.reduce((m, x) => Math.max(m, x.voucherNumber || 0), 0);
-    const voucherNumber = await getNextVoucherNumber(studyId, company.id, 0, maxLocal);
-    const lines = sanitizeVoucherLines(v.lines, accounts);
-    const totalDebit = lines.reduce((acc, l) => acc + (Number(l.debit) || 0), 0);
-    const totalCredit = lines.reduce((acc, l) => acc + (Number(l.credit) || 0), 0);
-    if (Math.abs(totalDebit - totalCredit) >= 0.01) throw new Error('El asiento de la recepción no cuadra.');
-    const nowIso = new Date().toISOString();
-    const data: Omit<Voucher, 'id'> = {
-      voucherNumber, date: v.date, period: periodo, type: 'Traspaso', gloss: v.gloss, lines,
-      totalDebit, totalCredit, status: 'Valido', origin: v.origin || 'COMPRAS',
-      createdBy: auth.currentUser?.uid || 'compras', createdByUserEmail: auth.currentUser?.email || '',
-      creationMode: 'SISTEMA', createdAt: nowIso, lastModifiedBy: auth.currentUser?.uid || 'compras', lastModifiedAt: nowIso
-    };
-    const ref = await addDoc(collection(companyRef, 'vouchers'), data);
-    return { id: ref.id, voucherNumber };
-  };
+  // Contexto de la capa contable única (utils/capaContable.ts)
+  const contextoContable = (): ContextoContable => ({
+    verificarPeriodo: (periodo) => {
+      const chequeo = checkIsPeriodClosed(periodo);
+      if (chequeo.isClosed) throw new Error(chequeo.errorMsg || `El período ${periodo} está cerrado.`);
+    },
+    siguienteNumero: siguienteNumeroComprobante,
+    guardar: async (v) => (await addDoc(collection(companyRef, 'vouchers'), v)).id,
+    usuario: () => ({ uid: auth.currentUser?.uid || 'sistema', email: auth.currentUser?.email || '' }),
+  });
+
+  const crearComprobanteCompras = async (v: { date: string; gloss: string; lines: VoucherLine[]; origin?: string }): Promise<{ id: string; voucherNumber: number }> =>
+    crearComprobante(contextoContable(), { date: v.date, gloss: v.gloss, lines: sanitizeVoucherLines(v.lines, accounts), origin: v.origin || 'COMPRAS' });
 
   const reversarComprobanteCompras = async (voucherId: string, gloss: string, date: string): Promise<{ id: string; voucherNumber: number }> => {
     const snap = await getDoc(doc(companyRef, 'vouchers', voucherId));
     if (!snap.exists()) throw new Error('No se encontró el comprobante original de la recepción.');
     const orig = snap.data() as Voucher;
-    const lines = (orig.lines || []).map(l => ({ ...l, debit: l.credit || 0, credit: l.debit || 0, gloss: `Reverso: ${l.gloss || ''}` }));
-    return crearComprobanteCompras({ date, gloss, lines });
+    return crearComprobanteCompras({ date, gloss, lines: reversarLineas(orig.lines || []) });
   };
 
   // Comprobante que respalda a un documento del RCV (por enlace directo o por origen)
@@ -9606,13 +9599,12 @@ export default function CompanyAccountingDashboard({
           selectedPeriod={selectedRcvPeriod}
           onSaveMovement={handleSaveInventoryMovement}
           onCentralizeVoucher={async (voucherData) => {
-            const docRef = await addDoc(collection(companyRef, 'vouchers'), {
-              ...voucherData,
-              voucherNumber: await siguienteNumeroComprobante(),
-              createdAt: new Date().toISOString()
+            const creado = await crearComprobante(contextoContable(), {
+              date: voucherData.date, gloss: voucherData.gloss, lines: voucherData.lines as VoucherLine[],
+              type: voucherData.type, origin: voucherData.origin as string | undefined, extra: voucherData as Partial<Voucher>
             });
             await fetchData();
-            return docRef.id;
+            return creado.id;
           }}
           onNavigateToLibroDiario={() => setActiveTab('libroDiario')}
           onNavigateToVoucher={(vId) => {
@@ -9647,13 +9639,12 @@ export default function CompanyAccountingDashboard({
           vouchers={vouchers}
           masterParams={rcvParams as any}
           onCentralizeVoucher={async (voucherData) => {
-            const docRef = await addDoc(collection(companyRef, 'vouchers'), {
-              ...voucherData,
-              voucherNumber: await siguienteNumeroComprobante(),
-              createdAt: new Date().toISOString()
+            const creado = await crearComprobante(contextoContable(), {
+              date: voucherData.date, gloss: voucherData.gloss, lines: voucherData.lines as VoucherLine[],
+              type: voucherData.type, origin: voucherData.origin as string | undefined, extra: voucherData as Partial<Voucher>
             });
             await fetchData();
-            return docRef.id;
+            return creado.id;
           }}
           onNavigateToLibroDiario={() => setActiveTab('libroDiario')}
           onNavigateToVoucher={(vId) => {
@@ -9688,13 +9679,12 @@ export default function CompanyAccountingDashboard({
           masterParams={rcvParams as any}
           selectedPeriod={selectedRcvPeriod}
           onCentralizeVoucher={async (voucherData) => {
-            const docRef = await addDoc(collection(companyRef, 'vouchers'), {
-              ...voucherData,
-              voucherNumber: await siguienteNumeroComprobante(),
-              createdAt: new Date().toISOString()
+            const creado = await crearComprobante(contextoContable(), {
+              date: voucherData.date, gloss: voucherData.gloss, lines: voucherData.lines as VoucherLine[],
+              type: voucherData.type, origin: voucherData.origin as string | undefined, extra: voucherData as Partial<Voucher>
             });
             await fetchData();
-            return docRef.id;
+            return creado.id;
           }}
           onNavigateToLibroDiario={() => setActiveTab('libroDiario')}
           onNavigateToVoucher={(vId) => {

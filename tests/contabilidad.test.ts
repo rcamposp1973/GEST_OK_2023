@@ -89,4 +89,24 @@ import { join } from 'node:path';
   const malos=archivos.filter(f=>/(voucherNumber|nextNum\w*)\s*[:=][^\n]*Math\.random/.test(readFileSync(f,'utf8')));
   ok('numeración: ningún comprobante usa número al azar'+(malos.length?' ('+malos.join(', ')+')':''),malos.length===0);
 }
+// ===== CAPA CONTABLE ÚNICA =====
+import { armarComprobante, reversarLineas, crearComprobante } from '../src/utils/capaContable';
+{
+  const u={uid:'u1',email:'a@x.cl'};
+  const lns:any[]=[{id:'1',accountId:'A',debit:1000,credit:0,gloss:'g'},{id:'2',accountId:'B',debit:0,credit:1000,gloss:'g'}];
+  const v=armarComprobante({date:'2026-03-15',gloss:'x',lines:lns,origin:'KARDEX',extra:{companyId:'C1'} as any},5,u,'2026-03-15T00:00:00Z');
+  ok('capa: arma comprobante con período, totales y número',v.period==='2026-03'&&v.totalDebit===1000&&v.totalCredit===1000&&v.voucherNumber===5);
+  ok('capa: conserva campos extra del módulo y fija origen',(v as any).companyId==='C1'&&v.origin==='KARDEX');
+  const lanza=(f:()=>any)=>{try{f();return false}catch{return true}};
+  ok('capa: rechaza comprobante descuadrado',lanza(()=>armarComprobante({date:'2026-03-15',gloss:'x',lines:[{...lns[0],debit:1000},{...lns[1],credit:900}]},1,u)));
+  ok('capa: rechaza sin líneas / sin fecha / sin número',lanza(()=>armarComprobante({date:'2026-03-15',gloss:'x',lines:[]},1,u))&&lanza(()=>armarComprobante({date:'15-03-2026',gloss:'x',lines:lns},1,u))&&lanza(()=>armarComprobante({date:'2026-03-15',gloss:'x',lines:lns},0,u)));
+  const rev=reversarLineas(lns);
+  ok('capa: reverso invierte Debe y Haber',rev[0].credit===1000&&rev[1].debit===1000&&rev[0].gloss==='Reverso: g');
+  const guardados:any[]=[]; let n=10;
+  const ctx={verificarPeriodo:(p:string)=>{if(p==='2026-01')throw new Error('cerrado')},siguienteNumero:async()=>++n,guardar:async(x:any)=>{guardados.push(x);return 'id'+guardados.length},usuario:()=>u};
+  const r1=await crearComprobante(ctx,{date:'2026-03-15',gloss:'x',lines:lns});
+  ok('capa: crea y devuelve id y número',r1.id==='id1'&&r1.voucherNumber===11&&guardados.length===1);
+  let bloqueado=false; try{await crearComprobante(ctx,{date:'2026-01-10',gloss:'x',lines:lns})}catch{bloqueado=true}
+  ok('capa: período cerrado no guarda nada',bloqueado&&guardados.length===1);
+}
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

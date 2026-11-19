@@ -322,6 +322,7 @@ export default function EmisionDteView({
         const rcvRef = doc(companyRef, 'rcvDocuments', `RCV-${dteDoc.id}`);
         const rcvDoc: RCVDocument = {
           id: `RCV-${dteDoc.id}`,
+          origenDocumento: 'EMISION_DEMO',
           tipoRegistro: d.tipoRegistro || 'Venta',
           period: dteDoc.period,
           rutEmisor: dteDoc.emisor.rut,
@@ -969,6 +970,7 @@ export default function EmisionDteView({
         montoTotal,
         estadoContabilizado: true,
         voucherId: vRef.id,
+        origenDocumento: 'EMISION_DEMO' as const,
       };
 
       const safeRcvItem = Object.fromEntries(
@@ -1004,6 +1006,11 @@ export default function EmisionDteView({
 
   return (
     <div className="space-y-6">
+      <div className="rounded-xl border border-amber-300 bg-amber-50 text-amber-900 px-4 py-3 text-sm">
+        <strong>Modo demostración.</strong> Este módulo simula la emisión: la firma y el timbre no son reales y los documentos
+        <strong> no tienen validez ante el SII</strong>. Para emitir facturas válidas use un facturador autorizado y cargue o digite
+        los documentos en el Registro de Compras y Ventas.
+      </div>
       {/* HEADER & MODULE TOGGLE BANNER */}
       <div className="bg-slate-900 text-white rounded-2xl p-6 shadow-xl border border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>

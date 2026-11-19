@@ -9,6 +9,11 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## [1.17.0] - Preparado para facturadores externos
+- Registro de Compras y Ventas: nuevo botón "Cargar XML de facturador" para cargar los DTE (XML) emitidos o recibidos desde cualquier facturador autorizado (Bsale, Nubox, Haulmer, SimpleFactura, portal del SII). Decide solo si es Venta o Compra según el RUT de la empresa, omite lo que no cuadra o no pertenece y avisa por qué. No duplica documentos ya cargados.
+- Cada documento del RCV guarda su origen (digitado, RCV del SII, facturador externo, demostración) y el nombre del facturador.
+- "Emisión DTE" muestra aviso de MODO DEMOSTRACIÓN: es una simulación sin validez ante el SII.
+
 ## [1.16.6] - Orden técnico: más módulos con numeración única
 - Cobranza, Nóminas de pago, Formulario 29 y la contabilización de documentos del RCV ahora numeran con el contador único (antes "mayor número + 1", que podía repetirse si dos personas guardaban a la vez).
 - Cobranza, Nóminas y F29 rechazan un comprobante descuadrado con un mensaje claro.

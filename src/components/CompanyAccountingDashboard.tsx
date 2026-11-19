@@ -50,6 +50,7 @@ import { OperativaComercialView } from './OperativaComercialView';
 import ComprasView from './ComprasView';
 import VentasView from './VentasView';
 import { getNextVoucherNumber } from '../utils/voucherCounter';
+import { leerDtesXml } from '../utils/dteXmlImport';
 import { crearComprobante, reversarLineas, type ContextoContable } from '../utils/capaContable';
 import { StockKardexView } from './StockKardexView';
 import { WarehousesView } from './WarehousesView';
@@ -1602,7 +1603,8 @@ export default function CompanyAccountingDashboard({
             razonSocialEmisor: item.razonSocialEmisor || (item.tipoRegistro === 'Venta' ? (company.name || company.razonSocial || 'Empresa') : 'Proveedor/Emisor'),
             rutReceptor: formatRut(item.rutReceptor || (item.tipoRegistro === 'Venta' ? (item.rutEmisor || '76.000.000-0') : (company.rut || '76.000.000-0'))),
             razonSocialReceptor: item.razonSocialReceptor || (item.tipoRegistro === 'Venta' ? (item.razonSocialEmisor || 'Cliente') : (company.name || company.razonSocial || 'Empresa')),
-            estadoContabilizado: false
+            estadoContabilizado: false,
+            origenDocumento: (item as any).origenDocumento || 'RCV_SII'
           }).filter(([_, v]) => v !== undefined)
         );
 
@@ -2501,6 +2503,7 @@ export default function CompanyAccountingDashboard({
             createdBy: userUid,
             createdByUserEmail: userEmail,
             creationMode: 'IMPORTACION_RCV' as const,
+            origenDocumento: 'RCV_SII' as const,
             createdAt: nowIso,
             lastModifiedBy: userUid,
             lastModifiedAt: nowIso
@@ -2869,7 +2872,8 @@ export default function CompanyAccountingDashboard({
           createdAt: nowIso,
           lastModifiedBy: userUid,
           lastModifiedAt: nowIso,
-          source: 'SII_API'
+          source: 'SII_API',
+          origenDocumento: 'RCV_SII' as const
         };
 
         const safeCleanRcv = Object.fromEntries(
@@ -6336,6 +6340,38 @@ export default function CompanyAccountingDashboard({
                 >
                   <span>{showManualUpload ? '✕ Ocultar Carga CSV' : 'Cargar CSV/TXT Manual'}</span>
                 </button>
+              </div>
+
+              <div className="pt-3.5">
+                <label
+                  className="cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs px-3 py-2 rounded-lg border border-slate-300 transition-all flex items-center gap-1.5"
+                  title="Cargar archivos XML de DTE emitidos o recibidos desde cualquier facturador autorizado (Bsale, Nubox, Haulmer, SimpleFactura, portal SII...)"
+                >
+                  <span>Cargar XML de facturador</span>
+                  <input
+                    type="file"
+                    accept=".xml,text/xml,application/xml"
+                    multiple
+                    className="hidden"
+                    onChange={async (e) => {
+                      const archivos = Array.from(e.target.files || []);
+                      e.target.value = '';
+                      if (archivos.length === 0) return;
+                      if (isReadOnly) { alert('Modo Solo Lectura: no puede cargar documentos.'); return; }
+                      const nombreFacturador = (window.prompt('¿Con qué facturador se emitieron? (opcional, ej: Bsale, Nubox, Haulmer)') || '').trim();
+                      const docs: Omit<RCVDocument, 'id'>[] = [];
+                      const omitidos: string[] = [];
+                      for (const f of archivos) {
+                        const r = leerDtesXml(await f.text(), company.rut || '', nombreFacturador || undefined);
+                        docs.push(...r.documentos);
+                        r.omitidos.forEach(o => omitidos.push(`${f.name} folio ${o.folio}: ${o.motivo}`));
+                      }
+                      if (docs.length > 0) await processImportBatch(docs);
+                      if (omitidos.length > 0) alert(`Documentos NO cargados (${omitidos.length}):\n\n` + omitidos.slice(0, 15).join('\n'));
+                      else if (docs.length === 0) alert('No se encontraron documentos DTE en los archivos.');
+                    }}
+                  />
+                </label>
               </div>
 
               <div className="pt-3.5">

@@ -393,6 +393,10 @@ export interface RCVDocument {
   razonSocialEmisor: string;
   rutReceptor?: string;
   razonSocialReceptor?: string;
+  /** De dónde viene el documento. Sin valor = digitado a mano. */
+  origenDocumento?: 'DIGITADO' | 'RCV_SII' | 'FACTURADOR_EXTERNO' | 'EMISION_DEMO';
+  /** Nombre del facturador externo (Bsale, Nubox, Haulmer...) cuando origenDocumento = FACTURADOR_EXTERNO. */
+  facturadorNombre?: string;
   tipoDoc: string; // ej: '33', '34', '39', '41', '46', '56', '61', '110', 'BHE'
   tipoDocumento?: string;
   nombreTipoDoc?: string;

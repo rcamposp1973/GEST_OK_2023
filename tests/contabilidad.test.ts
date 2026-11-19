@@ -109,4 +109,16 @@ import { armarComprobante, reversarLineas, crearComprobante } from '../src/utils
   let bloqueado=false; try{await crearComprobante(ctx,{date:'2026-01-10',gloss:'x',lines:lns})}catch{bloqueado=true}
   ok('capa: período cerrado no guarda nada',bloqueado&&guardados.length===1);
 }
+// ===== IMPORTAR DTE XML DE FACTURADORES EXTERNOS =====
+import { leerDtesXml } from '../src/utils/dteXmlImport';
+{
+  const dte=(tipo:string,folio:string,emi:string,rec:string,neto:number,iva:number,tot:number)=>`<DTE><Documento><Encabezado><IdDoc><TipoDTE>${tipo}</TipoDTE><Folio>${folio}</Folio><FchEmis>2026-10-15</FchEmis></IdDoc><Emisor><RUTEmisor>${emi}</RUTEmisor><RznSoc>Emisor &amp; Cía</RznSoc></Emisor><Receptor><RUTRecep>${rec}</RUTRecep><RznSocRecep>Cliente SA</RznSocRecep></Receptor><Totales><MntNeto>${neto}</MntNeto><IVA>${iva}</IVA><MntTotal>${tot}</MntTotal></Totales></Encabezado></Documento></DTE>`;
+  const xml=`<?xml version="1.0"?><EnvioDTE><SetDTE>${dte('33','101','76.111.111-1','77.222.222-2',1000,190,1190)}${dte('33','55','78.333.333-3','76.111.111-1',2000,380,2380)}${dte('33','9','70.000.000-0','71.000.000-0',100,19,119)}${dte('33','7','76.111.111-1','77.222.222-2',1000,190,1500)}</SetDTE></EnvioDTE>`;
+  const r=leerDtesXml(xml,'76111111-1','Bsale');
+  ok('xml: lee 2 documentos válidos',r.documentos.length===2);
+  ok('xml: emitido por la empresa = Venta; recibido = Compra',r.documentos[0].tipoRegistro==='Venta'&&r.documentos[1].tipoRegistro==='Compra');
+  ok('xml: montos, período, origen y facturador',r.documentos[0].montoTotal===1190&&r.documentos[0].period==='2026-10'&&r.documentos[0].origenDocumento==='FACTURADOR_EXTERNO'&&r.documentos[0].facturadorNombre==='Bsale');
+  ok('xml: decodifica caracteres especiales',r.documentos[0].razonSocialEmisor==='Emisor & Cía');
+  ok('xml: omite ajeno y descuadrado con motivo',r.omitidos.length===2&&r.omitidos.some(o=>o.folio==='9')&&r.omitidos.some(o=>o.folio==='7'));
+}
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

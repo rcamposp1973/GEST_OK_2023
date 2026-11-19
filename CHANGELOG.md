@@ -9,6 +9,15 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.16.2 — 19 de noviembre de 2026 — Aprobación de Compras y Ventas: sin aprobación por defecto, 1 o 2 niveles a elección [solo Pruebas]
+
+- Las órdenes de compra y de venta parten sin aprobación: al emitirlas quedan aprobadas.
+- En Configuración, cada empresa elige: Sin aprobación, 1 nivel o 2 niveles, y los correos de los aprobadores de cada nivel (se exige al menos uno por nivel elegido). Un administrador del estudio siempre puede aprobar.
+- Se eliminó el monto mínimo para el nivel 2: ahora el nivel lo define la empresa.
+- Las configuraciones ya guardadas siguen funcionando.
+
+---
+
 ## 1.16.1 — 19 de noviembre de 2026 — Compras y Ventas son módulos adicionales por plan [solo Pruebas]
 
 - Compras y Ventas ahora se contratan aparte: aparecen en la matriz de módulos del estudio (Super Administrador) y ningún plan los incluye por defecto.

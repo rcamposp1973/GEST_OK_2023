@@ -8,7 +8,7 @@ import type {
 } from '../types';
 import {
   CONFIG_COMPRAS_INICIAL, ESTADOS_OC, armarAsientoRecepcion, calcularTotales, cantidadPendiente,
-  estadoAlEnviar, estadoSegunRecepcion, estadoTrasAprobar, fxrAbierto, fxrContabilizado, fxrFacturado,
+  estadoAlEnviar, nivelesAprobacion, estadoSegunRecepcion, estadoTrasAprobar, fxrAbierto, fxrContabilizado, fxrFacturado,
   importeLinea, montoRecepcionLinea, puedeAprobar, referenciaOC, sugerirFxrNeto
 } from '../utils/compras';
 import { imprimirOrdenCompra } from '../utils/ordenCompraImpresion';
@@ -234,7 +234,9 @@ function ConfigPanel({ cfg, accounts, disabled, onSave }: { cfg: PurchasesConfig
   const [n1, setN1] = useState((cfg.level1Emails || []).join(', '));
   const [n2, setN2] = useState((cfg.level2Emails || []).join(', '));
   const [guardando, setGuardando] = useState(false);
+  const niveles = nivelesAprobacion(c);
   const lista = (t: string) => t.split(/[,;\s]+/).map(x => x.trim().toLowerCase()).filter(Boolean);
+  const faltanAprobadores = niveles > 0 && (lista(n1).length === 0 || (niveles === 2 && lista(n2).length === 0));
   const imputables = accounts.filter(a => a.isImputable !== false);
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4 max-w-3xl">
@@ -253,25 +255,28 @@ function ConfigPanel({ cfg, accounts, disabled, onSave }: { cfg: PurchasesConfig
           return ok ? null : <p className="text-xs text-amber-700 mt-1">Recomendado: marca esta cuenta con “Requiere auxiliar RUT” y “Requiere documento” en el plan de cuentas, para que la recepción y la factura se neteen por proveedor y O/C en Auxiliares.</p>;
         })()}
       </div>
-      <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-        <input disabled={disabled} type="checkbox" className="accent-blue-600 h-4 w-4" checked={c.approvalRequired} onChange={e => setC({ ...c, approvalRequired: e.target.checked })} />
-        Las órdenes de compra necesitan aprobación
-      </label>
-      {c.approvalRequired && (
+      <div>
+        <label className="text-sm font-semibold text-slate-700">Aprobación de las órdenes de compra</label>
+        <p className="text-xs text-slate-500 mb-1">Por defecto no necesitan aprobación. Si eliges 1 o 2 niveles, la orden queda esperando a los aprobadores antes de poder usarse.</p>
+        <select disabled={disabled} className={inputCls + ' max-w-xs'} value={niveles} onChange={e => setC({ ...c, approvalLevels: Number(e.target.value) as 0 | 1 | 2, approvalRequired: Number(e.target.value) > 0 })}>
+          <option value={0}>Sin aprobación</option>
+          <option value={1}>1 nivel de aprobación</option>
+          <option value={2}>2 niveles de aprobación</option>
+        </select>
+      </div>
+      {niveles > 0 && (
         <div className="grid md:grid-cols-2 gap-3">
           <div>
             <label className="text-sm font-semibold text-slate-700">Aprobadores nivel 1 (correos)</label>
             <textarea disabled={disabled} rows={2} className={inputCls} value={n1} onChange={e => setN1(e.target.value)} placeholder="jefe@empresa.cl, otro@empresa.cl" />
           </div>
-          <div>
-            <label className="text-sm font-semibold text-slate-700">Aprobadores nivel 2 (correos)</label>
-            <textarea disabled={disabled} rows={2} className={inputCls} value={n2} onChange={e => setN2(e.target.value)} placeholder="gerente@empresa.cl" />
-          </div>
-          <div className="md:col-span-2">
-            <label className="text-sm font-semibold text-slate-700">Total desde el cual se exige también el nivel 2</label>
-            <p className="text-xs text-slate-500 mb-1">Con 0, toda orden pasa por los dos niveles (si hay aprobadores de nivel 2).</p>
-            <input disabled={disabled} type="number" min={0} className={inputCls + ' max-w-xs'} value={c.level2MinAmount} onChange={e => setC({ ...c, level2MinAmount: Number(e.target.value) || 0 })} />
-          </div>
+          {niveles === 2 && (
+            <div>
+              <label className="text-sm font-semibold text-slate-700">Aprobadores nivel 2 (correos)</label>
+              <textarea disabled={disabled} rows={2} className={inputCls} value={n2} onChange={e => setN2(e.target.value)} placeholder="gerente@empresa.cl" />
+            </div>
+          )}
+          {faltanAprobadores && <p className="md:col-span-2 text-xs text-rose-700">Falta indicar al menos un correo por cada nivel elegido. Un administrador del estudio siempre puede aprobar.</p>}
         </div>
       )}
       <div className="grid md:grid-cols-2 gap-3">
@@ -282,9 +287,9 @@ function ConfigPanel({ cfg, accounts, disabled, onSave }: { cfg: PurchasesConfig
       </div>
       <div><label className="text-sm font-semibold text-slate-700">Texto al pie de la O/C impresa</label>
         <textarea disabled={disabled} rows={2} className={inputCls} value={c.footerNotes || ''} onChange={e => setC({ ...c, footerNotes: e.target.value })} placeholder="Indicar N° de O/C en la factura. Despachar con guía de despacho." /></div>
-      <button className={btnPri} disabled={disabled || guardando} onClick={async () => {
+      <button className={btnPri} disabled={disabled || guardando || faltanAprobadores} onClick={async () => {
         setGuardando(true);
-        try { await onSave({ ...c, level1Emails: lista(n1), level2Emails: lista(n2) }); } finally { setGuardando(false); }
+        try { await onSave({ ...c, approvalLevels: niveles, approvalRequired: niveles > 0, level1Emails: lista(n1), level2Emails: niveles === 2 ? lista(n2) : [], level2MinAmount: 0 }); } finally { setGuardando(false); }
       }}>Guardar configuración</button>
     </div>
   );

@@ -5,7 +5,8 @@ import type {
 export const TASA_IVA = 0.19;
 
 export const CONFIG_COMPRAS_INICIAL: PurchasesConfig = {
-  approvalRequired: true,
+  approvalRequired: false, // por naturaleza sin aprobación
+  approvalLevels: 0,
   level1Emails: [],
   level2Emails: [],
   level2MinAmount: 0,
@@ -43,19 +44,21 @@ export function calcularTotales(lines: PurchaseOrderLine[]) {
 
 const norm = (e: string) => (e || '').trim().toLowerCase();
 
-export function requiereNivel2(total: number, cfg: PurchasesConfig): boolean {
-  return (cfg.level2Emails || []).length > 0 && total >= (Number(cfg.level2MinAmount) || 0);
+/** Niveles de aprobación definidos por el usuario: 0 = sin aprobación, 1 o 2. (Compatible con configuraciones antiguas.) */
+export function nivelesAprobacion(cfg: PurchasesConfig): 0 | 1 | 2 {
+  if (cfg.approvalLevels === 0 || cfg.approvalLevels === 1 || cfg.approvalLevels === 2) return cfg.approvalLevels;
+  if (!cfg.approvalRequired) return 0;
+  return (cfg.level2Emails || []).length > 0 ? 2 : 1;
 }
 
-/** Estado al que pasa una O/C cuando se envía a aprobación. */
+/** Estado al que pasa una orden cuando se emite: sin aprobación queda aprobada; con aprobación espera al nivel 1. */
 export function estadoAlEnviar(cfg: PurchasesConfig): PurchaseOrderStatus {
-  if (!cfg.approvalRequired || (cfg.level1Emails || []).length === 0) return 'APROBADA';
-  return 'PENDIENTE_N1';
+  return nivelesAprobacion(cfg) === 0 ? 'APROBADA' : 'PENDIENTE_N1';
 }
 
 /** Estado después de aprobar el nivel indicado. */
-export function estadoTrasAprobar(level: 1 | 2, total: number, cfg: PurchasesConfig): PurchaseOrderStatus {
-  if (level === 1 && requiereNivel2(total, cfg)) return 'PENDIENTE_N2';
+export function estadoTrasAprobar(level: 1 | 2, _total: number, cfg: PurchasesConfig): PurchaseOrderStatus {
+  if (level === 1 && nivelesAprobacion(cfg) === 2) return 'PENDIENTE_N2';
   return 'APROBADA';
 }
 

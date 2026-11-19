@@ -1343,6 +1343,7 @@ export interface LandingPricingPlan {
 export interface PurchasesConfig {
   facturasPorRecibirAccountId?: string; // Cuenta del plan de cuentas "Facturas por Recibir" (la elige el usuario, el sistema no la crea)
   approvalRequired: boolean; // Si la O/C necesita aprobación antes de enviarse
+  approvalLevels?: 0 | 1 | 2; // Niveles de aprobación que define el usuario (0 = sin aprobación, por defecto)
   level1Emails: string[]; // Aprobadores nivel 1
   level2Emails: string[]; // Aprobadores nivel 2
   level2MinAmount: number; // Total desde el cual se exige también el nivel 2 (0 = siempre ambos niveles)
@@ -1439,6 +1440,7 @@ export interface PurchaseOrder {
 export interface SalesConfig {
   facturasPorEmitirAccountId?: string; // Cuenta "Facturas por Emitir" del plan de cuentas (la elige el usuario; el sistema no la crea)
   approvalRequired: boolean;
+  approvalLevels?: 0 | 1 | 2; // Niveles de aprobación que define el usuario (0 = sin aprobación, por defecto)
   level1Emails: string[];
   level2Emails: string[];
   level2MinAmount: number;

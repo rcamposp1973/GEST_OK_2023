@@ -172,9 +172,7 @@ export default function Login({ onBackToLanding, initialEmail = '' }: LoginProps
               <div />
             )}
 
-            <span className="text-[10px] font-mono font-medium tracking-wide px-2 py-0.5 rounded bg-slate-100 text-slate-600 uppercase border border-slate-200">
-              {APP_VERSION_FULL}
-            </span>
+            <span className="text-xs text-slate-400">{APP_VERSION_FULL}</span>
           </div>
 
           {/* Logo de Marca Minimalista */}
@@ -183,13 +181,8 @@ export default function Login({ onBackToLanding, initialEmail = '' }: LoginProps
               <Activity className="w-4.5 h-4.5 stroke-[2.25]" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xl font-bold tracking-tight text-slate-900">Gest_OK</span>
-                <span className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded bg-slate-100 text-slate-700 border border-slate-200">
-                  ERP
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500 font-normal">Software Contable, Financiero & Tributario</p>
+              <span className="text-xl font-bold tracking-tight text-slate-900">Gest_OK</span>
+              <p className="text-xs text-slate-500">Contabilidad, finanzas e impuestos</p>
             </div>
           </div>
 
@@ -200,8 +193,8 @@ export default function Login({ onBackToLanding, initialEmail = '' }: LoginProps
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 mt-1 leading-relaxed">
               {isResetMode
-                ? 'Ingresa tu correo o RUT corporativo registrado para enviar el enlace de recuperación.'
-                : 'Ingresa tus credenciales para acceder a la gestión contable de tu estudio o empresa.'}
+                ? 'Te enviaremos un enlace a tu correo.'
+                : 'Ingresa con tu correo o RUT.'}
             </p>
           </div>
 
@@ -266,7 +259,7 @@ export default function Login({ onBackToLanding, initialEmail = '' }: LoginProps
                   className="text-xs font-semibold text-[#533AFD] hover:underline inline-flex items-center gap-1.5 transition cursor-pointer"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
-                  <span>Volver a Iniciar Sesión</span>
+                  <span>Volver a iniciar sesión</span>
                 </button>
               </div>
             </form>
@@ -337,7 +330,7 @@ export default function Login({ onBackToLanding, initialEmail = '' }: LoginProps
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <>
-                    <span>Iniciar Sesión en Gest_OK</span>
+                    <span>Iniciar sesión</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
@@ -365,10 +358,13 @@ export default function Login({ onBackToLanding, initialEmail = '' }: LoginProps
         <div className="mt-8 pt-5 border-t border-slate-100 flex items-center justify-between gap-3 text-[11px] text-[#64748D]">
           <div className="flex items-center gap-1.5">
             <ShieldCheck className="w-4 h-4 text-[#059669]" />
-            <span>Conexión Encriptada SSL 256-bit</span>
+            <span>Conexión cifrada</span>
           </div>
           <span>PulsoContable SpA &bull; Chile</span>
         </div>
+        <p className="mt-4 text-center text-[11px] text-slate-400">
+          Pensado y desarrollado por Ramón Campos, con el apoyo de Claude, de Anthropic.
+        </p>
 
       </div>
     </div>

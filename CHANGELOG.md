@@ -9,6 +9,11 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## [1.16.4] - Etapa 3 del orden técnico: numeración única
+- Kardex, Activo fijo, Rendición de gastos y Gestión Comercial ya no inventan el número del comprobante al azar: usan el contador único de la empresa (no repite ni retrocede respecto de los existentes).
+- Ajustes de Kardex y operaciones comerciales también pasan por ese contador.
+- Nueva prueba automática que impide volver a numerar al azar.
+
 ## [1.16.3] - Etapa 1 del orden técnico: red de seguridad
 - Nuevo `npm test`: pruebas automáticas de asientos de compras/ventas, aprobación y compensación parcial.
 - Nuevo `npm run typecheck`: revisa tipos en cada despliegue y falla solo si aparecen errores NUEVOS (los 50 antiguos quedan en `scripts/tsc-baseline.txt` y se irán eliminando).

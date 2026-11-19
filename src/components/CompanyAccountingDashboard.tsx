@@ -619,17 +619,12 @@ export default function CompanyAccountingDashboard({
 
       // 3. Guardar comprobantes contables generados automáticamente
       for (const v of vouchersToCreate) {
-        const vYear = v.date ? new Date(v.date).getFullYear() : new Date().getFullYear();
-        const yearVouchers = vouchers.filter(item => {
-          const itemYear = item.date ? new Date(item.date).getFullYear() : 0;
-          return itemYear === vYear;
-        });
-        const nextNum = yearVouchers.length > 0 ? Math.max(...yearVouchers.map(x => x.voucherNumber || 0)) + 1 : 1;
+        const nextNum = await siguienteNumeroComprobante();
         
         const sanitizedLines = sanitizeVoucherLines(v.lines || [], accounts);
         const voucherPayload = {
           ...v,
-          voucherNumber: v.voucherNumber || nextNum,
+          voucherNumber: nextNum,
           lines: sanitizedLines,
           creationMode: 'AUTOMATICO' as const,
           createdAt: new Date().toISOString()
@@ -868,12 +863,7 @@ export default function CompanyAccountingDashboard({
 
       // Si se solicitó comprobante contable automático por merma, consumo o ajuste
       if (autoVoucher && autoVoucher.lines && autoVoucher.lines.length > 0) {
-        const vYear = autoVoucher.date ? new Date(autoVoucher.date).getFullYear() : new Date().getFullYear();
-        const yearVouchers = vouchers.filter(item => {
-          const itemYear = item.date ? new Date(item.date).getFullYear() : 0;
-          return itemYear === vYear;
-        });
-        const nextVNum = yearVouchers.length > 0 ? Math.max(...yearVouchers.map(x => x.voucherNumber || 0)) + 1 : 1;
+        const nextVNum = await siguienteNumeroComprobante();
         const vLines = autoVoucher.lines as VoucherLine[];
         const totDeb = vLines.reduce((acc, l) => acc + (Number(l.debit) || 0), 0);
         const totCred = vLines.reduce((acc, l) => acc + (Number(l.credit) || 0), 0);
@@ -3656,6 +3646,12 @@ export default function CompanyAccountingDashboard({
       lastModifiedBy: userUid,
       lastModifiedAt: nowIso
     };
+  };
+
+  // Punto único para numerar comprobantes nuevos (contador atómico; nunca repite ni retrocede respecto de los existentes).
+  const siguienteNumeroComprobante = async (): Promise<number> => {
+    const maxLocal = vouchers.reduce((m, x) => Math.max(m, x.voucherNumber || 0), 0);
+    return getNextVoucherNumber(studyId, company.id, 0, maxLocal);
   };
 
   // ── Módulo Compras: comprobantes de recepción (y su reverso) ──
@@ -9612,6 +9608,7 @@ export default function CompanyAccountingDashboard({
           onCentralizeVoucher={async (voucherData) => {
             const docRef = await addDoc(collection(companyRef, 'vouchers'), {
               ...voucherData,
+              voucherNumber: await siguienteNumeroComprobante(),
               createdAt: new Date().toISOString()
             });
             await fetchData();
@@ -9652,6 +9649,7 @@ export default function CompanyAccountingDashboard({
           onCentralizeVoucher={async (voucherData) => {
             const docRef = await addDoc(collection(companyRef, 'vouchers'), {
               ...voucherData,
+              voucherNumber: await siguienteNumeroComprobante(),
               createdAt: new Date().toISOString()
             });
             await fetchData();
@@ -9692,6 +9690,7 @@ export default function CompanyAccountingDashboard({
           onCentralizeVoucher={async (voucherData) => {
             const docRef = await addDoc(collection(companyRef, 'vouchers'), {
               ...voucherData,
+              voucherNumber: await siguienteNumeroComprobante(),
               createdAt: new Date().toISOString()
             });
             await fetchData();

@@ -438,7 +438,7 @@ export const RendicionGastosView: React.FC<RendicionGastosViewProps> = ({
       const totalCredit = lines.reduce((s, l) => s + (l.credit || 0), 0);
 
       const voucherPayload: Omit<Voucher, 'id' | 'createdAt'> = {
-        voucherNumber: 700 + Math.floor(Math.random() * 90),
+        voucherNumber: 0 /* lo asigna el contador único al guardar */,
         date: rep.date,
         period: rep.period,
         type: 'Traspaso',

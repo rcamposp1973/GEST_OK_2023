@@ -80,4 +80,13 @@ import { repartoParcial, pareadoPorLinea } from '../src/utils/pareoParcial';
   const m=pareadoPorLinea([{matchedLines:[{voucherId:'V1',lineIndex:0,debit:100,credit:0} as any]},{status:'DESCALZADO',matchedLines:[{voucherId:'V1',lineIndex:0,debit:999,credit:0} as any]}]);
   ok('pareo: ignora pareos descalzados',m.get('V1_0')?.debit===100);
 }
+// ===== NUMERACIÓN: nadie inventa números de comprobante al azar =====
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join } from 'node:path';
+{
+  const archivos:string[]=[]; const rec=(d:string)=>readdirSync(d).forEach(f=>{const p=join(d,f); statSync(p).isDirectory()?rec(p):/\.(ts|tsx)$/.test(f)&&archivos.push(p);});
+  rec('src');
+  const malos=archivos.filter(f=>/(voucherNumber|nextNum\w*)\s*[:=][^\n]*Math\.random/.test(readFileSync(f,'utf8')));
+  ok('numeración: ningún comprobante usa número al azar'+(malos.length?' ('+malos.join(', ')+')':''),malos.length===0);
+}
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

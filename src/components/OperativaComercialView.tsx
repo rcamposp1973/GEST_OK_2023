@@ -290,7 +290,7 @@ export const OperativaComercialView: React.FC<OperativaComercialViewProps> = ({
     const generatedVouchers: Voucher[] = [];
 
     // A. Asiento Comercial (Venta / Compra)
-    const voucherNumberBase = Math.floor(1000 + Math.random() * 9000);
+    const voucherNumberBase = 0 /* lo asigna el contador único al guardar */;
     const voucherIdOp = `vouch-${Date.now()}-op`;
 
     if (opType === 'VENTA') {

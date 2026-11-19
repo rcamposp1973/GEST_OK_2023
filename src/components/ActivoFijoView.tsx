@@ -232,7 +232,7 @@ export const ActivoFijoView: React.FC<ActivoFijoViewProps> = ({
       const voucher = {
         companyId: company.id,
         period: `${calculationYear}-12`,
-        voucherNumber: 900 + Math.floor(Math.random() * 90),
+        voucherNumber: 0 /* lo asigna el contador único al guardar */,
         voucherType: 'Traspaso' as const,
         date: `${calculationYear}-12-31`,
         type: 'Traspaso' as const,

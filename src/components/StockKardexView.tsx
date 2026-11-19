@@ -497,7 +497,7 @@ export const StockKardexView: React.FC<StockKardexViewProps> = ({
       const voucher = {
         companyId,
         period: periodStr,
-        voucherNumber: 800 + Math.floor(Math.random() * 90),
+        voucherNumber: 0 /* lo asigna el contador único al guardar */,
         voucherType: 'Traspaso' as const,
         date: `${periodStr}-${new Date(Number(periodStr.slice(0, 4)), Number(periodStr.slice(5, 7)), 0).getDate()}`,
         type: 'Traspaso' as const,

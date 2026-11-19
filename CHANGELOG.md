@@ -9,6 +9,9 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## [1.17.1] - Página de bienvenida
+- Pie de página con la autoría: pensado y desarrollado por Ramón Campos, con el apoyo de Claude, de Anthropic.
+
 ## [1.17.0] - Preparado para facturadores externos
 - Registro de Compras y Ventas: nuevo botón "Cargar XML de facturador" para cargar los DTE (XML) emitidos o recibidos desde cualquier facturador autorizado (Bsale, Nubox, Haulmer, SimpleFactura, portal del SII). Decide solo si es Venta o Compra según el RUT de la empresa, omite lo que no cuadra o no pertenece y avisa por qué. No duplica documentos ya cargados.
 - Cada documento del RCV guarda su origen (digitado, RCV del SII, facturador externo, demostración) y el nombre del facturador.

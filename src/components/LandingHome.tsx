@@ -245,6 +245,9 @@ export default function LandingHome({ onGoToLogin }: LandingHomeProps) {
           <span><b className="text-slate-900">Gest_OK</b> {APP_VERSION}, Santiago de Chile</span>
           <span>&copy; {new Date().getFullYear()} PulsoContable SpA</span>
         </div>
+        <p className="max-w-6xl mx-auto px-5 mt-3 text-center sm:text-left">
+          Pensado y desarrollado por Ramón Campos, con el apoyo de Claude, de Anthropic.
+        </p>
       </footer>
     </div>
   );

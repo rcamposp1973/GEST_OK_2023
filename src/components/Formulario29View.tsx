@@ -1755,7 +1755,7 @@ export default function Formulario29View({
           }`}
         >
           <span> Auditoría y Trazabilidad RCV</span>
-          <span className="bg-slate-100 text-slate-700 px-1.5 py-0.2 rounded-full text-[10px]">{periodDocs.length} docs</span>
+          <span className="text-slate-700 text-[10px]">{periodDocs.length} docs</span>
         </button>
 
         <button
@@ -1778,7 +1778,7 @@ export default function Formulario29View({
           }`}
         >
           <span> Historial de Declaraciones F29</span>
-          <span className="bg-slate-100 text-slate-700 px-1.5 py-0.2 rounded-full text-[10px]">{savedDeclarations.length}</span>
+          <span className="text-slate-700 text-[10px]">{savedDeclarations.length}</span>
         </button>
       </div>
 

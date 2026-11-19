@@ -9,6 +9,9 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## [1.17.4] - Menos píldoras
+- Las píldoras neutras (contadores, etiquetas informativas) pasan a texto simple en 16 lugares. Se mantienen las que indican estado (éxito, alerta, error).
+
 ## [1.17.3] - Login más limpio
 - Se quitan la pastilla "ERP" y la versión en recuadro; textos más cortos ("Iniciar sesión", "Conexión cifrada"); autoría al pie.
 

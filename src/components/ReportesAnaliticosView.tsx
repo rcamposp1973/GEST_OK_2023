@@ -1305,7 +1305,7 @@ export default function ReportesAnaliticosView({
         >
           <TableIcon className="w-4 h-4" />
           <span>Matriz Dinámica de Análisis (Pivot Contable)</span>
-          <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-600 font-normal">
+          <span className="text-[10px] text-slate-600 font-normal">
             Centros de Costo & Gastos
           </span>
         </button>

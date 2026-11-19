@@ -2424,7 +2424,7 @@ export default function EmisionDteView({
                     <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
                       <span> Credencial 2: Empresa (Boletas de Honorarios BHE & F29)</span>
                     </h4>
-                    <span className="text-[10px] bg-slate-200 text-slate-800 font-bold px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] text-slate-800 font-bold">
                       Acceso Directo Empresa
                     </span>
                   </div>

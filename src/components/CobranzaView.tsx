@@ -814,7 +814,7 @@ export default function CobranzaView({
           }`}
         >
           <span> Historial de Recaudaciones</span>
-          <span className="bg-slate-100 text-slate-700 px-1.5 py-0.2 rounded-full text-[10px] font-bold">{collectionRecords.length}</span>
+          <span className="text-slate-700 text-[10px] font-bold">{collectionRecords.length}</span>
         </button>
 
         <button

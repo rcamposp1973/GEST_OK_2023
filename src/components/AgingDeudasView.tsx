@@ -601,7 +601,7 @@ export const AgingDeudasView: React.FC<AgingDeudasViewProps> = ({
                           {item.diasMora > 0 ? `+${item.diasMora}d` : `${item.diasMora}d`}
                         </td>
                         <td className="p-2.5 text-center">
-                          <span className="bg-slate-100 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-slate-200">
+                          <span className="text-slate-700 text-[10px] font-bold">
                             {item.bucket}
                           </span>
                         </td>
@@ -686,7 +686,7 @@ export const AgingDeudasView: React.FC<AgingDeudasViewProps> = ({
                           {item.diasMora > 0 ? `+${item.diasMora}d` : `${item.diasMora}d`}
                         </td>
                         <td className="p-2.5 text-center">
-                          <span className="bg-slate-100 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-slate-200">
+                          <span className="text-slate-700 text-[10px] font-bold">
                             {item.bucket}
                           </span>
                         </td>

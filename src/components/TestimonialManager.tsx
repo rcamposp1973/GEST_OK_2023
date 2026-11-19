@@ -492,7 +492,7 @@ export default function TestimonialManager() {
             <h3 className="font-bold text-sm text-[#0D253D]">
               Diapositivas Activas en Portada ({testimonials.length})
             </h3>
-            <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-mono">
+            <span className="text-[10px] text-slate-600 font-mono">
               Rotación en tiempo real
             </span>
           </div>

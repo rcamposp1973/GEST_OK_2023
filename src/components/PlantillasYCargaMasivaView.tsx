@@ -656,7 +656,7 @@ export default function PlantillasYCargaMasivaView({
           }`}
         >
           <span> Importar Plan de Cuentas</span>
-          <span className="bg-slate-100 text-slate-700 px-1.5 py-0.2 rounded-full text-[10px]">{accounts.length} actuales</span>
+          <span className="text-slate-700 text-[10px]">{accounts.length} actuales</span>
         </button>
 
         <button
@@ -668,7 +668,7 @@ export default function PlantillasYCargaMasivaView({
           }`}
         >
           <span> Importar Clientes y Proveedores (Auxiliares)</span>
-          <span className="bg-slate-100 text-slate-700 px-1.5 py-0.2 rounded-full text-[10px]">{auxiliaries.length} actuales</span>
+          <span className="text-slate-700 text-[10px]">{auxiliaries.length} actuales</span>
         </button>
       </div>
 

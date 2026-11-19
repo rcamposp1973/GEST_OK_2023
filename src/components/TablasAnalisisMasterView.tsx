@@ -612,7 +612,7 @@ export default function TablasAnalisisMasterView({
           }`}
         >
           <span>Centros de Costo</span>
-          <span className="px-1.5 py-0.2 bg-slate-200 text-slate-700 rounded-full text-[10px] font-mono font-bold">
+          <span className="text-slate-700 text-[10px] font-mono font-bold">
             {costCenters.length}
           </span>
         </button>
@@ -626,7 +626,7 @@ export default function TablasAnalisisMasterView({
           }`}
         >
           <span>Ítems de Gasto</span>
-          <span className="px-1.5 py-0.2 bg-slate-200 text-slate-700 rounded-full text-[10px] font-mono font-bold">
+          <span className="text-slate-700 text-[10px] font-mono font-bold">
             {expenseItems.length}
           </span>
         </button>
@@ -640,7 +640,7 @@ export default function TablasAnalisisMasterView({
           }`}
         >
           <span>Documentos No SII / Internos</span>
-          <span className="px-1.5 py-0.2 bg-slate-200 text-slate-700 rounded-full text-[10px] font-mono font-bold">
+          <span className="text-slate-700 text-[10px] font-mono font-bold">
             {nonSiiDocTypes.length}
           </span>
         </button>
@@ -654,7 +654,7 @@ export default function TablasAnalisisMasterView({
           }`}
         >
           <span>Proyectos / Obras</span>
-          <span className="px-1.5 py-0.2 bg-slate-200 text-slate-700 rounded-full text-[10px] font-mono font-bold">
+          <span className="text-slate-700 text-[10px] font-mono font-bold">
             {projects.length}
           </span>
         </button>
@@ -668,7 +668,7 @@ export default function TablasAnalisisMasterView({
           }`}
         >
           <span>Productos / Servicios</span>
-          <span className="px-1.5 py-0.2 bg-slate-200 text-slate-700 rounded-full text-[10px] font-mono font-bold">
+          <span className="text-slate-700 text-[10px] font-mono font-bold">
             {products.length}
           </span>
         </button>

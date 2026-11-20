@@ -32,6 +32,7 @@ export interface StudyModulePermissions {
   copilotoIA?: boolean; // Cuadernos inteligentes y Copiloto IA
   compras?: boolean; // Módulo adicional: Órdenes de Compra, recepción y Facturas por Recibir (se contrata aparte)
   ventas?: boolean; // Módulo adicional: Órdenes de Venta, entrega y Facturas por Emitir (se contrata aparte)
+  agente?: boolean; // Agente de IA (piloto): lo asigna el Super Admin; el administrador del estudio lo asigna a sus usuarios
   [key: string]: boolean | undefined;
 }
 

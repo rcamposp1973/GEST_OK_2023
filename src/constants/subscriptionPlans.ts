@@ -129,6 +129,14 @@ export const SYSTEM_MODULES_CATALOG: SystemModuleMetadata[] = [
     icon: '',
     isAddonForBasic: true
   },
+  {
+    key: 'agente',
+    label: 'Agente de IA (piloto): reclasificación asistida',
+    category: 'AVANZADO',
+    description: 'Agente que prepara reclasificaciones de cuentas a partir de una instrucción; el usuario aprueba una vista previa. En piloto: solo Super Admin y usuarios autorizados. Adicional con costo cuando se ofrezca.',
+    icon: '',
+    isAddonForBasic: true
+  },
   // 6. Personal & Remuneraciones
   {
     key: 'remuneraciones',

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { provisionAuthUser } from '../utils/adminApi';
 import { db } from '../lib/firebase';
 import { collection, getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc, setDoc } from 'firebase/firestore';
+import { puedeAsignarAgente } from '../utils/agenteAcceso';
 import { User, Company, UserRole, Assignment, Study, ChartOfAccount, Voucher, RCVDocument, BankReconciliation, FiscalPeriodYear, DTEConfig } from '../types';
 import CompanyAccountingDashboard from './CompanyAccountingDashboard';
 import ClientExecutiveManagementView from './ClientExecutiveManagementView';
@@ -64,6 +65,8 @@ export default function StudyAdminDashboard({
   const isCurrentStudyTest = isTestStudy(studyId, studyData?.name);
   const comprasContratado = studyData?.modules?.compras === true;
   const ventasContratado = studyData?.modules?.ventas === true;
+  const agenteContratado = studyData?.modules?.agente === true;
+  const puedeAsignarAgenteAhora = puedeAsignarAgente(currentUserRole as string, agenteContratado);
 
   // Test Study Purge states
   const [isTestPurging, setIsTestPurging] = useState(false);
@@ -370,6 +373,7 @@ export default function StudyAdminDashboard({
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
     const role = (formData.get('role') as UserRole) || UserRole.ACCOUNTANT;
+    const agenteHabilitado = formData.get('agenteHabilitado') === 'on';
     const estado = (formData.get('estado') as 'Activo' | 'Inactivo') || 'Activo';
 
     if (!name || !email) {
@@ -405,6 +409,7 @@ export default function StudyAdminDashboard({
       await provisionAuthUser({ email, password: password || undefined, name, role, studyId });
       if (editingUser) {
         const updateData: any = { name, email, role, estado };
+        if (puedeAsignarAgenteAhora) updateData.agenteHabilitado = agenteHabilitado;
         if (password) updateData.password = password;
         await updateDoc(doc(studyRef, 'users', editingUser.id), updateData);
         alert('Usuario actualizado exitosamente.');
@@ -417,6 +422,7 @@ export default function StudyAdminDashboard({
           password,
           role,
           estado: 'Activo',
+          ...(puedeAsignarAgenteAhora ? { agenteHabilitado } : {}),
           createdAt: new Date()
         });
         alert('Usuario registrado exitosamente.');
@@ -1154,6 +1160,12 @@ export default function StudyAdminDashboard({
                       <option value={UserRole.STUDY_ADMIN}>Administrador de Estudio (Gestión Completa)</option>
                     </select>
                   </div>
+                  {puedeAsignarAgenteAhora && (
+                    <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+                      <input type="checkbox" name="agenteHabilitado" defaultChecked={!!(editingUser as any)?.agenteHabilitado} className="w-4 h-4" />
+                      Puede usar el Agente de IA
+                    </label>
+                  )}
                   <div className="flex gap-2 pt-2">
                     <button type="submit" className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2.5 rounded-lg transition-colors">
                       {editingUser ? 'Guardar Cambios' : 'Registrar Usuario'}

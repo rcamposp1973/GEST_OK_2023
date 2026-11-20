@@ -9,6 +9,12 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## [1.18.0] - Agente de reclasificación (piloto, solo Pruebas)
+- Nuevo agente: escribes qué reclasificar ("gastos de combustible de septiembre y octubre a movilización"); la IA solo interpreta la instrucción, y el sistema selecciona los movimientos, calcula los montos y muestra una vista previa. Nada se crea hasta que apruebas.
+- Al aprobar crea un comprobante de reclasificación por mes (Debe y Haber invertidos entre las dos cuentas), con cuadre obligatorio, contador único y registro de auditoría. Los comprobantes originales no se tocan y una misma reclasificación no se aplica dos veces.
+- Acceso: fase piloto. Solo Super Admin y campos.ramon@gmail.com (y este último solo en estudios a los que el Super Admin asignó el agente, en la matriz de módulos). Está listo el esquema para abrirlo después: el administrador del estudio podrá asignarlo a sus analistas y contadores (casilla "Puede usar el Agente de IA" en la ficha del usuario).
+- El servidor vuelve a comprobar el acceso; no basta con ocultar el botón.
+
 ## [1.17.4] - Menos píldoras
 - Las píldoras neutras (contadores, etiquetas informativas) pasan a texto simple en 16 lugares. Se mantienen las que indican estado (éxito, alerta, error).
 

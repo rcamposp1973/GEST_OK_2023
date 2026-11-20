@@ -10,6 +10,7 @@ interface Props {
   pinnedIds?: string[];
   periodLabel?: string;
   comprasHabilitado?: boolean;
+  agenteHabilitado?: boolean;
   ventasHabilitado?: boolean;
 }
 
@@ -24,11 +25,11 @@ const AREAS: { cat: ModuleCategory; titulo: string; desc: string; icon: any; ton
   { cat: 'CONFIGURACIONES', titulo: 'Configuración', desc: 'Plan de cuentas y maestros', icon: Settings, tono: '#475569' },
 ];
 
-export default function HomeModulesView({ onOpenModule, stats = [], pinnedIds = [], periodLabel, comprasHabilitado = false, ventasHabilitado = false }: Props) {
+export default function HomeModulesView({ onOpenModule, stats = [], pinnedIds = [], periodLabel, comprasHabilitado = false, ventasHabilitado = false, agenteHabilitado = false }: Props) {
   const [q, setQ] = useState('');
   const [abierta, setAbierta] = useState<ModuleCategory>('FINANZAS');
 
-  const catalogo = useMemo(() => COCKPIT_MODULE_CATALOG.filter(m => (m.requiere !== 'compras' || comprasHabilitado) && (m.requiere !== 'ventas' || ventasHabilitado)), [comprasHabilitado, ventasHabilitado]);
+  const catalogo = useMemo(() => COCKPIT_MODULE_CATALOG.filter(m => (m.requiere !== 'compras' || comprasHabilitado) && (m.requiere !== 'ventas' || ventasHabilitado) && (m.requiere !== 'agente' || agenteHabilitado)), [comprasHabilitado, ventasHabilitado, agenteHabilitado]);
   const porId = useMemo(() => new Map(catalogo.map(m => [m.id, m])), [catalogo]);
   const frecuentes = useMemo(
     () => pinnedIds.map(id => porId.get(id)).filter((m): m is NonNullable<typeof m> => !!m && m.id !== 'calculator').slice(0, 8),

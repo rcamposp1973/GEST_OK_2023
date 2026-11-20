@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import HomeModulesView from './HomeModulesView';
 import BuscadorComprobantesView from './BuscadorComprobantesView';
 import { db, auth } from '../lib/firebase';
-import { collection, getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc, setDoc, onSnapshot } from 'firebase/firestore';
+import { collection, getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc, setDoc, onSnapshot, query, where } from 'firebase/firestore';
 import { Company, DTEConfig, ChartOfAccount, Auxiliary, ExchangeRate, FiscalPeriodYear, RCVDocument, Voucher, VoucherLine, RCVAccountingParams, MasterAccountingParameters, BankReconciliation, UserRole, CostCenterMaster, ExpenseItemMaster, NonSiiDocTypeMaster, ProjectMaster, ProductMaster, CustomAnalysisTableItem, CommercialDocument, InventoryMovement, ProductService, Employee, PayrollSlip, Warehouse } from '../types';
 import { EmployeesView } from './EmployeesView';
 import { LiquidacionSueldosView } from './LiquidacionSueldosView';
@@ -51,6 +51,8 @@ import ComprasView from './ComprasView';
 import VentasView from './VentasView';
 import { getNextVoucherNumber } from '../utils/voucherCounter';
 import { leerDtesXml } from '../utils/dteXmlImport';
+import AgenteReclasificadorView from './AgenteReclasificadorView';
+import { puedeUsarAgente, AGENTE_FASE_PILOTO } from '../utils/agenteAcceso';
 import { crearComprobante, reversarLineas, type ContextoContable } from '../utils/capaContable';
 import { StockKardexView } from './StockKardexView';
 import { WarehousesView } from './WarehousesView';
@@ -123,6 +125,7 @@ const QUICK_ACCESS_ITEMS = [
   { id: 'operativaComercial', label: 'Gestión Comercial', group: 'OPERACIONES', icon: ShoppingCart, tab: 'operativaComercial' },
   { id: 'compras', label: 'Compras · Órdenes de Compra', group: 'OPERACIONES', icon: ShoppingBag, tab: 'compras' },
   { id: 'ventas', label: 'Ventas · Órdenes de Venta', group: 'OPERACIONES', icon: ShoppingCart, tab: 'ventas' },
+  { id: 'agente', label: 'Agente de reclasificación', group: 'OPERACIONES', icon: Sparkles, tab: 'agente' },
   { id: 'emisionDte', label: 'Emisión DTE / Facturas', group: 'OPERACIONES', icon: FileSpreadsheet, tab: 'emisionDte' },
   { id: 'stockKardex', label: 'Control de Stock & Kardex', group: 'OPERACIONES', icon: Package, tab: 'stockKardex' },
   { id: 'warehouses', label: 'Bodegas y Almacenes', group: 'OPERACIONES', icon: WarehouseIcon, tab: 'warehouses' },
@@ -189,7 +192,19 @@ export default function CompanyAccountingDashboard({
   const [studyModulesCompany, setStudyModulesCompany] = useState<Record<string, boolean | undefined>>({});
   const comprasActivo = !!company.comprasHabilitado && studyModulesCompany.compras === true;
   const ventasActivo = !!company.ventasHabilitado && studyModulesCompany.ventas === true;
-  const [activeTab, setActiveTab] = useState<'ventas' | 'compras' | 'accounts' | 'auxiliaries' | 'periods' | 'rcv' | 'exchange' | 'rcvParams' | 'centralizaciones' | 'f29Codes' | 'vouchers' | 'libroDiario' | 'libroMayor' | 'balance8' | 'balanceIFRS' | 'analisisAuxiliares' | 'analisisCuentas' | 'planillaConsultas' | 'analyticsHud' | 'reportesAnaliticos' | 'estadoResultados' | 'indicadoresFinancieros' | 'auditorEstadosFinancieros' | 'smartNotebooks' | 'flujoDeCaja' | 'agingDeudas' | 'nominasPago' | 'cobranza' | 'conciliacionBancaria' | 'libroBancoColaborativo' | 'cargaMasiva' | 'formulario29' | 'plantillasCarga' | 'importacionInteligente' | 'cierreAnio' | 'informeMensual' | 'rendicionGastos' | 'emisionDte' | 'tablasAnalisis' | 'controlFolios' | 'productsServices' | 'operativaComercial' | 'stockKardex' | 'warehouses' | 'employees' | 'liquidaciones' | 'activoFijo' | 'ddjj' | 'agenticStudy2040' | 'agenticPyme2040' | 'home' | 'buscadorComprobantes'>('home');
+  const [usuarioAgenteHabilitado, setUsuarioAgenteHabilitado] = useState(false);
+  const agenteActivo = puedeUsarAgente({ email: currentUserEmail, role: currentUserRole as string, estudioContrataAgente: studyModulesCompany.agente === true, usuarioHabilitado: usuarioAgenteHabilitado });
+  // Fuera de la fase piloto: ver si el administrador del estudio le asignó el agente a este usuario.
+  useEffect(() => {
+    if (AGENTE_FASE_PILOTO || !currentUserEmail) return;
+    (async () => {
+      try {
+        const q = await getDocs(query(collection(db, 'studies', studyId, 'users'), where('email', '==', currentUserEmail)));
+        setUsuarioAgenteHabilitado(q.docs.some(d => (d.data() as any).agenteHabilitado === true));
+      } catch { setUsuarioAgenteHabilitado(false); }
+    })();
+  }, [studyId, currentUserEmail]);
+  const [activeTab, setActiveTab] = useState<'agente' | 'ventas' | 'compras' | 'accounts' | 'auxiliaries' | 'periods' | 'rcv' | 'exchange' | 'rcvParams' | 'centralizaciones' | 'f29Codes' | 'vouchers' | 'libroDiario' | 'libroMayor' | 'balance8' | 'balanceIFRS' | 'analisisAuxiliares' | 'analisisCuentas' | 'planillaConsultas' | 'analyticsHud' | 'reportesAnaliticos' | 'estadoResultados' | 'indicadoresFinancieros' | 'auditorEstadosFinancieros' | 'smartNotebooks' | 'flujoDeCaja' | 'agingDeudas' | 'nominasPago' | 'cobranza' | 'conciliacionBancaria' | 'libroBancoColaborativo' | 'cargaMasiva' | 'formulario29' | 'plantillasCarga' | 'importacionInteligente' | 'cierreAnio' | 'informeMensual' | 'rendicionGastos' | 'emisionDte' | 'tablasAnalisis' | 'controlFolios' | 'productsServices' | 'operativaComercial' | 'stockKardex' | 'warehouses' | 'employees' | 'liquidaciones' | 'activoFijo' | 'ddjj' | 'agenticStudy2040' | 'agenticPyme2040' | 'home' | 'buscadorComprobantes'>('home');
   const [auxSubTab, setAuxSubTab] = useState<'deudores' | 'acreedores'>('deudores');
   const [employeeSubTab, setEmployeeSubTab] = useState<'employees' | 'contracts' | 'attendance' | 'advances' | 'severance' | 'certificates'>('employees');
   const [payrollTab, setPayrollTab] = useState<'NOMINA' | 'LIQUIDACION_INDIVIDUAL' | 'LRD_DT' | 'PREVIRED' | 'PARAMETROS' | 'CONCEPTOS' | 'RELIQUIDACIONES'>('NOMINA');
@@ -7368,6 +7383,7 @@ export default function CompanyAccountingDashboard({
             periodLabel={selectedRcvPeriod}
             comprasHabilitado={!!comprasActivo}
             ventasHabilitado={!!ventasActivo}
+            agenteHabilitado={!!agenteActivo}
             stats={[
               { label: 'Comprobantes del período', value: n(delPeriodo.length), hint: `${n(vouchers.length)} en total` },
               { label: 'Movimiento del período', value: '$' + n(Math.round(delPeriodo.reduce((s, v) => s + (v.totalDebit || 0), 0))), hint: 'suma del debe' },
@@ -9597,6 +9613,25 @@ export default function CompanyAccountingDashboard({
         )
       )}
 
+      {/* TAB: AGENTE DE RECLASIFICACIÓN (piloto) */}
+      {activeTab === 'agente' && (
+        agenteActivo ? (
+          <AgenteReclasificadorView
+            studyId={studyId}
+            company={company}
+            accounts={accounts as any}
+            vouchers={vouchers}
+            isReadOnly={isAnalyst || isReadOnly}
+            onCreateVoucher={async (v) => crearComprobante(contextoContable(), { date: v.date, gloss: v.gloss, lines: v.lines, origin: 'AGENTE_RECLASIFICACION', extra: { reclasificadas: v.reclasificadas } as any })}
+            onRefresh={fetchData}
+          />
+        ) : (
+          <div className="bg-white border border-slate-200 rounded-xl p-6 text-sm text-slate-600">
+            El agente está en fase piloto y no está habilitado para tu usuario o tu estudio.
+          </div>
+        )
+      )}
+
       {/* TAB: VENTAS (módulo opcional) */}
       {activeTab === 'ventas' && (
         ventasActivo ? (
@@ -9911,7 +9946,7 @@ export default function CompanyAccountingDashboard({
               </p>
 
               <div className="space-y-1.5 pt-1">
-                {QUICK_ACCESS_ITEMS.filter(it => (it.id !== 'compras' || comprasActivo) && (it.id !== 'ventas' || ventasActivo)).map((item) => {
+                {QUICK_ACCESS_ITEMS.filter(it => (it.id !== 'compras' || comprasActivo) && (it.id !== 'ventas' || ventasActivo) && (it.id !== 'agente' || agenteActivo)).map((item) => {
                   const IconComp = item.icon;
                   const isPinned = pinnedQuickAccessIds.includes(item.id);
                   return (

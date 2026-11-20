@@ -28,7 +28,7 @@ export interface CockpitModuleItem {
   colorScheme: 'indigo' | 'emerald' | 'amber' | 'rose' | 'cyan' | 'purple' | 'blue' | 'slate';
   shortcut?: string;
   description: string;
-  requiere?: 'compras' | 'ventas'; // Módulo opcional que la empresa debe tener habilitado para ver este ítem
+  requiere?: 'compras' | 'ventas' | 'agente'; // Módulo opcional que la empresa debe tener habilitado para ver este ítem
 }
 
 export interface WorkspaceTab {
@@ -308,6 +308,16 @@ export const COCKPIT_MODULE_CATALOG: CockpitModuleItem[] = [
     colorScheme: 'cyan',
     description: 'Órdenes de venta, entrega y factura por emitir',
     requiere: 'ventas'
+  },
+  {
+    id: 'agente',
+    label: 'Agente de reclasificación',
+    shortLabel: 'Agente',
+    category: 'OPERACIONES',
+    icon: ShoppingCart,
+    colorScheme: 'cyan',
+    description: 'Pide una reclasificación, revisa la propuesta y apruébala',
+    requiere: 'agente'
   },
   {
     id: 'emisionDte',

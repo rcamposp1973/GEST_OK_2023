@@ -121,4 +121,43 @@ import { leerDtesXml } from '../src/utils/dteXmlImport';
   ok('xml: decodifica caracteres especiales',r.documentos[0].razonSocialEmisor==='Emisor & Cía');
   ok('xml: omite ajeno y descuadrado con motivo',r.omitidos.length===2&&r.omitidos.some(o=>o.folio==='9')&&r.omitidos.some(o=>o.folio==='7'));
 }
+// ===== AGENTE: ACCESO Y RECLASIFICACIÓN =====
+import { puedeUsarAgente, puedeAsignarAgente } from '../src/utils/agenteAcceso';
+import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } from '../src/utils/agenteReclasificador';
+{
+  ok('agente: super admin sí',puedeUsarAgente({role:'SUPER_USER',email:'x@y.cl'}));
+  ok('agente piloto: Ramón con estudio contratado sí',puedeUsarAgente({role:'ACCOUNTANT',email:'Campos.Ramon@gmail.com',estudioContrataAgente:true}));
+  ok('agente piloto: Ramón sin estudio asignado no',!puedeUsarAgente({role:'ACCOUNTANT',email:'campos.ramon@gmail.com'}));
+  ok('agente piloto: otro admin de estudio no, aunque tenga el módulo',!puedeUsarAgente({role:'STUDY_ADMIN',email:'otro@estudio.cl',estudioContrataAgente:true,usuarioHabilitado:true}));
+  ok('agente piloto: nadie asigna salvo super admin',puedeAsignarAgente('SUPER_USER',true)&&!puedeAsignarAgente('STUDY_ADMIN',true));
+  const cuentas=[{id:'a1',code:'6101',name:'Combustible'},{id:'a2',code:'6205',name:'Movilización'},{id:'a3',code:'1101',name:'Banco'}];
+  const L=(acc:any,d:number,c:number,x:any={})=>({accountId:acc.id,accountCode:acc.code,accountName:acc.name,debit:d,credit:c,...x});
+  const V=(id:string,n:number,date:string,gloss:string,lines:any[],x:any={})=>({id,voucherNumber:n,date,gloss,lines,status:'Valido',...x});
+  const vs:any[]=[
+    V('v1',1,'2026-09-10','Bencina camioneta',[L(cuentas[0],10000,0,{auxiliaryRut:'76.111.111-1'}),L(cuentas[2],0,10000)]),
+    V('v2',2,'2026-09-20','Bencina reparto',[L(cuentas[0],5000,0),L(cuentas[2],0,5000)]),
+    V('v3',3,'2026-10-05','Bencina octubre',[L(cuentas[0],7000,0),L(cuentas[2],0,7000)]),
+    V('v4',4,'2026-11-05','Bencina fuera de rango',[L(cuentas[0],9000,0),L(cuentas[2],0,9000)]),
+    V('v5',5,'2026-09-12','Devolución',[L(cuentas[2],2000,0),L(cuentas[0],0,2000)]),
+  ];
+  ok('agente: rechaza cuenta inexistente',!validarFiltro({cuentaOrigen:'9999',cuentaDestino:'6205'},cuentas).ok);
+  ok('agente: rechaza origen = destino',!validarFiltro({cuentaOrigen:'6101',cuentaDestino:'6101'},cuentas).ok);
+  const fv:any=validarFiltro({cuentaOrigen:'6101',cuentaDestino:'6205',desde:'2026-09-01',hasta:'2026-10-31'},cuentas);
+  ok('agente: acepta filtro válido',fv.ok);
+  const pr=armarPropuesta(fv.filtro,vs,cuentas);
+  ok('agente: respeta rango de fechas (4 líneas, no incluye noviembre)',pr.totalLineas===4&&!pr.lineas.some(l=>l.voucherId==='v4'));
+  ok('agente: neto = debe − haber de la cuenta origen (10000+5000+7000−2000)',pr.neto===20000);
+  const cs=armarComprobantesDeReclasificacion(pr);
+  ok('agente: un comprobante por período, fecha fin de mes',cs.length===2&&cs[0].date==='2026-09-30'&&cs[1].date==='2026-10-31');
+  const sum=(ls:any[],k:string)=>ls.reduce((a,l)=>a+l[k],0);
+  ok('agente: cada comprobante cuadra',cs.every(c=>sum(c.lines,'debit')===sum(c.lines,'credit')));
+  const sept=cs[0].lines; const origSept=sept.filter((l:any)=>l.accountCode==='6101'); const destSept=sept.filter((l:any)=>l.accountCode==='6205');
+  ok('agente: efecto neto en septiembre: origen −13000, destino +13000',sum(origSept,'credit')-sum(origSept,'debit')===13000&&sum(destSept,'debit')-sum(destSept,'credit')===13000);
+  ok('agente: conserva auxiliar y referencia al comprobante original',sept.some((l:any)=>l.auxiliaryRut==='76.111.111-1'&&/N° 1/.test(l.gloss)));
+  const yaHechos:any[]=[...vs,{id:'r1',voucherNumber:9,date:'2026-09-30',gloss:'x',origin:'AGENTE_RECLASIFICACION',lines:[],reclasificadas:cs[0].reclasificadas}];
+  const pr2=armarPropuesta(fv.filtro,yaHechos,cuentas);
+  ok('agente: no reclasifica dos veces lo ya reclasificado',pr2.lineas.every(l=>l.period==='2026-10')&&pr2.totalLineas===1);
+  const fg:any=validarFiltro({cuentaOrigen:'6101',cuentaDestino:'6205',glosaContiene:'reparto'},cuentas);
+  ok('agente: filtro por glosa',armarPropuesta(fg.filtro,vs,cuentas).totalLineas===1);
+}
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

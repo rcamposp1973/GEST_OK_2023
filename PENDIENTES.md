@@ -85,3 +85,9 @@ Hallazgos (nov 2026): el módulo "Emisión DTE" es una simulación (firma `SIMUL
 Propuesta: (1) marcar Emisión DTE como "Demostración" y no guardar claves; (2) campo `origenDocumento` en documentos RCV (DIGITADO, RCV_SII, FACTURADOR:<nombre>); (3) importar XML/CSV de DTE de cualquier facturador (Bsale, Nubox, Haulmer, SimpleFactura...) hacia RCV y enlazarlo a la O/V; (4) más adelante, conector API a un facturador elegido.
 - Seguridad: las claves SII (`claveRepLegalSii`, `claveEmpresaSii`) siguen en el documento de la empresa porque la descarga automática del RCV las lee desde ahí. Migrar a `/api/companies/:id/secrets` (cifrado en servidor, ya existe) y hacer que la descarga del RCV use los secretos del servidor; probar contra el SII antes de borrar las claves en claro.
 - Facturación: mostrar el origen del documento en la lista del RCV; enlazar XML importado con la O/V automáticamente por folio/referencia; conector API a un facturador (paso 4).
+
+## Agentes de IA (piloto desde v1.18.0)
+- Hoy hay un solo agente: reclasificación. Reglas de acceso en `src/utils/agenteAcceso.ts` (y duplicadas en `api/index.ts`): `AGENTE_FASE_PILOTO = true` limita a Super Admin y campos.ramon@gmail.com.
+- Para ofrecerlo en planes con costo: poner `AGENTE_FASE_PILOTO = false` (en ambos archivos), definir precio/límite de uso por estudio y medir consumo de la API de IA.
+- Agentes futuros, mismo esquema (la IA interpreta, el sistema calcula, el usuario aprueba): conciliación bancaria asistida, revisión de cuadraturas, borrador de F29, cobranza.
+- Mejoras del reclasificador: modificar el auxiliar/centro de costo, reclasificar por documento, deshacer con un clic.

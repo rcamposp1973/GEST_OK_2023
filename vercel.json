@@ -38,6 +38,10 @@
       "destination": "/api/index"
     },
     {
+      "source": "/api/agents/reclasificador/interpretar",
+      "destination": "/api/index"
+    },
+    {
       "source": "/api/admin/normalizar-ruts",
       "destination": "/api/index"
     },

@@ -125,7 +125,7 @@ const QUICK_ACCESS_ITEMS = [
   { id: 'operativaComercial', label: 'Gestión Comercial', group: 'OPERACIONES', icon: ShoppingCart, tab: 'operativaComercial' },
   { id: 'compras', label: 'Compras · Órdenes de Compra', group: 'OPERACIONES', icon: ShoppingBag, tab: 'compras' },
   { id: 'ventas', label: 'Ventas · Órdenes de Venta', group: 'OPERACIONES', icon: ShoppingCart, tab: 'ventas' },
-  { id: 'agente', label: 'Agente de reclasificación', group: 'OPERACIONES', icon: Sparkles, tab: 'agente' },
+  { id: 'agente', label: 'Agente de reclasificación', group: 'FINANZAS', icon: Sparkles, tab: 'agente' },
   { id: 'emisionDte', label: 'Emisión DTE / Facturas', group: 'OPERACIONES', icon: FileSpreadsheet, tab: 'emisionDte' },
   { id: 'stockKardex', label: 'Control de Stock & Kardex', group: 'OPERACIONES', icon: Package, tab: 'stockKardex' },
   { id: 'warehouses', label: 'Bodegas y Almacenes', group: 'OPERACIONES', icon: WarehouseIcon, tab: 'warehouses' },

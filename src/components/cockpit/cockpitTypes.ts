@@ -313,9 +313,9 @@ export const COCKPIT_MODULE_CATALOG: CockpitModuleItem[] = [
     id: 'agente',
     label: 'Agente de reclasificación',
     shortLabel: 'Agente',
-    category: 'OPERACIONES',
-    icon: ShoppingCart,
-    colorScheme: 'cyan',
+    category: 'FINANZAS',
+    icon: Sparkles,
+    colorScheme: 'indigo',
     description: 'Pide una reclasificación, revisa la propuesta y apruébala',
     requiere: 'agente'
   },

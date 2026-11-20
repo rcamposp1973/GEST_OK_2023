@@ -932,6 +932,9 @@ INSTRUCCIÓN: ${instruccion.trim()}`;
       glosaContiene: json.glosaContiene, auxiliarRut: json.auxiliarRut }, explicacion: String(json.explicacion || '').slice(0, 300) });
   } catch (err: any) {
     console.error("Error en /api/agents/reclasificador/interpretar:", err);
+    if (err?.status === 402 || err?.status === 429 || /RESOURCE_EXHAUSTED|credits|quota/i.test(String(err?.message || ''))) {
+      return res.status(503).json({ success: false, error: "El servicio de IA no tiene saldo o llegó a su límite. Hay que cargar saldo en la cuenta de Google AI Studio." });
+    }
     return res.status(500).json({ success: false, error: "No se pudo consultar al agente. Intenta de nuevo." });
   }
 });

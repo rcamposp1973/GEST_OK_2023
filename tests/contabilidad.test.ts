@@ -160,4 +160,10 @@ import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } fro
   const fg:any=validarFiltro({cuentaOrigen:'6101',cuentaDestino:'6205',glosaContiene:'reparto'},cuentas);
   ok('agente: filtro por glosa',armarPropuesta(fg.filtro,vs,cuentas).totalLineas===1);
 }
+{
+  const { getNaturaleza } = await import('../src/utils/ifrsClassification');
+  ok('balance 8 col: Ventas 3101001 con tipo Patrimonio es Ingreso (Ganancia)', getNaturaleza({code:'3101001',name:'VENTAS',type:'Patrimonio'} as any)==='INGRESO');
+  ok('balance 8 col: Capital 2301001 sigue siendo Patrimonio', getNaturaleza({code:'2301001',name:'CAPITAL',type:'Patrimonio'} as any)==='PATRIMONIO');
+  ok('balance 8 col: Gasto 4101023 con BLCE ACTIVO por defecto sigue siendo Gasto', getNaturaleza({code:'4101023',name:'HONORARIOS CURSOS',type:'Gasto',blce8Columnas:'ACTIVO'} as any)==='GASTO');
+}
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

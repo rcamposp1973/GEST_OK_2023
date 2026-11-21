@@ -1,3 +1,4 @@
+import { getNaturaleza } from '../utils/ifrsClassification';
 import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useMemo, useEffect } from 'react';
 import { periodosParaSelector } from '../utils/periodUtils';
@@ -232,34 +233,14 @@ export default function Balance8ColumnasView({
       let resLoss = 0;
       let resGain = 0;
 
-      const code = (account.code || '').trim();
-      const codePrefix = code.charAt(0);
-      const normType = (account.type || 'Activo').toLowerCase();
-
-      // Criterios de Clasificación: 1 = Activos, 2 = Pasivo (salvedad 23 = Patrimonio), 3 = Ingresos, 4 / 5 = Gastos
-      const isPatrimonio = 
-        code.startsWith('23') || 
-        code.startsWith('2.3') || 
-        code.startsWith('2-3') || 
-        normType.includes('patrimonio') || 
-        normType.includes('capital');
-
-      const isActivo = 
-        codePrefix === '1' || 
-        (!['2', '3', '4', '5'].includes(codePrefix) && normType.includes('activo'));
-
-      const isPasivo = 
-        !isPatrimonio && 
-        (codePrefix === '2' || (!['1', '3', '4', '5'].includes(codePrefix) && normType.includes('pasivo')));
-
-      const isGasto = 
-        codePrefix === '4' || 
-        codePrefix === '5' || 
-        (!['1', '2', '3'].includes(codePrefix) && (normType.includes('gasto') || normType.includes('costo') || normType.includes('perdida')));
-
-      const isIngreso = 
-        codePrefix === '3' || 
-        (!['1', '2', '4', '5'].includes(codePrefix) && (normType.includes('ingreso') || normType.includes('ganancia') || normType.includes('venta')));
+      // Misma convención que el resto de los informes (utils/ifrsClassification): manda el código de la cuenta
+      // (1 Activo · 2 Pasivo · 23 Patrimonio · 3 Ingresos · 4 Gastos). El "tipo" interno solo se usa si el código no sigue la convención.
+      const nat = getNaturaleza(account as any);
+      const isPatrimonio = nat === 'PATRIMONIO';
+      const isActivo = nat === 'ACTIVO';
+      const isPasivo = nat === 'PASIVO';
+      const isGasto = nat === 'GASTO';
+      const isIngreso = nat === 'INGRESO';
 
       if (isActivo) {
         invAsset = balDebit - balCredit;

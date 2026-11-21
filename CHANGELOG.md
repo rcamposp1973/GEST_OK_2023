@@ -9,6 +9,9 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## [1.18.6] - La validación de parametrización avisa, no prohíbe
+- Si una cuenta de la parametrización parece no corresponder (p. ej. IVA crédito en una cuenta de gasto), el sistema muestra un aviso y pregunta "¿Guardar de todos modos?". Si confirmas, se guarda tal cual. Antes lo impedía.
+
 ## [1.18.5] - El "Tipo" de la cuenta sigue la convención por código
 - El Balance de 8 columnas muestra el Tipo según el código de la cuenta (Ventas 3xxx = Ingreso), no un valor antiguo guardado ("Patrimonio").
 - Al guardar el plan de cuentas, el tipo de las cuentas 1-4 se corrige solo según el código.

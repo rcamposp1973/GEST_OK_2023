@@ -5307,8 +5307,8 @@ export default function CompanyAccountingDashboard({
     };
 
     const erroresParam = validarNaturalezaParametros(params as any, accounts);
-    if (erroresParam.length > 0) {
-      alert('No se guardó. Corrige estas cuentas:\n\n' + erroresParam.join('\n'));
+    // Aviso, no prohibición: la contadora decide. Si confirma, se guarda tal cual.
+    if (erroresParam.length > 0 && !window.confirm('Revisa estas cuentas:\n\n' + erroresParam.join('\n') + '\n\n¿Guardar de todos modos?')) {
       return;
     }
 
@@ -5341,8 +5341,8 @@ export default function CompanyAccountingDashboard({
       return;
     }
     const erroresParam = validarNaturalezaParametros(params as any, accounts);
-    if (erroresParam.length > 0) {
-      throw new Error('No se guardó. Corrige estas cuentas: ' + erroresParam.join(' · '));
+    if (erroresParam.length > 0 && !window.confirm('Revisa estas cuentas:\n\n' + erroresParam.join('\n') + '\n\n¿Guardar de todos modos?')) {
+      throw new Error('Guardado cancelado.');
     }
     try {
       await setDoc(doc(companyRef, 'config', 'rcvParams'), params, { merge: true });

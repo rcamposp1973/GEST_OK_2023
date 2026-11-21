@@ -53,6 +53,7 @@ import { getNextVoucherNumber } from '../utils/voucherCounter';
 import { leerDtesXml } from '../utils/dteXmlImport';
 import AgenteReclasificadorView from './AgenteReclasificadorView';
 import { getNaturaleza } from '../utils/ifrsClassification';
+import { validarNaturalezaParametros } from '../utils/validarParametros';
 import { puedeUsarAgente, AGENTE_FASE_PILOTO } from '../utils/agenteAcceso';
 import { crearComprobante, reversarLineas, type ContextoContable } from '../utils/capaContable';
 import { StockKardexView } from './StockKardexView';
@@ -5305,6 +5306,12 @@ export default function CompanyAccountingDashboard({
       defaultProduct: formData.get('defaultProduct') as string,
     };
 
+    const erroresParam = validarNaturalezaParametros(params as any, accounts);
+    if (erroresParam.length > 0) {
+      alert('No se guardó. Corrige estas cuentas:\n\n' + erroresParam.join('\n'));
+      return;
+    }
+
     try {
       await setDoc(doc(companyRef, 'config', 'rcvParams'), params);
       setRcvParams(params);
@@ -5332,6 +5339,10 @@ export default function CompanyAccountingDashboard({
     if (isReadOnly) {
       alert('Modo Solo Lectura: El perfil Observador no puede modificar parámetros.');
       return;
+    }
+    const erroresParam = validarNaturalezaParametros(params as any, accounts);
+    if (erroresParam.length > 0) {
+      throw new Error('No se guardó. Corrige estas cuentas: ' + erroresParam.join(' · '));
     }
     try {
       await setDoc(doc(companyRef, 'config', 'rcvParams'), params, { merge: true });

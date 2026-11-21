@@ -9,6 +9,9 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## [1.18.4] - Parametrización contable valida la naturaleza de las cuentas
+- Al guardar la parametrización (Parám. RCV y Matriz Maestra), el sistema rechaza errores claros: IVA crédito o Clientes que no sean de Activo, IVA débito de otra naturaleza, Ingresos por ventas que no sean de Ingresos, Gasto por defecto que no sea Gasto o Costo. Proveedores acepta Pasivo o Caja/Banco (compras al contado).
+
 ## [1.18.3] - Centralización del RCV ya no adivina cuentas
 - Si falta una cuenta (por ejemplo Clientes) al centralizar un documento del RCV, el sistema antes elegía en silencio "cualquier cuenta del mismo tipo" o la primera del plan (p. ej. Caja). Ahora se detiene y avisa qué cuenta falta; no genera el comprobante.
 - La búsqueda por palabra clave solo considera cuentas de la naturaleza correcta (ya no confunde "Costo de ventas" con Ventas).

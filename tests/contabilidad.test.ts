@@ -166,4 +166,12 @@ import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } fro
   ok('balance 8 col: Capital 2301001 sigue siendo Patrimonio', getNaturaleza({code:'2301001',name:'CAPITAL',type:'Patrimonio'} as any)==='PATRIMONIO');
   ok('balance 8 col: Gasto 4101023 con BLCE ACTIVO por defecto sigue siendo Gasto', getNaturaleza({code:'4101023',name:'HONORARIOS CURSOS',type:'Gasto',blce8Columnas:'ACTIVO'} as any)==='GASTO');
 }
+{
+  const { validarNaturalezaParametros } = await import('../src/utils/validarParametros');
+  const plan=[{id:'a',code:'1101001',name:'CAJA',type:'Activo'},{id:'b',code:'3101001',name:'VENTAS',type:'Patrimonio'},{id:'c',code:'4101001',name:'COSTO DE VENTAS',type:'Gasto'},{id:'d',code:'2101001',name:'PROVEEDORES',type:'Pasivo'}];
+  ok('parámetros: IVA crédito = Costo de ventas se rechaza', validarNaturalezaParametros({ivaCreditoAccountId:'c'},plan).length===1);
+  ok('parámetros: Proveedores = Caja se acepta (compras al contado)', validarNaturalezaParametros({defaultSupplierAccountId:'a'},plan).length===0);
+  ok('parámetros: Proveedores = Costo de ventas se rechaza', validarNaturalezaParametros({defaultSupplierAccountId:'c'},plan).length===1);
+  ok('parámetros: configuración correcta pasa', validarNaturalezaParametros({defaultCustomerAccountId:'a',defaultSupplierAccountId:'d',defaultSalesIncomeAccountId:'b',defaultCostOrExpenseAccountId:'c'},plan).length===0);
+}
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

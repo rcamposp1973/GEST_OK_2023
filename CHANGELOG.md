@@ -9,6 +9,10 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## [1.18.3] - Centralización del RCV ya no adivina cuentas
+- Si falta una cuenta (por ejemplo Clientes) al centralizar un documento del RCV, el sistema antes elegía en silencio "cualquier cuenta del mismo tipo" o la primera del plan (p. ej. Caja). Ahora se detiene y avisa qué cuenta falta; no genera el comprobante.
+- La búsqueda por palabra clave solo considera cuentas de la naturaleza correcta (ya no confunde "Costo de ventas" con Ventas).
+
 ## [1.18.2] - Balance de 8 columnas clasifica por código de cuenta
 - El Balance Tributario de 8 columnas usaba el "tipo" interno de la cuenta, y una cuenta 3xxx (Ventas) con tipo Patrimonio caía en Pasivo, dando una pérdida falsa. Ahora usa la misma convención que los demás informes (1 Activo, 2 Pasivo, 23 Patrimonio, 3 Ingresos, 4 Gastos).
 

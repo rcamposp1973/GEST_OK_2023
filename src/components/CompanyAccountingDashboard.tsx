@@ -52,6 +52,7 @@ import VentasView from './VentasView';
 import { getNextVoucherNumber } from '../utils/voucherCounter';
 import { leerDtesXml } from '../utils/dteXmlImport';
 import AgenteReclasificadorView from './AgenteReclasificadorView';
+import { getNaturaleza } from '../utils/ifrsClassification';
 import { puedeUsarAgente, AGENTE_FASE_PILOTO } from '../utils/agenteAcceso';
 import { crearComprobante, reversarLineas, type ContextoContable } from '../utils/capaContable';
 import { StockKardexView } from './StockKardexView';
@@ -3060,6 +3061,7 @@ export default function CompanyAccountingDashboard({
   };
 
   // Helper to resolve an account object by ID, code, fallback keywords, or fallback type
+  const CUENTA_FALTANTE = '__CUENTA_FALTANTE__';
   const resolveAccountDetails = (
     accountId?: string,
     fallbackKeywords: string[] = [],
@@ -3079,27 +3081,23 @@ export default function CompanyAccountingDashboard({
       if (found) return { id: found.id, code: found.code, name: found.name };
     }
 
-    // Try keyword match in code or name
+    // Búsqueda por palabra clave, pero SOLO entre cuentas de la naturaleza que corresponde
+    // (así "venta" no confunde "Costo de ventas" con la cuenta de ingresos).
+    const naturalezaEsperada = ({ Activo: 'ACTIVO', Pasivo: 'PASIVO', Ingreso: 'INGRESO', Gasto: 'GASTO' } as Record<string, string>)[fallbackType || ''];
+    const candidatas = naturalezaEsperada ? accounts.filter(a => getNaturaleza(a as any) === naturalezaEsperada) : accounts;
     for (const kw of fallbackKeywords) {
       const lowerKw = kw.toLowerCase();
-      const match = accounts.find(
+      const match = candidatas.find(
         a => a.code.toLowerCase().includes(lowerKw) || a.name.toLowerCase().includes(lowerKw)
       );
       if (match) return { id: match.id, code: match.code, name: match.name };
     }
 
-    // Try type match
-    if (fallbackType) {
-      const matchType = accounts.find(a => a.type === fallbackType);
-      if (matchType) return { id: matchType.id, code: matchType.code, name: matchType.name };
-    }
-
-    // If accounts list is not empty, pick first as ultimate fallback
-    if (accounts.length > 0) {
-      return { id: accounts[0].id, code: accounts[0].code, name: accounts[0].name };
-    }
-
-    return { id: 'default', code: defaultCode, name: defaultName };
+    // Antes se elegía "cualquier cuenta del mismo tipo" o "la primera del plan" (p. ej. Caja). Eso ensucia la contabilidad en silencio:
+    // ahora se detiene y pide configurar la cuenta.
+    // No se detiene aquí (se piden todas las cuentas por adelantado aunque el documento no las use): se marca como faltante
+    // y makeLine se detiene solo si el documento realmente necesita esa cuenta.
+    return { id: CUENTA_FALTANTE, code: defaultCode, name: defaultName };
   };
 
   // Helper to build a complete double-entry voucher from an RCVDocument
@@ -3159,6 +3157,9 @@ export default function CompanyAccountingDashboard({
       razonSocial?: string,
       docRef?: string
     ): VoucherLine => {
+      if (accObj.id === CUENTA_FALTANTE) {
+        throw new Error(`Falta la cuenta "${accObj.name}" en el plan de cuentas o en Parámetros RCV. Créala o configúrala y vuelve a intentar. No se generó ningún comprobante.`);
+      }
       const realAcc = accounts.find(a => a.id === accObj.id || a.code === accObj.code);
       const isClientOrSupplierCode = accObj.code.startsWith('1.1.02') || accObj.code.startsWith('2.1.01') || accObj.code.startsWith('2.1.04');
       const requiresRut = realAcc ? Boolean(realAcc.requiereAuxiliarRUT || isClientOrSupplierCode) : isClientOrSupplierCode;

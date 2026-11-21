@@ -275,7 +275,8 @@ export default function Balance8ColumnasView({
       calculatedRows.push({
         code: account.code,
         name: account.name,
-        type: account.type,
+        // El "Tipo" mostrado es el que resulta del código de la cuenta (el mismo con que se clasificó), no el valor antiguo guardado.
+        type: ({ ACTIVO: 'Activo', PASIVO: 'Pasivo', PATRIMONIO: 'Patrimonio', INGRESO: 'Ingreso', GASTO: 'Gasto' } as Record<string, string>)[nat] || account.type,
         sumDebit,
         sumCredit,
         balDebit,

@@ -357,7 +357,8 @@ export default function PlanDeCuentasGrid({ studyId, company, onRefreshCompany }
           const docData = {
             code: acc.code.trim().toUpperCase(),
             name: acc.name.trim().toUpperCase(),
-            type: acc.type || inferTypeFromBalance(acc.blce8Columnas || 'ACTIVO', acc.code),
+            // Si el código sigue la convención (1 Activo · 2 Pasivo/23 Patrimonio · 3 Ingresos · 4 Gastos), el tipo se corrige solo.
+            type: /^[1-4]/.test((acc.code || '').replace(/\D/g, '')) ? inferTypeFromBalance(acc.blce8Columnas || 'ACTIVO', acc.code) : (acc.type || inferTypeFromBalance(acc.blce8Columnas || 'ACTIVO', acc.code)),
             isImputable: acc.isImputable ?? true,
             moneda: (acc.moneda || 'CLP').toUpperCase(),
             requiereAuxiliarRUT: !!acc.requiereAuxiliarRUT,

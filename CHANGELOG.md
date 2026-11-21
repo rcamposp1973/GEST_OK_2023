@@ -9,6 +9,10 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## [1.18.5] - El "Tipo" de la cuenta sigue la convención por código
+- El Balance de 8 columnas muestra el Tipo según el código de la cuenta (Ventas 3xxx = Ingreso), no un valor antiguo guardado ("Patrimonio").
+- Al guardar el plan de cuentas, el tipo de las cuentas 1-4 se corrige solo según el código.
+
 ## [1.18.4] - Parametrización contable valida la naturaleza de las cuentas
 - Al guardar la parametrización (Parám. RCV y Matriz Maestra), el sistema rechaza errores claros: IVA crédito o Clientes que no sean de Activo, IVA débito de otra naturaleza, Ingresos por ventas que no sean de Ingresos, Gasto por defecto que no sea Gasto o Costo. Proveedores acepta Pasivo o Caja/Banco (compras al contado).
 

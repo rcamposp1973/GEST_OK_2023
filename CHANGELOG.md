@@ -9,6 +9,9 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## [1.18.1] - Sin comprobantes duplicados al contabilizar el RCV
+- Al contabilizar o centralizar un documento del RCV, el sistema ahora revisa en la base de datos que ese documento no tenga ya un comprobante (doble clic, pantalla desactualizada u otra pestaña). Si ya lo tiene, no crea otro.
+
 ## [1.18.0] - Agente de reclasificación (piloto, solo Pruebas)
 - Nuevo agente: escribes qué reclasificar ("gastos de combustible de septiembre y octubre a movilización"); la IA solo interpreta la instrucción, y el sistema selecciona los movimientos, calcula los montos y muestra una vista previa. Nada se crea hasta que apruebas.
 - Al aprobar crea un comprobante de reclasificación por mes (Debe y Haber invertidos entre las dos cuentas), con cuadre obligatorio, contador único y registro de auditoría. Los comprobantes originales no se tocan y una misma reclasificación no se aplica dos veces.

@@ -174,4 +174,27 @@ import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } fro
   ok('parámetros: Proveedores = Costo de ventas se rechaza', validarNaturalezaParametros({defaultSupplierAccountId:'c'},plan).length===1);
   ok('parámetros: configuración correcta pasa', validarNaturalezaParametros({defaultCustomerAccountId:'a',defaultSupplierAccountId:'d',defaultSalesIncomeAccountId:'b',defaultCostOrExpenseAccountId:'c'},plan).length===0);
 }
+{
+  const R = await import('../src/utils/rentaAnual');
+  const plan=[{id:'caja',code:'1101001',name:'CAJA',type:'Activo'},{id:'prov',code:'2101001',name:'PROVEEDORES',type:'Pasivo'},{id:'cap',code:'2301001',name:'CAPITAL PAGADO',type:'Patrimonio'},{id:'vta',code:'3101001',name:'VENTAS',type:'Patrimonio'},{id:'gto',code:'4101001',name:'GASTOS',type:'Gasto'}];
+  const L=(id:string,d:number,c:number)=>({accountId:id,debit:d,credit:c});
+  const vs=[
+    {date:'2025-06-01',status:'Valido',lines:[L('caja',1000,0),L('cap',0,1000)]},
+    {date:'2026-03-01',status:'Valido',lines:[L('caja',5000,0),L('vta',0,5000)]},
+    {date:'2026-04-01',status:'Valido',lines:[L('gto',2000,0),L('prov',0,2000)]},
+    {date:'2026-05-01',status:'Anulado',lines:[L('caja',999,0),L('vta',0,999)]},
+    {date:'2027-01-05',status:'Valido',lines:[L('caja',7,0),L('vta',0,7)]},
+  ];
+  const d=R.datosContablesDelAnio(vs as any,plan,2026);
+  ok('renta: utilidad contable 2026 = 3.000 (excluye anulados y otros años)', d.utilidadContable===3000 && d.ingresos===5000 && d.gastos===2000);
+  ok('renta: activos/pasivos al 31-12 con historia previa', d.activos===6000 && d.pasivos===2000 && d.capitalSugerido===1000);
+  const h=R.hojaInicial('14_D3_PROPYME_GENERAL',d); h.ajustes=[{id:'a',concepto:'GR',tipo:'AGREGADO',monto:500},{id:'b',concepto:'DNP',tipo:'DEDUCCION',monto:1500}]; h.ppmPagados=100;
+  const r=R.calcularRenta(d,h);
+  ok('renta 14D3: RLI 2.000, IDPC 12,5% = 250, saldo 150', r.rli===2000 && r.idpc===250 && r.saldoImpuesto===150);
+  ok('renta 14D3: CPT simplificado = capital 1.000 + base 2.000', r.cpt===3000);
+  const ra=R.calcularRenta(d,{...R.hojaInicial('14_A_SEMI_INTEGRADO',d),ajustes:h.ajustes});
+  ok('renta 14A: IDPC 27% y CPT = activos - pasivos', ra.idpc===540 && ra.cpt===4000);
+  const r8=R.calcularRenta(d,{...R.hojaInicial('14_D8_PROPYME_TRANSPARENTE',d),ajustes:[{id:'x',concepto:'p',tipo:'DEDUCCION',monto:9000}]});
+  ok('renta 14D8: sin IDPC; pérdida tributaria si la base es negativa', r8.idpc===0 && r8.rli===0 && r8.perdidaTributaria===6000);
+}
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

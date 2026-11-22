@@ -53,6 +53,7 @@ import { getNextVoucherNumber } from '../utils/voucherCounter';
 import { leerDtesXml } from '../utils/dteXmlImport';
 import AgenteReclasificadorView from './AgenteReclasificadorView';
 import { getNaturaleza } from '../utils/ifrsClassification';
+import { RentaAnualView } from './RentaAnualView';
 import { validarNaturalezaParametros } from '../utils/validarParametros';
 import { puedeUsarAgente, AGENTE_FASE_PILOTO } from '../utils/agenteAcceso';
 import { crearComprobante, reversarLineas, type ContextoContable } from '../utils/capaContable';
@@ -122,6 +123,7 @@ const QUICK_ACCESS_ITEMS = [
   { id: 'formulario29', label: 'Impuestos F29', group: 'IMPUESTOS', icon: Receipt, tab: 'formulario29' },
   { id: 'f29Codes', label: 'Parámetros y Códigos F.29', group: 'IMPUESTOS', icon: Sliders, tab: 'f29Codes' },
   { id: 'ddjj', label: 'Declaraciones Juradas SII', group: 'IMPUESTOS', icon: ShieldCheck, tab: 'ddjj' },
+  { id: 'rentaAnual', label: 'Renta anual: RLI y capital propio', group: 'IMPUESTOS', icon: ShieldCheck, tab: 'rentaAnual' },
   { id: 'controlFolios', label: 'Timbraje y Folios SII', group: 'IMPUESTOS', icon: Printer, tab: 'controlFolios' },
   { id: 'rendicionGastos', label: 'Rendición de Gastos & Viáticos', group: 'OPERACIONES', icon: Receipt, tab: 'rendicionGastos' },
   { id: 'operativaComercial', label: 'Gestión Comercial', group: 'OPERACIONES', icon: ShoppingCart, tab: 'operativaComercial' },
@@ -206,7 +208,7 @@ export default function CompanyAccountingDashboard({
       } catch { setUsuarioAgenteHabilitado(false); }
     })();
   }, [studyId, currentUserEmail]);
-  const [activeTab, setActiveTab] = useState<'agente' | 'ventas' | 'compras' | 'accounts' | 'auxiliaries' | 'periods' | 'rcv' | 'exchange' | 'rcvParams' | 'centralizaciones' | 'f29Codes' | 'vouchers' | 'libroDiario' | 'libroMayor' | 'balance8' | 'balanceIFRS' | 'analisisAuxiliares' | 'analisisCuentas' | 'planillaConsultas' | 'analyticsHud' | 'reportesAnaliticos' | 'estadoResultados' | 'indicadoresFinancieros' | 'auditorEstadosFinancieros' | 'smartNotebooks' | 'flujoDeCaja' | 'agingDeudas' | 'nominasPago' | 'cobranza' | 'conciliacionBancaria' | 'libroBancoColaborativo' | 'cargaMasiva' | 'formulario29' | 'plantillasCarga' | 'importacionInteligente' | 'cierreAnio' | 'informeMensual' | 'rendicionGastos' | 'emisionDte' | 'tablasAnalisis' | 'controlFolios' | 'productsServices' | 'operativaComercial' | 'stockKardex' | 'warehouses' | 'employees' | 'liquidaciones' | 'activoFijo' | 'ddjj' | 'agenticStudy2040' | 'agenticPyme2040' | 'home' | 'buscadorComprobantes'>('home');
+  const [activeTab, setActiveTab] = useState<'rentaAnual' | 'agente' | 'ventas' | 'compras' | 'accounts' | 'auxiliaries' | 'periods' | 'rcv' | 'exchange' | 'rcvParams' | 'centralizaciones' | 'f29Codes' | 'vouchers' | 'libroDiario' | 'libroMayor' | 'balance8' | 'balanceIFRS' | 'analisisAuxiliares' | 'analisisCuentas' | 'planillaConsultas' | 'analyticsHud' | 'reportesAnaliticos' | 'estadoResultados' | 'indicadoresFinancieros' | 'auditorEstadosFinancieros' | 'smartNotebooks' | 'flujoDeCaja' | 'agingDeudas' | 'nominasPago' | 'cobranza' | 'conciliacionBancaria' | 'libroBancoColaborativo' | 'cargaMasiva' | 'formulario29' | 'plantillasCarga' | 'importacionInteligente' | 'cierreAnio' | 'informeMensual' | 'rendicionGastos' | 'emisionDte' | 'tablasAnalisis' | 'controlFolios' | 'productsServices' | 'operativaComercial' | 'stockKardex' | 'warehouses' | 'employees' | 'liquidaciones' | 'activoFijo' | 'ddjj' | 'agenticStudy2040' | 'agenticPyme2040' | 'home' | 'buscadorComprobantes'>('home');
   const [auxSubTab, setAuxSubTab] = useState<'deudores' | 'acreedores'>('deudores');
   const [employeeSubTab, setEmployeeSubTab] = useState<'employees' | 'contracts' | 'attendance' | 'advances' | 'severance' | 'certificates'>('employees');
   const [payrollTab, setPayrollTab] = useState<'NOMINA' | 'LIQUIDACION_INDIVIDUAL' | 'LRD_DT' | 'PREVIRED' | 'PARAMETROS' | 'CONCEPTOS' | 'RELIQUIDACIONES'>('NOMINA');
@@ -9770,6 +9772,10 @@ export default function CompanyAccountingDashboard({
       )}
 
       {/* TAB: DECLARACIONES JURADAS SII (DDJJ RENTA) */}
+      {activeTab === 'rentaAnual' && (
+        <RentaAnualView studyId={studyId} company={company} accounts={accounts} vouchers={vouchers} soloLectura={isReadOnly} />
+      )}
+
       {activeTab === 'ddjj' && (
         <DeclaracionesJuradasView
           company={company}

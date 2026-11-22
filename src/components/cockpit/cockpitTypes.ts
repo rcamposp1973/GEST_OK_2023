@@ -434,6 +434,15 @@ export const COCKPIT_MODULE_CATALOG: CockpitModuleItem[] = [
     description: 'Generación de DJ 1887, 1879 y declaraciones de renta anual'
   },
   {
+    id: 'rentaAnual',
+    label: 'Renta anual: RLI y capital propio',
+    shortLabel: 'Renta anual',
+    category: 'IMPUESTOS',
+    icon: ShieldCheck,
+    colorScheme: 'rose',
+    description: 'Hoja de trabajo de renta líquida imponible y capital propio tributario por régimen'
+  },
+  {
     id: 'controlFolios',
     label: 'Timbraje y Folios SII',
     shortLabel: 'Folios SII',

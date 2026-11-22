@@ -9,6 +9,9 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## [1.19.0] - Renta anual: hoja de trabajo de RLI y capital propio
+- Nuevo módulo en Impuestos: parte del resultado contable del año, permite agregados y deducciones (con sugerencias por régimen), calcula RLI o base imponible, Primera Categoría (27 % general, 12,5 % Pro Pyme, editable), saldo referencial contra PPM y créditos, y capital propio tributario (activos − pasivos en 14 A; simplificado en Pro Pyme). Se guarda por empresa y año tributario y se exporta a CSV. Es referencial: no reemplaza al F22.
+
 ## [1.18.6] - La validación de parametrización avisa, no prohíbe
 - Si una cuenta de la parametrización parece no corresponder (p. ej. IVA crédito en una cuenta de gasto), el sistema muestra un aviso y pregunta "¿Guardar de todos modos?". Si confirmas, se guarda tal cual. Antes lo impedía.
 

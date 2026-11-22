@@ -123,6 +123,7 @@ export interface HojaRenta {
   tasaIdpc: number;
   ajustes: AjusteRenta[];
   ppmPagados: number;
+  cuentaPpmId?: string; // si está, los PPM se leen del saldo de esta cuenta en el año
   otrosCreditos: number;
   // CPT régimen general
   ajustesCpt: { id: string; concepto: string; monto: number }[];
@@ -182,4 +183,26 @@ export function normalizarRegimen(r?: string): RegimenRenta {
   if (s.includes('D8') || s.includes('TRANSPARENTE')) return '14_D8_PROPYME_TRANSPARENTE';
   if (s.includes('14_A') || s.includes('14 A') || s.includes('SEMI') || s.includes('GENERAL (14 A')) return '14_A_SEMI_INTEGRADO';
   return '14_D3_PROPYME_GENERAL';
+}
+
+/** Débitos menos créditos de una cuenta en el año comercial (sin el comprobante de apertura ni el de cierre). Para leer los PPM pagados. */
+export function movimientoCuentaDelAnio(vouchers: VoucherMin[], accounts: CuentaMin[], cuentaId: string, anio: number): number {
+  const cuenta = accounts.find(a => a.id === cuentaId);
+  if (!cuenta) return 0;
+  const desde = `${anio}-01-01`, hasta = `${anio}-12-31`;
+  let total = 0;
+  for (const v of vouchers) {
+    if (v.status === 'Anulado' || v.origin === ORIGEN_CIERRE || v.origin === ORIGEN_APERTURA || !cuadra(v)) continue;
+    const f = v.date || (v.period ? `${v.period}-01` : '');
+    if (!f || f < desde || f > hasta) continue;
+    for (const l of v.lines || []) {
+      if (l.accountId === cuenta.id || (!l.accountId && l.accountCode === cuenta.code)) total += (Number(l.debit) || 0) - (Number(l.credit) || 0);
+    }
+  }
+  return Math.round(total);
+}
+
+/** Cuenta de PPM sugerida por su nombre. */
+export function sugerirCuentaPpm(accounts: CuentaMin[]): string | undefined {
+  return accounts.find(a => /\bPPM\b|PAGOS? PROVISIONAL/i.test(a.name || ''))?.id;
 }

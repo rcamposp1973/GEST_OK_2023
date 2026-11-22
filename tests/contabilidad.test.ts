@@ -197,4 +197,18 @@ import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } fro
   const r8=R.calcularRenta(d,{...R.hojaInicial('14_D8_PROPYME_TRANSPARENTE',d),ajustes:[{id:'x',concepto:'p',tipo:'DEDUCCION',monto:9000}]});
   ok('renta 14D8: sin IDPC; pérdida tributaria si la base es negativa', r8.idpc===0 && r8.rli===0 && r8.perdidaTributaria===6000);
 }
+{
+  const R = await import('../src/utils/rentaAnual');
+  const plan=[{id:'ppm',code:'1105002',name:'PAGOS PROVISIONALES MENSUALES',type:'Activo'},{id:'caja',code:'1101001',name:'CAJA',type:'Activo'}];
+  const L=(id:string,d:number,c:number)=>({accountId:id,debit:d,credit:c});
+  const vs=[
+    {date:'2026-01-01',origin:'APERTURA_ANIO',status:'Valido',lines:[L('ppm',50,0),L('caja',0,50)]},
+    {date:'2026-02-20',status:'Valido',lines:[L('ppm',100,0),L('caja',0,100)]},
+    {date:'2026-03-20',status:'Valido',lines:[L('ppm',120,0),L('caja',0,120)]},
+    {date:'2026-04-20',status:'Anulado',lines:[L('ppm',999,0),L('caja',0,999)]},
+    {date:'2027-01-20',status:'Valido',lines:[L('ppm',80,0),L('caja',0,80)]},
+  ];
+  ok('renta: cuenta PPM sugerida por nombre', R.sugerirCuentaPpm(plan)==='ppm');
+  ok('renta: PPM del año = 220 (sin apertura, anulados ni otros años)', R.movimientoCuentaDelAnio(vs as any,plan,'ppm',2026)===220);
+}
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

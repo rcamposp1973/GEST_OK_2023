@@ -3,9 +3,10 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { Plus, Trash2, Save, Download, AlertTriangle } from 'lucide-react';
 import { db, auth } from '../lib/firebase';
 import type { Company, ChartOfAccount, Voucher } from '../types';
+import { getNaturaleza } from '../utils/ifrsClassification';
 import {
   AJUSTES_SUGERIDOS, NOMBRE_REGIMEN, TASA_IDPC_SUGERIDA, RegimenRenta, HojaRenta,
-  calcularRenta, datosContablesDelAnio, hojaInicial, normalizarRegimen,
+  calcularRenta, datosContablesDelAnio, hojaInicial, normalizarRegimen, movimientoCuentaDelAnio, sugerirCuentaPpm,
 } from '../utils/rentaAnual';
 
 interface Props {
@@ -52,7 +53,7 @@ export const RentaAnualView: React.FC<Props> = ({ studyId, company, accounts, vo
       if (!vivo) return;
       setGuardadaEnBD(s.exists());
       if (s.exists()) setHoja({ ...hojaInicial(normalizarRegimen(company.regimenTributario), datos), ...(s.data() as any).hoja });
-      else setHoja(hojaInicial(normalizarRegimen(company.regimenTributario), datos));
+      else setHoja({ ...hojaInicial(normalizarRegimen(company.regimenTributario), datos), cuentaPpmId: sugerirCuentaPpm(accounts) });
     }).catch(() => {});
     return () => { vivo = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -63,7 +64,14 @@ export const RentaAnualView: React.FC<Props> = ({ studyId, company, accounts, vo
     if (!guardadaEnBD) setHoja(h => ({ ...h, capitalAportado: datos.capitalSugerido }));
   }, [datos.capitalSugerido, guardadaEnBD]);
 
-  const res = useMemo(() => calcularRenta(datos, hoja), [datos, hoja]);
+  // PPM: si hay una cuenta elegida, el monto sale de la contabilidad del año
+  const ppmDesdeCuenta = useMemo(
+    () => (hoja.cuentaPpmId ? movimientoCuentaDelAnio(vouchers as any, accounts, hoja.cuentaPpmId, anio) : null),
+    [hoja.cuentaPpmId, vouchers, accounts, anio]
+  );
+  const hojaEfectiva = useMemo(() => (ppmDesdeCuenta === null ? hoja : { ...hoja, ppmPagados: ppmDesdeCuenta }), [hoja, ppmDesdeCuenta]);
+  const cuentasActivo = useMemo(() => accounts.filter(a => getNaturaleza(a as any) === 'ACTIVO' && a.isImputable !== false), [accounts]);
+  const res = useMemo(() => calcularRenta(datos, hojaEfectiva), [datos, hojaEfectiva]);
   const pyme = hoja.regimen !== '14_A_SEMI_INTEGRADO';
   const transparente = hoja.regimen === '14_D8_PROPYME_TRANSPARENTE';
   const set = (p: Partial<HojaRenta>) => setHoja(h => ({ ...h, ...p }));
@@ -88,7 +96,7 @@ export const RentaAnualView: React.FC<Props> = ({ studyId, company, accounts, vo
       ['Ingresos del ejercicio', datos.ingresos], ['Costos y gastos del ejercicio', datos.gastos], ['Resultado contable', datos.utilidadContable], [],
       ...hoja.ajustes.map(a => [`${a.tipo === 'AGREGADO' ? 'Agregado' : 'Deducción'}: ${a.concepto}`, a.tipo === 'AGREGADO' ? a.monto : -a.monto]),
       [], [transparente ? 'Base imponible' : 'Renta líquida imponible', res.rli], ['Pérdida tributaria', res.perdidaTributaria],
-      ['Tasa IDPC %', transparente ? 0 : hoja.tasaIdpc], ['Impuesto de Primera Categoría', res.idpc], ['PPM pagados', hoja.ppmPagados],
+      ['Tasa IDPC %', transparente ? 0 : hoja.tasaIdpc], ['Impuesto de Primera Categoría', res.idpc], ['PPM pagados', hojaEfectiva.ppmPagados],
       ['Otros créditos', hoja.otrosCreditos], ['Saldo (a pagar + / a devolver -)', res.saldoImpuesto], [], ['Capital propio tributario', res.cpt],
     ];
     const csv = filas.map(f => f.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(';')).join('\n');
@@ -214,10 +222,26 @@ export const RentaAnualView: React.FC<Props> = ({ studyId, company, accounts, vo
                 className="w-24 border border-slate-300 rounded-lg px-2 py-1 text-right font-mono text-sm" />
             </div>
             <Fila label="Impuesto de Primera Categoría" value={res.idpc} />
-            <div className="flex items-center justify-between py-1.5">
-              <span className="text-sm text-slate-600">PPM pagados en el año (desde los F29)</span>
-              <Monto value={hoja.ppmPagados} disabled={soloLectura} onChange={n => set({ ppmPagados: n })} />
+            <div className="flex flex-wrap items-center justify-between gap-2 py-1.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm text-slate-600">PPM pagados en el año</span>
+                <select
+                  value={hoja.cuentaPpmId || ''} disabled={soloLectura}
+                  onChange={e => set({ cuentaPpmId: e.target.value || undefined })}
+                  className="border border-slate-300 rounded-lg px-2 py-1 text-sm max-w-[18rem]"
+                  title="Cuenta donde se contabilizan los PPM. El monto se lee de sus movimientos del año."
+                >
+                  <option value="">Ingresar a mano</option>
+                  {cuentasActivo.map(a => <option key={a.id} value={a.id}>[{a.code}] {a.name}</option>)}
+                </select>
+              </div>
+              {ppmDesdeCuenta === null
+                ? <Monto value={hoja.ppmPagados} disabled={soloLectura} onChange={n => set({ ppmPagados: n })} />
+                : <span className="font-mono text-sm text-slate-800">{pesos(ppmDesdeCuenta)}</span>}
             </div>
+            {ppmDesdeCuenta !== null && (
+              <p className="text-xs text-slate-500 -mt-1">Movimientos de la cuenta entre el 1-1 y el 31-12-{anio}, sin apertura. Si un PPM se pagó fuera de plazo y se contabilizó en otro año, ajústalo en "Otros créditos".</p>
+            )}
             <div className="flex items-center justify-between py-1.5">
               <span className="text-sm text-slate-600">Otros créditos (Sence, donaciones, etc.)</span>
               <Monto value={hoja.otrosCreditos} disabled={soloLectura} onChange={n => set({ otrosCreditos: n })} />

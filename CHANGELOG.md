@@ -9,6 +9,9 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## [1.19.1] - Renta anual: PPM desde la contabilidad
+- Los PPM pagados se leen de la cuenta contable donde se registran (sugerida por nombre "PPM" o "Pagos provisionales"; se puede cambiar o volver a ingreso manual). Toma los movimientos del 1-1 al 31-12, sin apertura ni anulados.
+
 ## [1.19.0] - Renta anual: hoja de trabajo de RLI y capital propio
 - Nuevo módulo en Impuestos: parte del resultado contable del año, permite agregados y deducciones (con sugerencias por régimen), calcula RLI o base imponible, Primera Categoría (27 % general, 12,5 % Pro Pyme, editable), saldo referencial contra PPM y créditos, y capital propio tributario (activos − pasivos en 14 A; simplificado en Pro Pyme). Se guarda por empresa y año tributario y se exporta a CSV. Es referencial: no reemplaza al F22.
 

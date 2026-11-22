@@ -211,4 +211,18 @@ import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } fro
   ok('renta: cuenta PPM sugerida por nombre', R.sugerirCuentaPpm(plan)==='ppm');
   ok('renta: PPM del año = 220 (sin apertura, anulados ni otros años)', R.movimientoCuentaDelAnio(vs as any,plan,'ppm',2026)===220);
 }
+{
+  const C = await import('../src/utils/cuadraturaRetenciones');
+  const plan=[{id:'iu',code:'2103002',name:'IMPUESTO UNICO POR PAGAR'},{id:'rh',code:'2101020',name:'RETENCION DE 2° CATEGORIA'}];
+  const liq=[{period:'2026-01',impuestoUnicoSegundaCategoria:1000},{period:'2026-01',impuestoUnicoSegundaCategoria:500},{period:'2026-02',impuestoUnicoSegundaCategoria:800}];
+  const f29=[{period:'2026-01',retenciones:{impuestoUnicoTrabajadores:1500,retencionHonorarios:0}},{period:'2026-02',retenciones:{impuestoUnicoTrabajadores:700,retencionHonorarios:300}}];
+  const vs=[{period:'2026-01',status:'Valido',lines:[{accountId:'iu',debit:0,credit:1500}]},{period:'2026-02',status:'Valido',lines:[{accountId:'iu',debit:1500,credit:800}]}];
+  const r=C.cuadratura1887(2026,liq,f29,vs as any,plan[0]);
+  ok('cuadratura 1887: enero cuadra (liquidaciones = F29 = contabilidad)', r.filas[0].cuadra && r.filas[0].contabilidad===1500);
+  ok('cuadratura 1887: febrero no cuadra (F29 700 vs 800) y el pago al debe no cuenta', !r.filas[1].cuadra && r.filas[1].contabilidad===800 && r.mesesConDiferencia===1);
+  const docs=[{period:'2026-02',tipoRegistro:'Honorarios',montoRetencion:300},{period:'2026-03',tipoRegistro:'Honorarios',montoRetencion:200},{period:'2026-03',tipoRegistro:'Compra',montoRetencion:999}];
+  const h=C.cuadratura1879(2026,docs,f29,[] as any);
+  ok('cuadratura 1879: marzo sin F29 se marca como faltante', h.filas[2].faltaF29 && !h.filas[2].cuadra && h.filas[1].cuadra && h.totalOrigen===500);
+  ok('cuadratura: cuentas sugeridas por nombre', C.sugerirCuentaImpuestoUnico(plan)==='iu' && C.sugerirCuentaRetencionHonorarios(plan)==='rh');
+}
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

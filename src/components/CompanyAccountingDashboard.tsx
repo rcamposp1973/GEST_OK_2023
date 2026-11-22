@@ -9778,6 +9778,7 @@ export default function CompanyAccountingDashboard({
 
       {activeTab === 'ddjj' && (
         <DeclaracionesJuradasView
+          studyId={studyId}
           company={company}
           employees={employees}
           savedSlips={payrollSlips}

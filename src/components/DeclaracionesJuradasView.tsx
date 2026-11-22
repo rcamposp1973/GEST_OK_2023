@@ -8,8 +8,10 @@ import {
 import { Company, Employee, PayrollSlip, ChartOfAccount, RCVDocument, Voucher } from '../types';
 import * as XLSX from 'xlsx';
 import CertificadosOficialesSiiModal from './CertificadosOficialesSiiModal';
+import CuadraturaRetencionesView from './CuadraturaRetencionesView';
 
 interface DeclaracionesJuradasViewProps {
+  studyId?: string;
   company: Company;
   employees: Employee[];
   savedSlips?: PayrollSlip[];
@@ -19,6 +21,7 @@ interface DeclaracionesJuradasViewProps {
 }
 
 export const DeclaracionesJuradasView: React.FC<DeclaracionesJuradasViewProps> = ({
+  studyId,
   company,
   employees = [],
   savedSlips = [],
@@ -26,8 +29,8 @@ export const DeclaracionesJuradasView: React.FC<DeclaracionesJuradasViewProps> =
   accounts = [],
   vouchers = []
 }) => {
-  const [selectedYear, setSelectedYear] = useState<number>(2025); // Año Comercial (AT = año + 1)
-  const [activeDjTab, setActiveDjTab] = useState<'DJ_1887' | 'DJ_1879' | 'DJ_1847'>('DJ_1887');
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getMonth() >= 9 ? new Date().getFullYear() : new Date().getFullYear() - 1); // Año Comercial (AT = año + 1)
+  const [activeDjTab, setActiveDjTab] = useState<'DJ_1887' | 'DJ_1879' | 'DJ_1847' | 'CUADRATURA'>('CUADRATURA');
 
   // Modal de Certificados Oficiales SII
   const [showCertModal, setShowCertModal] = useState<boolean>(false);
@@ -189,6 +192,14 @@ export const DeclaracionesJuradasView: React.FC<DeclaracionesJuradasViewProps> =
       {/* TABS DE DDJJ */}
       <div className="flex border-b border-slate-200 gap-2">
         <button
+          onClick={() => setActiveDjTab('CUADRATURA')}
+          className={`pb-3 px-4 text-xs font-bold border-b-2 transition-all cursor-pointer ${
+            activeDjTab === 'CUADRATURA' ? 'border-slate-900 text-slate-900 font-extrabold' : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          Cuadratura 1887 / 1879
+        </button>
+        <button
           onClick={() => setActiveDjTab('DJ_1887')}
           className={`pb-3 px-4 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
             activeDjTab === 'DJ_1887' ? 'border-indigo-600 text-indigo-950 font-extrabold' : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -226,6 +237,13 @@ export const DeclaracionesJuradasView: React.FC<DeclaracionesJuradasViewProps> =
       </div>
 
       {/* ========================================================================= */}
+      {activeDjTab === 'CUADRATURA' && (
+        <CuadraturaRetencionesView
+          studyId={studyId} company={company} anio={selectedYear}
+          savedSlips={savedSlips} rcvDocuments={rcvDocuments} vouchers={vouchers} accounts={accounts}
+        />
+      )}
+
       {/* CONTENIDO TAB DJ 1887 (SUELDOS Y REMUNERACIONES) */}
       {/* ========================================================================= */}
       {activeDjTab === 'DJ_1887' && (

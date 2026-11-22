@@ -9,6 +9,10 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## [1.20.0] - Cuadratura de DJ 1887 y 1879
+- Nueva pestaña "Cuadratura 1887 / 1879" en Declaraciones Juradas: compara mes a mes el impuesto único (liquidaciones vs F29 código 48 vs contabilidad) y la retención de honorarios (boletas del RCV vs F29 código 151 vs contabilidad). Marca los meses con diferencia o sin F29.
+- El año comercial de Declaraciones Juradas parte en el año que corresponde a la próxima Operación Renta.
+
 ## [1.19.1] - Renta anual: PPM desde la contabilidad
 - Los PPM pagados se leen de la cuenta contable donde se registran (sugerida por nombre "PPM" o "Pagos provisionales"; se puede cambiar o volver a ingreso manual). Toma los movimientos del 1-1 al 31-12, sin apertura ni anulados.
 

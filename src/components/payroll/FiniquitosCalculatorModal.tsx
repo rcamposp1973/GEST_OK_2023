@@ -4,7 +4,7 @@ import {
   FileText, Calculator, Download, Printer, X, CheckCircle2, 
   AlertCircle, DollarSign, Calendar, User, ShieldCheck, ArrowRight, Building2
 } from 'lucide-react';
-import { Employee, FiniquitoRecord, ChartOfAccount } from '../../types';
+import { Employee, FiniquitoRecord, ChartOfAccount, ProjectMaster } from '../../types';
 import { formatRut } from '../../utils/rutMatcher';
 import { getPrevisionalParametersForPeriod } from '../../utils/payrollCalculator';
 import { calcularFiniquito, baseArt172 } from '../../utils/finiquito';
@@ -21,6 +21,7 @@ interface FiniquitosCalculatorModalProps {
   onSaveFiniquito?: (record: FiniquitoRecord) => void;
   /** Si se entrega, el término masivo puede quedar registrado en la ficha de cada trabajador */
   onGuardarTrabajador?: (emp: Employee) => Promise<void>;
+  obras?: ProjectMaster[];
 }
 
 export const CHILEAN_TERMINATION_CAUSALS = [
@@ -41,7 +42,8 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
   accounts,
   onClose,
   onSaveFiniquito,
-  onGuardarTrabajador
+  onGuardarTrabajador,
+  obras = []
 }) => {
   const [modo, setModo] = useState<'individual' | 'masivo'>('individual');
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
@@ -220,6 +222,7 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
               employees={employees}
               companyName={companyName}
               onGuardarTrabajador={onGuardarTrabajador}
+              obras={obras}
               onVerIndividual={(id, fecha) => { setModo('individual'); setSelectedEmployeeId(id); setCausalCode('ART_159_CONCLUSION'); setFechaCese(fecha); }}
             />
           </div>
@@ -320,6 +323,11 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
                 {finiquitoCalculated.sinIAS && (
                   <div className="text-[11px] text-amber-300 bg-amber-900/30 border border-amber-700/50 rounded-lg px-3 py-2">
                     No corresponde indemnización por años de servicio: el trabajador tiene menos de 1 año de antigüedad (Art. 163).
+                  </div>
+                )}
+                {finiquitoCalculated.avisoFeriado && (
+                  <div className="text-[11px] text-amber-300 bg-amber-900/30 border border-amber-700/50 rounded-lg px-3 py-2">
+                    {finiquitoCalculated.avisoFeriado}
                   </div>
                 )}
                 {finiquitoCalculated.avisoObra && (

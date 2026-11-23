@@ -9,6 +9,13 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## [1.24.0] - Obras con fechas, trabajadores por obra y liquidación hasta el término
+- Proyectos / Obras tiene fecha de inicio y de término.
+- Cada contrato del trabajador se asocia a una obra del maestro (o texto libre si la empresa no tiene obras).
+- Término masivo: se filtra por obra y la fecha de término se toma de la obra.
+- La liquidación de sueldo cuenta los días hasta la fecha de término del contrato (antes solo consideraba la fecha de ingreso). Terminar el último día del mes = mes completo.
+- Contratos de 30 días o menos: el finiquito no calcula feriado proporcional (Art. 44 inc. 4°) y lo avisa.
+
 ## [1.23.0] - Historial de contratos del trabajador
 - La ficha del trabajador tiene una sección "Contratos": cada contrato con su tipo, obra o faena, fecha de inicio, fecha de término y causal. "Registrar término" cierra el contrato vigente; "Nuevo contrato" registra una recontratación (por obra, plazo fijo o indefinido).
 - Al recontratar, la antigüedad y el finiquito se calculan solo sobre el contrato que termina: no se acumulan contratos anteriores ya finiquitados. El cambio de tipo de contrato rige desde el inicio del nuevo contrato para las liquidaciones.

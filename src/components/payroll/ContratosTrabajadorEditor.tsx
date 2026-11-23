@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { ContractType, ContratoLaboral, Employee } from '../../types';
+import type { ContractType, ContratoLaboral, Employee, ProjectMaster } from '../../types';
 import { contratosDe, nuevoContrato, terminarContrato, NOMBRE_TIPO_CONTRATO } from '../../utils/contratosLaborales';
 import { CHILEAN_TERMINATION_CAUSALS } from './FiniquitosCalculatorModal';
 
@@ -12,11 +12,14 @@ type Ficha = Pick<Employee, 'contratos' | 'hireDate' | 'terminationDate' | 'cont
 interface Props {
   ficha: Ficha;
   onChange: (cambios: Partial<Employee>) => void;
+  obras?: ProjectMaster[]; // maestro de Proyectos / Obras de la empresa
 }
 
 const nombreCausal = (code?: string) => CHILEAN_TERMINATION_CAUSALS.find(c => c.code === code)?.name.split(' - ')[0] || '';
 
-export default function ContratosTrabajadorEditor({ ficha, onChange }: Props) {
+export default function ContratosTrabajadorEditor({ ficha, onChange, obras = [] }: Props) {
+  const obrasActivas = obras.filter(o => o.estado !== 'Inactivo');
+  const [obraId, setObraId] = useState('');
   const contratos = contratosDe(ficha);
   const actual = contratos[contratos.length - 1];
   const [modo, setModo] = useState<'' | 'termino' | 'nuevo'>('');
@@ -34,6 +37,11 @@ export default function ContratosTrabajadorEditor({ ficha, onChange }: Props) {
       onChange({ contratos: r.contratos, hireDate: r.hireDate, contractType: r.contractType, terminationDate: r.terminationDate });
       setModo(''); setError('');
     } catch (e: any) { setError(e?.message || 'No se pudo registrar'); }
+  };
+
+  const asignarObra = (c: ContratoLaboral, id: string) => {
+    const o = obras.find(x => x.id === id);
+    onChange({ contratos: contratos.map(x => (x.id === c.id ? { ...x, obraId: id || undefined, obraFaena: o ? o.name : x.obraFaena } : x)) });
   };
 
   const actualizarObra = (c: ContratoLaboral, texto: string) =>
@@ -66,8 +74,15 @@ export default function ContratosTrabajadorEditor({ ficha, onChange }: Props) {
               <tr key={c.id} className="border-t border-slate-100">
                 <td className="py-1 pr-2">{NOMBRE_TIPO_CONTRATO[c.tipo] || c.tipo}</td>
                 <td className="py-1 pr-2">
-                  <input value={c.obraFaena || ''} onChange={e => actualizarObra(c, e.target.value)} placeholder={c.tipo === 'OBRA_FAENA' ? 'Nombre de la obra' : ''}
-                    className="w-full min-w-[8rem] border border-slate-200 rounded px-1.5 py-0.5" />
+                  {obras.length > 0 ? (
+                    <select value={c.obraId || ''} onChange={e => asignarObra(c, e.target.value)} className="w-full min-w-[9rem] border border-slate-200 rounded px-1 py-0.5">
+                      <option value="">{c.obraFaena && !c.obraId ? c.obraFaena : 'Sin obra'}</option>
+                      {obras.map(o => <option key={o.id} value={o.id}>{o.code} · {o.name}</option>)}
+                    </select>
+                  ) : (
+                    <input value={c.obraFaena || ''} onChange={e => actualizarObra(c, e.target.value)} placeholder={c.tipo === 'OBRA_FAENA' ? 'Nombre de la obra' : ''}
+                      className="w-full min-w-[8rem] border border-slate-200 rounded px-1.5 py-0.5" />
+                  )}
                 </td>
                 <td className="py-1 pr-2 font-mono">{c.fechaInicio}</td>
                 <td className="py-1 pr-2 font-mono">{c.fechaTermino || <span className="text-emerald-700">Vigente</span>}</td>
@@ -102,10 +117,25 @@ export default function ContratosTrabajadorEditor({ ficha, onChange }: Props) {
           <label className="text-[11px] text-slate-600">Fecha de inicio
             <input type="date" value={fecha} onChange={e => setFecha(e.target.value)} className="block border border-slate-300 rounded px-2 py-1 text-xs" />
           </label>
-          <label className="text-[11px] text-slate-600 flex-1 min-w-[10rem]">Obra o faena
-            <input value={obra} onChange={e => setObra(e.target.value)} className="block w-full border border-slate-300 rounded px-2 py-1 text-xs" />
-          </label>
-          <button type="button" onClick={() => aplicar(() => nuevoContrato(ficha, { tipo, fechaInicio: fecha, obraFaena: obra.trim() || undefined }))} className="text-xs bg-slate-900 text-white rounded-lg px-3 py-1.5">Agregar</button>
+          {obrasActivas.length > 0 ? (
+            <label className="text-[11px] text-slate-600 flex-1 min-w-[10rem]">Obra o faena
+              <select value={obraId} onChange={e => { setObraId(e.target.value); const o = obras.find(x => x.id === e.target.value); if (o?.fechaInicio && o.fechaInicio > fecha) setFecha(o.fechaInicio); }}
+                className="block w-full border border-slate-300 rounded px-2 py-1 text-xs">
+                <option value="">Sin obra</option>
+                {obrasActivas.map(o => <option key={o.id} value={o.id}>{o.code} · {o.name}</option>)}
+              </select>
+            </label>
+          ) : (
+            <label className="text-[11px] text-slate-600 flex-1 min-w-[10rem]">Obra o faena
+              <input value={obra} onChange={e => setObra(e.target.value)} className="block w-full border border-slate-300 rounded px-2 py-1 text-xs" />
+            </label>
+          )}
+          <button type="button" onClick={() => aplicar(() => {
+            const o = obras.find(x => x.id === obraId);
+            const r = nuevoContrato(ficha, { tipo, fechaInicio: fecha, obraFaena: o ? o.name : (obra.trim() || undefined) });
+            if (o && r.contratos) r.contratos[r.contratos.length - 1].obraId = o.id;
+            return r;
+          })} className="text-xs bg-slate-900 text-white rounded-lg px-3 py-1.5">Agregar</button>
         </div>
       )}
       {error && <p className="text-xs text-rose-700">{error}</p>}

@@ -9360,6 +9360,7 @@ export default function CompanyAccountingDashboard({
       {activeTab === 'employees' && (
         <EmployeesView
           studyId={studyId}
+          projects={projects}
           companyId={company.id}
           employees={employees}
           costCenters={costCenters}
@@ -9887,6 +9888,7 @@ export default function CompanyAccountingDashboard({
           employees={employees}
           accounts={accounts}
           onGuardarTrabajador={handleSaveEmployee}
+          obras={projects}
           onClose={() => setShowFiniquitoModal(false)}
         />
       )}

@@ -1033,6 +1033,8 @@ export interface ProjectMaster {
   name: string; // e.g. Edificio Costanera, Proyecto TI 2026
   clientOrLocation?: string; // e.g. Minera Escondida / Antofagasta
   description?: string;
+  fechaInicio?: string;  // YYYY-MM-DD inicio de la obra o faena
+  fechaTermino?: string; // YYYY-MM-DD término de la obra o faena (cuando se sabe)
   estado: 'Activo' | 'Inactivo';
   createdAt?: string;
   updatedAt?: string;
@@ -1295,7 +1297,8 @@ export interface ContratoLaboral {
   tipo: ContractType;
   fechaInicio: string;      // YYYY-MM-DD
   fechaTermino?: string;    // YYYY-MM-DD; vacío = vigente
-  obraFaena?: string;       // obra, faena o servicio (contratos por obra) o descripción
+  obraId?: string;          // obra o faena del maestro de Proyectos / Obras
+  obraFaena?: string;       // nombre de la obra, faena o servicio (o descripción libre)
   causalTermino?: string;   // código de causal (Art. 159, 160, 161)
 }
 /** Cambio de condiciones previsionales/contractuales de un trabajador, vigente DESDE un mes (YYYY-MM).

@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Download } from 'lucide-react';
-import type { Employee } from '../../types';
+import type { Employee, ProjectMaster } from '../../types';
 import { formatRut } from '../../utils/rutMatcher';
 import { getPrevisionalParametersForPeriod } from '../../utils/payrollCalculator';
 import { calcularFiniquito, baseArt172 } from '../../utils/finiquito';
@@ -15,14 +15,16 @@ interface Props {
   companyName: string;
   onVerIndividual: (employeeId: string, fechaCese: string) => void;
   onGuardarTrabajador?: (emp: Employee) => Promise<void>;
+  obras?: ProjectMaster[];
 }
 
 const pesos = (n: number) => '$' + Math.round(n).toLocaleString('es-CL');
 
-export default function FiniquitoMasivoObra({ employees, companyName, onVerIndividual, onGuardarTrabajador }: Props) {
+export default function FiniquitoMasivoObra({ employees, companyName, onVerIndividual, onGuardarTrabajador, obras = [] }: Props) {
   const hoy = new Date().toISOString().slice(0, 10);
   const [fechaCese, setFechaCese] = useState(hoy);
   const [filtro, setFiltro] = useState('');
+  const [obraId, setObraId] = useState('');
   const [incluirOtros, setIncluirOtros] = useState(false);
   const [seleccion, setSeleccion] = useState<Record<string, boolean>>({});
   const [vacTomadas, setVacTomadas] = useState<Record<string, number>>({});
@@ -33,8 +35,9 @@ export default function FiniquitoMasivoObra({ employees, companyName, onVerIndiv
   const candidatos = useMemo(() => employees.filter(e =>
     !e.terminationDate
     && (incluirOtros || e.contractType === 'OBRA_FAENA')
+    && (!obraId || contratoActual(e)?.obraId === obraId)
     && (!filtro || `${e.name} ${e.rut} ${e.department || ''} ${e.position || ''} ${contratoActual(e)?.obraFaena || ''}`.toLowerCase().includes(filtro.toLowerCase()))
-  ), [employees, filtro, incluirOtros]);
+  ), [employees, filtro, incluirOtros, obraId]);
 
   const uf = getPrevisionalParametersForPeriod(fechaCese.slice(0, 7)).uf || 0;
 
@@ -83,6 +86,18 @@ export default function FiniquitoMasivoObra({ employees, companyName, onVerIndiv
         <label className="text-xs text-slate-600">Fecha de término
           <input type="date" value={fechaCese} onChange={e => setFechaCese(e.target.value)} className="block mt-1 border border-slate-300 rounded-lg px-2 py-1.5 text-sm" />
         </label>
+        {obras.length > 0 && (
+          <label className="text-xs text-slate-600">Obra
+            <select value={obraId} onChange={e => {
+              const id = e.target.value; setObraId(id); setSeleccion({});
+              const o = obras.find(x => x.id === id);
+              if (o?.fechaTermino) setFechaCese(o.fechaTermino);
+            }} className="block mt-1 border border-slate-300 rounded-lg px-2 py-1.5 text-sm max-w-[16rem]">
+              <option value="">Todas</option>
+              {obras.map(o => <option key={o.id} value={o.id}>{o.code} · {o.name}{o.fechaTermino ? ` (termina ${o.fechaTermino})` : ''}</option>)}
+            </select>
+          </label>
+        )}
         <label className="text-xs text-slate-600 flex-1 min-w-[12rem]">Buscar (nombre, RUT, obra o cargo)
           <input value={filtro} onChange={e => setFiltro(e.target.value)} className="block w-full mt-1 border border-slate-300 rounded-lg px-2 py-1.5 text-sm" />
         </label>
@@ -120,6 +135,7 @@ export default function FiniquitoMasivoObra({ employees, companyName, onVerIndiv
                     <div className="font-medium text-slate-900">{e.name}</div>
                     <div className="text-slate-500">{formatRut(e.rut)}{e.position ? ` · ${e.position}` : ''}{contratoActual(e)?.obraFaena ? ` · ${contratoActual(e)?.obraFaena}` : ''}</div>
                     {r.avisoObra && <div className="text-amber-700 mt-0.5">{r.avisoObra}</div>}
+                    {r.avisoFeriado && <div className="text-amber-700 mt-0.5">{r.avisoFeriado}</div>}
                   </td>
                   <td className="p-2 font-mono">{e.hireDate}</td>
                   <td className="p-2 text-right font-mono">{r.mesesObra}</td>

@@ -30,6 +30,7 @@ export interface ResultadoFiniquito {
   diasIndemnizacionObra: number;
   montoIndemnizacionObra: number;
   avisoObra?: string;
+  avisoFeriado?: string;
   diasVacacionesPendientes: number;
   montoVacaciones: number;
   totalBruto: number;
@@ -107,16 +108,19 @@ export function calcularFiniquito(x: DatosFiniquito): ResultadoFiniquito {
     }
   }
 
-  // Feriado proporcional: 1,25 días hábiles por mes; se pagan como corridos (factor aproximado 1,4)
-  const devengados = (diffDays / 30) * 1.25;
+  // Feriado proporcional: 1,25 días hábiles por mes; se pagan como corridos (factor aproximado 1,4).
+  // Contratos de 30 días o menos: no corresponde, se entiende incluido en la remuneración (Art. 44 inc. 4°).
+  const contratoCorto = diffDays <= 30;
+  const devengados = contratoCorto ? 0 : (diffDays / 30) * 1.25;
   const diasVacacionesPendientes = Math.max(0, devengados - (x.diasVacacionesTomados || 0));
   const montoVacaciones = Math.round(diasVacacionesPendientes * 1.4 * (x.baseMensual / 30));
+  const avisoFeriado = contratoCorto ? 'Contrato de 30 días o menos: no corresponde feriado proporcional (Art. 44 inc. 4°).' : undefined;
 
   const totalBruto = montoIAS + montoAvisoPrevio + montoIndemnizacionObra + montoVacaciones + (x.otrosHaberes || 0);
   const totalDescuentos = x.descuentos || 0;
   return {
     diffDays, anosCompletos, mesesRestantes, anosParaIAS, topeLegal, baseTopada, montoIAS, montoAvisoPrevio,
-    diasPorMesObra, mesesObra, diasIndemnizacionObra, montoIndemnizacionObra, avisoObra,
+    diasPorMesObra, mesesObra, diasIndemnizacionObra, montoIndemnizacionObra, avisoObra, avisoFeriado,
     diasVacacionesPendientes: Math.round(diasVacacionesPendientes * 10) / 10, montoVacaciones,
     totalBruto, totalDescuentos, totalLiquido: Math.max(0, totalBruto - totalDescuentos),
   };

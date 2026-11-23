@@ -262,4 +262,18 @@ import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } fro
   const s=C.sincronizarFicha({...r2,hireDate:'2026-01-06'});
   ok('contratos: editar la ficha ajusta el contrato actual, no el anterior', s.contratos![1].fechaInicio==='2026-01-06' && s.contratos![0].fechaInicio==='2025-02-01');
 }
+{
+  const F = await import('../src/utils/finiquito');
+  const c=F.calcularFiniquito({hireDate:'2026-11-02',fechaCese:'2026-11-24',contractType:'OBRA_FAENA',requiereIAS:false,requiereAvisoPrevio:false,esConclusionObra:true,conAvisoPrevio:false,baseMensual:900000,ufCese:40000,diasVacacionesTomados:0});
+  ok('obra 2 al 24 nov: 23 días, sin indemnización ni feriado proporcional', c.diffDays===23 && c.montoIndemnizacionObra===0 && c.montoVacaciones===0 && !!c.avisoFeriado && !!c.avisoObra && c.totalLiquido===0);
+}
+{
+  const P = await import('../src/utils/payrollCalculator');
+  const emp:any={id:'e',rut:'1-9',name:'X',hireDate:'2026-11-02',terminationDate:'2026-11-24',contractType:'OBRA_FAENA',baseSalary:900000,pensionSystem:'HABITAT',healthSystem:'FONASA',hasCesantiaAFC:true};
+  const prm:any={period:'2026-11'};
+  let s:any; try { s=P.calculatePayrollSlip(emp,{...(P as any).getPrevisionalParametersForPeriod?.('2026-11'),period:'2026-11'}); } catch(e){ s=null; }
+  ok('liquidación: obra del 2 al 24 de noviembre = 23 días', !!s && s.diasTrabajados===23);
+  let s2:any; try { s2=P.calculatePayrollSlip({...emp,hireDate:'2026-10-01',terminationDate:'2026-11-30'},{...(P as any).getPrevisionalParametersForPeriod?.('2026-11'),period:'2026-11'}); } catch(e){ s2=null; }
+  ok('liquidación: término el último día del mes = 30 días', !!s2 && s2.diasTrabajados===30);
+}
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

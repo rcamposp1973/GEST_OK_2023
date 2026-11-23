@@ -316,6 +316,12 @@ export default function TablasAnalisisMasterView({
     const name = (form.get('name') as string || '').trim().toUpperCase();
     const clientOrLocation = (form.get('clientOrLocation') as string || '').trim().toUpperCase();
     const estado = (form.get('estado') as 'Activo' | 'Inactivo') || 'Activo';
+    const fechaInicio = (form.get('fechaInicio') as string || '').trim();
+    const fechaTermino = (form.get('fechaTermino') as string || '').trim();
+    if (fechaInicio && fechaTermino && fechaTermino < fechaInicio) {
+      alert('La fecha de término no puede ser anterior a la de inicio.');
+      return;
+    }
 
     if (!code || !name) {
       alert('El código y el nombre del Proyecto u Obra son obligatorios.');
@@ -331,6 +337,8 @@ export default function TablasAnalisisMasterView({
         name,
         clientOrLocation,
         estado,
+        fechaInicio,
+        fechaTermino,
         updatedAt: nowIso
       };
 
@@ -944,6 +952,7 @@ export default function TablasAnalisisMasterView({
                 <th className="p-3 w-36 font-mono">Código</th>
                 <th className="p-3">Nombre Proyecto / Obra</th>
                 <th className="p-3 w-64">Cliente / Ubicación</th>
+                <th className="p-3 w-44">Vigencia</th>
                 <th className="p-3 w-28 text-center">Estado</th>
                 <th className="p-3 w-28 text-right">Acciones</th>
               </tr>
@@ -951,7 +960,7 @@ export default function TablasAnalisisMasterView({
             <tbody className="divide-y divide-slate-200">
               {filteredProjects.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-slate-400">
+                  <td colSpan={6} className="p-8 text-center text-slate-400">
                     No se encontraron Proyectos u Obras registradas.
                   </td>
                 </tr>
@@ -961,6 +970,7 @@ export default function TablasAnalisisMasterView({
                     <td className="p-3 font-mono font-bold text-teal-700">{proy.code}</td>
                     <td className="p-3 font-semibold text-slate-900">{proy.name}</td>
                     <td className="p-3 text-slate-600">{proy.clientOrLocation || '-'}</td>
+                    <td className="p-3 font-mono text-slate-600">{proy.fechaInicio || '—'} → {proy.fechaTermino || 'en curso'}</td>
                     <td className="p-3 text-center">
                       <button
                         onClick={() => handleToggleStatus('projects', proy.id, proy.estado)}
@@ -1385,6 +1395,16 @@ export default function TablasAnalisisMasterView({
                     required
                     className="border border-slate-300 p-2 w-full rounded-lg text-xs font-medium focus:ring-2 focus:ring-indigo-500"
                   />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Inicio de la obra</label>
+                    <input type="date" name="fechaInicio" defaultValue={editingProject?.fechaInicio || ''} className="border border-slate-300 p-2 w-full rounded-lg text-xs" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Término de la obra</label>
+                    <input type="date" name="fechaTermino" defaultValue={editingProject?.fechaTermino || ''} className="border border-slate-300 p-2 w-full rounded-lg text-xs" />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Cliente / Ubicación</label>

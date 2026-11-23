@@ -413,20 +413,24 @@ export function calculatePayrollSlip(
   const month = parseInt(monthStr, 10) || (new Date().getMonth() + 1);
 
   // Días trabajados del mes (norma laboral chilena base 30 días)
-  // Considera automáticamente la fecha de ingreso del trabajador
+  // Considera la fecha de ingreso y la fecha de término del contrato vigente
   let diasBase = 30;
+  const finMes = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  let diaDesde = 1, diaHasta = 30;
   if (employee.hireDate) {
     const hirePeriod = employee.hireDate.slice(0, 7);
-    if (hirePeriod === params.period) {
-      const hireDay = parseInt(employee.hireDate.split('-')[2], 10) || 1;
-      if (hireDay <= 1) {
-        diasBase = 30; // Ingreso el día 01 del mes: mes completo 30 días
-      } else {
-        diasBase = Math.max(1, Math.min(30, 30 - hireDay + 1)); // Ingreso durante el mes: días proporcionales
-      }
-    } else if (employee.hireDate > `${params.period}-31`) {
-      diasBase = 0; // Ingreso en período futuro
-    }
+    if (hirePeriod === params.period) diaDesde = parseInt(employee.hireDate.split('-')[2], 10) || 1;
+    else if (employee.hireDate > `${params.period}-31`) diasBase = 0; // ingreso en período futuro
+  }
+  if (employee.terminationDate) {
+    const termPeriod = employee.terminationDate.slice(0, 7);
+    if (termPeriod === params.period) {
+      const diaTermino = parseInt(employee.terminationDate.split('-')[2], 10) || finMes;
+      diaHasta = diaTermino >= finMes ? 30 : diaTermino; // terminar el último día del mes = mes completo
+    } else if (employee.terminationDate < `${params.period}-01`) diasBase = 0; // contrato ya terminado
+  }
+  if (diasBase !== 0) {
+    diasBase = diaDesde <= 1 && diaHasta >= 30 ? 30 : Math.max(0, Math.min(30, diaHasta - diaDesde + 1));
   }
 
   const diasLicencia = input.diasLicencia || 0;

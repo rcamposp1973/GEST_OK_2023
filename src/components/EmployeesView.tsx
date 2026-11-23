@@ -1,3 +1,4 @@
+import type { ProjectMaster } from '../types';
 import ContratosTrabajadorEditor from './payroll/ContratosTrabajadorEditor';
 import { contratosDe, contratoActual, sincronizarFicha } from '../utils/contratosLaborales';
 import { formatearRut } from '../utils/rutFormato';
@@ -190,6 +191,7 @@ R.U.T.: ${companyRut}                          R.U.T.: ${workerRut}`;
 
 interface EmployeesViewProps {
   studyId?: string;
+  projects?: ProjectMaster[];
   companyId?: string;
   employees: Employee[];
   costCenters: CostCenterMaster[];
@@ -206,6 +208,7 @@ interface EmployeesViewProps {
 
 export const EmployeesView: React.FC<EmployeesViewProps> = ({
   studyId,
+  projects = [],
   companyId,
   employees,
   costCenters,
@@ -1780,9 +1783,10 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
                     />
                   </div>
 
-                  {editingEmployee && (
+                  {formData.hireDate && (
                     <ContratosTrabajadorEditor
                       ficha={formData as any}
+                      obras={projects}
                       onChange={(cambios) => setFormData(prev => ({ ...prev, ...cambios } as any))}
                     />
                   )}

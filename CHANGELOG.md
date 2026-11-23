@@ -9,6 +9,10 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## [1.24.1] - Obras solo para contratos por obra o faena
+- La obra se asigna únicamente a contratos "Por obra o faena"; en los demás tipos aparece "No aplica".
+- El término masivo muestra solo trabajadores con contrato por obra o faena.
+
 ## [1.24.0] - Obras con fechas, trabajadores por obra y liquidación hasta el término
 - Proyectos / Obras tiene fecha de inicio y de término.
 - Cada contrato del trabajador se asocia a una obra del maestro (o texto libre si la empresa no tiene obras).

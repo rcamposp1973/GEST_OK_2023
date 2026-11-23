@@ -25,7 +25,6 @@ export default function FiniquitoMasivoObra({ employees, companyName, onVerIndiv
   const [fechaCese, setFechaCese] = useState(hoy);
   const [filtro, setFiltro] = useState('');
   const [obraId, setObraId] = useState('');
-  const [incluirOtros, setIncluirOtros] = useState(false);
   const [seleccion, setSeleccion] = useState<Record<string, boolean>>({});
   const [vacTomadas, setVacTomadas] = useState<Record<string, number>>({});
   const [confirmando, setConfirmando] = useState(false);
@@ -34,10 +33,10 @@ export default function FiniquitoMasivoObra({ employees, companyName, onVerIndiv
 
   const candidatos = useMemo(() => employees.filter(e =>
     !e.terminationDate
-    && (incluirOtros || e.contractType === 'OBRA_FAENA')
+    && e.contractType === 'OBRA_FAENA' // solo contratos por obra o faena
     && (!obraId || contratoActual(e)?.obraId === obraId)
     && (!filtro || `${e.name} ${e.rut} ${e.department || ''} ${e.position || ''} ${contratoActual(e)?.obraFaena || ''}`.toLowerCase().includes(filtro.toLowerCase()))
-  ), [employees, filtro, incluirOtros, obraId]);
+  ), [employees, filtro, obraId]);
 
   const uf = getPrevisionalParametersForPeriod(fechaCese.slice(0, 7)).uf || 0;
 
@@ -100,10 +99,6 @@ export default function FiniquitoMasivoObra({ employees, companyName, onVerIndiv
         )}
         <label className="text-xs text-slate-600 flex-1 min-w-[12rem]">Buscar (nombre, RUT, obra o cargo)
           <input value={filtro} onChange={e => setFiltro(e.target.value)} className="block w-full mt-1 border border-slate-300 rounded-lg px-2 py-1.5 text-sm" />
-        </label>
-        <label className="text-xs text-slate-600 flex items-center gap-1.5 pb-2">
-          <input type="checkbox" checked={incluirOtros} onChange={e => setIncluirOtros(e.target.checked)} />
-          Mostrar también otros tipos de contrato
         </label>
       </div>
       {uf === 0 && <p className="text-xs text-amber-700">La UF de ese mes no está cargada: no se aplica el tope de 90 UF.</p>}

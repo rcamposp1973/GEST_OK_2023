@@ -74,7 +74,9 @@ export default function ContratosTrabajadorEditor({ ficha, onChange, obras = [] 
               <tr key={c.id} className="border-t border-slate-100">
                 <td className="py-1 pr-2">{NOMBRE_TIPO_CONTRATO[c.tipo] || c.tipo}</td>
                 <td className="py-1 pr-2">
-                  {obras.length > 0 ? (
+                  {c.tipo !== 'OBRA_FAENA' ? (
+                    <span className="text-slate-400">No aplica</span>
+                  ) : obras.length > 0 ? (
                     <select value={c.obraId || ''} onChange={e => asignarObra(c, e.target.value)} className="w-full min-w-[9rem] border border-slate-200 rounded px-1 py-0.5">
                       <option value="">{c.obraFaena && !c.obraId ? c.obraFaena : 'Sin obra'}</option>
                       {obras.map(o => <option key={o.id} value={o.id}>{o.code} · {o.name}</option>)}
@@ -117,7 +119,7 @@ export default function ContratosTrabajadorEditor({ ficha, onChange, obras = [] 
           <label className="text-[11px] text-slate-600">Fecha de inicio
             <input type="date" value={fecha} onChange={e => setFecha(e.target.value)} className="block border border-slate-300 rounded px-2 py-1 text-xs" />
           </label>
-          {obrasActivas.length > 0 ? (
+          {tipo !== 'OBRA_FAENA' ? null : obrasActivas.length > 0 ? (
             <label className="text-[11px] text-slate-600 flex-1 min-w-[10rem]">Obra o faena
               <select value={obraId} onChange={e => { setObraId(e.target.value); const o = obras.find(x => x.id === e.target.value); if (o?.fechaInicio && o.fechaInicio > fecha) setFecha(o.fechaInicio); }}
                 className="block w-full border border-slate-300 rounded px-2 py-1 text-xs">
@@ -131,8 +133,8 @@ export default function ContratosTrabajadorEditor({ ficha, onChange, obras = [] 
             </label>
           )}
           <button type="button" onClick={() => aplicar(() => {
-            const o = obras.find(x => x.id === obraId);
-            const r = nuevoContrato(ficha, { tipo, fechaInicio: fecha, obraFaena: o ? o.name : (obra.trim() || undefined) });
+            const o = tipo === 'OBRA_FAENA' ? obras.find(x => x.id === obraId) : undefined;
+            const r = nuevoContrato(ficha, { tipo, fechaInicio: fecha, obraFaena: tipo === 'OBRA_FAENA' ? (o ? o.name : (obra.trim() || undefined)) : undefined });
             if (o && r.contratos) r.contratos[r.contratos.length - 1].obraId = o.id;
             return r;
           })} className="text-xs bg-slate-900 text-white rounded-lg px-3 py-1.5">Agregar</button>

@@ -9,6 +9,10 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.24.2 — 2026-11-23
+- Cierre de obra: al poner la fecha de término en Proyectos / Obras, se cierran automáticamente los contratos por obra o faena de esa obra (Art. 159 N° 5), previa confirmación con la lista de trabajadores. Si se corrige la fecha, se corrigen los contratos; si se borra, se reabren. No toca contratos terminados por otro motivo.
+- Las liquidaciones del mes del cierre siguen editables (bonos, ausencias, licencias, vacaciones); solo cambian las fechas del contrato.
+- Finiquito masivo: al elegir una obra cerrada, muestra también a los trabajadores que el cierre ya terminó.
 ## [1.24.1] - Obras solo para contratos por obra o faena
 - La obra se asigna únicamente a contratos "Por obra o faena"; en los demás tipos aparece "No aplica".
 - El término masivo muestra solo trabajadores con contrato por obra o faena.

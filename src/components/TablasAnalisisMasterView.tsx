@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { db, auth } from '../lib/firebase';
-import { collection, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, doc, addDoc, updateDoc, deleteDoc, getDocs, setDoc } from 'firebase/firestore';
+import { aplicarCierreObra } from '../utils/contratosLaborales';
 import {
   Company,
   CostCenterMaster,
@@ -343,7 +344,41 @@ export default function TablasAnalisisMasterView({
       };
 
       if (editingProject) {
+        // Cierre de obra: al poner (o cambiar / quitar) la fecha de término, se ajustan
+        // los contratos por obra o faena de esa obra. Solo cambian fechas del contrato;
+        // la liquidación sigue editable (bonos, ausencias, licencias, vacaciones).
+        const fechaAnterior = editingProject.fechaTermino || '';
+        let cambios: { id: string; data: any; nombre: string }[] = [];
+        if (fechaTermino !== fechaAnterior) {
+          const snap = await getDocs(collection(companyRef, 'employees'));
+          snap.forEach(d => {
+            const emp: any = { id: d.id, ...d.data() };
+            const r = aplicarCierreObra(emp, editingProject.id, fechaTermino, fechaAnterior || undefined);
+            if (r) cambios.push({
+              id: d.id,
+              data: { contratos: r.contratos, terminationDate: r.terminationDate || '' },
+              nombre: [emp.firstName, emp.lastName].filter(Boolean).join(' ') || emp.name || emp.rut || d.id,
+            });
+          });
+          if (cambios.length) {
+            const accion = fechaTermino
+              ? `Se cerrarán (o corregirán) los contratos por obra o faena de ${cambios.length} trabajador(es) al ${fechaTermino}:`
+              : `Se reabrirán los contratos de ${cambios.length} trabajador(es) que se habían cerrado con esta obra:`;
+            const lista = cambios.slice(0, 15).map(c => '• ' + c.nombre).join('\n') + (cambios.length > 15 ? `\n… y ${cambios.length - 15} más` : '');
+            if (!window.confirm(`${accion}\n\n${lista}\n\nLas liquidaciones siguen editables (bonos, ausencias, licencias, vacaciones). ¿Continuar?`)) {
+              cambios = [];
+              if (!window.confirm('¿Guardar la obra de todos modos, sin cambiar los contratos?')) { setIsSaving(false); return; }
+            }
+          }
+        }
         await updateDoc(doc(companyRef, 'projects', editingProject.id), payload);
+        for (const c of cambios) {
+          await setDoc(doc(companyRef, 'employees', c.id), c.data, { merge: true });
+        }
+        if (cambios.length) {
+          logAuditEvent({ studyId, companyId: company.id, action: 'EDITAR', module: 'REMUNERACIONES', details: `Cierre de obra ${code}: ${cambios.length} contrato(s) ajustados (término ${fechaTermino || 'reabierta'})` } as any);
+          alert(`Listo: ${cambios.length} contrato(s) ${fechaTermino ? 'cerrados al ' + fechaTermino : 'reabiertos'}.`);
+        }
       } else {
         payload.createdAt = nowIso;
         await addDoc(collection(companyRef, 'projects'), payload);

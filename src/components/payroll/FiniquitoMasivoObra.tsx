@@ -31,12 +31,14 @@ export default function FiniquitoMasivoObra({ employees, companyName, onVerIndiv
   const [registrando, setRegistrando] = useState(false);
   const [mensaje, setMensaje] = useState('');
 
+  const obraSel = obras.find(o => o.id === obraId);
   const candidatos = useMemo(() => employees.filter(e =>
-    !e.terminationDate
+    // vigentes, o ya cerrados por el cierre de la obra elegida (para calcular su finiquito)
+    (!e.terminationDate || (!!obraSel?.fechaTermino && e.terminationDate === obraSel.fechaTermino && contratoActual(e)?.obraId === obraId))
     && e.contractType === 'OBRA_FAENA' // solo contratos por obra o faena
     && (!obraId || contratoActual(e)?.obraId === obraId)
     && (!filtro || `${e.name} ${e.rut} ${e.department || ''} ${e.position || ''} ${contratoActual(e)?.obraFaena || ''}`.toLowerCase().includes(filtro.toLowerCase()))
-  ), [employees, filtro, obraId]);
+  ), [employees, filtro, obraId, obraSel]);
 
   const uf = getPrevisionalParametersForPeriod(fechaCese.slice(0, 7)).uf || 0;
 
@@ -59,6 +61,7 @@ export default function FiniquitoMasivoObra({ employees, companyName, onVerIndiv
     setRegistrando(true); setMensaje('');
     let ok = 0; const fallas: string[] = [];
     for (const { e } of marcadas) {
+      if (e.terminationDate === fechaCese) { ok++; continue; } // ya cerrado por la obra
       try { await onGuardarTrabajador(terminarContrato(e, fechaCese, 'ART_159_CONCLUSION') as Employee); ok++; }
       catch (err: any) { fallas.push(`${e.name}: ${err?.message || err}`); }
     }

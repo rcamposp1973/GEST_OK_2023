@@ -63,3 +63,29 @@ export function nuevoContrato<T extends Pick<Employee, 'contratos' | 'hireDate' 
   const c: ContratoLaboral = limpiar({ id: `c${Date.now()}`, tipo: datos.tipo, fechaInicio: datos.fechaInicio, obraFaena: datos.obraFaena });
   return { ...e, contratos: [...cs.map(limpiar), c], hireDate: c.fechaInicio, contractType: c.tipo, terminationDate: '' };
 }
+
+/**
+ * Cierre (o corrección del cierre) de una obra: ajusta el contrato por obra o faena asociado a esa obra.
+ * - Contrato vigente de la obra → se termina en la fecha de la obra (Art. 159 N° 5).
+ * - Contrato ya cerrado por la obra con la fecha anterior → se corrige a la nueva fecha, o se reabre si la obra se reabre.
+ * Devuelve la ficha cambiada, o null si este trabajador no se ve afectado.
+ * Solo toca fechas del contrato: la liquidación del mes sigue editable (bonos, ausencias, licencias, vacaciones).
+ */
+export function aplicarCierreObra<T extends Pick<Employee, 'contratos' | 'hireDate' | 'terminationDate' | 'contractType'>>(
+  e: T, obraId: string, fechaNueva: string, fechaAnterior?: string
+): T | null {
+  const cs = contratosDe(e);
+  const ult = cs[cs.length - 1];
+  if (!ult || ult.tipo !== 'OBRA_FAENA' || ult.obraId !== obraId) return null;
+  const cerradoPorObra = !!ult.fechaTermino && !!fechaAnterior && ult.fechaTermino === fechaAnterior && (!ult.causalTermino || ult.causalTermino === 'ART_159_CONCLUSION');
+  if (fechaNueva) {
+    if (ult.fechaTermino && !cerradoPorObra) return null;       // terminado antes por otro motivo: no se toca
+    if (ult.fechaTermino === fechaNueva) return null;
+    if (fechaNueva < ult.fechaInicio) return null;               // la obra cierra antes de que empezara este contrato
+    return terminarContrato(e, fechaNueva, 'ART_159_CONCLUSION');
+  }
+  // la obra se reabrió: se reabre el contrato que había cerrado
+  if (!cerradoPorObra) return null;
+  const abierto = { ...ult } as any; delete abierto.fechaTermino; delete abierto.causalTermino;
+  return { ...e, contratos: [...cs.slice(0, -1), abierto], terminationDate: '' };
+}

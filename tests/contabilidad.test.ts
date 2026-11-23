@@ -276,4 +276,17 @@ import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } fro
   let s2:any; try { s2=P.calculatePayrollSlip({...emp,hireDate:'2026-10-01',terminationDate:'2026-11-30'},{...(P as any).getPrevisionalParametersForPeriod?.('2026-11'),period:'2026-11'}); } catch(e){ s2=null; }
   ok('liquidación: término el último día del mes = 30 días', !!s2 && s2.diasTrabajados===30);
 }
+{
+  const C = await import('../src/utils/contratosLaborales');
+  const w:any={hireDate:'2026-11-02',contractType:'OBRA_FAENA',contratos:[{id:'c1',tipo:'OBRA_FAENA',fechaInicio:'2026-11-02',obraId:'o1'}]};
+  const a=C.aplicarCierreObra(w,'o1','2026-11-24');
+  ok('cierre de obra: termina el contrato de la obra', !!a && a.terminationDate==='2026-11-24' && a.contratos![0].causalTermino==='ART_159_CONCLUSION');
+  ok('cierre de obra: no toca a trabajadores de otra obra', C.aplicarCierreObra(w,'o2','2026-11-24')===null);
+  const b=C.aplicarCierreObra(a!,'o1','2026-11-27','2026-11-24');
+  ok('cierre de obra: corregir la fecha corrige el contrato', !!b && b.terminationDate==='2026-11-27');
+  const r=C.aplicarCierreObra(b!,'o1','','2026-11-27');
+  ok('cierre de obra: reabrir la obra reabre el contrato', !!r && r.terminationDate==='' && !r.contratos![0].fechaTermino);
+  const renuncia=C.terminarContrato(w,'2026-11-10','ART_159_RENUNCIA');
+  ok('cierre de obra: no cambia un contrato terminado por renuncia', C.aplicarCierreObra(renuncia,'o1','2026-11-24')===null);
+}
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

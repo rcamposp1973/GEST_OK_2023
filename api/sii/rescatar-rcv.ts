@@ -179,23 +179,28 @@ async function migrarSiHayEnClaro(compRef: any, compData: any, studyId: string, 
   return e;
 }
 
-/** Clave de SimpleAPI. Si solo viene la del navegador del Super Admin, se guarda cifrada para que sirva a todos. */
+/**
+ * Clave de SimpleAPI. Es UNA sola para todo el sistema (la cuenta de Gest_OK en SimpleAPI):
+ * variable SII_API_KEY > clave general guardada cifrada > clave propia de la empresa > la del navegador.
+ * Si aún no hay clave general y el Super Admin sincroniza con una empresa (o un navegador) que sí la tiene,
+ * esa clave se guarda cifrada como general y desde ahí sirve para todas las empresas de todos los estudios.
+ */
 async function resolverApiKey(deEmpresa: string, deNavegador: string, esSuperAdmin: boolean): Promise<string> {
   if (process.env.SII_API_KEY) return process.env.SII_API_KEY.trim();
-  if (deEmpresa) return deEmpresa;
   const ref = adminDb.collection('systemSecrets').doc('simpleApi');
   try {
     const snap = await ref.get();
     const guardada = snap.exists ? decryptSecret((snap.data() as any)?.apiKeyEncrypted || '') : '';
     if (guardada) return guardada;
-    if (deNavegador && esSuperAdmin) {
-      const enc = encryptSecret(deNavegador);
-      if (decryptSecret(enc) === deNavegador) await ref.set({ apiKeyEncrypted: enc, updatedAt: new Date().toISOString() });
+    const candidata = deEmpresa || deNavegador;
+    if (candidata && esSuperAdmin) {
+      const enc = encryptSecret(candidata);
+      if (decryptSecret(enc) === candidata) await ref.set({ apiKeyEncrypted: enc, updatedAt: new Date().toISOString() });
     }
   } catch (err: any) {
     console.error('Clave general de SimpleAPI:', err?.message || err);
   }
-  return deNavegador;
+  return deEmpresa || deNavegador;
 }
 
 // Helper to parse JSON body in Vercel Serverless Function

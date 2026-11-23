@@ -9,6 +9,9 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## [1.21.1] - Una sola clave de SimpleAPI para todo el sistema
+- La clave de SimpleAPI es general: si una empresa la tiene guardada y el Super Admin sincroniza, queda como clave general cifrada y sirve para todas las empresas de todos los estudios. Antes, cada empresa necesitaba la suya.
+
 ## [1.21.0] - Claves del SII cifradas
 - Las claves del SII (representante y empresa), el certificado digital y su clave, y la clave de SimpleAPI ya no se guardan en el documento de la empresa: se envían al servidor y se guardan cifradas (AES-256-GCM) en una colección que el navegador no puede leer. En la empresa solo queda la marca "clave guardada".
 - La sincronización del RCV ocurre completa en el servidor: el navegador solo indica empresa y período; ya no recibe ni envía claves ni certificado.

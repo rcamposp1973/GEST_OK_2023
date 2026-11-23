@@ -233,4 +233,17 @@ import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } fro
   ok('credenciales: se envían las reales y no la máscara', haySecretos && secretos.claveRepresentante==='abc' && secretos.claveSii==='' && secretos.certificadoB64==='QUJD' && secretos.siiApiKey==='k1');
   ok('credenciales: quedan solo marcas', limpio.claveRepLegalSiiMasked==='••••••••' && limpio.hasCertificadoDigital===true && limpio.ambiente==='Producción');
 }
+{
+  const F = await import('../src/utils/finiquito');
+  ok('obra/faena: gradualidad Ley 21.122', F.diasPorMesObraFaena('2018-12-31')===0 && F.diasPorMesObraFaena('2019-03-01')===1 && F.diasPorMesObraFaena('2020-08-01')===1.5 && F.diasPorMesObraFaena('2021-09-01')===2 && F.diasPorMesObraFaena('2026-02-01')===2.5);
+  ok('obra/faena: 6 meses y 16 días = 7 meses', F.mesesTrabajadosObra('2026-01-01','2026-07-16').meses===7);
+  ok('obra/faena: 6 meses y 15 días = 6 meses', F.mesesTrabajadosObra('2026-01-01','2026-07-15').meses===6);
+  ok('obra/faena: menos de un mes no da derecho', !F.mesesTrabajadosObra('2026-03-01','2026-03-20').vigenteUnMesOMas);
+  const r=F.calcularFiniquito({hireDate:'2026-01-01',fechaCese:'2026-07-16',contractType:'OBRA_FAENA',requiereIAS:false,requiereAvisoPrevio:false,esConclusionObra:true,conAvisoPrevio:false,baseMensual:900000,ufCese:40000,diasVacacionesTomados:0});
+  ok('obra/faena: 7 meses x 2,5 = 17,5 días = $525.000', r.diasIndemnizacionObra===17.5 && r.montoIndemnizacionObra===525000);
+  const t=F.calcularFiniquito({hireDate:'2026-01-01',fechaCese:'2026-07-16',contractType:'OBRA_FAENA',requiereIAS:false,requiereAvisoPrevio:false,esConclusionObra:true,conAvisoPrevio:false,baseMensual:5000000,ufCese:40000,diasVacacionesTomados:0});
+  ok('obra/faena: base topada en 90 UF', t.baseTopada===3600000 && t.montoIndemnizacionObra===2100000);
+  const i=F.calcularFiniquito({hireDate:'2026-01-01',fechaCese:'2026-07-16',contractType:'INDEFINIDO',requiereIAS:false,requiereAvisoPrevio:false,esConclusionObra:true,conAvisoPrevio:false,baseMensual:900000,ufCese:40000,diasVacacionesTomados:0});
+  ok('obra/faena: si el contrato no es de obra, avisa y no calcula', i.montoIndemnizacionObra===0 && !!i.avisoObra);
+}
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

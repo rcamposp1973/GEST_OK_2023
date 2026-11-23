@@ -9,6 +9,11 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## [1.22.0] - Finiquito por término de obra o faena
+- La causal Art. 159 N° 5 ahora calcula la indemnización del Art. 163 inc. 3° (Ley 21.122): días por mes trabajado y fracción superior a 15 días, según la fecha del contrato (1 / 1,5 / 2 / 2,5 días), con tope de 90 UF. Al elegir un trabajador por obra o faena se propone esa causal.
+- Nuevo modo "Término de obra o faena (varios)": marca varios trabajadores, una fecha de término, y obtén indemnización, feriado proporcional y total de cada uno; exporta a Excel/CSV y abre el finiquito PDF individual.
+- El cálculo de finiquitos pasa a un módulo con pruebas automáticas.
+
 ## [1.21.3] - Sincronización del RCV más rápida
 - Ventas, compras y honorarios se consultan al SII en paralelo (antes, una tras otra) y la función tiene hasta 5 minutos. Se registra el tiempo de cada sincronización para diagnosticar.
 

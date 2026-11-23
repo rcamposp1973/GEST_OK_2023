@@ -7,6 +7,8 @@ import {
 import { Employee, FiniquitoRecord, ChartOfAccount } from '../../types';
 import { formatRut } from '../../utils/rutMatcher';
 import { getPrevisionalParametersForPeriod } from '../../utils/payrollCalculator';
+import { calcularFiniquito, baseArt172 } from '../../utils/finiquito';
+import FiniquitoMasivoObra from './FiniquitoMasivoObra';
 import jsPDF from 'jspdf';
 
 interface FiniquitosCalculatorModalProps {
@@ -38,6 +40,7 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
   onClose,
   onSaveFiniquito
 }) => {
+  const [modo, setModo] = useState<'individual' | 'masivo'>('individual');
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
   const [causalCode, setCausalCode] = useState<string>('ART_161_NECESIDADES');
   const [fechaCese, setFechaCese] = useState<string>(new Date().toISOString().slice(0, 10));
@@ -57,77 +60,27 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
     return CHILEAN_TERMINATION_CAUSALS.find(c => c.code === causalCode) || CHILEAN_TERMINATION_CAUSALS[0];
   }, [causalCode]);
 
-  // Cálculos Automáticos según Código del Trabajo
+  // Cálculos según Código del Trabajo (lógica en utils/finiquito, con pruebas automáticas)
   const finiquitoCalculated = useMemo(() => {
     if (!selectedEmployee) return null;
-
-    const fIngreso = new Date(selectedEmployee.hireDate || '2025-01-01');
-    const fCese = new Date(fechaCese || new Date());
-
-    // Antigüedad en días (referencia) y en años/meses de calendario
-    const diffTime = Math.max(0, fCese.getTime() - fIngreso.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    let totalMeses = (fCese.getUTCFullYear() - fIngreso.getUTCFullYear()) * 12 + (fCese.getUTCMonth() - fIngreso.getUTCMonth());
-    if (fCese.getUTCDate() < fIngreso.getUTCDate()) totalMeses -= 1;
-    totalMeses = Math.max(0, totalMeses);
-    const anosCompletos = Math.floor(totalMeses / 12);
-    const mesesRestantes = totalMeses % 12;
-
-    // Art. 163: la indemnización por años de servicio exige 1 año o más de servicio.
-    // Se paga 1 mes por año de servicio y fracción superior a 6 meses, con máximo de 11 años.
-    let anosParaIAS = 0;
-    if (anosCompletos >= 1) {
-      anosParaIAS = anosCompletos + ((mesesRestantes > 6 || (mesesRestantes === 6 && fCese.getUTCDate() !== fIngreso.getUTCDate())) ? 1 : 0);
-    }
-    anosParaIAS = Math.min(11, anosParaIAS);
-
-    // Última remuneración mensual (Art. 172): sueldo base, bonos y haberes mensuales pactados y asignaciones permanentes
-    // (colación, movilización). Se excluyen horas extra, gratificación anual, aguinaldos y pagos esporádicos.
-    const baseSueldo = (selectedEmployee.baseSalary || 0) + (selectedEmployee.bonosPactados || 0) + (selectedEmployee.otrosImponiblesPactados || 0)
-      + (selectedEmployee.colacionPactada || 0) + (selectedEmployee.movilizacionPactada || 0);
-    // Tope legal: 90 UF, con la UF del mes del cese (valor oficial; 0 si el mes aún no está cargado)
+    const baseSueldo = baseArt172(selectedEmployee);
     const ufCese = getPrevisionalParametersForPeriod((fechaCese || '').slice(0, 7)).uf || 0;
-    const topeLegal = ufCese > 0 ? Math.round(90 * ufCese) : Number.POSITIVE_INFINITY;
-    const baseSueldoTopado = Math.min(baseSueldo, topeLegal);
-
-    // 1. IAS (Indemnización por Años de Servicio)
-    const montoIAS = causalConfig.requiereIAS ? anosParaIAS * baseSueldoTopado : 0;
-
-    // 2. Sustitutiva de Aviso Previo
-    const montoAvisoPrevio = (causalConfig.requiereAvisoPrevio && !conAvisoPrevio) ? baseSueldoTopado : 0;
-
-    // 3. Vacaciones Proporcionales (1.25 días por mes trabajado)
-    const mesesTrabajadosTotal = (diffDays / 30);
-    const diasVacacionesTotalesDevengados = mesesTrabajadosTotal * 1.25;
-    const diasPendientesReal = Math.max(0, diasVacacionesTotalesDevengados - diasVacacionesHabiles);
-    
-    // Factor de conversión días hábiles a corridos (1.4 aproximado)
-    const valorDiaTrabajador = baseSueldo / 30;
-    const sinIAS = causalConfig.requiereIAS && anosParaIAS === 0;
-    const montoVacaciones = Math.round(diasPendientesReal * 1.4 * valorDiaTrabajador);
-
-    const totalBruto = montoIAS + montoAvisoPrevio + montoVacaciones + otrosHaberes;
-    const totalDescuentos = descuentosPrestamos + otrosDescuentos;
-    const totalLiquido = Math.max(0, totalBruto - totalDescuentos);
-
-    return {
-      diffDays,
-      anosCompletos,
-      mesesRestantes,
-      anosParaIAS,
-      baseSueldo,
-      topeLegal,
-      ufCese,
-      sinIAS,
-      montoIAS,
-      montoAvisoPrevio,
-      diasPendientesReal: Math.round(diasPendientesReal * 10) / 10,
-      montoVacaciones,
-      totalBruto,
-      totalDescuentos,
-      totalLiquido
-    };
+    const r = calcularFiniquito({
+      hireDate: selectedEmployee.hireDate, fechaCese, contractType: selectedEmployee.contractType,
+      requiereIAS: causalConfig.requiereIAS, requiereAvisoPrevio: causalConfig.requiereAvisoPrevio,
+      esConclusionObra: causalConfig.code === 'ART_159_CONCLUSION', conAvisoPrevio,
+      baseMensual: baseSueldo, ufCese, diasVacacionesTomados: diasVacacionesHabiles,
+      otrosHaberes, descuentos: descuentosPrestamos + otrosDescuentos,
+    });
+    return { ...r, baseSueldo, ufCese, sinIAS: causalConfig.requiereIAS && r.anosParaIAS === 0, diasPendientesReal: r.diasVacacionesPendientes };
   }, [selectedEmployee, fechaCese, causalConfig, conAvisoPrevio, diasVacacionesHabiles, descuentosPrestamos, otrosHaberes, otrosDescuentos]);
+
+  // Al elegir un trabajador con contrato por obra o faena, se propone la causal de conclusión de la obra
+  const elegirTrabajador = (id: string) => {
+    setSelectedEmployeeId(id);
+    const emp = employees.find(e => e.id === id || e.rut === id);
+    if (emp?.contractType === 'OBRA_FAENA') setCausalCode('ART_159_CONCLUSION');
+  };
 
   // Generar PDF Oficial del Finiquito
   const handleDownloadPDF = () => {
@@ -168,6 +121,12 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
     doc.text(`Indemnización por Años de Servicio (${finiquitoCalculated.anosParaIAS} años):`, 14, y);
     doc.text(`$ ${finiquitoCalculated.montoIAS.toLocaleString('es-CL')}`, 170, y, { align: 'right' });
     y += 6;
+
+    if (finiquitoCalculated.montoIndemnizacionObra > 0) {
+      doc.text(`Indemnización Obra o Faena Art. 163 inc. 3° (${finiquitoCalculated.diasIndemnizacionObra} días):`, 14, y);
+      doc.text(`$ ${finiquitoCalculated.montoIndemnizacionObra.toLocaleString('es-CL')}`, 170, y, { align: 'right' });
+      y += 6;
+    }
 
     doc.text(`Indemnización Sustitutiva Aviso Previo:`, 14, y);
     doc.text(`$ ${finiquitoCalculated.montoAvisoPrevio.toLocaleString('es-CL')}`, 170, y, { align: 'right' });
@@ -247,8 +206,23 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
           </button>
         </div>
 
+        <div className="px-6 pt-4 flex gap-2">
+          <button onClick={() => setModo('individual')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${modo === 'individual' ? 'bg-slate-900 text-white border-slate-900' : 'border-slate-300 text-slate-700'}`}>Un trabajador</button>
+          <button onClick={() => setModo('masivo')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${modo === 'masivo' ? 'bg-slate-900 text-white border-slate-900' : 'border-slate-300 text-slate-700'}`}>Término de obra o faena (varios)</button>
+        </div>
+
+        {modo === 'masivo' && (
+          <div className="p-6 max-h-[80vh] overflow-y-auto">
+            <FiniquitoMasivoObra
+              employees={employees}
+              companyName={companyName}
+              onVerIndividual={(id, fecha) => { setModo('individual'); setSelectedEmployeeId(id); setCausalCode('ART_159_CONCLUSION'); setFechaCese(fecha); }}
+            />
+          </div>
+        )}
+
         {/* Body */}
-        <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+        <div className={`p-6 space-y-6 max-h-[80vh] overflow-y-auto ${modo === 'masivo' ? 'hidden' : ''}`}>
           {/* Employee Selection */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
             <div>
@@ -257,7 +231,7 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
               </label>
               <select
                 value={selectedEmployeeId}
-                onChange={e => setSelectedEmployeeId(e.target.value)}
+                onChange={e => elegirTrabajador(e.target.value)}
                 className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-xs font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="">-- Seleccionar Trabajador Activo --</option>
@@ -342,6 +316,19 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
                 {finiquitoCalculated.sinIAS && (
                   <div className="text-[11px] text-amber-300 bg-amber-900/30 border border-amber-700/50 rounded-lg px-3 py-2">
                     No corresponde indemnización por años de servicio: el trabajador tiene menos de 1 año de antigüedad (Art. 163).
+                  </div>
+                )}
+                {finiquitoCalculated.avisoObra && (
+                  <div className="text-[11px] text-amber-300 bg-amber-900/30 border border-amber-700/50 rounded-lg px-3 py-2">
+                    {finiquitoCalculated.avisoObra}
+                  </div>
+                )}
+                {finiquitoCalculated.montoIndemnizacionObra > 0 && (
+                  <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700 text-xs flex flex-wrap items-baseline justify-between gap-2">
+                    <span className="text-slate-300">
+                      Indemnización por obra o faena (Art. 163 inc. 3°): {finiquitoCalculated.mesesObra} meses × {finiquitoCalculated.diasPorMesObra} días = {finiquitoCalculated.diasIndemnizacionObra} días
+                    </span>
+                    <span className="text-lg font-mono font-black text-emerald-400">$ {finiquitoCalculated.montoIndemnizacionObra.toLocaleString('es-CL')}</span>
                   </div>
                 )}
                 {!Number.isFinite(finiquitoCalculated.topeLegal) && (

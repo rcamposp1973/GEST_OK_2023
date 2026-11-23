@@ -246,4 +246,20 @@ import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } fro
   const i=F.calcularFiniquito({hireDate:'2026-01-01',fechaCese:'2026-07-16',contractType:'INDEFINIDO',requiereIAS:false,requiereAvisoPrevio:false,esConclusionObra:true,conAvisoPrevio:false,baseMensual:900000,ufCese:40000,diasVacacionesTomados:0});
   ok('obra/faena: si el contrato no es de obra, avisa y no calcula', i.montoIndemnizacionObra===0 && !!i.avisoObra);
 }
+{
+  const C = await import('../src/utils/contratosLaborales');
+  const F = await import('../src/utils/finiquito');
+  const base:any={hireDate:'2025-02-01',contractType:'OBRA_FAENA'};
+  ok('contratos: ficha antigua se lee como un contrato', C.contratosDe(base).length===1 && C.contratoActual(base)!.fechaInicio==='2025-02-01');
+  const t1=C.terminarContrato(base,'2025-08-31','ART_159_CONCLUSION');
+  ok('contratos: término queda en el contrato y en la ficha', t1.terminationDate==='2025-08-31' && t1.contratos![0].causalTermino==='ART_159_CONCLUSION');
+  let err=''; try { C.nuevoContrato(base,{tipo:'PLAZO_FIJO',fechaInicio:'2025-09-01'}); } catch(e:any){ err=e.message; }
+  ok('contratos: no se recontrata sin terminar el vigente', err.includes('término'));
+  const r2=C.nuevoContrato(t1,{tipo:'OBRA_FAENA',fechaInicio:'2026-01-05',obraFaena:'Edificio Sur'});
+  ok('contratos: recontratación abre contrato nuevo sin término', r2.contratos!.length===2 && r2.hireDate==='2026-01-05' && r2.terminationDate==='');
+  const f=F.calcularFiniquito({hireDate:r2.hireDate,fechaCese:'2026-04-04',contractType:r2.contractType,requiereIAS:false,requiereAvisoPrevio:false,esConclusionObra:true,conAvisoPrevio:false,baseMensual:600000,ufCese:40000,diasVacacionesTomados:0});
+  ok('contratos: el finiquito cuenta solo el contrato nuevo (3 meses = 7,5 días)', f.mesesObra===3 && f.diasIndemnizacionObra===7.5);
+  const s=C.sincronizarFicha({...r2,hireDate:'2026-01-06'});
+  ok('contratos: editar la ficha ajusta el contrato actual, no el anterior', s.contratos![1].fechaInicio==='2026-01-06' && s.contratos![0].fechaInicio==='2025-02-01');
+}
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

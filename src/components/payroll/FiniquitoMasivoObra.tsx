@@ -4,6 +4,7 @@ import type { Employee } from '../../types';
 import { formatRut } from '../../utils/rutMatcher';
 import { getPrevisionalParametersForPeriod } from '../../utils/payrollCalculator';
 import { calcularFiniquito, baseArt172 } from '../../utils/finiquito';
+import { terminarContrato, contratoActual } from '../../utils/contratosLaborales';
 
 /**
  * Término de obra o faena para varios trabajadores a la vez (Art. 159 N° 5).
@@ -13,22 +14,26 @@ interface Props {
   employees: Employee[];
   companyName: string;
   onVerIndividual: (employeeId: string, fechaCese: string) => void;
+  onGuardarTrabajador?: (emp: Employee) => Promise<void>;
 }
 
 const pesos = (n: number) => '$' + Math.round(n).toLocaleString('es-CL');
 
-export default function FiniquitoMasivoObra({ employees, companyName, onVerIndividual }: Props) {
+export default function FiniquitoMasivoObra({ employees, companyName, onVerIndividual, onGuardarTrabajador }: Props) {
   const hoy = new Date().toISOString().slice(0, 10);
   const [fechaCese, setFechaCese] = useState(hoy);
   const [filtro, setFiltro] = useState('');
   const [incluirOtros, setIncluirOtros] = useState(false);
   const [seleccion, setSeleccion] = useState<Record<string, boolean>>({});
   const [vacTomadas, setVacTomadas] = useState<Record<string, number>>({});
+  const [confirmando, setConfirmando] = useState(false);
+  const [registrando, setRegistrando] = useState(false);
+  const [mensaje, setMensaje] = useState('');
 
   const candidatos = useMemo(() => employees.filter(e =>
     !e.terminationDate
     && (incluirOtros || e.contractType === 'OBRA_FAENA')
-    && (!filtro || `${e.name} ${e.rut} ${e.department || ''} ${e.position || ''}`.toLowerCase().includes(filtro.toLowerCase()))
+    && (!filtro || `${e.name} ${e.rut} ${e.department || ''} ${e.position || ''} ${contratoActual(e)?.obraFaena || ''}`.toLowerCase().includes(filtro.toLowerCase()))
   ), [employees, filtro, incluirOtros]);
 
   const uf = getPrevisionalParametersForPeriod(fechaCese.slice(0, 7)).uf || 0;
@@ -46,6 +51,18 @@ export default function FiniquitoMasivoObra({ employees, companyName, onVerIndiv
   const marcadas = filas.filter(f => seleccion[f.id]);
   const total = marcadas.reduce((s, f) => s + f.r.totalLiquido, 0);
   const todasMarcadas = filas.length > 0 && filas.every(f => seleccion[f.id]);
+
+  const registrarTermino = async () => {
+    if (!onGuardarTrabajador) return;
+    setRegistrando(true); setMensaje('');
+    let ok = 0; const fallas: string[] = [];
+    for (const { e } of marcadas) {
+      try { await onGuardarTrabajador(terminarContrato(e, fechaCese, 'ART_159_CONCLUSION') as Employee); ok++; }
+      catch (err: any) { fallas.push(`${e.name}: ${err?.message || err}`); }
+    }
+    setRegistrando(false); setConfirmando(false); setSeleccion({});
+    setMensaje(`Término registrado en ${ok} ficha(s).` + (fallas.length ? ` No se pudo en: ${fallas.join(' · ')}` : ''));
+  };
 
   const exportar = () => {
     const cab = ['Trabajador', 'RUT', 'Cargo', 'Inicio', 'Término', 'Meses', 'Días por mes', 'Días indemnización', 'Indemnización obra', 'Días feriado pendientes', 'Feriado proporcional', 'Total'];
@@ -101,7 +118,7 @@ export default function FiniquitoMasivoObra({ employees, companyName, onVerIndiv
                   <td className="p-2 text-center"><input type="checkbox" checked={!!seleccion[id]} onChange={ev => setSeleccion(s => ({ ...s, [id]: ev.target.checked }))} /></td>
                   <td className="p-2">
                     <div className="font-medium text-slate-900">{e.name}</div>
-                    <div className="text-slate-500">{formatRut(e.rut)}{e.position ? ` · ${e.position}` : ''}</div>
+                    <div className="text-slate-500">{formatRut(e.rut)}{e.position ? ` · ${e.position}` : ''}{contratoActual(e)?.obraFaena ? ` · ${contratoActual(e)?.obraFaena}` : ''}</div>
                     {r.avisoObra && <div className="text-amber-700 mt-0.5">{r.avisoObra}</div>}
                   </td>
                   <td className="p-2 font-mono">{e.hireDate}</td>
@@ -126,11 +143,27 @@ export default function FiniquitoMasivoObra({ employees, companyName, onVerIndiv
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="text-slate-700">{marcadas.length} trabajador(es) seleccionado(s) · Total a pagar: <strong className="font-mono">{pesos(total)}</strong></span>
+        <div className="flex flex-wrap gap-2">
+        {onGuardarTrabajador && !confirmando && (
+          <button disabled={marcadas.length === 0} onClick={() => setConfirmando(true)}
+            className="border border-slate-300 rounded-lg px-3 py-1.5 text-xs disabled:opacity-40 hover:bg-slate-50">
+            Registrar término en las fichas
+          </button>
+        )}
+        {confirmando && (
+          <span className="flex items-center gap-2 text-xs bg-amber-50 border border-amber-200 rounded-lg px-2 py-1">
+            ¿Registrar el {fechaCese} como término (Art. 159 N° 5) de {marcadas.length} contrato(s)?
+            <button disabled={registrando} onClick={registrarTermino} className="bg-slate-900 text-white rounded px-2 py-0.5">{registrando ? 'Registrando…' : 'Sí, registrar'}</button>
+            <button disabled={registrando} onClick={() => setConfirmando(false)} className="underline">Cancelar</button>
+          </span>
+        )}
         <button disabled={marcadas.length === 0} onClick={exportar}
           className="inline-flex items-center gap-1.5 bg-slate-900 text-white rounded-lg px-3 py-1.5 text-xs disabled:opacity-40">
           <Download className="w-4 h-4" /> Exportar seleccionados (Excel/CSV)
         </button>
+        </div>
       </div>
+      {mensaje && <p className="text-xs text-slate-700 bg-slate-100 rounded-lg px-3 py-2">{mensaje}</p>}
       <p className="text-xs text-slate-500">Base: última remuneración mensual (Art. 172) registrada en la ficha del trabajador. El feriado se paga en días corridos con factor aproximado de 1,4; revisa casos con feriado progresivo o regiones extremas (20 días).</p>
     </div>
   );

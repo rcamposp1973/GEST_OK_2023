@@ -1,3 +1,5 @@
+import ContratosTrabajadorEditor from './payroll/ContratosTrabajadorEditor';
+import { contratosDe, contratoActual, sincronizarFicha } from '../utils/contratosLaborales';
 import { formatearRut } from '../utils/rutFormato';
 import { CondicionesVigenciaEditor } from './payroll/CondicionesVigenciaEditor';
 import { subirRespaldo, tamanoLegible, MAX_RESPALDO_BYTES } from '../utils/respaldosPrevisionales';
@@ -354,6 +356,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
       nationality: emp.nationality || 'Chilena',
       hireDate: emp.hireDate,
       terminationDate: emp.terminationDate,
+      contratos: emp.contratos,
       position: emp.position,
       department: emp.department || 'Administración',
       costCenterId: emp.costCenterId || '',
@@ -428,6 +431,15 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
       return;
     }
     if (editingEmployee) {
+      // Recontratación: el cambio de tipo de contrato rige desde el inicio del nuevo contrato, sin preguntar
+      const antes = contratosDe(editingEmployee).length;
+      const despues = (formData as any).contratos ? contratosDe(formData as any).length : antes;
+      if (despues > antes) {
+        const inicio = (contratoActual(formData as any)?.fechaInicio || '').slice(0, 7);
+        const tipoCambio = formData.contractType !== editingEmployee.contractType;
+        await guardarFicha(tipoCambio ? { campos: ['contractType'], desde: inicio, motivo: 'Nuevo contrato' } : undefined);
+        return;
+      }
       const campos = CAMPOS_VIGENCIA.filter(k => (formData as any)[k] !== (editingEmployee as any)[k] && !((formData as any)[k] === 0 && (editingEmployee as any)[k] === undefined));
       if (campos.length > 0) {
         setErrorCambio('');
@@ -493,6 +505,10 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
         }
         datos.condiciones = [...(formData.condiciones || []), tramo];
       }
+
+      // Ingreso, término y tipo quedan alineados con el contrato actual del historial
+      const fichaSincronizada = sincronizarFicha({ ...datos, contractType: formData.contractType });
+      datos = { ...datos, contratos: fichaSincronizada.contratos, hireDate: fichaSincronizada.hireDate, terminationDate: fichaSincronizada.terminationDate };
 
       const employeePayload: Employee = {
         id: editingEmployee ? editingEmployee.id : `emp_${Date.now()}`,
@@ -1763,6 +1779,13 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                     />
                   </div>
+
+                  {editingEmployee && (
+                    <ContratosTrabajadorEditor
+                      ficha={formData as any}
+                      onChange={(cambios) => setFormData(prev => ({ ...prev, ...cambios } as any))}
+                    />
+                  )}
 
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Jornada Semanal (Horas)</label>

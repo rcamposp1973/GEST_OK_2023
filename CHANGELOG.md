@@ -9,6 +9,11 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## [1.23.0] - Historial de contratos del trabajador
+- La ficha del trabajador tiene una sección "Contratos": cada contrato con su tipo, obra o faena, fecha de inicio, fecha de término y causal. "Registrar término" cierra el contrato vigente; "Nuevo contrato" registra una recontratación (por obra, plazo fijo o indefinido).
+- Al recontratar, la antigüedad y el finiquito se calculan solo sobre el contrato que termina: no se acumulan contratos anteriores ya finiquitados. El cambio de tipo de contrato rige desde el inicio del nuevo contrato para las liquidaciones.
+- El término masivo de obra o faena puede registrarse directamente en las fichas (con confirmación), y la búsqueda incluye el nombre de la obra.
+
 ## [1.22.0] - Finiquito por término de obra o faena
 - La causal Art. 159 N° 5 ahora calcula la indemnización del Art. 163 inc. 3° (Ley 21.122): días por mes trabajado y fracción superior a 15 días, según la fecha del contrato (1 / 1,5 / 2 / 2,5 días), con tope de 90 UF. Al elegir un trabajador por obra o faena se propone esa causal.
 - Nuevo modo "Término de obra o faena (varios)": marca varios trabajadores, una fecha de término, y obtén indemnización, feriado proporcional y total de cada uno; exporta a Excel/CSV y abre el finiquito PDF individual.

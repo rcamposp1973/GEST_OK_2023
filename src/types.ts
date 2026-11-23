@@ -1288,6 +1288,16 @@ export interface InventoryMovement {
 }
 
 export type ContractType = 'INDEFINIDO' | 'PLAZO_FIJO' | 'OBRA_FAENA' | 'PART_TIME';
+
+/** Un contrato dentro de la relación con el trabajador. Al recontratar se agrega uno nuevo: la antigüedad no se acumula. */
+export interface ContratoLaboral {
+  id: string;
+  tipo: ContractType;
+  fechaInicio: string;      // YYYY-MM-DD
+  fechaTermino?: string;    // YYYY-MM-DD; vacío = vigente
+  obraFaena?: string;       // obra, faena o servicio (contratos por obra) o descripción
+  causalTermino?: string;   // código de causal (Art. 159, 160, 161)
+}
 /** Cambio de condiciones previsionales/contractuales de un trabajador, vigente DESDE un mes (YYYY-MM).
  *  Los campos base del trabajador son las condiciones iniciales; cada tramo las modifica desde su mes. */
 export interface EmployeeCondicion {
@@ -1337,8 +1347,9 @@ export interface Employee {
   birthDate?: string;
   gender?: 'M' | 'F' | 'OTRO';
   nationality?: string;
-  hireDate: string;
-  terminationDate?: string;
+  hireDate: string;          // inicio del contrato vigente
+  terminationDate?: string;  // término del contrato vigente
+  contratos?: ContratoLaboral[]; // historial de contratos (recontrataciones)
   position: string;
   department?: string;
   costCenterId?: string;

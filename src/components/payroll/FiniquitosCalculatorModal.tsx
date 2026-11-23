@@ -19,6 +19,8 @@ interface FiniquitosCalculatorModalProps {
   accounts: ChartOfAccount[];
   onClose: () => void;
   onSaveFiniquito?: (record: FiniquitoRecord) => void;
+  /** Si se entrega, el término masivo puede quedar registrado en la ficha de cada trabajador */
+  onGuardarTrabajador?: (emp: Employee) => Promise<void>;
 }
 
 export const CHILEAN_TERMINATION_CAUSALS = [
@@ -38,7 +40,8 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
   employees,
   accounts,
   onClose,
-  onSaveFiniquito
+  onSaveFiniquito,
+  onGuardarTrabajador
 }) => {
   const [modo, setModo] = useState<'individual' | 'masivo'>('individual');
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
@@ -216,6 +219,7 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
             <FiniquitoMasivoObra
               employees={employees}
               companyName={companyName}
+              onGuardarTrabajador={onGuardarTrabajador}
               onVerIndividual={(id, fecha) => { setModo('individual'); setSelectedEmployeeId(id); setCausalCode('ART_159_CONCLUSION'); setFechaCese(fecha); }}
             />
           </div>

@@ -9886,6 +9886,7 @@ export default function CompanyAccountingDashboard({
           companyAddress={company.address}
           employees={employees}
           accounts={accounts}
+          onGuardarTrabajador={handleSaveEmployee}
           onClose={() => setShowFiniquitoModal(false)}
         />
       )}

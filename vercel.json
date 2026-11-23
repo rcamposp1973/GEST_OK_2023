@@ -71,5 +71,10 @@
       "path": "/api/alertas",
       "schedule": "0 12 * * *"
     }
-  ]
+  ],
+  "functions": {
+    "api/sii/rescatar-rcv.ts": {
+      "maxDuration": 300
+    }
+  }
 }

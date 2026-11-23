@@ -277,6 +277,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       res.end(JSON.stringify(payload));
     };
 
+    console.log(`[rescatar-rcv] inicio empresa=${companyId} periodo=${year}-${month}`);
     if (!studyId || !companyId) return responder(400, { success: false, error: 'Falta indicar el estudio y la empresa.' });
     if (decodedToken?.role !== 'SUPER_USER' && decodedToken?.studyId !== studyId) {
       return responder(403, { success: false, error: 'No tienes permisos sobre esta empresa.' });
@@ -353,6 +354,9 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
     let apiErrors: string[] = [];
 
+    const inicio = Date.now();
+    const tareas: Promise<void>[] = [];
+    tareas.push((async () => {
     // A. Ventas
     if (tipo === 'ALL' || tipo === 'VENTAS' || tipo === 'VENTA') {
       try {
@@ -466,6 +470,8 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       }
     }
 
+    })());
+    tareas.push((async () => {
     // B. Compras
     if (tipo === 'ALL' || tipo === 'COMPRAS' || tipo === 'COMPRA') {
       try {
@@ -519,6 +525,8 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       }
     }
 
+    })());
+    tareas.push((async () => {
     // C. Boletas de Honorarios (BHR)
     if (tipo === 'ALL' || tipo === 'HONORARIOS' || tipo === 'HONORARIO') {
       try {
@@ -566,6 +574,11 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
         console.warn("Honorarios error:", errH);
       }
     }
+    })());
+
+    // Las tres consultas van en paralelo: el tiempo total es el de la más lenta, no la suma.
+    await Promise.all(tareas);
+    console.log(`[rescatar-rcv] ${cleanCompanyRutWithDash} ${yearNum}-${formattedMonth}: ${docs.length} docs en ${Date.now() - inicio} ms`);
 
     res.statusCode = 200;
     res.setHeader('Content-Type', 'application/json');

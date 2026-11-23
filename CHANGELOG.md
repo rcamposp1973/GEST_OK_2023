@@ -9,6 +9,9 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## [1.21.3] - Sincronización del RCV más rápida
+- Ventas, compras y honorarios se consultan al SII en paralelo (antes, una tras otra) y la función tiene hasta 5 minutos. Se registra el tiempo de cada sincronización para diagnosticar.
+
 ## [1.21.2] - API general sin depender del Super Admin
 - La API de SimpleAPI guardada en cualquier empresa se adopta como API general aunque sincronice un administrador de estudio.
 

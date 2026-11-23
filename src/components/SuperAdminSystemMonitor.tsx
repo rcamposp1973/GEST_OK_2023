@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import JuniorAITrainingCenter from './JuniorAITrainingCenter';
 import RutMantenimientoCard from './RutMantenimientoCard';
+import ProtegerClavesSiiCard from './ProtegerClavesSiiCard';
 import { APP_VERSION_FULL } from '../constants/version';
 
 /**
@@ -351,7 +352,7 @@ export default function SuperAdminSystemMonitor({ onSelectStudy }: Props) {
         </>
       )}
 
-      {tab === 'datos' && <RutMantenimientoCard />}
+      {tab === 'datos' && <div className="space-y-4"><ProtegerClavesSiiCard /><RutMantenimientoCard /></div>}
 
       {tab === 'sii' && (
         <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3">

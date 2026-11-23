@@ -37,12 +37,27 @@ const admin: any = {
   auth: () => adminAuth
 };
 
+// Misma clave que api/index.ts: SECRETS_ENCRYPTION_KEY o, si no existe, derivada de la cuenta de servicio de Firebase.
 function getEncryptionKey(): Buffer {
   const rawKey = process.env.SECRETS_ENCRYPTION_KEY;
-  if (!rawKey) {
-    throw new Error("Falta configurar SECRETS_ENCRYPTION_KEY en el servidor.");
-  }
-  return crypto.createHash('sha256').update(rawKey).digest();
+  if (rawKey) return crypto.createHash('sha256').update(rawKey).digest();
+  try {
+    const sa = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}');
+    if (sa.private_key) {
+      return crypto.createHash('sha256').update('gest_ok/secretos-empresa/v1|' + sa.private_key).digest();
+    }
+  } catch { /* sigue al error */ }
+  throw new Error("Falta configurar SECRETS_ENCRYPTION_KEY en el servidor.");
+}
+
+function encryptSecret(plainText: string): string {
+  if (!plainText) return '';
+  const key = getEncryptionKey();
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  let encrypted = cipher.update(plainText, 'utf8', 'base64');
+  encrypted += cipher.final('base64');
+  return JSON.stringify({ iv: iv.toString('base64'), data: encrypted, tag: cipher.getAuthTag().toString('base64') });
 }
 
 function decryptSecret(encryptedPayload: string): string {
@@ -76,6 +91,7 @@ async function getDecryptedCompanySecrets(companyId: string) {
       claveRepresentante: data.claveRepresentanteEncrypted ? decryptSecret(data.claveRepresentanteEncrypted) : '',
       claveCertificadoDigital: data.claveCertificadoEncrypted ? decryptSecret(data.claveCertificadoEncrypted) : '',
       certificadoB64: data.certificadoB64Encrypted ? decryptSecret(data.certificadoB64Encrypted) : '',
+      siiApiKey: data.siiApiKeyEncrypted ? decryptSecret(data.siiApiKeyEncrypted) : '',
       hasCertificadoDigital: !!data.hasCertificadoDigital
     };
   } catch {
@@ -112,6 +128,74 @@ function validateSiiApiUrl(rawUrl: string): { valid: boolean; error?: string } {
   } catch {
     return { valid: false, error: 'URL malformada o inválida.' };
   }
+}
+
+// Credenciales que versiones anteriores dejaron sin cifrar en el documento de la empresa
+function secretosEnClaro(compData: any) {
+  const d = compData?.dteConfig || {};
+  const v = (x: any) => (typeof x === 'string' && x.trim() && x !== '••••••••' ? x.trim() : '');
+  return {
+    claveRepresentante: v(d.claveRepLegalSii) || v(d.claveRepresentante) || v(compData?.claveRepresentante),
+    claveSii: v(d.claveEmpresaSii) || v(d.claveSii) || v(compData?.claveSii) || v(compData?.claveTributaria),
+    claveCertificadoDigital: v(d.claveCertificadoDigital) || v(compData?.claveCertificadoDigital),
+    certificadoB64: (v(d.certificadoB64) || v(compData?.certificadoB64)).replace(/^data:[^;]+;base64,/, ''),
+    siiApiKey: v(d.siiApiKey),
+    rutRepresentante: v(d.rutRepresentante) || v(compData?.legalRepRut),
+  };
+}
+
+/** Cifra lo que esté en claro, comprueba que se puede descifrar, y recién ahí lo borra de la empresa. Devuelve los valores en claro para usarlos ahora. */
+async function migrarSiHayEnClaro(compRef: any, compData: any, studyId: string, companyId: string) {
+  const e = secretosEnClaro(compData);
+  if (!(e.claveRepresentante || e.claveSii || e.claveCertificadoDigital || e.certificadoB64 || e.siiApiKey)) return e;
+  try {
+    const enc: any = { companyId, studyId, updatedAt: new Date().toISOString() };
+    if (e.rutRepresentante) enc.rutRepresentante = e.rutRepresentante;
+    if (e.claveRepresentante) enc.claveRepresentanteEncrypted = encryptSecret(e.claveRepresentante);
+    if (e.claveSii) enc.claveSiiEncrypted = encryptSecret(e.claveSii);
+    if (e.claveCertificadoDigital) enc.claveCertificadoEncrypted = encryptSecret(e.claveCertificadoDigital);
+    if (e.certificadoB64) { enc.certificadoB64Encrypted = encryptSecret(e.certificadoB64); enc.hasCertificadoDigital = true; }
+    if (e.siiApiKey) enc.siiApiKeyEncrypted = encryptSecret(e.siiApiKey);
+    for (const k of Object.keys(enc)) {
+      if (k.endsWith('Encrypted') && !decryptSecret(enc[k])) throw new Error('verificación de cifrado');
+    }
+    await adminDb.collection('companySecrets').doc(companyId).set(enc, { merge: true });
+    const del = FieldValue.delete();
+    const upd: any = {
+      claveSii: del, claveTributaria: del, claveRepresentante: del, claveCertificadoDigital: del, certificadoB64: del,
+      'dteConfig.claveSii': del, 'dteConfig.claveRepresentante': del, 'dteConfig.claveCertificadoDigital': del,
+      'dteConfig.certificadoB64': del, 'dteConfig.claveRepLegalSii': del, 'dteConfig.claveEmpresaSii': del, 'dteConfig.siiApiKey': del,
+    };
+    if (e.claveRepresentante) { upd['dteConfig.claveRepLegalSiiMasked'] = '••••••••'; upd['dteConfig.claveSiiMasked'] = '••••••••'; }
+    if (e.claveSii) upd['dteConfig.claveEmpresaSiiMasked'] = '••••••••';
+    if (e.claveCertificadoDigital) upd['dteConfig.claveCertificadoMasked'] = '••••••••';
+    if (e.certificadoB64) upd['dteConfig.hasCertificadoDigital'] = true;
+    if (e.siiApiKey) upd['dteConfig.siiApiKeyMasked'] = '••••••••';
+    await compRef.update(upd);
+  } catch (err: any) {
+    // Si no se pudo cifrar, no se borra nada y la consulta sigue funcionando con los valores actuales.
+    console.error('No se pudieron migrar credenciales de empresa:', err?.message || err);
+  }
+  return e;
+}
+
+/** Clave de SimpleAPI. Si solo viene la del navegador del Super Admin, se guarda cifrada para que sirva a todos. */
+async function resolverApiKey(deEmpresa: string, deNavegador: string, esSuperAdmin: boolean): Promise<string> {
+  if (process.env.SII_API_KEY) return process.env.SII_API_KEY.trim();
+  if (deEmpresa) return deEmpresa;
+  const ref = adminDb.collection('systemSecrets').doc('simpleApi');
+  try {
+    const snap = await ref.get();
+    const guardada = snap.exists ? decryptSecret((snap.data() as any)?.apiKeyEncrypted || '') : '';
+    if (guardada) return guardada;
+    if (deNavegador && esSuperAdmin) {
+      const enc = encryptSecret(deNavegador);
+      if (decryptSecret(enc) === deNavegador) await ref.set({ apiKeyEncrypted: enc, updatedAt: new Date().toISOString() });
+    }
+  } catch (err: any) {
+    console.error('Clave general de SimpleAPI:', err?.message || err);
+  }
+  return deNavegador;
 }
 
 // Helper to parse JSON body in Vercel Serverless Function
@@ -177,79 +261,58 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
   try {
     const body = await parseBody(req);
-    const {
-      year,
-      month,
-      tipo = 'ALL',
-      apiKey,
-      provider = 'SIMPLE_API',
-      rutEmpresa,
-      rutRepresentante,
-      claveRepresentante,
-      claveCertificadoDigital,
-      certificadoB64,
-      companyRut,
-      companyName,
-      companyId,
-      siiApiUrl
-    } = body;
+    // El navegador solo indica empresa y período. Las credenciales se leen aquí, cifradas; nunca vienen del navegador.
+    const { year, month, tipo = 'ALL', studyId, companyId } = body;
+    const apiKeyNavegador = typeof body.apiKey === 'string' ? body.apiKey.trim() : '';
+    const responder = (code: number, payload: any) => {
+      res.statusCode = code;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify(payload));
+    };
 
-    // SSRF Check
-    if (siiApiUrl && typeof siiApiUrl === 'string' && siiApiUrl.trim().length > 0) {
-      const urlCheck = validateSiiApiUrl(siiApiUrl.trim());
-      if (!urlCheck.valid) {
-        res.statusCode = 400;
-        res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ success: false, error: `URL rechazada: ${urlCheck.error}` }));
-        return;
-      }
+    if (!studyId || !companyId) return responder(400, { success: false, error: 'Falta indicar el estudio y la empresa.' });
+    if (decodedToken?.role !== 'SUPER_USER' && decodedToken?.studyId !== studyId) {
+      return responder(403, { success: false, error: 'No tienes permisos sobre esta empresa.' });
+    }
+    const compRef = adminDb.collection('studies').doc(String(studyId)).collection('companies').doc(String(companyId));
+    const compSnap = await compRef.get();
+    if (!compSnap.exists) return responder(404, { success: false, error: 'Empresa no encontrada en este estudio.' });
+    const compData: any = compSnap.data() || {};
+    const dte: any = compData.dteConfig || {};
+
+    const secrets = await getDecryptedCompanySecrets(String(companyId));
+    if (secrets && secrets.studyId && secrets.studyId !== studyId) {
+      return responder(403, { success: false, error: 'No tienes permisos sobre las credenciales de esta empresa.' });
     }
 
-    // Cargar secretos de servidor si no se envían
-    let activeCertB64 = certificadoB64;
-    let activeCertPass = claveCertificadoDigital || claveRepresentante;
-    let activeRepRut = rutRepresentante;
+    // Empresas antiguas: credenciales aún en claro en la empresa. Se cifran y se retiran en este mismo paso.
+    const enClaro = await migrarSiHayEnClaro(compRef, compData, String(studyId), String(companyId));
 
-    if ((!activeCertB64 || !activeCertPass) && companyId) {
-      const secrets = await getDecryptedCompanySecrets(companyId);
-      if (secrets) {
-        if (decodedToken?.role !== 'SUPER_USER' && secrets.studyId !== decodedToken?.studyId) {
-          res.statusCode = 403;
-          res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify({ success: false, error: "No tienes permisos sobre las credenciales de esta empresa." }));
-          return;
-        }
-        if (!activeCertB64) activeCertB64 = secrets.certificadoB64;
-        if (!activeCertPass) activeCertPass = secrets.claveCertificadoDigital || secrets.claveRepresentante;
-        if (!activeRepRut) activeRepRut = secrets.rutRepresentante;
-      }
-    }
+    const activeCertB64 = secrets?.certificadoB64 || enClaro.certificadoB64;
+    const activeCertPass = secrets?.claveCertificadoDigital || secrets?.claveRepresentante || enClaro.claveCertificadoDigital || enClaro.claveRepresentante;
+    const activeRepRut = secrets?.rutRepresentante || enClaro.rutRepresentante || dte.rutRepresentante || compData.legalRepRut || '';
 
-    const cleanCompanyRut = (rutEmpresa || companyRut || '').replace(/[^0-9kK]/g, '').toUpperCase();
+    const cleanCompanyRut = (compData.rut || '').replace(/[^0-9kK]/g, '').toUpperCase();
+    const companyName = compData.name || '';
     const cleanRepRut = (activeRepRut || '').replace(/[^0-9kK]/g, '').toUpperCase();
     const yearNum = Number(year) || new Date().getFullYear();
 
     const formatRut = (raw: string) => {
       if (!raw || raw.length < 2) return '';
-      const bodyPart = raw.slice(0, -1);
-      const dvPart = raw.slice(-1);
-      return `${bodyPart}-${dvPart}`;
+      return `${raw.slice(0, -1)}-${raw.slice(-1)}`;
     };
 
     const cleanCompanyRutWithDash = formatRut(cleanCompanyRut);
     const cleanRepRutWithDash = formatRut(cleanRepRut);
 
-    const MASTER_SII_API_KEY = process.env.SII_API_KEY || '';
-    const effectiveApiKey = (apiKey || MASTER_SII_API_KEY).trim();
+    // Clave de SimpleAPI: variable del servidor > la de la empresa > la general guardada cifrada > la del navegador (transición)
+    const effectiveApiKey = await resolverApiKey(secrets?.siiApiKey || enClaro.siiApiKey || '', apiKeyNavegador, decodedToken?.role === 'SUPER_USER');
 
     if (!effectiveApiKey) {
-      res.statusCode = 500;
-      res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify({
+      return responder(200, {
         success: false,
-        error: "Error de configuración: Variable de entorno SII_API_KEY no configurada en el servidor."
-      }));
-      return;
+        error: 'Falta la clave del servicio SimpleAPI en el servidor. El Super Admin debe sincronizar una vez desde su equipo, o configurarla en Vercel como SII_API_KEY.'
+      });
     }
 
     const cleanCertB64 = (activeCertB64 || '').replace(/^data:[^;]+;base64,/, '').trim();
@@ -270,7 +333,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
     // 2. Ejecutar rescate oficial RCV directamente contra SimpleAPI
     let docs: any[] = [];
-    const ambienteNum = (body.ambiente === 'SANDBOX' || body.ambiente === 'Certificación' || body.ambiente === 0) ? 0 : 1;
+    const ambienteNum = (dte.ambiente === 'SANDBOX' || dte.ambiente === 'Certificación') ? 0 : 1;
     const headers = { 'Authorization': effectiveApiKey };
 
     const rcvInputPayload = {

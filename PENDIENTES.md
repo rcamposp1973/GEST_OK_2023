@@ -16,7 +16,7 @@ Lista viva. Cada punto se pasa al CHANGELOG cuando se hace.
   - Costo por uso de la IA, privacidad de datos y elección de proveedor, como en el asistente.
 
 ## Panel del Super Administrador
-- **Clave API del SII al servidor.** Hoy se guarda solo en el navegador de quien la ingresa; la consulta automática del RCV funciona únicamente desde ese equipo. Mover la clave a una variable segura del servidor y hacer que las consultas al SII pasen por el servidor (así sirve a todos los estudios y la clave no llega a ningún navegador).
+- **Clave API del SII al servidor** (v1.21.0): se guarda cifrada en el servidor la primera vez que el Super Admin sincroniza el RCV desde su equipo.
 - **Pestaña "Asistente IA"** (entrenamiento): se dejó tal cual. Mejora futura: revisar qué hace, simplificarla y dejarla con texto claro.
 - **Alertas por WhatsApp o correo** (indicadores del día sin actualizar, estudio sin actividad, certificado digital por vencer, accesos fallidos). Requiere una revisión programada en el servidor y un canal de envío.
 - Errores de ejecución de Vercel y despliegues fallidos dentro del panel.
@@ -83,7 +83,7 @@ Lista viva. Cada punto se pasa al CHANGELOG cuando se hace.
 ## Facturación electrónica: preparar el sistema para facturadores externos
 Hallazgos (nov 2026): el módulo "Emisión DTE" es una simulación (firma `SIMULATED_RSA_DIGITAL_SIGNATURE`, timbre simulado, test de conexión simulado) y guarda en la base de datos las claves SII del representante y de la empresa (`claveRepLegalSii`, `claveEmpresaSii`) sin cifrar.
 Propuesta: (1) marcar Emisión DTE como "Demostración" y no guardar claves; (2) campo `origenDocumento` en documentos RCV (DIGITADO, RCV_SII, FACTURADOR:<nombre>); (3) importar XML/CSV de DTE de cualquier facturador (Bsale, Nubox, Haulmer, SimpleFactura...) hacia RCV y enlazarlo a la O/V; (4) más adelante, conector API a un facturador elegido.
-- Seguridad: las claves SII (`claveRepLegalSii`, `claveEmpresaSii`) siguen en el documento de la empresa porque la descarga automática del RCV las lee desde ahí. Migrar a `/api/companies/:id/secrets` (cifrado en servidor, ya existe) y hacer que la descarga del RCV use los secretos del servidor; probar contra el SII antes de borrar las claves en claro.
+- Seguridad (v1.21.0, en Pruebas): claves SII, certificado y clave SimpleAPI cifrados en `companySecrets` y `systemSecrets/simpleApi`; RCV 100 % en servidor. La clave de cifrado se deriva de FIREBASE_SERVICE_ACCOUNT si no existe SECRETS_ENCRYPTION_KEY: antes de rotar la cuenta de servicio, fijar SECRETS_ENCRYPTION_KEY o volver a ingresar las credenciales. Pendiente: probar sincronización real en Pruebas y correr "Proteger claves del SII" en producción.
 - Facturación: mostrar el origen del documento en la lista del RCV; enlazar XML importado con la O/V automáticamente por folio/referencia; conector API a un facturador (paso 4).
 
 ## Agentes de IA (piloto desde v1.18.0)

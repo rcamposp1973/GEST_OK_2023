@@ -42,6 +42,10 @@
       "destination": "/api/index"
     },
     {
+      "source": "/api/admin/proteger-claves-sii",
+      "destination": "/api/index"
+    },
+    {
       "source": "/api/admin/normalizar-ruts",
       "destination": "/api/index"
     },

@@ -44,12 +44,19 @@ const admin: any = {
 };
 
 // Clave de cifrado derivada AES-256-GCM
+// Si no hay SECRETS_ENCRYPTION_KEY, la clave se deriva de la llave privada de la cuenta de servicio de Firebase
+// (ya es secreta y es la misma en Pruebas y Producción). Si algún día se rota la cuenta de servicio, hay que
+// fijar antes SECRETS_ENCRYPTION_KEY con la clave derivada actual o volver a ingresar las credenciales.
 function getEncryptionKey(): Buffer {
   const rawKey = process.env.SECRETS_ENCRYPTION_KEY;
-  if (!rawKey) {
-    throw new Error("Falta configurar SECRETS_ENCRYPTION_KEY en el servidor.");
-  }
-  return crypto.createHash('sha256').update(rawKey).digest();
+  if (rawKey) return crypto.createHash('sha256').update(rawKey).digest();
+  try {
+    const sa = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}');
+    if (sa.private_key) {
+      return crypto.createHash('sha256').update('gest_ok/secretos-empresa/v1|' + sa.private_key).digest();
+    }
+  } catch { /* sigue al error */ }
+  throw new Error("Falta configurar SECRETS_ENCRYPTION_KEY en el servidor.");
 }
 
 export function encryptSecret(plainText: string): string {
@@ -98,11 +105,70 @@ export async function getDecryptedCompanySecrets(companyId: string) {
       claveRepresentante: data.claveRepresentanteEncrypted ? decryptSecret(data.claveRepresentanteEncrypted) : '',
       claveCertificadoDigital: data.claveCertificadoEncrypted ? decryptSecret(data.claveCertificadoEncrypted) : '',
       certificadoB64: data.certificadoB64Encrypted ? decryptSecret(data.certificadoB64Encrypted) : '',
+      siiApiKey: data.siiApiKeyEncrypted ? decryptSecret(data.siiApiKeyEncrypted) : '',
       hasCertificadoDigital: !!data.hasCertificadoDigital
     };
   } catch {
     return null;
   }
+}
+
+// Credenciales que versiones anteriores dejaron sin cifrar en el documento de la empresa
+function secretosEnClaro(compData: any) {
+  const d = compData?.dteConfig || {};
+  const v = (x: any) => (typeof x === 'string' && x.trim() && x !== '••••••••' ? x.trim() : '');
+  return {
+    claveRepresentante: v(d.claveRepLegalSii) || v(d.claveRepresentante) || v(compData?.claveRepresentante),
+    claveSii: v(d.claveEmpresaSii) || v(d.claveSii) || v(compData?.claveSii) || v(compData?.claveTributaria),
+    claveCertificadoDigital: v(d.claveCertificadoDigital) || v(compData?.claveCertificadoDigital),
+    certificadoB64: (v(d.certificadoB64) || v(compData?.certificadoB64)).replace(/^data:[^;]+;base64,/, ''),
+    siiApiKey: v(d.siiApiKey),
+    rutRepresentante: v(d.rutRepresentante) || v(compData?.legalRepRut),
+  };
+}
+
+// Antes de borrar algo en claro, comprueba que lo cifrado se puede descifrar
+function verificarCifrado(encryptedDoc: any) {
+  for (const k of Object.keys(encryptedDoc)) {
+    if (k.endsWith('Encrypted') && encryptedDoc[k] && !decryptSecret(encryptedDoc[k])) {
+      throw new Error('La verificación del cifrado falló; no se borró nada.');
+    }
+  }
+}
+
+// Campos en claro que se borran de la empresa una vez cifrados
+const BORRAR_EN_CLARO = (FieldValue: any) => ({
+  claveSii: FieldValue.delete(), claveTributaria: FieldValue.delete(), claveRepresentante: FieldValue.delete(),
+  claveCertificadoDigital: FieldValue.delete(), certificadoB64: FieldValue.delete(),
+  'dteConfig.claveSii': FieldValue.delete(), 'dteConfig.claveRepresentante': FieldValue.delete(),
+  'dteConfig.claveCertificadoDigital': FieldValue.delete(), 'dteConfig.certificadoB64': FieldValue.delete(),
+  'dteConfig.claveRepLegalSii': FieldValue.delete(), 'dteConfig.claveEmpresaSii': FieldValue.delete(), 'dteConfig.siiApiKey': FieldValue.delete(),
+});
+
+/** Cifra y retira de la empresa las credenciales que aún estén en claro. Devuelve true si migró algo. */
+async function migrarSecretosEmpresa(studyId: string, companyId: string): Promise<boolean> {
+  const compRef = adminDb.collection('studies').doc(studyId).collection('companies').doc(companyId);
+  const snap = await compRef.get();
+  if (!snap.exists) return false;
+  const e = secretosEnClaro(snap.data());
+  if (!(e.claveRepresentante || e.claveSii || e.claveCertificadoDigital || e.certificadoB64 || e.siiApiKey)) return false;
+  const enc: any = { companyId, studyId, updatedAt: new Date().toISOString() };
+  if (e.rutRepresentante) enc.rutRepresentante = e.rutRepresentante;
+  if (e.claveRepresentante) enc.claveRepresentanteEncrypted = encryptSecret(e.claveRepresentante);
+  if (e.claveSii) enc.claveSiiEncrypted = encryptSecret(e.claveSii);
+  if (e.claveCertificadoDigital) enc.claveCertificadoEncrypted = encryptSecret(e.claveCertificadoDigital);
+  if (e.certificadoB64) { enc.certificadoB64Encrypted = encryptSecret(e.certificadoB64); enc.hasCertificadoDigital = true; }
+  if (e.siiApiKey) enc.siiApiKeyEncrypted = encryptSecret(e.siiApiKey);
+  verificarCifrado(enc);
+  await adminDb.collection('companySecrets').doc(companyId).set(enc, { merge: true });
+  const upd: any = BORRAR_EN_CLARO(FieldValue);
+  if (e.claveRepresentante) { upd['dteConfig.claveRepLegalSiiMasked'] = '••••••••'; upd['dteConfig.claveSiiMasked'] = '••••••••'; }
+  if (e.claveSii) upd['dteConfig.claveEmpresaSiiMasked'] = '••••••••';
+  if (e.claveCertificadoDigital) upd['dteConfig.claveCertificadoMasked'] = '••••••••';
+  if (e.certificadoB64) upd['dteConfig.hasCertificadoDigital'] = true;
+  if (e.siiApiKey) upd['dteConfig.siiApiKeyMasked'] = '••••••••';
+  await compRef.update(upd);
+  return true;
 }
 
 // SSRF Allowlist Validation
@@ -381,7 +447,7 @@ app.all("/api/indicators/sync", async (req, res) => {
 app.post("/api/companies/:companyId/secrets", verifyFirebaseAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { companyId } = req.params;
-    const { studyId, claveSii, rutRepresentante, claveRepresentante, claveCertificadoDigital, certificadoB64 } = req.body;
+    const { studyId, claveSii, rutRepresentante, claveRepresentante, claveCertificadoDigital, certificadoB64, siiApiKey } = req.body;
 
     if (!studyId) {
       return res.status(400).json({ success: false, error: "El studyId es requerido." });
@@ -403,7 +469,7 @@ app.post("/api/companies/:companyId/secrets", verifyFirebaseAuth, async (req: Au
     }
     const compData = compSnap.data() || {};
 
-    const hasAnyCred = !!(claveSii || claveRepresentante || claveCertificadoDigital || certificadoB64);
+    const hasAnyCred = !!(claveSii || claveRepresentante || claveCertificadoDigital || certificadoB64 || siiApiKey);
     if (!hasAnyCred) {
       return res.status(400).json({ success: false, error: "No se recibió ninguna credencial para guardar." });
     }
@@ -423,6 +489,16 @@ app.post("/api/companies/:companyId/secrets", verifyFirebaseAuth, async (req: Au
       encryptedDoc.certificadoB64Encrypted = encryptSecret(cleanB64);
       encryptedDoc.hasCertificadoDigital = true;
     }
+    if (siiApiKey) encryptedDoc.siiApiKeyEncrypted = encryptSecret(siiApiKey);
+
+    // Lo que aún esté en claro en la empresa y no venga en esta petición también se cifra antes de borrarlo
+    const enClaro = secretosEnClaro(compData);
+    if (!claveRepresentante && enClaro.claveRepresentante) encryptedDoc.claveRepresentanteEncrypted = encryptSecret(enClaro.claveRepresentante);
+    if (!claveSii && enClaro.claveSii) encryptedDoc.claveSiiEncrypted = encryptSecret(enClaro.claveSii);
+    if (!claveCertificadoDigital && enClaro.claveCertificadoDigital) encryptedDoc.claveCertificadoEncrypted = encryptSecret(enClaro.claveCertificadoDigital);
+    if (!certificadoB64 && enClaro.certificadoB64) { encryptedDoc.certificadoB64Encrypted = encryptSecret(enClaro.certificadoB64); encryptedDoc.hasCertificadoDigital = true; }
+    if (!siiApiKey && enClaro.siiApiKey) encryptedDoc.siiApiKeyEncrypted = encryptSecret(enClaro.siiApiKey);
+    verificarCifrado(encryptedDoc);
 
     await adminDb.collection('companySecrets').doc(companyId).set(encryptedDoc, { merge: true });
 
@@ -436,8 +512,16 @@ app.post("/api/companies/:companyId/secrets", verifyFirebaseAuth, async (req: Au
       'dteConfig.claveSii': admin.firestore.FieldValue.delete(),
       'dteConfig.claveRepresentante': admin.firestore.FieldValue.delete(),
       'dteConfig.claveCertificadoDigital': admin.firestore.FieldValue.delete(),
-      'dteConfig.certificadoB64': admin.firestore.FieldValue.delete()
+      'dteConfig.certificadoB64': admin.firestore.FieldValue.delete(),
+      // Nombres que usan las pantallas de Gest_OK
+      'dteConfig.claveRepLegalSii': admin.firestore.FieldValue.delete(),
+      'dteConfig.claveEmpresaSii': admin.firestore.FieldValue.delete(),
+      'dteConfig.siiApiKey': admin.firestore.FieldValue.delete()
     };
+    if (claveRepresentante) { updates['dteConfig.claveRepLegalSiiMasked'] = '••••••••'; updates['dteConfig.claveSiiMasked'] = '••••••••'; }
+    if (claveSii) updates['dteConfig.claveEmpresaSiiMasked'] = '••••••••';
+    if (claveCertificadoDigital) updates['dteConfig.claveCertificadoMasked'] = '••••••••';
+    if (siiApiKey) updates['dteConfig.siiApiKeyMasked'] = '••••••••';
 
     if (claveSii) {
       updates.claveSiiMasked = '••••••••';
@@ -467,6 +551,45 @@ app.post("/api/companies/:companyId/secrets", verifyFirebaseAuth, async (req: Au
   } catch (err: any) {
     console.error("Error guardando secretos de empresa:", err.message || err);
     return res.status(500).json({ success: false, error: "Error interno al cifrar y resguardar los secretos." });
+  }
+});
+
+// Endpoint (solo Super Admin): cifra las credenciales del SII que aún estén en claro en todas las empresas.
+// "revisar" solo cuenta; "aplicar" cifra, verifica y recién entonces borra lo que estaba en claro.
+app.post("/api/admin/proteger-claves-sii", verifyFirebaseAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    if (req.user?.role !== 'SUPER_USER') return res.status(403).json({ ok: false, error: 'Solo el Super Admin puede hacer esto.' });
+    getEncryptionKey(); // falla temprano si el servidor no puede cifrar
+    const aplicar = req.body?.modo === 'aplicar';
+    const studies = await adminDb.collection('studies').get();
+    let revisadas = 0, conClaves = 0, protegidas = 0;
+    const errores: string[] = [];
+    for (const st of studies.docs) {
+      const comps = await st.ref.collection('companies').get();
+      for (const c of comps.docs) {
+        revisadas++;
+        const e = secretosEnClaro(c.data());
+        if (!(e.claveRepresentante || e.claveSii || e.claveCertificadoDigital || e.certificadoB64 || e.siiApiKey)) continue;
+        conClaves++;
+        if (!aplicar) continue;
+        try {
+          if (await migrarSecretosEmpresa(st.id, c.id)) protegidas++;
+        } catch (err: any) {
+          errores.push(`${(c.data() as any)?.name || c.id}: ${err?.message || err}`);
+        }
+      }
+    }
+    if (aplicar) {
+      try {
+        await adminDb.collection('auditLogs').add({
+          timestamp: new Date().toISOString(), userId: req.user?.uid || '', userEmail: req.user?.email || '', studyId: null,
+          action: 'PROTEGER_CLAVES_SII', module: 'SEGURIDAD', details: `Credenciales cifradas en ${protegidas} empresa(s)`
+        });
+      } catch { /* bitácora opcional */ }
+    }
+    return res.json({ ok: true, modo: aplicar ? 'aplicar' : 'revisar', revisadas, conClaves, protegidas, errores });
+  } catch (err: any) {
+    return res.status(500).json({ ok: false, error: err?.message || 'No se pudo completar.' });
   }
 });
 

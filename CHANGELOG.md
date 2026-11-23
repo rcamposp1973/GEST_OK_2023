@@ -9,6 +9,12 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## [1.21.0] - Claves del SII cifradas
+- Las claves del SII (representante y empresa), el certificado digital y su clave, y la clave de SimpleAPI ya no se guardan en el documento de la empresa: se envían al servidor y se guardan cifradas (AES-256-GCM) en una colección que el navegador no puede leer. En la empresa solo queda la marca "clave guardada".
+- La sincronización del RCV ocurre completa en el servidor: el navegador solo indica empresa y período; ya no recibe ni envía claves ni certificado.
+- Las credenciales antiguas sin cifrar se cifran solas al sincronizar el RCV o al guardar la empresa, y el Super Admin puede protegerlas todas de una vez (Monitor del sistema > Datos > "Proteger claves del SII"), con revisión previa.
+- La clave general de SimpleAPI que estaba solo en el navegador del Super Admin se guarda cifrada en el servidor la primera vez que él sincroniza; desde ahí sirve a todos los estudios.
+
 ## [1.20.0] - Cuadratura de DJ 1887 y 1879
 - Nueva pestaña "Cuadratura 1887 / 1879" en Declaraciones Juradas: compara mes a mes el impuesto único (liquidaciones vs F29 código 48 vs contabilidad) y la retención de honorarios (boletas del RCV vs F29 código 151 vs contabilidad). Marca los meses con diferencia o sin F29.
 - El año comercial de Declaraciones Juradas parte en el año que corresponde a la próxima Operación Renta.

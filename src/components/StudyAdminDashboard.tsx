@@ -1,3 +1,4 @@
+import { separarCredenciales, guardarSecretosSii } from '../utils/credencialesSii';
 import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useEffect } from 'react';
 import { provisionAuthUser } from '../utils/adminApi';
@@ -547,6 +548,16 @@ export default function StudyAdminDashboard({
         siiConnectionStatus: (repClaveClean || existingDteConfig.claveRepLegalSii || companyFormData.hasCertificadoDigital || existingDteConfig.hasCertificadoDigital) ? 'Conectado' : 'No Configurado',
       };
 
+      // Las claves del SII y el certificado no se guardan en la empresa: van cifradas al servidor.
+      const credSeparadas = separarCredenciales(dteConfigPayload);
+      // Conserva las marcas de "clave guardada" de credenciales ya cifradas en el servidor
+      for (const k of ['claveRepLegalSiiMasked', 'claveEmpresaSiiMasked', 'claveSiiMasked', 'claveCertificadoMasked', 'siiApiKeyMasked'] as const) {
+        (credSeparadas.limpio as any)[k] = (credSeparadas.limpio as any)[k] || (existingDteConfig as any)[k] || '';
+      }
+      if ((existingDteConfig as any).claveRepLegalSiiMasked && credSeparadas.limpio.siiConnectionStatus === 'No Configurado') {
+        credSeparadas.limpio.siiConnectionStatus = 'Conectado';
+      }
+
       const companyPayload = {
         studyId,
         name,
@@ -566,7 +577,7 @@ export default function StudyAdminDashboard({
         estado: editingCompany ? (editingCompany.estado || 'Activo') : estado,
         assignedAccountantIds,
         assignedAccountantEmails,
-        dteConfig: dteConfigPayload,
+        dteConfig: credSeparadas.limpio,
         dteModuleEnabled: true,
         comprasHabilitado: !!companyFormData.comprasHabilitado && comprasContratado,
         ventasHabilitado: !!companyFormData.ventasHabilitado && ventasContratado,
@@ -600,6 +611,14 @@ export default function StudyAdminDashboard({
         }
 
         alert('Empresa registrada exitosamente. Todos los períodos contables 2025-2027 han sido inicializados cerrados por defecto.');
+      }
+
+      if (targetCompanyId && credSeparadas.haySecretos) {
+        try {
+          await guardarSecretosSii(studyId, targetCompanyId, credSeparadas.secretos);
+        } catch (e: any) {
+          alert('La empresa se guardó, pero las credenciales del SII no: ' + (e?.message || e) + '\n\nVuelve a ingresarlas.');
+        }
       }
 
       // Synchronize with 'assignments' collection

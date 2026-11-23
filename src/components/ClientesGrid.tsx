@@ -53,7 +53,7 @@ export default function ClientesGrid({ title = 'Mis clientes', subtitle, compani
       const asignados = [...ids].map(id => porId.get(id)).filter(Boolean) as User[];
       const contadores = asignados.filter(u => u.role !== UserRole.OBSERVER);
       const observadores = asignados.filter(u => u.role === UserRole.OBSERVER);
-      const siiOk = !!(c.dteConfig?.claveRepLegalSii || c.dteConfig?.hasCertificadoDigital || c.dteConfig?.siiConnectionStatus === 'Conectado');
+      const siiOk = !!(c.dteConfig?.claveRepLegalSii || (c.dteConfig as any)?.claveRepLegalSiiMasked || c.dteConfig?.hasCertificadoDigital || c.dteConfig?.siiConnectionStatus === 'Conectado');
       return { c, contadores, observadores, siiOk, inactiva: c.estado === 'Inactivo' };
     });
   }, [companies, users, assignments]);

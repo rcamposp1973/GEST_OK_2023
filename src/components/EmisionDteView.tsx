@@ -5,7 +5,8 @@ import { collection, getDocs, addDoc, updateDoc, doc, setDoc, deleteDoc } from '
 import { Company, Auxiliary, ChartOfAccount, DTEDocument, DTEConfig, DTEDocumentItem, Voucher, VoucherLine, RCVDocument } from '../types';
 import { sanitizeVoucherLines } from '../utils/voucherValidation';
 import { generateDteXml, downloadDteXml, simulateSiiConnectionTest, SiiConnectionDiagnostic } from '../utils/siiDteGenerator';
-import { fetchRcvFromSii } from '../utils/siiRcvClient';
+import { fetchRcvFromSii, apiKeyGuardadaEnNavegador } from '../utils/siiRcvClient';
+import { separarCredenciales, guardarSecretosSii } from '../utils/credencialesSii';
 import { formatRut } from '../utils/rutMatcher';
 import { getOfficialDolar, getOfficialEuro } from '../utils/chileanEconomicIndicators';
 
@@ -174,18 +175,12 @@ export default function EmisionDteView({
 
       // CALL RESILIENT RCV RESCUE (Backend + Direct Client Fallback)
       const resData = await fetchRcvFromSii({
-        companyRut: company.rut,
-        companyName: company.name,
+        studyId,
+        companyId: company.id,
         year: yearToSync,
         month: 'ALL',
         tipo: 'ALL',
-        rutRepresentante: config.rutRepresentante || company.legalRepRut,
-        claveRepresentante: config.claveRepLegalSii || company.dteConfig?.claveRepLegalSii,
-        claveCertificadoDigital: config.claveCertificadoDigital || company.dteConfig?.claveCertificadoDigital || '',
-        certificadoB64: config.certificadoB64 || company.dteConfig?.certificadoB64 || '',
-        apiKey: apiKeyVal,
-        provider: chosenProvider,
-        ambiente: config.ambiente || 'Producción'
+        apiKeyNavegador: apiKeyGuardadaEnNavegador(),
       });
 
       if (!resData.success) {
@@ -611,9 +606,9 @@ export default function EmisionDteView({
         claveEmpresaSii: compClave,
         claveCertificadoDigital: certClave,
         siiApiUrl: finalApiUrl,
-        claveRepLegalSiiMasked: repClave ? '••••••••' : '',
-        claveEmpresaSiiMasked: compClave ? '••••••••' : '',
-        claveSiiMasked: repClave ? '••••••••' : '',
+        claveRepLegalSiiMasked: repClave || config.claveRepLegalSiiMasked ? '••••••••' : '',
+        claveEmpresaSiiMasked: compClave || config.claveEmpresaSiiMasked ? '••••••••' : '',
+        claveSiiMasked: repClave || config.claveSiiMasked ? '••••••••' : '',
         siiApiProvider: chosenProvider,
         siiApiKey: config.siiApiKey?.trim() || '',
         siiConnectionStatus: 'Conectado',
@@ -621,8 +616,11 @@ export default function EmisionDteView({
         lastSiiSyncDate: new Date().toISOString(),
       };
 
+      // Claves y certificado van cifrados al servidor; en la empresa solo quedan las marcas
+      const { limpio: configSinSecretos, secretos, haySecretos } = separarCredenciales(updatedConfig);
+      if (haySecretos) await guardarSecretosSii(studyId, company.id, secretos);
       await updateDoc(companyRef, {
-        dteConfig: updatedConfig,
+        dteConfig: configSinSecretos,
         dteModuleEnabled: true,
         legalRepRut: config.rutRepresentante.trim(),
         legalRepName: config.nombreRepresentante.trim(),
@@ -631,10 +629,10 @@ export default function EmisionDteView({
       });
 
       setIsModuleEnabled(true);
-      setConfig(updatedConfig);
-      setClaveRepInput(repClave);
-      setClaveCompInput(compClave);
-      setClaveCertInput(certClave);
+      setConfig(configSinSecretos as DTEConfig);
+      setClaveRepInput('');
+      setClaveCompInput('');
+      setClaveCertInput('');
       await onRefreshData();
       alert(` ¡Credenciales e Integración SII Guardadas con Éxito!\n\n- Modo Emisión: ${updatedConfig.ambiente}\n- Proveedor API: ${updatedConfig.siiApiProvider}\n- URL API: ${updatedConfig.siiApiUrl || 'Por defecto'}\n- API Key: ${updatedConfig.siiApiKey ? '••••' + updatedConfig.siiApiKey.slice(-4) : 'Sin API Key'}\n- Sociedad: ${company.name} (${formatearRut(company.rut)})\n- Rep. Legal: ${config.nombreRepresentante} (${config.rutRepresentante})`);
     } catch (err) {

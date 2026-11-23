@@ -77,7 +77,8 @@ import * as XLSX from 'xlsx';
 import { useProcess } from '../context/ProcessContext';
 import { validateVoucherLine, isCustomAnalysisRequired, sanitizeVoucherLine, sanitizeVoucherLines } from '../utils/voucherValidation';
 import { getLatestOpenPeriod, getCurrentPeriodStr, checkIsPeriodClosed as checkIsPeriodClosedUtil, getNextOpenPeriodAndDate } from '../utils/periodUtils';
-import { fetchRcvFromSii } from '../utils/siiRcvClient';
+import { fetchRcvFromSii, apiKeyGuardadaEnNavegador } from '../utils/siiRcvClient';
+import { separarCredenciales, guardarSecretosSii } from '../utils/credencialesSii';
 import { formatRut } from '../utils/rutMatcher';
 import DemoFerreteriaManagerModal from './DemoFerreteriaManagerModal';
 import CertificadosOficialesSiiModal from './CertificadosOficialesSiiModal';
@@ -375,7 +376,7 @@ export default function CompanyAccountingDashboard({
     if (company?.dteConfig) {
       setQuickApiProvider(company.dteConfig.siiApiProvider || (company.dteConfig.siiApiKey ? 'SIMPLE_API' : 'DIRECT_SII'));
       setQuickApiUrl(company.dteConfig.siiApiUrl || '');
-      setQuickApiKey(company.dteConfig.siiApiKey || '');
+      setQuickApiKey('');
     }
   }, [company]);
 
@@ -392,9 +393,12 @@ export default function CompanyAccountingDashboard({
         siiApiKey: quickApiKey.trim(),
         siiConnectionStatus: 'Conectado'
       };
+      // La clave de la API va cifrada al servidor; en la empresa queda solo la marca
+      const { limpio, secretos, haySecretos } = separarCredenciales(updatedDteConfig);
       await updateDoc(companyRef, {
-        dteConfig: updatedDteConfig
+        dteConfig: limpio
       });
+      if (haySecretos) await guardarSecretosSii(studyId, company.id, secretos);
       await fetchData();
       setShowQuickApiConfig(false);
       alert(`Configuración de API Guardada con Éxito para ${company.name}:\n\n• Proveedor: ${quickApiProvider}\n• API Key: ${quickApiKey ? '••••' + quickApiKey.slice(-4) : 'Sin Key'}\n• URL Endpoint: ${finalUrl}`);
@@ -2649,40 +2653,19 @@ export default function CompanyAccountingDashboard({
 
     setIsRescatandoRcvApi(true);
     try {
-      const dteConfig: Partial<DTEConfig> = company.dteConfig || {};
-      const repRut = company.legalRepRut || dteConfig.rutRepresentante || '';
-      const repClave = dteConfig.claveRepLegalSii || '';
-      const certClave = dteConfig.claveCertificadoDigital || '';
-      const certB64 = dteConfig.certificadoB64 || '';
-      const apiKey = dteConfig.siiApiKey || '';
-
-      // Verificar que cuente con certificado digital o clave del SII
-      if (!certB64 && !repClave) {
-        setShowManualUpload(true);
-        alert(
-          `Credenciales Requeridas para Consulta Automática del SII:\n\n` +
-          `Para consultar automáticamente el Registro de Compras, Ventas y Honorarios del SII desde el servidor, la empresa debe tener ingresado su Certificado Digital (.pfx) o la Clave del SII del Representante Legal.\n\n` +
-          `PASO FÁCIL Y RECOMENDADO:\n` +
-          `Como tienes abierta la pestaña del SII, descarga el archivo Detalle en CSV/TXT y súbelo en la sección "Cargar CSV/TXT Manual" que acabamos de desplegar abajo.`
-        );
-        setIsRescatandoRcvApi(false);
-        return;
-      }
-
+      // Las credenciales del SII se resuelven en el servidor (cifradas). El navegador no las lee ni las envía.
       const data = await fetchRcvFromSii({
-        companyRut: company.rut,
-        companyName: company.name,
+        studyId,
+        companyId: company.id,
         year: parseInt(yearStr, 10),
         month: monthStr,
         tipo: 'ALL',
-        rutRepresentante: repRut,
-        claveRepresentante: repClave,
-        claveCertificadoDigital: certClave,
-        certificadoB64: certB64,
-        apiKey: apiKey,
-        provider: 'SIMPLE_API',
-        ambiente: dteConfig.ambiente || 'Producción'
+        apiKeyNavegador: apiKeyGuardadaEnNavegador(),
       });
+
+      if (!data.success && data.needsCertificate) {
+        setShowManualUpload(true);
+      }
 
       if (!data.success) {
         if (data.needsCertificate) {

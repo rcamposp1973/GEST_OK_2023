@@ -225,4 +225,12 @@ import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } fro
   ok('cuadratura 1879: marzo sin F29 se marca como faltante', h.filas[2].faltaF29 && !h.filas[2].cuadra && h.filas[1].cuadra && h.totalOrigen===500);
   ok('cuadratura: cuentas sugeridas por nombre', C.sugerirCuentaImpuestoUnico(plan)==='iu' && C.sugerirCuentaRetencionHonorarios(plan)==='rh');
 }
+{
+  const K = await import('../src/utils/credencialesSii');
+  const cfg:any={rutRepresentante:'11.111.111-1',claveRepLegalSii:'abc',claveEmpresaSii:'••••••••',certificadoB64:'QUJD',siiApiKey:'k1',ambiente:'Producción'};
+  const {limpio,secretos,haySecretos}=K.separarCredenciales(cfg);
+  ok('credenciales: ninguna clave queda en la empresa', !('claveRepLegalSii' in limpio) && !('certificadoB64' in limpio) && !('siiApiKey' in limpio) && !('claveEmpresaSii' in limpio));
+  ok('credenciales: se envían las reales y no la máscara', haySecretos && secretos.claveRepresentante==='abc' && secretos.claveSii==='' && secretos.certificadoB64==='QUJD' && secretos.siiApiKey==='k1');
+  ok('credenciales: quedan solo marcas', limpio.claveRepLegalSiiMasked==='••••••••' && limpio.hasCertificadoDigital===true && limpio.ambiente==='Producción');
+}
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

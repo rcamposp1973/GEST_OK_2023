@@ -9,6 +9,9 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## [1.21.2] - API general sin depender del Super Admin
+- La API de SimpleAPI guardada en cualquier empresa se adopta como API general aunque sincronice un administrador de estudio.
+
 ## [1.21.1] - Una sola clave de SimpleAPI para todo el sistema
 - La clave de SimpleAPI es general: si una empresa la tiene guardada y el Super Admin sincroniza, queda como clave general cifrada y sirve para todas las empresas de todos los estudios. Antes, cada empresa necesitaba la suya.
 

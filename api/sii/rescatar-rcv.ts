@@ -192,8 +192,10 @@ async function resolverApiKey(deEmpresa: string, deNavegador: string, esSuperAdm
     const snap = await ref.get();
     const guardada = snap.exists ? decryptSecret((snap.data() as any)?.apiKeyEncrypted || '') : '';
     if (guardada) return guardada;
-    const candidata = deEmpresa || deNavegador;
-    if (candidata && esSuperAdmin) {
+    // La API guardada en la configuración de una empresa la ingresó un administrador: se adopta como general.
+    // La que viene solo del navegador se adopta únicamente si sincroniza el Super Admin.
+    const candidata = deEmpresa || (esSuperAdmin ? deNavegador : '');
+    if (candidata) {
       const enc = encryptSecret(candidata);
       if (decryptSecret(enc) === candidata) await ref.set({ apiKeyEncrypted: enc, updatedAt: new Date().toISOString() });
     }

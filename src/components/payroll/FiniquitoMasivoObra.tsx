@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
-import { escribirFiniquito } from '../../utils/finiquitoPdf';
+import { escribirFiniquito, DatosDocumentoFiniquito } from '../../utils/finiquitoPdf';
+import type { guardarFiniquito } from '../../utils/finiquitosGuardados';
 import React, { useMemo, useState } from 'react';
 import { Download } from 'lucide-react';
 import type { Employee, ProjectMaster, PayrollSlip } from '../../types';
@@ -21,11 +22,13 @@ interface Props {
   payrollSlips?: PayrollSlip[];
   companyRut?: string;
   companyAddress?: string;
+  /** Guarda cada finiquito generado */
+  onFiniquitoGenerado?: (f: Parameters<typeof guardarFiniquito>[2]) => Promise<void>;
 }
 
 const pesos = (n: number) => '$' + Math.round(n).toLocaleString('es-CL');
 
-export default function FiniquitoMasivoObra({ employees, companyName, onVerIndividual, onGuardarTrabajador, obras = [], payrollSlips = [], companyRut = '', companyAddress }: Props) {
+export default function FiniquitoMasivoObra({ employees, companyName, onVerIndividual, onGuardarTrabajador, obras = [], payrollSlips = [], companyRut = '', companyAddress, onFiniquitoGenerado }: Props) {
   const hoy = new Date().toISOString().slice(0, 10);
   const [fechaCese, setFechaCese] = useState(hoy);
   const [filtro, setFiltro] = useState('');
@@ -75,20 +78,35 @@ export default function FiniquitoMasivoObra({ employees, companyName, onVerIndiv
     setMensaje(`Término registrado en ${ok} ficha(s).` + (fallas.length ? ` No se pudo en: ${fallas.join(' · ')}` : ''));
   };
 
-  const descargarFiniquitos = () => {
+  const [avisoGuardado, setAvisoGuardado] = useState('');
+  const descargarFiniquitos = async () => {
     const doc = new jsPDF();
-    marcadas.forEach(({ e, r }, i) => {
+    let guardadosOk = 0, errores = 0;
+    for (const [i, { e, r }] of marcadas.entries()) {
       if (i > 0) doc.addPage();
       const c = contratoActual(e);
       const o = obras.find(x => x.id === c?.obraId);
-      escribirFiniquito(doc, {
+      const documento: DatosDocumentoFiniquito = {
         empresa: { nombre: companyName, rut: companyRut, domicilio: companyAddress },
         trabajador: { nombre: e.name, rut: e.rut, cargo: e.position },
         fechaInicio: c?.fechaInicio || e.hireDate, fechaCese,
         causal: 'Art. 159 N° 5 - Conclusión del Trabajo o Servicio', esObra: true,
         obra: o ? o.name : c?.obraFaena, r, periodoSueldo: fechaCese.slice(0, 7),
-      }, formatRut);
-    });
+      };
+      escribirFiniquito(doc, documento, formatRut);
+      if (onFiniquitoGenerado) {
+        try {
+          await onFiniquitoGenerado({
+            employeeId: e.id, employeeRut: e.rut, employeeName: e.name,
+            causalCodigo: 'ART_159_CONCLUSION', causalNombre: documento.causal,
+            fechaInicio: documento.fechaInicio, fechaCese, obra: documento.obra,
+            total: r.totalLiquido, documento, origen: 'MASIVO_OBRA',
+          });
+          guardadosOk++;
+        } catch { errores++; }
+      }
+    }
+    if (onFiniquitoGenerado) setAvisoGuardado(errores ? `Se guardaron ${guardadosOk}; ${errores} no se pudieron guardar.` : `${guardadosOk} finiquito(s) guardados en "Finiquitos generados".`);
     doc.save(`Finiquitos_obra_${companyName.replace(/\W+/g, '_')}_${fechaCese}.pdf`);
   };
 
@@ -198,8 +216,9 @@ export default function FiniquitoMasivoObra({ employees, companyName, onVerIndiv
         )}
         <button disabled={marcadas.length === 0} onClick={descargarFiniquitos}
           className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-xs font-bold rounded-lg px-3 py-2">
-          Descargar finiquitos PDF ({marcadas.length})
+          Generar y guardar finiquitos PDF ({marcadas.length})
         </button>
+        {avisoGuardado && <span className="text-xs font-semibold text-emerald-700">{avisoGuardado}</span>}
         <button disabled={marcadas.length === 0} onClick={exportar}
           className="inline-flex items-center gap-1.5 bg-slate-900 text-white rounded-lg px-3 py-1.5 text-xs disabled:opacity-40">
           <Download className="w-4 h-4" /> Exportar seleccionados (Excel/CSV)

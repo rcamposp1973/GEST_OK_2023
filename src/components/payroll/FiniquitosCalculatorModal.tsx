@@ -1,5 +1,5 @@
 import { formatearRut } from '../../utils/rutFormato';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   FileText, Calculator, Download, Printer, X, CheckCircle2, 
   AlertCircle, DollarSign, Calendar, User, ShieldCheck, ArrowRight, Building2
@@ -12,6 +12,8 @@ import FiniquitoMasivoObra from './FiniquitoMasivoObra';
 import { escribirFiniquito } from '../../utils/finiquitoPdf';
 import { contratoActual } from '../../utils/contratosLaborales';
 import jsPDF from 'jspdf';
+import { guardarFiniquito, escucharFiniquitos, cambiarEstadoFiniquito, FiniquitoGuardado } from '../../utils/finiquitosGuardados';
+import type { DatosDocumentoFiniquito } from '../../utils/finiquitoPdf';
 
 interface FiniquitosCalculatorModalProps {
   companyName: string;
@@ -28,6 +30,9 @@ interface FiniquitosCalculatorModalProps {
   payrollSlips?: PayrollSlip[];
   /** Mostrar dentro de una página (sin ventana flotante ni botón cerrar) */
   embebido?: boolean;
+  /** Para guardar los finiquitos generados */
+  studyId?: string;
+  companyId?: string;
 }
 
 export const CHILEAN_TERMINATION_CAUSALS = [
@@ -54,9 +59,22 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
   onGuardarTrabajador,
   obras = [],
   payrollSlips = [],
-  embebido = false
+  embebido = false,
+  studyId,
+  companyId
 }) => {
-  const [modo, setModo] = useState<'individual' | 'masivo'>('individual');
+  const [modo, setModo] = useState<'individual' | 'masivo' | 'guardados'>('individual');
+  const [guardados, setGuardados] = useState<FiniquitoGuardado[]>([]);
+  const [avisoGuardado, setAvisoGuardado] = useState<string>('');
+  useEffect(() => {
+    if (!studyId || !companyId) return;
+    return escucharFiniquitos(studyId, companyId, setGuardados);
+  }, [studyId, companyId]);
+  const descargarGuardado = (g: FiniquitoGuardado) => {
+    const d = new jsPDF();
+    escribirFiniquito(d, g.documento, formatRut);
+    d.save(`Finiquito_${formatearRut(g.employeeRut)}_${g.fechaCese}.pdf`);
+  };
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
   const [causalCode, setCausalCode] = useState<string>('ART_161_NECESIDADES');
   const [fechaCese, setFechaCese] = useState<string>(new Date().toISOString().slice(0, 10));
@@ -115,20 +133,35 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
   };
 
   // Generar PDF Oficial del Finiquito
-  const handleDownloadPDF = () => {
+  const handleDownloadPDF = async () => {
     if (!selectedEmployee || !finiquitoCalculated) return;
-
-    const doc = new jsPDF();
     const contrato = contratoActual(selectedEmployee);
     const obra = obras.find(o => o.id === contrato?.obraId);
-    escribirFiniquito(doc, {
+    const { cuadro, ...r } = finiquitoCalculated as any;
+    const documento: DatosDocumentoFiniquito = {
       empresa: { nombre: companyName, rut: companyRut, domicilio: companyAddress },
       trabajador: { nombre: selectedEmployee.name, rut: selectedEmployee.rut, cargo: selectedEmployee.position },
       fechaInicio: contrato?.fechaInicio || selectedEmployee.hireDate, fechaCese,
       causal: causalConfig.name, esObra: !!esObra,
       obra: obra ? obra.name : contrato?.obraFaena,
-      r: finiquitoCalculated, otrosHaberes, periodoSueldo: slipMesCese?.period,
-    }, formatRut);
+      r, otrosHaberes, periodoSueldo: slipMesCese?.period,
+    };
+    const doc = new jsPDF();
+    escribirFiniquito(doc, documento, formatRut);
+    // Todo finiquito generado queda guardado (si se vuelve a generar, la versión anterior pasa al historial)
+    if (studyId && companyId) {
+      try {
+        await guardarFiniquito(studyId, companyId, {
+          employeeId: selectedEmployee.id, employeeRut: selectedEmployee.rut, employeeName: selectedEmployee.name,
+          causalCodigo: causalConfig.code, causalNombre: causalConfig.name,
+          fechaInicio: documento.fechaInicio, fechaCese, obra: documento.obra,
+          total: finiquitoCalculated.totalLiquido, documento, cuadro, origen: 'INDIVIDUAL',
+        });
+        setAvisoGuardado(`Guardado en "Finiquitos generados" (${selectedEmployee.name}, término ${fechaCese}).`);
+      } catch (e: any) {
+        setAvisoGuardado('No se pudo guardar el finiquito: ' + (e?.message || e) + '. El PDF igual se descargó.');
+      }
+    }
     doc.save(`Finiquito_${formatearRut(selectedEmployee.rut)}_${fechaCese}.pdf`);
   };
 
@@ -165,6 +198,9 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
         <div className="px-6 pt-4 flex gap-2">
           <button onClick={() => setModo('individual')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${modo === 'individual' ? 'bg-slate-900 text-white border-slate-900' : 'border-slate-300 text-slate-700'}`}>Un trabajador</button>
           <button onClick={() => setModo('masivo')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${modo === 'masivo' ? 'bg-slate-900 text-white border-slate-900' : 'border-slate-300 text-slate-700'}`}>Término de obra o faena (varios)</button>
+          {studyId && companyId && (
+            <button onClick={() => setModo('guardados')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${modo === 'guardados' ? 'bg-slate-900 text-white border-slate-900' : 'border-slate-300 text-slate-700'}`}>Finiquitos generados ({guardados.filter(g => g.estado !== 'ANULADO').length})</button>
+          )}
         </div>
 
         {modo === 'masivo' && (
@@ -177,13 +213,53 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
               companyAddress={companyAddress}
               onGuardarTrabajador={onGuardarTrabajador}
               obras={obras}
+              onFiniquitoGenerado={studyId && companyId ? (f) => guardarFiniquito(studyId, companyId, f).then(() => undefined) : undefined}
               onVerIndividual={(id, fecha) => { setModo('individual'); setSelectedEmployeeId(id); setCausalCode('ART_159_CONCLUSION'); setFechaCese(fecha); }}
             />
           </div>
         )}
 
         {/* Body */}
-        <div className={`p-6 space-y-6 max-h-[80vh] overflow-y-auto ${modo === 'masivo' ? 'hidden' : ''}`}>
+        {modo === 'guardados' && (
+          <div className="p-6 max-h-[80vh] overflow-y-auto">
+            {guardados.length === 0 ? (
+              <p className="text-xs text-slate-500">Aún no hay finiquitos generados. Cada vez que descargues un finiquito (individual o masivo) quedará guardado aquí.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead><tr className="text-left text-slate-500 border-b border-slate-200">
+                    <th className="p-2">Trabajador</th><th className="p-2">Término</th><th className="p-2">Causal</th><th className="p-2 text-right">Total</th><th className="p-2">Estado</th><th className="p-2"></th>
+                  </tr></thead>
+                  <tbody>
+                    {guardados.map(g => (
+                      <tr key={g.id} className={`border-b border-slate-100 ${g.estado === 'ANULADO' ? 'opacity-50 line-through' : ''}`}>
+                        <td className="p-2"><span className="font-semibold text-slate-900">{g.employeeName}</span><span className="block text-[10px] text-slate-500">{formatearRut(g.employeeRut)}{g.obra ? ` · ${g.obra}` : ''}</span></td>
+                        <td className="p-2 font-mono">{g.fechaCese}</td>
+                        <td className="p-2">{g.causalNombre}</td>
+                        <td className="p-2 text-right font-mono font-bold">$ {Math.round(g.total || 0).toLocaleString('es-CL')}</td>
+                        <td className="p-2">
+                          <select value={g.estado} onChange={e => studyId && companyId && cambiarEstadoFiniquito(studyId, companyId, g.id, e.target.value as any)}
+                            className="border border-slate-300 rounded-md px-1.5 py-1 text-xs bg-white">
+                            <option value="GENERADO">Generado</option><option value="FIRMADO">Firmado</option><option value="PAGADO">Pagado</option><option value="ANULADO">Anulado</option>
+                          </select>
+                          {(g.historial?.length || 0) > 0 && <span className="block text-[10px] text-slate-500 mt-0.5">{g.historial!.length} versión(es) anterior(es)</span>}
+                        </td>
+                        <td className="p-2 whitespace-nowrap">
+                          <button onClick={() => descargarGuardado(g)} className="px-2 py-1 rounded-md bg-indigo-600 text-white font-semibold mr-1">PDF</button>
+                          <button onClick={() => { setModo('individual'); setSelectedEmployeeId(g.employeeId); setCausalCode(g.causalCodigo); setFechaCese(g.fechaCese); }}
+                            className="px-2 py-1 rounded-md border border-slate-300 text-slate-700 font-semibold">Corregir</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className={`p-6 space-y-6 max-h-[80vh] overflow-y-auto ${modo !== 'individual' ? 'hidden' : ''}`}>
+          {avisoGuardado && <p className="text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">{avisoGuardado}</p>}
           {/* Employee Selection */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
             <div>
@@ -350,14 +426,14 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
             Cerrar
           </button>}
 
-          {selectedEmployee && finiquitoCalculated && (
+          {modo === 'individual' && selectedEmployee && finiquitoCalculated && (
             <div className="flex items-center gap-2">
               <button
                 onClick={handleDownloadPDF}
                 className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
               >
                 <Download className="w-4 h-4" />
-                <span>Descargar Finiquito Oficial (PDF)</span>
+                <span>Generar y guardar finiquito (PDF)</span>
               </button>
             </div>
           )}

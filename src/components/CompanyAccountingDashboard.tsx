@@ -9891,6 +9891,8 @@ export default function CompanyAccountingDashboard({
           onGuardarTrabajador={handleSaveEmployee}
           obras={projects}
           payrollSlips={payrollSlips}
+          studyId={studyId}
+          companyId={company.id}
           onClose={() => setShowFiniquitoModal(false)}
         />
       )}

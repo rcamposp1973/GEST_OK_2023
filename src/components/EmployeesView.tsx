@@ -1364,6 +1364,8 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
           accounts={[]}
           obras={projects}
           payrollSlips={payrollSlips}
+          studyId={studyId}
+          companyId={companyId}
           onGuardarTrabajador={onSaveEmployee}
           onClose={() => {}}
         />

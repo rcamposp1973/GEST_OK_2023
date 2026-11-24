@@ -9,6 +9,10 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.28.0 — 2026-11-24
+- Los finiquitos generados quedan guardados (antes solo se descargaba el PDF y no quedaba registro). Se guardan al generar el PDF, individual o masivo por obra, en studies/{s}/companies/{c}/finiquitos.
+- Nueva pestaña "Finiquitos generados": volver a descargar el PDF idéntico, marcar Generado / Firmado / Pagado / Anulado y Corregir. Si se corrige y se vuelve a generar, la versión anterior queda en el historial (hasta 10 versiones).
+
 ## 1.27.0 — 2026-11-24
 - Liquidación de sueldo como PDF real (texto nítido, letra Helvetica, sin imagen): siempre 1 hoja carta, columnas Haberes y Descuentos lado a lado, solo conceptos con monto. Nombre de archivo AAAAMM_Nombre_Apellido.pdf.
 - Nuevo botón "Todas en un PDF": todas las liquidaciones del período en un solo archivo, una hoja por trabajador.

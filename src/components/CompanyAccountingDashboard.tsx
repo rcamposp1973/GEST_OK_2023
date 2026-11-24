@@ -2747,8 +2747,9 @@ export default function CompanyAccountingDashboard({
           const oldParty = oldData.tipoRegistro === 'Venta' 
             ? (oldData.rutReceptor || oldData.rutEmisor || '') 
             : (oldData.rutEmisor || '');
-          const oldKey = `${oldParty.trim().toLowerCase()}_${String(oldData.tipoDocumento || oldData.tipoDoc).trim()}_${String(oldData.folio).trim()}`;
-          existingKeys.delete(oldKey);
+          // misma clave que se usa para detectar duplicados (si no, el resumen nuevo se saltaba como "duplicado")
+          const oldPer = oldData.period || (oldData.fechaEmision ? String(oldData.fechaEmision).slice(0, 7) : '');
+          existingKeys.delete(`${oldData.tipoRegistro || 'Compra'}_${cleanRutForMatch(oldParty)}_${normalizeTipoDocCode(oldData.tipoDocumento || oldData.tipoDoc)}_${cleanFolioNumber(oldData.folio)}_${oldPer}`);
           boletasPisadasCount++;
         }
       }

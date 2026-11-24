@@ -9,6 +9,10 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.31.2 — 2026-11-24
+- Boletas y comprobantes POS (resumen mensual del RCV): al volver a sincronizar se reemplaza el resumen anterior. Se corrigió que, si el resumen nuevo traía la misma cantidad de documentos, quedaba borrado el anterior y el nuevo se saltaba como duplicado.
+- Registro en el servidor de cuántas boletas de honorarios informa el SII por mes, para verificar la lectura.
+
 ## 1.31.1 — 2026-11-24
 - F29 desde el SII: un registro por mes. Si hay uno vigente se muestra ese; si no, el último rechazado por pago inconcluso; si un mes ya vencido (día 12 o 20 del mes siguiente) no tiene nada, aparece "PENDIENTE" en rojo y negrita. Se leen todos los registros (quedan en "todos").
 

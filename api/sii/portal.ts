@@ -338,6 +338,7 @@ export async function leerHonorariosRecibidos(s: SesionSii, rutEmpresa: string, 
       });
     }
     const total = num(meta?.total_boletas);
+    console.log(`[sii-portal] honorarios ${p.conGuion} ${anio}-${mm} página ${pagina}: informe=${meta ? 'sí' : 'no'} total_boletas=${meta?.total_boletas ?? '-'} filas=${Object.keys(porIndice).length}`);
     if (nuevos === 0 || vistos.size >= total) break;
   }
   return docs;

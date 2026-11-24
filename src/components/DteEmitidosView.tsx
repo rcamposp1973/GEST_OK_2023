@@ -37,7 +37,8 @@ export default function DteEmitidosView({ studyId, companyId, periodo, unidadSii
     const r = await consultarSiiDirecto({ studyId, companyId, accion: 'xml', year: y, month: m });
     setCargando(false);
     if (!r.success) { setAviso(r.error || 'No se pudo descargar desde el SII.'); return; }
-    setAviso(`Listo: ${r.cantidad} documento(s) del ${periodo}.${r.pendientes?.length ? ` Quedaron pendientes: ${r.pendientes.join('; ')}` : ''}`);
+    const pend: string[] = r.pendientes || [];
+    setAviso(`Listo: ${r.cantidad} documento(s) del ${periodo}.` + (pend.length ? ` No se pudieron bajar ${pend.length} grupo(s) (${pend.slice(0, 3).join(', ')}${pend.length > 3 ? '…' : ''}); vuelve a intentar o cárgalos con "Cargar XML de facturador".` : ''));
   };
   const ver = (g: DteGuardado, cedible = false) => {
     if (viendo) URL.revokeObjectURL(viendo.url);

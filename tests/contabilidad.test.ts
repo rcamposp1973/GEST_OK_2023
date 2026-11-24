@@ -341,4 +341,8 @@ import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } fro
   ok('XML SII: lee exportación (moneda, aduana, decimales, &amp;)', d.esExportacion && d.totales.moneda==='DOLAR USA' && d.totales.total===100.5 && d.aduana?.CodClauVenta==='5' && d.emisor.razon==='A & B SPA');
   ok('XML SII: texto del timbre sin saltos', R.textoTimbre(d.ted)==='<TED version="1.0"><DD><F>7</F></DD></TED>');
 }
+{
+  const P = await import('../api/sii/portal');
+  ok('XML SII: conteo del listado en cualquier orden', P.cantidadListado('<input type="hidden" value="3" name="cant_reg" id="cant_reg">')===3 && P.cantidadListado('<input id=cant_reg value=0>')===0 && P.cantidadListado('<p>No hay resultados</p>')===0 && P.cantidadListado('<p>x</p>')===null);
+}
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

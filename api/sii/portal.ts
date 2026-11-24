@@ -440,17 +440,30 @@ function partirEnTramos(desde: string, hasta: string, maxDias: number): [string,
   return out;
 }
 
+/** Cantidad de documentos que informa el listado del portal (campo oculto cant_reg, o el aviso "No hay resultados"). */
+export function cantidadListado(html: string): number | null {
+  const input = /<input\b[^>]*\bcant_reg\b[^>]*>/i.exec(html)?.[0];
+  const v = input ? /\bvalue\s*=\s*["']?(\d+)/i.exec(input)?.[1] : undefined;
+  if (v !== undefined) return Number(v);
+  if (/No hay resultados/i.test(html)) return 0;
+  return null;
+}
+
 async function descargarTramoXml(s: SesionSii, rut: { cuerpo: string; dv: string }, desde: string, hasta: string, tipo = '') {
   const comunes: Record<string, string> = { RUT_EMP: rut.cuerpo, DV_EMP: rut.dv, RUT_RECP: '', FOLIO: '', RZN_SOC: '', FEC_DESDE: desde, FEC_HASTA: hasta,
     TPO_DOC: tipo, ESTADO: '', ORDEN: '', FOLIOHASTA: '' };
   const listado = await s.pedir(`${MIPE}/lista_documentos.cgi`, { method: 'POST', body: new URLSearchParams({ ...comunes, TPO_ARCHIVO: 'dte', ORIGEN: 'ENV', NUM_PAG: '1' }).toString(),
     headers: { 'content-type': 'application/x-www-form-urlencoded', origin: 'https://www1.sii.cl', referer: `${MIPE}/auth.cgi` } });
-  const cant = /id=["']cant_reg["'][^>]*\bvalue=["'](\d+)["']/i.exec(listado.texto)?.[1];
+  const cant = cantidadListado(listado.texto);
   const r = await s.pedir(`${MIPE}/download.cgi?${new URLSearchParams({ ...comunes, ORIGEN: 'ENV', DOWNLOAD: 'XML' }).toString()}`);
   if (new URL(r.url).hostname === LOGIN_HOST) throw new ErrorSii('La sesión del SII se cerró durante la descarga de XML.', 'SESION');
-  if (/demasiados Documentos electr/i.test(r.texto)) return cant === '0' ? { vacio: true as const } : { excede: true as const };
+  // El SII responde "demasiados documentos" también cuando el filtro no trae nada: se mira el listado para distinguir
+  if (/demasiados Documentos electr/i.test(r.texto)) {
+    if (cant === null) console.warn(`[sii-portal] xml ${desde}..${hasta} tipo=${tipo || '-'}: listado sin conteo legible`);
+    return cant === 0 || (cant === null && !!tipo) ? { vacio: true as const } : { excede: true as const };
+  }
   if (!/<SetDTE/i.test(r.texto)) {
-    if (cant === '0') return { vacio: true as const };
+    if (cant === 0) return { vacio: true as const };
     const cod = /CODIGO:\s*([\d.\-]+)/.exec(r.texto)?.[1];
     throw new ErrorSii(`El SII no entregó el XML del ${desde} al ${hasta}${cod ? ` (código ${cod})` : ''}.`);
   }
@@ -473,7 +486,7 @@ export async function leerXmlEmitidos(s: SesionSii, rutEmpresa: string, anio: nu
     if ('vacio' in r) return;
     if (a !== b) { for (const [x, y] of partirEnTramos(a, b, 1)) await procesar(x, y, tipo); return; }
     if (!tipo) { for (const t of TIPOS_DTE_VENTA) await procesar(a, b, t); return; }
-    pendientes.push(`${a} (tipo ${tipo}): más de 20 documentos en un día; cárgalos con "Cargar XML de facturador"`);
+    pendientes.push(`${a} tipo ${tipo}`);
   };
   for (const [a, b] of partirEnTramos(desde, hasta, 7)) await procesar(a, b);
   const unicos = new Map(documentos.map(d => [`${d.tipo}_${d.folio}`, d]));

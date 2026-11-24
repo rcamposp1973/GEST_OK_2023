@@ -9,6 +9,9 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.32.1 — 2026-11-24
+- XML del facturador SII: el SII responde "más de 20 documentos" también cuando un día no tiene documentos. Ahora se lee bien el conteo del listado y esos días se tratan como vacíos (antes aparecía una larga lista de "pendientes" falsos y la descarga tardaba más). El aviso de pendientes reales es corto.
+
 ## 1.32.0 — 2026-11-24
 - Documentos emitidos (XML): descarga desde el facturador gratuito del SII los XML de las ventas del mes (de a 7 días, partiendo por día y tipo cuando el SII pone su tope de 20 documentos). Se guardan en studies/{s}/companies/{c}/dteXml. Si la cuenta de la empresa no está autorizada en el facturador, entra con el representante.
 - Representación impresa del DTE desde el XML: recuadro rojo con RUT, tipo y folio; unidad del SII; emisor, receptor, detalle, descuentos, referencias, totales y Timbre Electrónico (PDF417 del TED) con la resolución. Copia cedible con acuse de recibo (Ley 19.983) para facturas y guías. Se ve en pantalla y se descarga en PDF; el XML también se descarga.

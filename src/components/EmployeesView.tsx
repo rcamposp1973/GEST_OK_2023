@@ -1,4 +1,5 @@
-import type { ProjectMaster } from '../types';
+import { FiniquitosCalculatorModal } from './payroll/FiniquitosCalculatorModal';
+import type { ProjectMaster, PayrollSlip } from '../types';
 import ContratosTrabajadorEditor from './payroll/ContratosTrabajadorEditor';
 import { contratosDe, contratoActual, sincronizarFicha } from '../utils/contratosLaborales';
 import { formatearRut } from '../utils/rutFormato';
@@ -204,6 +205,7 @@ interface EmployeesViewProps {
   onSubTabChange?: (tab: 'employees' | 'contracts' | 'attendance' | 'advances' | 'severance' | 'certificates') => void;
   onNavigateToPayroll?: (tab?: string) => void;
   onOpenCertificadosSii?: (type: 'CERT_6_SUELDOS' | 'CERT_2_HONORARIOS') => void;
+  payrollSlips?: PayrollSlip[];
 }
 
 export const EmployeesView: React.FC<EmployeesViewProps> = ({
@@ -220,7 +222,8 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
   initialSubTab,
   onSubTabChange,
   onNavigateToPayroll,
-  onOpenCertificadosSii
+  onOpenCertificadosSii,
+  payrollSlips = []
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDepartment, setFilterDepartment] = useState('ALL');
@@ -253,9 +256,6 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
   const [advanceRecords, setAdvanceRecords] = useState<Array<{id: string, employeeId: string, employeeName: string, amount: number, date: string, status: string}>>([]);
   const [newAtt, setNewAtt] = useState({ employeeId: employees[0]?.id || '', period: '2026-09', type: 'LICENCIA', days: 1, note: '' });
   const [newAdv, setNewAdv] = useState({ employeeId: employees[0]?.id || '', amount: 50000, date: new Date().toISOString().split('T')[0] });
-  const [finiquitoEmpId, setFiniquitoEmpId] = useState(employees[0]?.id || '');
-  const [finiquitoCausal, setFiniquitoCausal] = useState('ART_161_NECESIDADES');
-  const [finiquitoFecha, setFiniquitoFecha] = useState(new Date().toISOString().split('T')[0]);
   const [certType, setCertType] = useState<'ANTIGUEDAD' | 'RENTA'>('ANTIGUEDAD');
   const [certEmpId, setCertEmpId] = useState(employees[0]?.id || '');
 
@@ -1353,142 +1353,20 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
         </div>
       )}
 
-      {/* SUB-TABA: CÁLCULO DE FINIQUITOS */}
+      {/* SUB-TABA: CÁLCULO DE FINIQUITOS (misma calculadora legal que Remuneraciones) */}
       {activeSubTab === 'severance' && (
-        <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-6">
-          <div className="border-b border-slate-100 pb-4">
-            <h3 className="text-base font-bold text-slate-900" title="Cálculo de indemnización por años de servicio, aviso previo y feriado proporcional">Módulo de Cálculo de Finiquitos (Código del Trabajo)</h3>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Seleccionar Trabajador</label>
-              <select
-                value={finiquitoEmpId}
-                onChange={(e) => setFiniquitoEmpId(e.target.value)}
-                className="w-full text-xs bg-white border border-slate-300 rounded-lg p-2 font-medium"
-              >
-                {employees.map(emp => (
-                  <option key={emp.id} value={emp.id}>{emp.name} ({emp.rut}) - Base: ${emp.baseSalary.toLocaleString('es-CL')}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Causal de Término</label>
-              <select
-                value={finiquitoCausal}
-                onChange={(e) => setFiniquitoCausal(e.target.value)}
-                className="w-full text-xs bg-white border border-slate-300 rounded-lg p-2 font-medium"
-              >
-                <option value="ART_159_02">Art. 159 N° 2 - Renuncia Voluntaria</option>
-                <option value="ART_161_NECESIDADES">Art. 161 - Necesidades de la Empresa (Indemnización)</option>
-                <option value="ART_159_04">Art. 159 N° 4 - Vencimiento del Plazo</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Fecha de Término</label>
-              <input
-                type="date"
-                value={finiquitoFecha}
-                onChange={(e) => setFiniquitoFecha(e.target.value)}
-                className="w-full text-xs bg-white border border-slate-300 rounded-lg p-2 font-mono"
-              />
-            </div>
-          </div>
-
-          {(() => {
-            const emp = employees.find(e => e.id === finiquitoEmpId);
-            if (!emp) return <div className="text-sm text-slate-500">Seleccione un trabajador para simular el finiquito.</div>;
-
-            const hireYear = new Date(emp.hireDate).getFullYear();
-            const termYear = new Date(finiquitoFecha).getFullYear();
-            const yearsOfService = Math.max(1, termYear - hireYear);
-            const isIndemnizable = finiquitoCausal === 'ART_161_NECESIDADES';
-            const baseIndemnizacion = isIndemnizable ? emp.baseSalary * Math.min(11, yearsOfService) : 0;
-            const avisoPrevio = isIndemnizable ? emp.baseSalary : 0;
-            const feriadoProporcional = Math.round((emp.baseSalary / 30) * 1.25 * 10); // aprox 10 dias acumulados
-            const totalFiniquito = baseIndemnizacion + avisoPrevio + feriadoProporcional;
-
-            return (
-              <div className="bg-indigo-50/60 border border-indigo-200 rounded-xl p-6 space-y-4">
-                <div className="flex justify-between items-center border-b border-indigo-200 pb-3">
-                  <div>
-                    <h4 className="font-bold text-indigo-900 text-base">Simulación de Liquidación de Finiquito</h4>
-                    <p className="text-xs text-indigo-700">Trabajador: <span className="font-semibold">{emp.name}</span> | Ingreso: {emp.hireDate}</p>
-                  </div>
-                  <button
-                    onClick={() => {
-                      triggerIframePrint({
-                        title: `Finiquito_${emp.name}`,
-                        htmlContent: `
-                          <div class="header-box">
-                            <h2>SIMULACIÓN DE FINIQUITO DE TRABAJO</h2>
-                            <p class="font-bold">${companyName.toUpperCase()} (RUT: ${companyRut})</p>
-                            <p>Trabajador: <strong>${emp.name}</strong> (RUT: ${formatearRut(emp.rut)})</p>
-                            <p>Fecha Ingreso: ${emp.hireDate} &bull; Emisión: ${new Date().toLocaleDateString('es-CL')}</p>
-                          </div>
-                          <table>
-                            <thead>
-                              <tr>
-                                <th>CONCEPTO DE INDEMNIZACIÓN</th>
-                                <th class="text-right">MONTO ($)</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr>
-                                <td>Indemnización por Años de Servicio (${yearsOfService} año${yearsOfService > 1 ? 's' : ''})</td>
-                                <td class="text-right font-bold">$${baseIndemnizacion.toLocaleString('es-CL')}</td>
-                              </tr>
-                              <tr>
-                                <td>Indemnización Sustitutiva de Aviso Previo</td>
-                                <td class="text-right font-bold">$${avisoPrevio.toLocaleString('es-CL')}</td>
-                              </tr>
-                              <tr>
-                                <td>Feriado Proporcional (Vacaciones Pendientes)</td>
-                                <td class="text-right font-bold">$${feriadoProporcional.toLocaleString('es-CL')}</td>
-                              </tr>
-                              <tr class="bg-slate font-bold" style="font-size:12px;">
-                                <td>TOTAL LIQUIDACIÓN DE FINIQUITO</td>
-                                <td class="text-right">$${totalFiniquito.toLocaleString('es-CL')}</td>
-                              </tr>
-                            </tbody>
-                          </table>
-                          <div class="footer-box">
-                            <p>Documento emitido conforme al Art. 177 del Código del Trabajo de Chile</p>
-                          </div>
-                        `
-                      });
-                    }}
-                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-lg shadow-xs flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <FileText className="w-4 h-4" />
-                    Imprimir / Exportar Finiquito
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm font-mono">
-                  <div className="bg-white p-4 rounded-lg border border-indigo-100 shadow-2xs">
-                    <span className="text-xs font-sans text-slate-500 block">Indemnización Años Servicio</span>
-                    <span className="text-lg font-bold text-slate-900">${baseIndemnizacion.toLocaleString('es-CL')}</span>
-                  </div>
-                  <div className="bg-white p-4 rounded-lg border border-indigo-100 shadow-2xs">
-                    <span className="text-xs font-sans text-slate-500 block">Indemnización Aviso Previo</span>
-                    <span className="text-lg font-bold text-slate-900">${avisoPrevio.toLocaleString('es-CL')}</span>
-                  </div>
-                  <div className="bg-white p-4 rounded-lg border border-indigo-100 shadow-2xs">
-                    <span className="text-xs font-sans text-slate-500 block">Feriado Proporcional (Vacaciones)</span>
-                    <span className="text-lg font-bold text-slate-900">${feriadoProporcional.toLocaleString('es-CL')}</span>
-                  </div>
-                </div>
-
-                <div className="bg-indigo-900 text-white p-4 rounded-lg flex justify-between items-center">
-                  <span className="font-bold text-sm">TOTAL A PAGAR POR FINIQUITO:</span>
-                  <span className="text-xl font-mono font-black">${totalFiniquito.toLocaleString('es-CL')}</span>
-                </div>
-              </div>
-            );
-          })()}
-        </div>
+        <FiniquitosCalculatorModal
+          embebido
+          companyName={companyName}
+          companyRut={companyRut}
+          companyAddress={companyAddress}
+          employees={employees}
+          accounts={[]}
+          obras={projects}
+          payrollSlips={payrollSlips}
+          onGuardarTrabajador={onSaveEmployee}
+          onClose={() => {}}
+        />
       )}
 
       {/* SUB-TABA: CERTIFICADOS */}

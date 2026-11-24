@@ -9369,6 +9369,7 @@ export default function CompanyAccountingDashboard({
           companyName={company.name}
           companyRut={company.rut}
           companyAddress={company.address}
+          payrollSlips={payrollSlips}
           initialSubTab={employeeSubTab}
           onSubTabChange={(st) => setEmployeeSubTab(st)}
           onNavigateToPayroll={(pTab) => {

@@ -9,6 +9,9 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.25.1 — 2026-11-24
+- Personal → Cálculo de Finiquitos usaba un simulador antiguo que cobraba siempre unos 10 días de vacaciones y no conocía la obra o faena. Ahora muestra la misma calculadora legal de Remuneraciones (individual y masiva por obra, con sueldo líquido del mes y PDF del finiquito).
+
 ## 1.25.0 — 2026-11-23
 - Finiquito por obra o faena: suma el sueldo líquido de la liquidación del mes de término más el feriado proporcional (y la indemnización del Art. 163 inc. 3° cuando corresponde). Sin aviso previo. Si falta la liquidación del mes, lo avisa.
 - El sistema redacta el finiquito completo en PDF (cláusulas de término, liquidación, cotizaciones, declaración del trabajador, ratificación ante ministro de fe), individual o masivo por obra (un PDF con todos los seleccionados).

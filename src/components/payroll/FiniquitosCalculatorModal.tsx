@@ -26,6 +26,8 @@ interface FiniquitosCalculatorModalProps {
   obras?: ProjectMaster[];
   /** Liquidaciones guardadas: para sumar el sueldo líquido del último mes al finiquito */
   payrollSlips?: PayrollSlip[];
+  /** Mostrar dentro de una página (sin ventana flotante ni botón cerrar) */
+  embebido?: boolean;
 }
 
 export const CHILEAN_TERMINATION_CAUSALS = [
@@ -48,7 +50,8 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
   onSaveFiniquito,
   onGuardarTrabajador,
   obras = [],
-  payrollSlips = []
+  payrollSlips = [],
+  embebido = false
 }) => {
   const [modo, setModo] = useState<'individual' | 'masivo'>('individual');
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
@@ -121,8 +124,8 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-4xl overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-150">
+    <div className={embebido ? "" : "fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"}>
+      <div className={embebido ? "bg-white rounded-2xl border border-slate-200 w-full overflow-hidden" : "bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-4xl overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-150"}>
         
         {/* Header */}
         <div className="bg-indigo-900 p-5 text-white flex items-center justify-between">
@@ -142,12 +145,12 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
               </p>
             </div>
           </div>
-          <button
+          {!embebido && <button
             onClick={onClose}
             className="p-1.5 rounded-xl text-indigo-200 hover:text-white hover:bg-white/10 transition-colors"
           >
             <X className="w-5 h-5" />
-          </button>
+          </button>}
         </div>
 
         <div className="px-6 pt-4 flex gap-2">
@@ -365,12 +368,12 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
 
         {/* Footer */}
         <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-          <button
+          {embebido ? <span /> : <button
             onClick={onClose}
             className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold rounded-xl transition-colors cursor-pointer"
           >
             Cerrar
-          </button>
+          </button>}
 
           {selectedEmployee && finiquitoCalculated && (
             <div className="flex items-center gap-2">

@@ -92,7 +92,7 @@ export function triggerIframePrint(options: TriggerIframePrintOptions): void {
                 try {
                   // Hoja carta vertical con márgenes de 10 mm: 196 x 259 mm útiles (≈ 740 x 978 px).
                   var w = document.getElementById('gest-print-wrap');
-                  var anchoHoja = 740, altoHoja = 960;
+                  var anchoHoja = 740, altoHoja = 940;
                   var hijo = w.firstElementChild;
                   if (hijo) { hijo.style.padding = '0'; hijo.style.border = 'none'; hijo.style.boxShadow = 'none'; hijo.style.maxWidth = 'none'; hijo.style.margin = '0'; }
                   // Se mide con el ancho real de la hoja y se escala ancho y alto para que todo quepa en 1 hoja.

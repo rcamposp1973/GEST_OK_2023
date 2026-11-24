@@ -9,6 +9,9 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.26.2 — 2026-11-24
+- Liquidación en 1 hoja (corrección): al imprimir, las columnas Haberes y Descuentos se apilaban una debajo de la otra (la hoja es más angosta que la pantalla) y la firma pasaba a la segunda hoja. Ahora se mantienen lado a lado también al imprimir.
+
 ## 1.26.1 — 2026-11-24
 - Liquidación de sueldo impresa: siempre en 1 sola hoja tamaño carta. Se mide con el ancho real de la hoja y se reduce hasta que quepa completa.
 

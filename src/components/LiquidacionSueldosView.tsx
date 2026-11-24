@@ -1924,7 +1924,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
             </div>
 
             {/* Desglose de Haberes vs Descuentos (2 Columnas Oficiales) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 print:grid-cols-2 gap-6 mb-6">
               {/* COLUMNA 1: HABERES */}
               <div className="border border-slate-200 rounded-xl p-4 bg-white flex flex-col justify-between">
                 <div>

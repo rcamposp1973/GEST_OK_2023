@@ -22,6 +22,9 @@ export interface FetchRcvResult {
   error?: string;
   message?: string;
   source?: string;
+  periodoCerrado?: boolean;
+  /** Consultas a SimpleAPI usadas en el mes (todas las empresas) */
+  consumoMes?: { usadas: number; limite: number; mes: string };
 }
 
 export async function fetchRcvFromSii(params: FetchRcvParams): Promise<FetchRcvResult> {

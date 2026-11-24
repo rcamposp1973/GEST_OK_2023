@@ -323,6 +323,17 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       });
     }
 
+    // Mes cerrado: no se vuelve a descargar (no se gasta cupo de SimpleAPI). Para descargarlo hay que abrirlo primero.
+    {
+      const mesNum = Number(month === 'ALL' ? 1 : month);
+      const fy = await compRef.collection('fiscalPeriods').doc(String(yearNum)).get();
+      const estado = (fy.data() as any)?.months?.[mesNum];
+      if (estado !== 'Abierto') {
+        return responder(200, { success: false, periodoCerrado: true,
+          error: `El período ${yearNum}-${String(mesNum).padStart(2, '0')} está cerrado: no se vuelve a descargar desde el SII. Si necesitas actualizarlo, ábrelo en Configuraciones > Períodos Contables.` });
+      }
+    }
+
     const cleanCertB64 = (activeCertB64 || '').replace(/^data:[^;]+;base64,/, '').trim();
     const certPass = (activeCertPass || '').trim();
     const formattedMonth = String(month === 'ALL' ? '01' : month).padStart(2, '0');
@@ -578,6 +589,20 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
     // Las tres consultas van en paralelo: el tiempo total es el de la más lenta, no la suma.
     await Promise.all(tareas);
+
+    // Consumo de SimpleAPI: cada bloque de hasta 5.000 documentos devueltos es 1 consulta; una respuesta vacía no se cobra.
+    let consumoMes: { usadas: number; limite: number; mes: string } | undefined;
+    try {
+      const porTipo = ['Venta', 'Compra', 'Honorario'].map(t => docs.filter(d => d.tipoRegistro === t).length);
+      const consultas = porTipo.reduce((a, n) => a + (n > 0 ? Math.ceil(n / 5000) : 0), 0);
+      const mesActual = new Date(Date.now() - 3 * 3600 * 1000).toISOString().slice(0, 7); // hora de Chile aprox.
+      const ref = adminDb.collection('systemUsage').doc(`simpleApi_${mesActual}`);
+      if (consultas > 0) {
+        await ref.set({ mes: mesActual, total: FieldValue.increment(consultas), porEmpresa: { [String(companyId)]: FieldValue.increment(consultas) }, actualizado: new Date().toISOString() }, { merge: true });
+      }
+      const usadas = Number(((await ref.get()).data() as any)?.total || 0);
+      consumoMes = { usadas, limite: Number(process.env.SIMPLEAPI_LIMITE_MES || 30), mes: mesActual };
+    } catch (e: any) { console.warn('[rescatar-rcv] no se pudo registrar el consumo', e?.message); }
     console.log(`[rescatar-rcv] ${cleanCompanyRutWithDash} ${yearNum}-${formattedMonth}: ${docs.length} docs en ${Date.now() - inicio} ms`);
 
     res.statusCode = 200;
@@ -588,7 +613,8 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       documents: docs,
       source: 'SIMPLE_API_SII_LIVE',
       period: `${yearNum}-${formattedMonth}`,
-      apiErrors: apiErrors.length > 0 ? apiErrors : undefined
+      apiErrors: apiErrors.length > 0 ? apiErrors : undefined,
+      consumoMes
     }));
   } catch (error: any) {
     res.statusCode = 500;

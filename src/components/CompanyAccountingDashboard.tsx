@@ -2643,10 +2643,14 @@ export default function CompanyAccountingDashboard({
 
     const [yearStr, monthStr] = selectedRcvPeriod.split('-');
 
+    // Si el mes ya se descargó desde el SII, avisar: volver a descargar gasta cupo de SimpleAPI
+    const yaDescargados = rcvDocuments.filter((d: any) => d.period === selectedRcvPeriod).length;
+
     // GEST_OK: Confirmación explícita de período antes de sincronizar
     const confirmSync = window.confirm(
       `Confirmación de Sincronización SII:\n\n` +
       `Se rescatarán documentos para el período tributario [${selectedRcvPeriod}].\n\n` +
+      (yaDescargados > 0 ? `Ojo: este mes ya tiene ${yaDescargados} documento(s) cargados. Volver a descargar usa cupo de SimpleAPI (solo se agregan los que falten).\n\n` : '') +
       `¿Es correcto este período de proceso?`
     );
     if (!confirmSync) return;
@@ -2897,7 +2901,8 @@ export default function CompanyAccountingDashboard({
         `• Nuevos auxiliares (Proveedores/Clientes) creados en el Maestro: ${newAuxCount}\n` +
         `• Duplicados ya existentes omitidos: ${duplicateCount}\n` +
         (data.message ? `\nDetalle: ${data.message}\n` : '') +
-        `\n• Conexión: ${data.source || 'SimpleAPI.cl'}`
+        `\n• Conexión: ${data.source || 'SimpleAPI.cl'}` +
+        (data.consumoMes ? `\n• Consultas SimpleAPI usadas en ${data.consumoMes.mes}: ${data.consumoMes.usadas} de ${data.consumoMes.limite} (todas las empresas)` : '')
       );
 
     } catch (err: any) {

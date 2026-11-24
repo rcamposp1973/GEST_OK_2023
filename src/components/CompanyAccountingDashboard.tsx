@@ -1,3 +1,4 @@
+import DteEmitidosView from './DteEmitidosView';
 import SiiDirectoPrueba from './SiiDirectoPrueba';
 import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
@@ -189,6 +190,7 @@ export default function CompanyAccountingDashboard({
 }: CompanyAccountingDashboardProps) {
   const isSuperUser = currentUserRole === UserRole.SUPER_USER;
   const [showSiiDirecto, setShowSiiDirecto] = useState(false);
+  const [showDteEmitidos, setShowDteEmitidos] = useState(false);
   const isAnalyst = currentUserRole === UserRole.ANALYST;
   const isReadOnly = currentUserRole === UserRole.OBSERVER;
   const { currentFormat, formatInfo, isAgentic, isPymeFormat, isStudyFormat } = useSystemFormat();
@@ -6388,6 +6390,13 @@ export default function CompanyAccountingDashboard({
                 </button>
               </div>
 
+              <div className="pt-3.5">
+                <button type="button" onClick={() => setShowDteEmitidos(true)}
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs px-3 py-2 rounded-lg border border-slate-300 whitespace-nowrap"
+                  title="XML y versión imprimible de las ventas emitidas en el facturador gratuito del SII">
+                  Documentos emitidos (XML)
+                </button>
+              </div>
               {isSuperUser && (
                 <div className="pt-3.5">
                   <button type="button" onClick={() => setShowSiiDirecto(true)}
@@ -9922,6 +9931,9 @@ export default function CompanyAccountingDashboard({
 
 
 
+      {showDteEmitidos && (
+        <DteEmitidosView studyId={studyId} companyId={company.id} periodo={selectedRcvPeriod} unidadSii={(company as any).siiUnidadOperativa} onClose={() => setShowDteEmitidos(false)} />
+      )}
       {showSiiDirecto && (
         <SiiDirectoPrueba studyId={studyId} companyId={company.id} periodo={selectedRcvPeriod} onClose={() => setShowSiiDirecto(false)} />
       )}

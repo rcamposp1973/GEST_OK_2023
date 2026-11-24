@@ -331,4 +331,14 @@ import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } fro
   ok('F29: vencido sin declarar = PENDIENTE', per('2026-08')[0]?.estadoCodigo==='PENDIENTE' && per('2026-10')[0]?.estadoCodigo==='PENDIENTE');
   ok('F29: mes sin vencer y antes del inicio no aparecen', per('2026-11').length===0 && per('2026-06').length===0);
 }
+{
+  const P = await import('../api/sii/portal');
+  const R = await import('../src/utils/dteRepresentacion');
+  const set = '<SetDTE><Caratula><FchResol>2014-08-22</FchResol><NroResol>80</NroResol></Caratula><DTE version="1.0"><Documento><Encabezado><IdDoc><TipoDTE>110</TipoDTE><Folio>7</Folio><FchEmis>2026-11-03</FchEmis></IdDoc><Emisor><RUTEmisor>77710929-4</RUTEmisor><RznSoc>A &amp; B SPA</RznSoc></Emisor><Receptor><RUTRecep>55555555-5</RUTRecep><RznSocRecep>NUTS LLC</RznSocRecep></Receptor><Transporte><Aduana><CodClauVenta>5</CodClauVenta></Aduana></Transporte><Totales><TpoMoneda>DOLAR USA</TpoMoneda><MntExe>100.5</MntExe><MntTotal>100.5</MntTotal></Totales></Encabezado><Detalle><NroLinDet>1</NroLinDet><NmbItem>Nueces</NmbItem><MontoItem>100.5</MontoItem></Detalle><TED version="1.0">\n <DD><F>7</F></DD>\n</TED></Documento></DTE><DTE version="1.0"><Documento><Encabezado><IdDoc><TipoDTE>33</TipoDTE><Folio>8</Folio><FchEmis>2026-11-04</FchEmis></IdDoc><Totales><MntTotal>119</MntTotal></Totales></Encabezado></Documento></DTE></SetDTE>';
+  const ds = P.separarSetDte(set);
+  ok('XML SII: separa el SetDTE y lee la resolución', ds.length===2 && ds[0].tipo==='110' && ds[0].nroResol==='80' && ds[1].folio==='8');
+  const d = R.leerDte(ds[0].xml);
+  ok('XML SII: lee exportación (moneda, aduana, decimales, &amp;)', d.esExportacion && d.totales.moneda==='DOLAR USA' && d.totales.total===100.5 && d.aduana?.CodClauVenta==='5' && d.emisor.razon==='A & B SPA');
+  ok('XML SII: texto del timbre sin saltos', R.textoTimbre(d.ted)==='<TED version="1.0"><DD><F>7</F></DD></TED>');
+}
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

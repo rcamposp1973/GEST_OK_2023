@@ -57,7 +57,7 @@ export const apiKeyGuardadaEnNavegador = (): string => {
 };
 
 /** API propia de Gest_OK contra el SII (sin SimpleAPI). Acciones: datos, rcv, f29. */
-export async function consultarSiiDirecto(params: { studyId: string; companyId: string; accion: 'datos' | 'rcv' | 'f29'; year?: number; month?: number }): Promise<any> {
+export async function consultarSiiDirecto(params: { studyId: string; companyId: string; accion: 'datos' | 'rcv' | 'f29' | 'xml'; year?: number; month?: number }): Promise<any> {
   const idToken = await auth.currentUser?.getIdToken();
   if (!idToken) return { success: false, error: 'Sesión expirada. Vuelve a iniciar sesión.' };
   try {

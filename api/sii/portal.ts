@@ -111,7 +111,7 @@ function decodificar(buf: ArrayBuffer, tipo: string): string {
   let charset = /charset=([\w-]+)/i.exec(tipo)?.[1];
   if (!charset) {
     const cabeza = new TextDecoder('latin1').decode(bytes.slice(0, 2048));
-    charset = /<meta[^>]+charset=["']?([\w-]+)/i.exec(cabeza)?.[1] || 'utf-8';
+    charset = /<meta[^>]+charset=["']?([\w-]+)/i.exec(cabeza)?.[1] || /<\?xml[^>]+encoding=["']([\w-]+)/i.exec(cabeza)?.[1] || 'utf-8';
   }
   try { return new TextDecoder(charset.toLowerCase()).decode(bytes); } catch { return new TextDecoder('utf-8').decode(bytes); }
 }
@@ -398,6 +398,88 @@ export function consolidarF29(todos: any[], anio: number, hastaMes: number, o: {
   return out;
 }
 
+// ─────────────────────────── XML de ventas del facturador gratuito (Portal MIPYME) ───────────────────────────
+// Respaldo de DTE: auth.cgi → lista_documentos.cgi → download.cgi. El SII entrega como máximo 20 documentos por descarga
+// y trunca sin avisar en rangos anchos: se pide de a 7 días como máximo y se parte por día y por tipo si se excede.
+const MIPE = 'https://www1.sii.cl/cgi-bin/Portal001';
+const TIPOS_DTE_VENTA = ['33', '34', '39', '41', '43', '46', '52', '56', '61', '110', '111', '112'];
+
+/** Selecciona la empresa en el portal de facturación gratuita. Devuelve false si la cuenta no está autorizada para ella. */
+export async function seleccionarEmpresaMipyme(s: SesionSii, rutEmpresa: string): Promise<boolean> {
+  const html = await s.html(`${MIPE}/mipeSelEmpresa.cgi?DESDE_DONDE_URL=OPCION%3D33%26TIPO%3D4`);
+  const opciones = [...html.matchAll(/<option value="([^"]+)"[^>]*>/g)].map(m => m[1].trim()).filter(r => /^\d{5,}-[\dkK]$/.test(r));
+  const objetivo = partirRut(rutEmpresa).conGuion.toUpperCase();
+  if (!/<select[^>]+RUT_EMP/i.test(html)) return true;                 // una sola empresa: el portal ya quedó en ella
+  if (!opciones.some(o => o.toUpperCase() === objetivo)) return false;  // la cuenta no opera esta empresa
+  await s.pedir(`${MIPE}/mipeSelEmpresa.cgi`, { method: 'POST', body: new URLSearchParams({ DESDE_DONDE_URL: 'OPCION=33&TIPO=4', RUT_EMP: objetivo }).toString(),
+    headers: { 'content-type': 'application/x-www-form-urlencoded', origin: 'https://www1.sii.cl', referer: `${MIPE}/mipeSelEmpresa.cgi` } });
+  return true;
+}
+
+/** Separa un SetDTE en documentos individuales y lee la resolución del SII de la carátula. */
+export function separarSetDte(xml: string) {
+  const nroResol = /<NroResol>\s*(\d+)\s*<\/NroResol>/.exec(xml)?.[1] || '';
+  const fchResol = /<FchResol>\s*([\d-]+)\s*<\/FchResol>/.exec(xml)?.[1] || '';
+  const dtes = xml.match(/<DTE\b[\s\S]*?<\/DTE>/g) || [];
+  return dtes.map(d => {
+    const t = (n: string) => new RegExp(`<${n}>([\\s\\S]*?)</${n}>`).exec(d)?.[1]?.trim() || '';
+    return { xml: d, tipo: t('TipoDTE'), folio: t('Folio'), fecha: t('FchEmis'), rutEmisor: t('RUTEmisor'), rutReceptor: t('RUTRecep'),
+      razonReceptor: t('RznSocRecep'), total: Number(t('MntTotal')) || 0, nroResol, fchResol };
+  }).filter(d => d.tipo && d.folio);
+}
+
+const isoDia = (d: Date) => d.toISOString().slice(0, 10);
+function partirEnTramos(desde: string, hasta: string, maxDias: number): [string, string][] {
+  const out: [string, string][] = [];
+  let a = new Date(`${desde}T00:00:00Z`); const fin = new Date(`${hasta}T00:00:00Z`);
+  while (a <= fin) {
+    const b = new Date(Math.min(fin.getTime(), a.getTime() + (maxDias - 1) * 86400000));
+    out.push([isoDia(a), isoDia(b)]);
+    a = new Date(b.getTime() + 86400000);
+  }
+  return out;
+}
+
+async function descargarTramoXml(s: SesionSii, rut: { cuerpo: string; dv: string }, desde: string, hasta: string, tipo = '') {
+  const comunes: Record<string, string> = { RUT_EMP: rut.cuerpo, DV_EMP: rut.dv, RUT_RECP: '', FOLIO: '', RZN_SOC: '', FEC_DESDE: desde, FEC_HASTA: hasta,
+    TPO_DOC: tipo, ESTADO: '', ORDEN: '', FOLIOHASTA: '' };
+  const listado = await s.pedir(`${MIPE}/lista_documentos.cgi`, { method: 'POST', body: new URLSearchParams({ ...comunes, TPO_ARCHIVO: 'dte', ORIGEN: 'ENV', NUM_PAG: '1' }).toString(),
+    headers: { 'content-type': 'application/x-www-form-urlencoded', origin: 'https://www1.sii.cl', referer: `${MIPE}/auth.cgi` } });
+  const cant = /id=["']cant_reg["'][^>]*\bvalue=["'](\d+)["']/i.exec(listado.texto)?.[1];
+  const r = await s.pedir(`${MIPE}/download.cgi?${new URLSearchParams({ ...comunes, ORIGEN: 'ENV', DOWNLOAD: 'XML' }).toString()}`);
+  if (new URL(r.url).hostname === LOGIN_HOST) throw new ErrorSii('La sesión del SII se cerró durante la descarga de XML.', 'SESION');
+  if (/demasiados Documentos electr/i.test(r.texto)) return cant === '0' ? { vacio: true as const } : { excede: true as const };
+  if (!/<SetDTE/i.test(r.texto)) {
+    if (cant === '0') return { vacio: true as const };
+    const cod = /CODIGO:\s*([\d.\-]+)/.exec(r.texto)?.[1];
+    throw new ErrorSii(`El SII no entregó el XML del ${desde} al ${hasta}${cod ? ` (código ${cod})` : ''}.`);
+  }
+  return { xml: r.texto };
+}
+
+/** XML de todos los documentos emitidos en el facturador gratuito durante el mes. */
+export async function leerXmlEmitidos(s: SesionSii, rutEmpresa: string, anio: number, mes: number, limiteMs = 240000) {
+  const t0 = Date.now();
+  await s.pedir(`${MIPE}/auth.cgi`);
+  const rut = partirRut(rutEmpresa);
+  const desde = `${anio}-${String(mes).padStart(2, '0')}-01`;
+  const hasta = isoDia(new Date(Date.UTC(anio, mes, 0)));
+  const documentos: ReturnType<typeof separarSetDte> = [];
+  const pendientes: string[] = [];
+  const procesar = async (a: string, b: string, tipo = ''): Promise<void> => {
+    if (Date.now() - t0 > limiteMs) { pendientes.push(`${a}${a !== b ? ` al ${b}` : ''}${tipo ? ` (tipo ${tipo})` : ''}: falta tiempo, vuelve a descargar`); return; }
+    const r = await descargarTramoXml(s, rut, a, b, tipo);
+    if ('xml' in r) { documentos.push(...separarSetDte(r.xml as string)); return; }
+    if ('vacio' in r) return;
+    if (a !== b) { for (const [x, y] of partirEnTramos(a, b, 1)) await procesar(x, y, tipo); return; }
+    if (!tipo) { for (const t of TIPOS_DTE_VENTA) await procesar(a, b, t); return; }
+    pendientes.push(`${a} (tipo ${tipo}): más de 20 documentos en un día; cárgalos con "Cargar XML de facturador"`);
+  };
+  for (const [a, b] of partirEnTramos(desde, hasta, 7)) await procesar(a, b);
+  const unicos = new Map(documentos.map(d => [`${d.tipo}_${d.folio}`, d]));
+  return { documentos: [...unicos.values()], pendientes };
+}
+
 // ─────────────────────────── Endpoint ───────────────────────────
 async function leerCuerpo(req: IncomingMessage): Promise<any> {
   return new Promise(resolve => { let b = ''; req.on('data', c => (b += c)); req.on('end', () => { try { resolve(b ? JSON.parse(b) : {}); } catch { resolve({}); } }); });
@@ -419,7 +501,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   const b: any = await leerCuerpo(req);
   const { accion, studyId, companyId } = b;
   try {
-    if (!['datos', 'rcv', 'f29'].includes(accion)) return responder(400, { success: false, error: 'Acción no reconocida.' });
+    if (!['datos', 'rcv', 'f29', 'xml'].includes(accion)) return responder(400, { success: false, error: 'Acción no reconocida.' });
     if (!studyId || !companyId) return responder(400, { success: false, error: 'Falta indicar el estudio y la empresa.' });
     if (usuario.role !== 'SUPER_USER' && usuario.studyId !== studyId) return responder(403, { success: false, error: 'No tienes permisos sobre esta empresa.' });
     const comp = await adminDb.collection('studies').doc(String(studyId)).collection('companies').doc(String(companyId)).get();
@@ -430,7 +512,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     const clave = decryptSecret(sec.claveSiiEncrypted || '');
     if (!c.rut || !clave) return responder(200, { success: false, error: 'La empresa no tiene guardada su clave tributaria del SII (Configuración de la empresa).' });
 
-    const s = new SesionSii();
+    let s = new SesionSii();
     await s.ingresar(c.rut, clave);
     const nombre = c.name || '';
     let resultado: any;
@@ -454,6 +536,38 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       const documents = [...ventas, ...compras, ...honorarios];
       resultado = { documents, count: documents.length, source: 'SII_DIRECTO', period: `${anio}-${String(mes).padStart(2, '0')}`,
         resumen: { ventas: ventas.length, compras: compras.length, honorarios: honorarios.length }, apiErrors: errores.length ? errores : undefined };
+    } else if (accion === 'xml') {
+      const anio = Number(b.year), mes = Number(b.month);
+      if (!anio || !mes) return responder(400, { success: false, error: 'Falta el período.' });
+      // Unidad del SII de la empresa (va bajo el recuadro de la representación impresa)
+      try {
+        const de = await leerDatosEmpresa(s);
+        if (de.unidadOperativa) await comp.ref.set({ siiUnidadOperativa: de.unidadOperativa }, { merge: true });
+      } catch { /* no es indispensable */ }
+      // El portal de facturación gratuita lo opera normalmente la persona autorizada, no la cuenta de la empresa
+      let cuenta = 'empresa';
+      if (!(await seleccionarEmpresaMipyme(s, c.rut))) {
+        const rutRep = sec.rutRepresentante || c.dteConfig?.rutRepresentante || c.legalRepRut || '';
+        const claveRep = decryptSecret(sec.claveRepresentanteEncrypted || '');
+        if (!rutRep || !claveRep) return responder(200, { success: false, error: 'La cuenta SII de la empresa no está autorizada en el facturador gratuito. Guarda el RUT y la clave tributaria del representante (usuario autorizado) en la configuración de la empresa.' });
+        s = new SesionSii();
+        await s.ingresar(rutRep, claveRep);
+        if (!(await seleccionarEmpresaMipyme(s, c.rut))) return responder(200, { success: false, error: 'Ni la empresa ni su representante están autorizados para esta empresa en el facturador gratuito del SII.' });
+        cuenta = 'representante';
+      }
+      const { documentos, pendientes } = await leerXmlEmitidos(s, c.rut, anio, mes);
+      const col = comp.ref.collection('dteXml');
+      let nuevos = 0;
+      for (let i = 0; i < documentos.length; i += 400) {
+        const lote = adminDb.batch();
+        for (const d of documentos.slice(i, i + 400)) {
+          const id = `${partirRut(d.rutEmisor || c.rut).cuerpo}_${d.tipo}_${d.folio}`;
+          lote.set(col.doc(id), { ...d, period: d.fecha.slice(0, 7), origen: 'SII_FACTURADOR_GRATUITO', descargadoEn: new Date().toISOString() }, { merge: true });
+          nuevos++;
+        }
+        await lote.commit();
+      }
+      resultado = { cantidad: nuevos, pendientes, cuenta, period: `${anio}-${String(mes).padStart(2, '0')}` };
     } else {
       const anio = Number(b.year) || new Date().getFullYear();
       const hasta = anio === new Date().getFullYear() ? new Date().getMonth() + 1 : 12;

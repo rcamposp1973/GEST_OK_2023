@@ -55,3 +55,20 @@ export async function fetchRcvFromSii(params: FetchRcvParams): Promise<FetchRcvR
 export const apiKeyGuardadaEnNavegador = (): string => {
   try { return (typeof window !== 'undefined' && localStorage.getItem('gest_ok_master_api_key')) || ''; } catch { return ''; }
 };
+
+/** API propia de Gest_OK contra el SII (sin SimpleAPI). Acciones: datos, rcv, f29. */
+export async function consultarSiiDirecto(params: { studyId: string; companyId: string; accion: 'datos' | 'rcv' | 'f29'; year?: number; month?: number }): Promise<any> {
+  const idToken = await auth.currentUser?.getIdToken();
+  if (!idToken) return { success: false, error: 'Sesión expirada. Vuelve a iniciar sesión.' };
+  try {
+    const r = await fetch('/api/sii/portal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+      body: JSON.stringify(params),
+    });
+    const data = await r.json().catch(() => null);
+    return data || { success: false, error: `El servidor no respondió correctamente (HTTP ${r.status}).` };
+  } catch (e: any) {
+    return { success: false, error: `No se pudo conectar con el servidor: ${e?.message || e}` };
+  }
+}

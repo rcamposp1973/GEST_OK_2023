@@ -75,6 +75,9 @@
   "functions": {
     "api/sii/rescatar-rcv.ts": {
       "maxDuration": 300
+    },
+    "api/sii/portal.ts": {
+      "maxDuration": 120
     }
   }
 }

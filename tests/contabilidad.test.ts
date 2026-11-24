@@ -303,4 +303,17 @@ import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } fro
   const c2 = F.cuadroDePago(r2,null,{descuentoAfc:99999999});
   ok('cuadro: descuento AFC no supera la indemnización por años', c2.totalDescuentos===-r2.montoIAS);
 }
+{
+  const P = await import('../api/sii/portal');
+  const r = P.partirRut('76.293.672-0');
+  ok('SII propia: RUT partido', r.cuerpo==='76293672' && r.dv==='0' && r.conPuntos==='76.293.672-0');
+  const html = "var arr_informe_mensual = new Array();\narr_informe_mensual['nroboleta_1'] = \"55\";\narr_informe_mensual['totalhonorarios_1'] = formatMiles('1300000','.');\nvar xml_values = new Array();\nxml_values['suma'] = 0;\nxml_values['suma'] += 1300000;\n";
+  const m = P.leerMapa(html,'arr_informe_mensual'), xv = P.leerMapa(html,'xml_values');
+  ok('SII propia: lee mapas en línea (boletas honorarios)', m!.nroboleta_1==='55' && m!.totalhonorarios_1==='1300000' && xv!.suma==='1300000');
+  ok('SII propia: página sin mapa = null', P.leerMapa('<html></html>','arr_informe_mensual')===null);
+  const o = P.extraerObjeto('<script>var DatosCntrNow = {"contribuyente":{"rut":"76293672","razonSocial":"A {B} C"}}; var x=1;</script>','DatosCntrNow');
+  ok('SII propia: extrae DatosCntrNow', o?.contribuyente?.razonSocial==='A {B} C');
+  const f = new P.Frasco(); f.aplicar('https://zeusr.sii.cl/x',['TOKEN=abc; Domain=.sii.cl; Path=/','LOCAL=1; Path=/']);
+  ok('SII propia: cookies por dominio', f.cabecera('https://www4.sii.cl/a').includes('TOKEN=abc') && !f.cabecera('https://www4.sii.cl/a').includes('LOCAL') && f.cabecera('https://zeusr.sii.cl/b').includes('LOCAL=1'));
+}
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

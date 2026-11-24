@@ -9,6 +9,10 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.30.0 — 2026-11-24
+- API propia de Gest_OK para el SII (primera versión, en prueba): entra al portal del SII con el RUT y la clave tributaria de la empresa, sin SimpleAPI. Lee los datos de la empresa (Mi SII), el RCV del mes (compras, ventas y resúmenes de boletas), las boletas de honorarios recibidas y los F29 presentados del año. Solo lectura.
+- Botón "API propia SII (prueba)" en el RCV, visible solo para Super Admin, para validarla empresa por empresa antes de reemplazar a SimpleAPI.
+
 ## 1.29.0 — 2026-11-24
 - RCV desde el SII: un mes cerrado no se vuelve a descargar, también bloqueado en el servidor (no gasta cupo de SimpleAPI).
 - Contador interno de consultas SimpleAPI del mes (todas las empresas), en systemUsage/simpleApi_AAAA-MM. No se muestra al usuario: la descarga no tiene avisos de costo ni de cupo.

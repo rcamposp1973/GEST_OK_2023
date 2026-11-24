@@ -1,3 +1,4 @@
+import SiiDirectoPrueba from './SiiDirectoPrueba';
 import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import HomeModulesView from './HomeModulesView';
@@ -187,6 +188,7 @@ export default function CompanyAccountingDashboard({
   onBack 
 }: CompanyAccountingDashboardProps) {
   const isSuperUser = currentUserRole === UserRole.SUPER_USER;
+  const [showSiiDirecto, setShowSiiDirecto] = useState(false);
   const isAnalyst = currentUserRole === UserRole.ANALYST;
   const isReadOnly = currentUserRole === UserRole.OBSERVER;
   const { currentFormat, formatInfo, isAgentic, isPymeFormat, isStudyFormat } = useSystemFormat();
@@ -6375,6 +6377,15 @@ export default function CompanyAccountingDashboard({
                 </button>
               </div>
 
+              {isSuperUser && (
+                <div className="pt-3.5">
+                  <button type="button" onClick={() => setShowSiiDirecto(true)}
+                    className="bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-semibold text-xs px-3 py-2 rounded-lg border border-indigo-200 whitespace-nowrap"
+                    title="Solo Super Admin: probar la API propia de Gest_OK contra el SII">
+                    API propia SII (prueba)
+                  </button>
+                </div>
+              )}
               <div className="pt-3.5">
                 <button
                   type="button"
@@ -9899,6 +9910,10 @@ export default function CompanyAccountingDashboard({
       )}
 
 
+
+      {showSiiDirecto && (
+        <SiiDirectoPrueba studyId={studyId} companyId={company.id} periodo={selectedRcvPeriod} onClose={() => setShowSiiDirecto(false)} />
+      )}
 
       {/* MODAL DE DISTRIBUCIÓN DE LÍNEA DE COMPROBANTE */}
       {distributingLineIdx !== null && voucherForm && voucherForm.lines[distributingLineIdx] && (

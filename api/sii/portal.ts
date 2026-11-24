@@ -403,7 +403,11 @@ async function leerCuerpo(req: IncomingMessage): Promise<any> {
 }
 
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
-  const responder = (code: number, payload: any) => { res.statusCode = code; res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(payload)); };
+  const responder = (code: number, payload: any) => {
+    if (!payload?.success) console.warn(`[sii-portal] respuesta ${code}: ${payload?.error || ''}`);
+    res.statusCode = code; res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(payload));
+  };
+  console.log('[sii-portal] solicitud recibida');
   if (req.method !== 'POST') return responder(405, { error: 'Method Not Allowed' });
   const token = String(req.headers['authorization'] || '').replace(/^Bearer\s+/i, '');
   if (!token) return responder(401, { success: false, error: 'Falta iniciar sesión.' });

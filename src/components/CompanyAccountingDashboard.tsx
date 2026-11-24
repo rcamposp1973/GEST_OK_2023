@@ -9889,6 +9889,7 @@ export default function CompanyAccountingDashboard({
           accounts={accounts}
           onGuardarTrabajador={handleSaveEmployee}
           obras={projects}
+          payrollSlips={payrollSlips}
           onClose={() => setShowFiniquitoModal(false)}
         />
       )}

@@ -4,11 +4,13 @@ import {
   FileText, Calculator, Download, Printer, X, CheckCircle2, 
   AlertCircle, DollarSign, Calendar, User, ShieldCheck, ArrowRight, Building2
 } from 'lucide-react';
-import { Employee, FiniquitoRecord, ChartOfAccount, ProjectMaster } from '../../types';
+import { Employee, FiniquitoRecord, ChartOfAccount, ProjectMaster, PayrollSlip } from '../../types';
 import { formatRut } from '../../utils/rutMatcher';
 import { getPrevisionalParametersForPeriod } from '../../utils/payrollCalculator';
 import { calcularFiniquito, baseArt172 } from '../../utils/finiquito';
 import FiniquitoMasivoObra from './FiniquitoMasivoObra';
+import { escribirFiniquito } from '../../utils/finiquitoPdf';
+import { contratoActual } from '../../utils/contratosLaborales';
 import jsPDF from 'jspdf';
 
 interface FiniquitosCalculatorModalProps {
@@ -22,6 +24,8 @@ interface FiniquitosCalculatorModalProps {
   /** Si se entrega, el término masivo puede quedar registrado en la ficha de cada trabajador */
   onGuardarTrabajador?: (emp: Employee) => Promise<void>;
   obras?: ProjectMaster[];
+  /** Liquidaciones guardadas: para sumar el sueldo líquido del último mes al finiquito */
+  payrollSlips?: PayrollSlip[];
 }
 
 export const CHILEAN_TERMINATION_CAUSALS = [
@@ -43,7 +47,8 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
   onClose,
   onSaveFiniquito,
   onGuardarTrabajador,
-  obras = []
+  obras = [],
+  payrollSlips = []
 }) => {
   const [modo, setModo] = useState<'individual' | 'masivo'>('individual');
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
@@ -56,6 +61,7 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
   const [descuentosPrestamos, setDescuentosPrestamos] = useState<number>(0);
   const [otrosHaberes, setOtrosHaberes] = useState<number>(0);
   const [otrosDescuentos, setOtrosDescuentos] = useState<number>(0);
+  const [incluirSueldo, setIncluirSueldo] = useState<boolean>(true);
 
   const selectedEmployee = useMemo(() => {
     return employees.find(e => e.id === selectedEmployeeId || e.rut === selectedEmployeeId) || null;
@@ -66,6 +72,13 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
   }, [causalCode]);
 
   // Cálculos según Código del Trabajo (lógica en utils/finiquito, con pruebas automáticas)
+  // Liquidación del mes del término (sueldo líquido aún no pagado)
+  const slipMesCese = useMemo(() => {
+    if (!selectedEmployee) return null;
+    const per = (fechaCese || '').slice(0, 7);
+    return payrollSlips.find(p => p.period === per && (p.employeeId === selectedEmployee.id || p.employeeRut === selectedEmployee.rut)) || null;
+  }, [payrollSlips, selectedEmployee, fechaCese]);
+
   const finiquitoCalculated = useMemo(() => {
     if (!selectedEmployee) return null;
     const baseSueldo = baseArt172(selectedEmployee);
@@ -76,9 +89,11 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
       esConclusionObra: causalConfig.code === 'ART_159_CONCLUSION', conAvisoPrevio,
       baseMensual: baseSueldo, ufCese, diasVacacionesTomados: diasVacacionesHabiles,
       otrosHaberes, descuentos: descuentosPrestamos + otrosDescuentos,
+      sueldoLiquidoPendiente: incluirSueldo && slipMesCese ? (slipMesCese.liquidoAPagar || 0) : 0,
     });
     return { ...r, baseSueldo, ufCese, sinIAS: causalConfig.requiereIAS && r.anosParaIAS === 0, diasPendientesReal: r.diasVacacionesPendientes };
-  }, [selectedEmployee, fechaCese, causalConfig, conAvisoPrevio, diasVacacionesHabiles, descuentosPrestamos, otrosHaberes, otrosDescuentos]);
+  }, [selectedEmployee, fechaCese, causalConfig, conAvisoPrevio, diasVacacionesHabiles, descuentosPrestamos, otrosHaberes, otrosDescuentos, incluirSueldo, slipMesCese]);
+  const esObra = selectedEmployee?.contractType === 'OBRA_FAENA';
 
   // Al elegir un trabajador con contrato por obra o faena, se propone la causal de conclusión de la obra
   const elegirTrabajador = (id: string) => {
@@ -92,92 +107,16 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
     if (!selectedEmployee || !finiquitoCalculated) return;
 
     const doc = new jsPDF();
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(16);
-    doc.text('FINIQUITO DE CONTRATO DE TRABAJO', 105, 20, { align: 'center' });
-    
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`En Santiago de Chile, a ${new Date().toLocaleDateString('es-CL')}, entre:`, 14, 32);
-
-    doc.setFont('helvetica', 'bold');
-    doc.text(`EMPLEADOR: ${companyName.toUpperCase()}`, 14, 40);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`RUT: ${formatRut(companyRut)} | Domicilio: ${companyAddress}`, 14, 46);
-
-    doc.setFont('helvetica', 'bold');
-    doc.text(`TRABAJADOR: ${selectedEmployee.name}`.toUpperCase(), 14, 56);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`RUT: ${formatRut(selectedEmployee.rut)} | Cargo: ${selectedEmployee.position || 'Trabajador'}`, 14, 62);
-
-    doc.setFont('helvetica', 'bold');
-    doc.text('I. ANTECEDENTES DEL CONTRATO', 14, 74);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`• Fecha de Ingreso: ${selectedEmployee.hireDate}`, 14, 82);
-    doc.text(`• Fecha de Cese de Funciones: ${fechaCese}`, 14, 88);
-    doc.text(`• Causal de Término: ${causalConfig.name}`, 14, 94);
-    doc.text(`• Tiempo de Servicios: ${finiquitoCalculated.anosCompletos} años y ${finiquitoCalculated.mesesRestantes} meses.`, 14, 100);
-
-    doc.setFont('helvetica', 'bold');
-    doc.text('II. LIQUIDACIÓN DE HABERES E INDEMNIZACIONES', 14, 112);
-
-    let y = 120;
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Indemnización por Años de Servicio (${finiquitoCalculated.anosParaIAS} años):`, 14, y);
-    doc.text(`$ ${finiquitoCalculated.montoIAS.toLocaleString('es-CL')}`, 170, y, { align: 'right' });
-    y += 6;
-
-    if (finiquitoCalculated.montoIndemnizacionObra > 0) {
-      doc.text(`Indemnización Obra o Faena Art. 163 inc. 3° (${finiquitoCalculated.diasIndemnizacionObra} días):`, 14, y);
-      doc.text(`$ ${finiquitoCalculated.montoIndemnizacionObra.toLocaleString('es-CL')}`, 170, y, { align: 'right' });
-      y += 6;
-    }
-
-    doc.text(`Indemnización Sustitutiva Aviso Previo:`, 14, y);
-    doc.text(`$ ${finiquitoCalculated.montoAvisoPrevio.toLocaleString('es-CL')}`, 170, y, { align: 'right' });
-    y += 6;
-
-    doc.text(`Vacaciones Proporcionales (${finiquitoCalculated.diasPendientesReal} días):`, 14, y);
-    doc.text(`$ ${finiquitoCalculated.montoVacaciones.toLocaleString('es-CL')}`, 170, y, { align: 'right' });
-    y += 6;
-
-    if (otrosHaberes > 0) {
-      doc.text(`Otros Haberes Finiquito:`, 14, y);
-      doc.text(`$ ${otrosHaberes.toLocaleString('es-CL')}`, 170, y, { align: 'right' });
-      y += 6;
-    }
-
-    doc.setFont('helvetica', 'bold');
-    doc.text(`TOTAL BRUTO FINIQUITO:`, 14, y);
-    doc.text(`$ ${finiquitoCalculated.totalBruto.toLocaleString('es-CL')}`, 170, y, { align: 'right' });
-    y += 8;
-
-    doc.setFont('helvetica', 'normal');
-    if (descuentosPrestamos > 0 || otrosDescuentos > 0) {
-      doc.text(`Descuentos (Préstamos / Anticipos):`, 14, y);
-      doc.text(`- $ ${finiquitoCalculated.totalDescuentos.toLocaleString('es-CL')}`, 170, y, { align: 'right' });
-      y += 8;
-    }
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.text(`TOTAL LÍQUIDO A RECIBIR: $ ${finiquitoCalculated.totalLiquido.toLocaleString('es-CL')}`, 14, y);
-
-    y += 20;
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.text('DECLARACIÓN DE AMPLO Y COMPLETO FINIQUITO:', 14, y);
-    y += 6;
-    doc.text('El trabajador declara recibir a su entera satisfacción la suma líquida antes señalada, no teniendo cargo ni reclamo alguno', 14, y);
-    y += 5;
-    doc.text('que formular en contra del empleador por concepto de remuneraciones, cotizaciones o indemnizaciones de ninguna especie.', 14, y);
-
-    y += 35;
-    doc.line(20, y, 90, y);
-    doc.line(120, y, 190, y);
-    doc.text('FIRMA EMPLEADOR', 55, y + 5, { align: 'center' });
-    doc.text('FIRMA TRABAJADOR', 155, y + 5, { align: 'center' });
-
+    const contrato = contratoActual(selectedEmployee);
+    const obra = obras.find(o => o.id === contrato?.obraId);
+    escribirFiniquito(doc, {
+      empresa: { nombre: companyName, rut: companyRut, domicilio: companyAddress },
+      trabajador: { nombre: selectedEmployee.name, rut: selectedEmployee.rut, cargo: selectedEmployee.position },
+      fechaInicio: contrato?.fechaInicio || selectedEmployee.hireDate, fechaCese,
+      causal: causalConfig.name, esObra: !!esObra,
+      obra: obra ? obra.name : contrato?.obraFaena,
+      r: finiquitoCalculated, otrosHaberes, periodoSueldo: slipMesCese?.period,
+    }, formatRut);
     doc.save(`Finiquito_${formatearRut(selectedEmployee.rut)}_${fechaCese}.pdf`);
   };
 
@@ -220,7 +159,10 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
           <div className="p-6 max-h-[80vh] overflow-y-auto">
             <FiniquitoMasivoObra
               employees={employees}
+              payrollSlips={payrollSlips}
               companyName={companyName}
+              companyRut={companyRut}
+              companyAddress={companyAddress}
               onGuardarTrabajador={onGuardarTrabajador}
               obras={obras}
               onVerIndividual={(id, fecha) => { setModo('individual'); setSelectedEmployeeId(id); setCausalCode('ART_159_CONCLUSION'); setFechaCese(fecha); }}
@@ -282,6 +224,20 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
                   />
                 </div>
 
+                {esObra ? (
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                  <span className="text-[11px] font-bold text-slate-700 block">Sueldo del mes de término:</span>
+                  {slipMesCese ? (
+                    <label className="flex items-center gap-2 mt-1 cursor-pointer">
+                      <input type="checkbox" checked={incluirSueldo} onChange={e => setIncluirSueldo(e.target.checked)} className="w-4 h-4 text-indigo-600 rounded" />
+                      <span className="text-xs text-slate-800 font-medium">Incluir líquido de la liquidación {slipMesCese.period}: $ {(slipMesCese.liquidoAPagar || 0).toLocaleString('es-CL')}</span>
+                    </label>
+                  ) : (
+                    <span className="text-xs text-amber-700 block">No hay liquidación guardada de {(fechaCese || '').slice(0, 7)}. Genérala primero (hasta la fecha de término) y vuelve aquí.</span>
+                  )}
+                  <span className="text-[10px] text-slate-500 block">Obra o faena: no hay aviso previo ni indemnización sustitutiva.</span>
+                </div>
+                ) : (
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
                   <span className="text-[11px] font-bold text-slate-700 block">Aviso Previo Dado (30 días):</span>
                   <label className="flex items-center gap-2 mt-1 cursor-pointer">
@@ -294,6 +250,7 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
                     <span className="text-xs text-slate-800 font-medium">Sí, se notificó con 30 días de anticipación</span>
                   </label>
                 </div>
+                )}
 
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
                   <span className="text-[11px] font-bold text-slate-700 block">Días Vacaciones Ya Tomadas:</span>
@@ -359,6 +316,17 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
                     </span>
                   </div>
 
+                  {esObra ? (
+                  <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700">
+                    <span className="text-slate-400 text-[10px] uppercase block font-bold">Sueldo líquido del mes</span>
+                    <span className="text-lg font-mono font-black text-indigo-400 mt-1 block">
+                      $ {finiquitoCalculated.sueldoLiquidoPendiente.toLocaleString('es-CL')}
+                    </span>
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">
+                      {slipMesCese ? `Liquidación ${slipMesCese.period}` : 'Falta la liquidación del mes'}
+                    </span>
+                  </div>
+                  ) : (
                   <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700">
                     <span className="text-slate-400 text-[10px] uppercase block font-bold">Sustitutiva Aviso Previo</span>
                     <span className="text-lg font-mono font-black text-indigo-400 mt-1 block">
@@ -368,6 +336,7 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
                       {finiquitoCalculated.montoAvisoPrevio > 0 ? '1 mes de sueldo' : 'Sin indemnización'}
                     </span>
                   </div>
+                  )}
 
                   <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700">
                     <span className="text-slate-400 text-[10px] uppercase block font-bold">Vacaciones Proporcionales</span>

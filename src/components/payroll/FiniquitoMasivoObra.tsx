@@ -1,6 +1,8 @@
+import jsPDF from 'jspdf';
+import { escribirFiniquito } from '../../utils/finiquitoPdf';
 import React, { useMemo, useState } from 'react';
 import { Download } from 'lucide-react';
-import type { Employee, ProjectMaster } from '../../types';
+import type { Employee, ProjectMaster, PayrollSlip } from '../../types';
 import { formatRut } from '../../utils/rutMatcher';
 import { getPrevisionalParametersForPeriod } from '../../utils/payrollCalculator';
 import { calcularFiniquito, baseArt172 } from '../../utils/finiquito';
@@ -16,11 +18,14 @@ interface Props {
   onVerIndividual: (employeeId: string, fechaCese: string) => void;
   onGuardarTrabajador?: (emp: Employee) => Promise<void>;
   obras?: ProjectMaster[];
+  payrollSlips?: PayrollSlip[];
+  companyRut?: string;
+  companyAddress?: string;
 }
 
 const pesos = (n: number) => '$' + Math.round(n).toLocaleString('es-CL');
 
-export default function FiniquitoMasivoObra({ employees, companyName, onVerIndividual, onGuardarTrabajador, obras = [] }: Props) {
+export default function FiniquitoMasivoObra({ employees, companyName, onVerIndividual, onGuardarTrabajador, obras = [], payrollSlips = [], companyRut = '', companyAddress }: Props) {
   const hoy = new Date().toISOString().slice(0, 10);
   const [fechaCese, setFechaCese] = useState(hoy);
   const [filtro, setFiltro] = useState('');
@@ -48,9 +53,10 @@ export default function FiniquitoMasivoObra({ employees, companyName, onVerIndiv
       hireDate: e.hireDate, fechaCese, contractType: e.contractType,
       requiereIAS: false, requiereAvisoPrevio: false, esConclusionObra: true, conAvisoPrevio: false,
       baseMensual: baseArt172(e), ufCese: uf, diasVacacionesTomados: vacTomadas[id] || 0,
+      sueldoLiquidoPendiente: payrollSlips.find(p => p.period === fechaCese.slice(0, 7) && (p.employeeId === e.id || p.employeeRut === e.rut))?.liquidoAPagar || 0,
     });
     return { e, id, r };
-  }), [candidatos, fechaCese, uf, vacTomadas]);
+  }), [candidatos, fechaCese, uf, vacTomadas, payrollSlips]);
 
   const marcadas = filas.filter(f => seleccion[f.id]);
   const total = marcadas.reduce((s, f) => s + f.r.totalLiquido, 0);
@@ -69,9 +75,26 @@ export default function FiniquitoMasivoObra({ employees, companyName, onVerIndiv
     setMensaje(`Término registrado en ${ok} ficha(s).` + (fallas.length ? ` No se pudo en: ${fallas.join(' · ')}` : ''));
   };
 
+  const descargarFiniquitos = () => {
+    const doc = new jsPDF();
+    marcadas.forEach(({ e, r }, i) => {
+      if (i > 0) doc.addPage();
+      const c = contratoActual(e);
+      const o = obras.find(x => x.id === c?.obraId);
+      escribirFiniquito(doc, {
+        empresa: { nombre: companyName, rut: companyRut, domicilio: companyAddress },
+        trabajador: { nombre: e.name, rut: e.rut, cargo: e.position },
+        fechaInicio: c?.fechaInicio || e.hireDate, fechaCese,
+        causal: 'Art. 159 N° 5 - Conclusión del Trabajo o Servicio', esObra: true,
+        obra: o ? o.name : c?.obraFaena, r, periodoSueldo: fechaCese.slice(0, 7),
+      }, formatRut);
+    });
+    doc.save(`Finiquitos_obra_${companyName.replace(/\W+/g, '_')}_${fechaCese}.pdf`);
+  };
+
   const exportar = () => {
-    const cab = ['Trabajador', 'RUT', 'Cargo', 'Inicio', 'Término', 'Meses', 'Días por mes', 'Días indemnización', 'Indemnización obra', 'Días feriado pendientes', 'Feriado proporcional', 'Total'];
-    const lineas = marcadas.map(({ e, r }) => [e.name, formatRut(e.rut), e.position || '', e.hireDate, fechaCese, r.mesesObra, r.diasPorMesObra, r.diasIndemnizacionObra, r.montoIndemnizacionObra, r.diasVacacionesPendientes, r.montoVacaciones, r.totalLiquido]);
+    const cab = ['Trabajador', 'RUT', 'Cargo', 'Inicio', 'Término', 'Meses', 'Días por mes', 'Días indemnización', 'Indemnización obra', 'Días feriado pendientes', 'Feriado proporcional', 'Sueldo líquido del mes', 'Total'];
+    const lineas = marcadas.map(({ e, r }) => [e.name, formatRut(e.rut), e.position || '', e.hireDate, fechaCese, r.mesesObra, r.diasPorMesObra, r.diasIndemnizacionObra, r.montoIndemnizacionObra, r.diasVacacionesPendientes, r.montoVacaciones, r.sueldoLiquidoPendiente, r.totalLiquido]);
     const csv = [cab, ...lineas].map(l => l.map(c => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\n');
     const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
     const a = document.createElement('a');
@@ -121,6 +144,7 @@ export default function FiniquitoMasivoObra({ employees, companyName, onVerIndiv
                 <th className="p-2 text-right">Indemnización</th>
                 <th className="p-2 text-right" title="Días hábiles de feriado ya usados">Feriado tomado</th>
                 <th className="p-2 text-right">Feriado prop.</th>
+                <th className="p-2 text-right" title="Líquido de la liquidación del mes de término">Sueldo líquido</th>
                 <th className="p-2 text-right">Total</th>
                 <th className="p-2" />
               </tr>
@@ -144,6 +168,7 @@ export default function FiniquitoMasivoObra({ employees, companyName, onVerIndiv
                       className="w-16 border border-slate-300 rounded px-1 py-0.5 text-right font-mono" />
                   </td>
                   <td className="p-2 text-right font-mono">{pesos(r.montoVacaciones)}</td>
+                  <td className="p-2 text-right font-mono">{r.sueldoLiquidoPendiente ? pesos(r.sueldoLiquidoPendiente) : <span className="text-amber-600" title="No hay liquidación guardada de ese mes">falta</span>}</td>
                   <td className="p-2 text-right font-mono font-semibold">{pesos(r.totalLiquido)}</td>
                   <td className="p-2">
                     <button onClick={() => onVerIndividual(id, fechaCese)} className="text-indigo-700 hover:underline whitespace-nowrap">Finiquito PDF</button>
@@ -171,6 +196,10 @@ export default function FiniquitoMasivoObra({ employees, companyName, onVerIndiv
             <button disabled={registrando} onClick={() => setConfirmando(false)} className="underline">Cancelar</button>
           </span>
         )}
+        <button disabled={marcadas.length === 0} onClick={descargarFiniquitos}
+          className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-xs font-bold rounded-lg px-3 py-2">
+          Descargar finiquitos PDF ({marcadas.length})
+        </button>
         <button disabled={marcadas.length === 0} onClick={exportar}
           className="inline-flex items-center gap-1.5 bg-slate-900 text-white rounded-lg px-3 py-1.5 text-xs disabled:opacity-40">
           <Download className="w-4 h-4" /> Exportar seleccionados (Excel/CSV)

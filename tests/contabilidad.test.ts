@@ -289,4 +289,9 @@ import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } fro
   const renuncia=C.terminarContrato(w,'2026-11-10','ART_159_RENUNCIA');
   ok('cierre de obra: no cambia un contrato terminado por renuncia', C.aplicarCierreObra(renuncia,'o1','2026-11-24')===null);
 }
+{
+  const F = await import('../src/utils/finiquito');
+  const r = F.calcularFiniquito({hireDate:'2026-11-02',fechaCese:'2026-11-24',contractType:'OBRA_FAENA',requiereIAS:false,requiereAvisoPrevio:false,esConclusionObra:true,conAvisoPrevio:false,baseMensual:600000,ufCese:0,diasVacacionesTomados:0,sueldoLiquidoPendiente:380000});
+  ok('finiquito obra: suma sueldo líquido del mes, sin aviso previo', r.totalLiquido===380000 && r.montoAvisoPrevio===0);
+}
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

@@ -9,6 +9,10 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.25.0 — 2026-11-23
+- Finiquito por obra o faena: suma el sueldo líquido de la liquidación del mes de término más el feriado proporcional (y la indemnización del Art. 163 inc. 3° cuando corresponde). Sin aviso previo. Si falta la liquidación del mes, lo avisa.
+- El sistema redacta el finiquito completo en PDF (cláusulas de término, liquidación, cotizaciones, declaración del trabajador, ratificación ante ministro de fe), individual o masivo por obra (un PDF con todos los seleccionados).
+
 ## 1.24.2 — 2026-11-23
 - Cierre de obra: al poner la fecha de término en Proyectos / Obras, se cierran automáticamente los contratos por obra o faena de esa obra (Art. 159 N° 5), previa confirmación con la lista de trabajadores. Si se corrige la fecha, se corrigen los contratos; si se borra, se reabren. No toca contratos terminados por otro motivo.
 - Las liquidaciones del mes del cierre siguen editables (bonos, ausencias, licencias, vacaciones); solo cambian las fechas del contrato.

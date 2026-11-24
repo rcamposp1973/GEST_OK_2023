@@ -13,6 +13,8 @@ export interface DatosFiniquito {
   diasVacacionesTomados: number; // días hábiles de feriado ya usados en el período que se liquida
   otrosHaberes?: number;
   descuentos?: number;
+  /** Sueldo líquido del último mes trabajado (de la liquidación), si aún no se ha pagado */
+  sueldoLiquidoPendiente?: number;
 }
 
 export interface ResultadoFiniquito {
@@ -35,6 +37,7 @@ export interface ResultadoFiniquito {
   montoVacaciones: number;
   totalBruto: number;
   totalDescuentos: number;
+  sueldoLiquidoPendiente: number;
   totalLiquido: number;
 }
 
@@ -122,7 +125,9 @@ export function calcularFiniquito(x: DatosFiniquito): ResultadoFiniquito {
     diffDays, anosCompletos, mesesRestantes, anosParaIAS, topeLegal, baseTopada, montoIAS, montoAvisoPrevio,
     diasPorMesObra, mesesObra, diasIndemnizacionObra, montoIndemnizacionObra, avisoObra, avisoFeriado,
     diasVacacionesPendientes: Math.round(diasVacacionesPendientes * 10) / 10, montoVacaciones,
-    totalBruto, totalDescuentos, totalLiquido: Math.max(0, totalBruto - totalDescuentos),
+    totalBruto, totalDescuentos, sueldoLiquidoPendiente: x.sueldoLiquidoPendiente || 0,
+    // el sueldo del mes ya viene líquido (con sus descuentos legales hechos): se suma directo
+    totalLiquido: Math.max(0, totalBruto - totalDescuentos) + (x.sueldoLiquidoPendiente || 0),
   };
 }
 

@@ -9,6 +9,12 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.26.0 — 2026-11-24
+- Cuadro de pago al término: A) liquidación del mes (haberes, cotizaciones, impuesto, anticipos, líquido), B) pagos por término y C) descuentos del finiquito, con el total a pagar. Solo aparecen los conceptos que corresponden; si no hay pagos por finiquito, lo dice y explica por qué.
+- Nuevas causales: Art. 159 N° 3 (muerte), N° 6 (caso fortuito), Art. 163 bis (liquidación concursal).
+- Campos para otros haberes, préstamos, otros descuentos y aporte AFC del empleador imputable a la indemnización por años de servicio (Art. 13 Ley 19.728, con tope en esa indemnización).
+- El aviso previo solo se pregunta cuando la causal lo exige. La antigüedad se cuenta desde el inicio del contrato vigente.
+
 ## 1.25.1 — 2026-11-24
 - Personal → Cálculo de Finiquitos usaba un simulador antiguo que cobraba siempre unos 10 días de vacaciones y no conocía la obra o faena. Ahora muestra la misma calculadora legal de Remuneraciones (individual y masiva por obra, con sueldo líquido del mes y PDF del finiquito).
 

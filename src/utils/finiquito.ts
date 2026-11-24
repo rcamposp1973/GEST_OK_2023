@@ -134,3 +134,39 @@ export function calcularFiniquito(x: DatosFiniquito): ResultadoFiniquito {
 /** Última remuneración mensual (Art. 172): sueldo, bonos y haberes mensuales pactados, colación y movilización. */
 export const baseArt172 = (e: { baseSalary?: number; bonosPactados?: number; otrosImponiblesPactados?: number; colacionPactada?: number; movilizacionPactada?: number }) =>
   (e.baseSalary || 0) + (e.bonosPactados || 0) + (e.otrosImponiblesPactados || 0) + (e.colacionPactada || 0) + (e.movilizacionPactada || 0);
+
+// ---------------------------------------------------------------------------
+// Cuadro de pago al término: liquidación del mes + finiquito. Solo se listan los conceptos que corresponden (≠ 0).
+export interface FilaCuadro { seccion: 'LIQUIDACION' | 'FINIQUITO' | 'DESCUENTOS'; concepto: string; monto: number; nota?: string }
+export interface LiquidacionMes {
+  period: string; diasTrabajados?: number; totalHaberes?: number; totalDescuentosPrevisionales?: number;
+  impuestoUnicoSegundaCategoria?: number; totalOtrosDescuentos?: number; liquidoAPagar: number;
+}
+export interface Cuadro { filas: FilaCuadro[]; totalLiquidacion: number; totalFiniquito: number; totalDescuentos: number; total: number; sinFiniquito: string[] }
+
+export function cuadroDePago(r: ResultadoFiniquito, liq: LiquidacionMes | null, extra: { otrosHaberes?: number; prestamos?: number; otrosDescuentos?: number; descuentoAfc?: number } = {}): Cuadro {
+  const filas: FilaCuadro[] = [];
+  const add = (f: FilaCuadro) => { if (Math.round(f.monto) !== 0) filas.push({ ...f, monto: Math.round(f.monto) }); };
+  let totalLiquidacion = 0;
+  if (liq) {
+    add({ seccion: 'LIQUIDACION', concepto: `Total haberes ${liq.period}${liq.diasTrabajados ? ` (${liq.diasTrabajados} días)` : ''}`, monto: liq.totalHaberes || 0 });
+    add({ seccion: 'LIQUIDACION', concepto: 'Cotizaciones del trabajador (AFP, salud, AFC)', monto: -(liq.totalDescuentosPrevisionales || 0) });
+    add({ seccion: 'LIQUIDACION', concepto: 'Impuesto único de segunda categoría', monto: -(liq.impuestoUnicoSegundaCategoria || 0) });
+    add({ seccion: 'LIQUIDACION', concepto: 'Anticipos y otros descuentos del mes', monto: -(liq.totalOtrosDescuentos || 0) });
+    totalLiquidacion = Math.round(liq.liquidoAPagar || 0);
+  }
+  add({ seccion: 'FINIQUITO', concepto: `Indemnización por años de servicio (${r.anosParaIAS} año(s), Art. 163)`, monto: r.montoIAS });
+  add({ seccion: 'FINIQUITO', concepto: 'Indemnización sustitutiva del aviso previo (Art. 161/162)', monto: r.montoAvisoPrevio });
+  add({ seccion: 'FINIQUITO', concepto: `Indemnización obra o faena (${r.diasIndemnizacionObra} días, Art. 163 inc. 3°)`, monto: r.montoIndemnizacionObra });
+  add({ seccion: 'FINIQUITO', concepto: `Feriado proporcional y pendiente (${r.diasVacacionesPendientes} días hábiles, Art. 73)`, monto: r.montoVacaciones });
+  add({ seccion: 'FINIQUITO', concepto: 'Otros haberes', monto: extra.otrosHaberes || 0 });
+  const totalFiniquito = filas.filter(f => f.seccion === 'FINIQUITO').reduce((s, f) => s + f.monto, 0);
+  // El aporte del empleador al seguro de cesantía solo se descuenta de la indemnización por años de servicio (Art. 13 Ley 19.728)
+  const afc = Math.min(extra.descuentoAfc || 0, r.montoIAS);
+  add({ seccion: 'DESCUENTOS', concepto: 'Aporte empleador seguro de cesantía imputable a la indemnización (Art. 13 Ley 19.728)', monto: -afc });
+  add({ seccion: 'DESCUENTOS', concepto: 'Préstamos de la empresa', monto: -(extra.prestamos || 0) });
+  add({ seccion: 'DESCUENTOS', concepto: 'Otros descuentos', monto: -(extra.otrosDescuentos || 0) });
+  const totalDescuentos = filas.filter(f => f.seccion === 'DESCUENTOS').reduce((s, f) => s + f.monto, 0);
+  const sinFiniquito = [r.avisoObra, r.avisoFeriado].filter(Boolean) as string[];
+  return { filas, totalLiquidacion, totalFiniquito, totalDescuentos, total: Math.max(0, totalLiquidacion + totalFiniquito + totalDescuentos), sinFiniquito };
+}

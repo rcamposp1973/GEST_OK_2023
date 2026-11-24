@@ -294,4 +294,13 @@ import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } fro
   const r = F.calcularFiniquito({hireDate:'2026-11-02',fechaCese:'2026-11-24',contractType:'OBRA_FAENA',requiereIAS:false,requiereAvisoPrevio:false,esConclusionObra:true,conAvisoPrevio:false,baseMensual:600000,ufCese:0,diasVacacionesTomados:0,sueldoLiquidoPendiente:380000});
   ok('finiquito obra: suma sueldo líquido del mes, sin aviso previo', r.totalLiquido===380000 && r.montoAvisoPrevio===0);
 }
+{
+  const F = await import('../src/utils/finiquito');
+  const r = F.calcularFiniquito({hireDate:'2026-11-02',fechaCese:'2026-11-24',contractType:'OBRA_FAENA',requiereIAS:false,requiereAvisoPrevio:false,esConclusionObra:true,conAvisoPrevio:false,baseMensual:553553,ufCese:0,diasVacacionesTomados:0});
+  const c = F.cuadroDePago(r,{period:'2026-11',diasTrabajados:23,totalHaberes:520000,totalDescuentosPrevisionales:95000,liquidoAPagar:425000});
+  ok('cuadro: obra corta = solo la liquidación, sin filas de finiquito', c.total===425000 && c.totalFiniquito===0 && !c.filas.some(f=>f.seccion==='FINIQUITO') && c.filas.length===2);
+  const r2 = F.calcularFiniquito({hireDate:'2020-01-01',fechaCese:'2026-11-24',contractType:'INDEFINIDO',requiereIAS:true,requiereAvisoPrevio:true,esConclusionObra:false,conAvisoPrevio:false,baseMensual:1000000,ufCese:0,diasVacacionesTomados:60});
+  const c2 = F.cuadroDePago(r2,null,{descuentoAfc:99999999});
+  ok('cuadro: descuento AFC no supera la indemnización por años', c2.totalDescuentos===-r2.montoIAS);
+}
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

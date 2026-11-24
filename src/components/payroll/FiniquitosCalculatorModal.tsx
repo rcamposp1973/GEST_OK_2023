@@ -7,7 +7,7 @@ import {
 import { Employee, FiniquitoRecord, ChartOfAccount, ProjectMaster, PayrollSlip } from '../../types';
 import { formatRut } from '../../utils/rutMatcher';
 import { getPrevisionalParametersForPeriod } from '../../utils/payrollCalculator';
-import { calcularFiniquito, baseArt172 } from '../../utils/finiquito';
+import { calcularFiniquito, baseArt172, cuadroDePago } from '../../utils/finiquito';
 import FiniquitoMasivoObra from './FiniquitoMasivoObra';
 import { escribirFiniquito } from '../../utils/finiquitoPdf';
 import { contratoActual } from '../../utils/contratosLaborales';
@@ -34,9 +34,12 @@ export const CHILEAN_TERMINATION_CAUSALS = [
   { code: 'ART_161_NECESIDADES', name: 'Art. 161 - Necesidades de la Empresa', requiereIAS: true, requiereAvisoPrevio: true },
   { code: 'ART_159_MUTUO_ACUERDO', name: 'Art. 159 N° 1 - Mutuo Acuerdo de las Partes', requiereIAS: false, requiereAvisoPrevio: false },
   { code: 'ART_159_RENUNCIA', name: 'Art. 159 N° 2 - Renuncia Voluntaria del Trabajador', requiereIAS: false, requiereAvisoPrevio: false },
+  { code: 'ART_159_MUERTE', name: 'Art. 159 N° 3 - Muerte del Trabajador', requiereIAS: false, requiereAvisoPrevio: false },
   { code: 'ART_159_VENCIMIENTO', name: 'Art. 159 N° 4 - Vencimiento del Plazo del Contrato', requiereIAS: false, requiereAvisoPrevio: false },
   { code: 'ART_159_CONCLUSION', name: 'Art. 159 N° 5 - Conclusión del Trabajo o Servicio', requiereIAS: false, requiereAvisoPrevio: false },
+  { code: 'ART_159_FUERZA_MAYOR', name: 'Art. 159 N° 6 - Caso Fortuito o Fuerza Mayor', requiereIAS: false, requiereAvisoPrevio: false },
   { code: 'ART_160_GRAVE', name: 'Art. 160 - Incumplimiento Grave / Conducta Indebida', requiereIAS: false, requiereAvisoPrevio: false },
+  { code: 'ART_163_BIS', name: 'Art. 163 bis - Liquidación Concursal del Empleador', requiereIAS: true, requiereAvisoPrevio: true },
   { code: 'ART_161_DESAHUCIO', name: 'Art. 161 inc. 2° - Desahucio Escrito del Empleador (Cargos de Confianza)', requiereIAS: true, requiereAvisoPrevio: true }
 ];
 
@@ -65,6 +68,7 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
   const [otrosHaberes, setOtrosHaberes] = useState<number>(0);
   const [otrosDescuentos, setOtrosDescuentos] = useState<number>(0);
   const [incluirSueldo, setIncluirSueldo] = useState<boolean>(true);
+  const [descuentoAfc, setDescuentoAfc] = useState<number>(0);
 
   const selectedEmployee = useMemo(() => {
     return employees.find(e => e.id === selectedEmployeeId || e.rut === selectedEmployeeId) || null;
@@ -86,16 +90,21 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
     if (!selectedEmployee) return null;
     const baseSueldo = baseArt172(selectedEmployee);
     const ufCese = getPrevisionalParametersForPeriod((fechaCese || '').slice(0, 7)).uf || 0;
-    const r = calcularFiniquito({
-      hireDate: selectedEmployee.hireDate, fechaCese, contractType: selectedEmployee.contractType,
+    const datos = {
+      hireDate: contratoActual(selectedEmployee)?.fechaInicio || selectedEmployee.hireDate, fechaCese, contractType: selectedEmployee.contractType,
       requiereIAS: causalConfig.requiereIAS, requiereAvisoPrevio: causalConfig.requiereAvisoPrevio,
       esConclusionObra: causalConfig.code === 'ART_159_CONCLUSION', conAvisoPrevio,
       baseMensual: baseSueldo, ufCese, diasVacacionesTomados: diasVacacionesHabiles,
       otrosHaberes, descuentos: descuentosPrestamos + otrosDescuentos,
       sueldoLiquidoPendiente: incluirSueldo && slipMesCese ? (slipMesCese.liquidoAPagar || 0) : 0,
-    });
-    return { ...r, baseSueldo, ufCese, sinIAS: causalConfig.requiereIAS && r.anosParaIAS === 0, diasPendientesReal: r.diasVacacionesPendientes };
-  }, [selectedEmployee, fechaCese, causalConfig, conAvisoPrevio, diasVacacionesHabiles, descuentosPrestamos, otrosHaberes, otrosDescuentos, incluirSueldo, slipMesCese]);
+    };
+    const r0 = calcularFiniquito(datos);
+    // El aporte AFC del empleador solo se imputa a la indemnización por años de servicio (Art. 13 Ley 19.728)
+    const afcAplicado = causalConfig.requiereIAS ? Math.min(descuentoAfc || 0, r0.montoIAS) : 0;
+    const r = afcAplicado ? calcularFiniquito({ ...datos, descuentos: datos.descuentos + afcAplicado }) : r0;
+    const cuadro = cuadroDePago(r, incluirSueldo ? slipMesCese : null, { otrosHaberes, prestamos: descuentosPrestamos, otrosDescuentos, descuentoAfc: afcAplicado });
+    return { ...r, cuadro, baseSueldo, ufCese, sinIAS: causalConfig.requiereIAS && r.anosParaIAS === 0, diasPendientesReal: r.diasVacacionesPendientes };
+  }, [selectedEmployee, fechaCese, causalConfig, conAvisoPrevio, diasVacacionesHabiles, descuentosPrestamos, otrosHaberes, otrosDescuentos, incluirSueldo, slipMesCese, descuentoAfc]);
   const esObra = selectedEmployee?.contractType === 'OBRA_FAENA';
 
   // Al elegir un trabajador con contrato por obra o faena, se propone la causal de conclusión de la obra
@@ -227,29 +236,23 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
                   />
                 </div>
 
-                {esObra ? (
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
                   <span className="text-[11px] font-bold text-slate-700 block">Sueldo del mes de término:</span>
                   {slipMesCese ? (
                     <label className="flex items-center gap-2 mt-1 cursor-pointer">
                       <input type="checkbox" checked={incluirSueldo} onChange={e => setIncluirSueldo(e.target.checked)} className="w-4 h-4 text-indigo-600 rounded" />
-                      <span className="text-xs text-slate-800 font-medium">Incluir líquido de la liquidación {slipMesCese.period}: $ {(slipMesCese.liquidoAPagar || 0).toLocaleString('es-CL')}</span>
+                      <span className="text-xs text-slate-800 font-medium">Incluir liquidación {slipMesCese.period} (líquido $ {(slipMesCese.liquidoAPagar || 0).toLocaleString('es-CL')})</span>
                     </label>
                   ) : (
                     <span className="text-xs text-amber-700 block">No hay liquidación guardada de {(fechaCese || '').slice(0, 7)}. Genérala primero (hasta la fecha de término) y vuelve aquí.</span>
                   )}
-                  <span className="text-[10px] text-slate-500 block">Obra o faena: no hay aviso previo ni indemnización sustitutiva.</span>
                 </div>
-                ) : (
+
+                {causalConfig.requiereAvisoPrevio && (
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
-                  <span className="text-[11px] font-bold text-slate-700 block">Aviso Previo Dado (30 días):</span>
+                  <span className="text-[11px] font-bold text-slate-700 block">Aviso previo dado (30 días):</span>
                   <label className="flex items-center gap-2 mt-1 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={conAvisoPrevio}
-                      onChange={e => setConAvisoPrevio(e.target.checked)}
-                      className="w-4 h-4 text-indigo-600 rounded"
-                    />
+                    <input type="checkbox" checked={conAvisoPrevio} onChange={e => setConAvisoPrevio(e.target.checked)} className="w-4 h-4 text-indigo-600 rounded" />
                     <span className="text-xs text-slate-800 font-medium">Sí, se notificó con 30 días de anticipación</span>
                   </label>
                 </div>
@@ -264,104 +267,76 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
                     className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-bold text-slate-900"
                   />
                 </div>
+                {([
+                  ['Otros haberes del finiquito ($)', otrosHaberes, setOtrosHaberes, true],
+                  ['Préstamos de la empresa a descontar ($)', descuentosPrestamos, setDescuentosPrestamos, true],
+                  ['Otros descuentos ($)', otrosDescuentos, setOtrosDescuentos, true],
+                  ['Aporte AFC empleador a imputar ($, Art. 13 Ley 19.728)', descuentoAfc, setDescuentoAfc, causalConfig.requiereIAS && finiquitoCalculated.montoIAS > 0],
+                ] as [string, number, (n: number) => void, boolean][]).filter(c => c[3]).map(([label, val, set]) => (
+                  <div key={label} className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                    <span className="text-[11px] font-bold text-slate-700 block">{label}</span>
+                    <input type="number" min={0} value={val || ''} onChange={e => set(Number(e.target.value) || 0)}
+                      className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-bold text-slate-900" />
+                  </div>
+                ))}
               </div>
 
-              {/* Summary Calculation Display */}
-              <div className="bg-slate-900 text-white rounded-2xl p-5 space-y-4 shadow-xl">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                  <div className="flex items-center gap-2">
-                    <Building2 className="w-4 h-4 text-indigo-400" />
-                    <span className="font-bold text-sm text-slate-200">
-                      Resumen del Finiquito: {selectedEmployee.name}
-                    </span>
+              {/* Cuadro de pago: liquidación del mes + finiquito, solo lo que corresponde */}
+              {(() => {
+                const c = finiquitoCalculated.cuadro;
+                const pesos = (n: number) => (n < 0 ? '- $ ' : '$ ') + Math.abs(n).toLocaleString('es-CL');
+                const bloque = (sec: 'LIQUIDACION' | 'FINIQUITO' | 'DESCUENTOS', titulo: string, subtotal: number | null) => {
+                  const filas = c.filas.filter(f => f.seccion === sec);
+                  if (!filas.length && sec !== 'FINIQUITO') return null;
+                  return (
+                    <tbody>
+                      <tr className="bg-slate-50"><td colSpan={2} className="px-3 py-2 text-xs font-bold text-slate-700">{titulo}</td></tr>
+                      {filas.map(f => (
+                        <tr key={f.concepto} className="border-t border-slate-100">
+                          <td className="px-3 py-1.5 text-xs text-slate-700">{f.concepto}</td>
+                          <td className={`px-3 py-1.5 text-xs text-right font-mono ${f.monto < 0 ? 'text-rose-700' : 'text-slate-900'}`}>{pesos(f.monto)}</td>
+                        </tr>
+                      ))}
+                      {sec === 'FINIQUITO' && !filas.length && (
+                        <tr className="border-t border-slate-100"><td colSpan={2} className="px-3 py-1.5 text-xs text-slate-500">No corresponden pagos por finiquito con esta causal y antigüedad.</td></tr>
+                      )}
+                      {subtotal !== null && (
+                        <tr className="border-t border-slate-200"><td className="px-3 py-1.5 text-xs font-bold text-slate-800">Subtotal</td><td className="px-3 py-1.5 text-xs text-right font-mono font-bold">{pesos(subtotal)}</td></tr>
+                      )}
+                    </tbody>
+                  );
+                };
+                return (
+                  <div className="rounded-2xl border border-indigo-200 overflow-hidden">
+                    <div className="bg-indigo-900 text-white px-4 py-3 flex flex-wrap justify-between gap-2">
+                      <span className="font-bold text-sm">Cuadro de pago: {selectedEmployee.name}</span>
+                      <span className="text-xs text-indigo-200">{causalConfig.name} · término {fechaCese}</span>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        {incluirSueldo && slipMesCese
+                          ? bloque('LIQUIDACION', `A. Liquidación de remuneraciones ${slipMesCese.period}`, c.totalLiquidacion)
+                          : null}
+                        {bloque('FINIQUITO', 'B. Pagos por término de contrato', c.totalFiniquito)}
+                        {bloque('DESCUENTOS', 'C. Descuentos del finiquito', c.totalDescuentos)}
+                        <tbody>
+                          <tr className="bg-emerald-50 border-t-2 border-emerald-300">
+                            <td className="px-3 py-3 text-sm font-black text-emerald-900">TOTAL A PAGAR AL TRABAJADOR</td>
+                            <td className="px-3 py-3 text-right font-mono text-lg font-black text-emerald-900">{pesos(c.total)}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    {(c.sinFiniquito.length > 0 || finiquitoCalculated.sinIAS || !slipMesCese) && (
+                      <ul className="px-4 py-3 bg-amber-50 text-[11px] text-amber-800 space-y-1 list-disc list-inside">
+                        {!slipMesCese && <li>Falta la liquidación de {(fechaCese || '').slice(0, 7)}: el cuadro no incluye el sueldo del mes.</li>}
+                        {finiquitoCalculated.sinIAS && <li>Menos de 1 año de antigüedad: no corresponde indemnización por años de servicio (Art. 163).</li>}
+                        {c.sinFiniquito.map(t => <li key={t}>{t}</li>)}
+                      </ul>
+                    )}
                   </div>
-                  <span className="font-mono text-xs text-indigo-300 bg-indigo-900/50 px-2.5 py-1 rounded-full border border-indigo-700/50">
-                    Antigüedad: {finiquitoCalculated.anosCompletos} años, {finiquitoCalculated.mesesRestantes} meses
-                  </span>
-                </div>
-
-                {finiquitoCalculated.sinIAS && (
-                  <div className="text-[11px] text-amber-300 bg-amber-900/30 border border-amber-700/50 rounded-lg px-3 py-2">
-                    No corresponde indemnización por años de servicio: el trabajador tiene menos de 1 año de antigüedad (Art. 163).
-                  </div>
-                )}
-                {finiquitoCalculated.avisoFeriado && (
-                  <div className="text-[11px] text-amber-300 bg-amber-900/30 border border-amber-700/50 rounded-lg px-3 py-2">
-                    {finiquitoCalculated.avisoFeriado}
-                  </div>
-                )}
-                {finiquitoCalculated.avisoObra && (
-                  <div className="text-[11px] text-amber-300 bg-amber-900/30 border border-amber-700/50 rounded-lg px-3 py-2">
-                    {finiquitoCalculated.avisoObra}
-                  </div>
-                )}
-                {finiquitoCalculated.montoIndemnizacionObra > 0 && (
-                  <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700 text-xs flex flex-wrap items-baseline justify-between gap-2">
-                    <span className="text-slate-300">
-                      Indemnización por obra o faena (Art. 163 inc. 3°): {finiquitoCalculated.mesesObra} meses × {finiquitoCalculated.diasPorMesObra} días = {finiquitoCalculated.diasIndemnizacionObra} días
-                    </span>
-                    <span className="text-lg font-mono font-black text-emerald-400">$ {finiquitoCalculated.montoIndemnizacionObra.toLocaleString('es-CL')}</span>
-                  </div>
-                )}
-                {!Number.isFinite(finiquitoCalculated.topeLegal) && (
-                  <div className="text-[11px] text-amber-300 bg-amber-900/30 border border-amber-700/50 rounded-lg px-3 py-2">
-                    La UF del mes del cese no está cargada: no se pudo aplicar el tope de 90 UF. Revisa el monto.
-                  </div>
-                )}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-                  <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700">
-                    <span className="text-slate-400 text-[10px] uppercase block font-bold">Años de Servicio (Art. 161)</span>
-                    <span className="text-lg font-mono font-black text-emerald-400 mt-1 block">
-                      $ {finiquitoCalculated.montoIAS.toLocaleString('es-CL')}
-                    </span>
-                    <span className="text-[10px] text-slate-400 mt-0.5 block">
-                      {finiquitoCalculated.anosParaIAS} años computables
-                    </span>
-                  </div>
-
-                  {esObra ? (
-                  <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700">
-                    <span className="text-slate-400 text-[10px] uppercase block font-bold">Sueldo líquido del mes</span>
-                    <span className="text-lg font-mono font-black text-indigo-400 mt-1 block">
-                      $ {finiquitoCalculated.sueldoLiquidoPendiente.toLocaleString('es-CL')}
-                    </span>
-                    <span className="text-[10px] text-slate-400 mt-0.5 block">
-                      {slipMesCese ? `Liquidación ${slipMesCese.period}` : 'Falta la liquidación del mes'}
-                    </span>
-                  </div>
-                  ) : (
-                  <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700">
-                    <span className="text-slate-400 text-[10px] uppercase block font-bold">Sustitutiva Aviso Previo</span>
-                    <span className="text-lg font-mono font-black text-indigo-400 mt-1 block">
-                      $ {finiquitoCalculated.montoAvisoPrevio.toLocaleString('es-CL')}
-                    </span>
-                    <span className="text-[10px] text-slate-400 mt-0.5 block">
-                      {finiquitoCalculated.montoAvisoPrevio > 0 ? '1 mes de sueldo' : 'Sin indemnización'}
-                    </span>
-                  </div>
-                  )}
-
-                  <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700">
-                    <span className="text-slate-400 text-[10px] uppercase block font-bold">Vacaciones Proporcionales</span>
-                    <span className="text-lg font-mono font-black text-amber-400 mt-1 block">
-                      $ {finiquitoCalculated.montoVacaciones.toLocaleString('es-CL')}
-                    </span>
-                    <span className="text-[10px] text-slate-400 mt-0.5 block">
-                      {finiquitoCalculated.diasPendientesReal} días pend.
-                    </span>
-                  </div>
-
-                  <div className="bg-emerald-950/80 p-3 rounded-xl border border-emerald-600/50">
-                    <span className="text-emerald-300 text-[10px] uppercase block font-bold">Total Líquido Finiquito</span>
-                    <span className="text-xl font-mono font-black text-emerald-300 mt-1 block">
-                      $ {finiquitoCalculated.totalLiquido.toLocaleString('es-CL')}
-                    </span>
-                    <span className="text-[10px] text-emerald-400 mt-0.5 block">
-                      Monto a pago al trabajador
-                    </span>
-                  </div>
-                </div>
-              </div>
+                );
+              })()}
             </>
           )}
         </div>

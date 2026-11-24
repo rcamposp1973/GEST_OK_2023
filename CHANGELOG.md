@@ -9,6 +9,9 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.26.1 — 2026-11-24
+- Liquidación de sueldo impresa: siempre en 1 sola hoja tamaño carta. Se mide con el ancho real de la hoja y se reduce hasta que quepa completa.
+
 ## 1.26.0 — 2026-11-24
 - Cuadro de pago al término: A) liquidación del mes (haberes, cotizaciones, impuesto, anticipos, líquido), B) pagos por término y C) descuentos del finiquito, con el total a pagar. Solo aparecen los conceptos que corresponden; si no hay pagos por finiquito, lo dice y explica por qué.
 - Nuevas causales: Art. 159 N° 3 (muerte), N° 6 (caso fortuito), Art. 163 bis (liquidación concursal).

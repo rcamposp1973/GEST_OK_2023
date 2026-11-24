@@ -66,7 +66,7 @@ export function triggerIframePrint(options: TriggerIframePrintOptions): void {
     appStyles = links + inline;
   }
   const baseStyles = options.useAppStyles
-    ? `@page { size: letter portrait; margin: 10mm; } body { margin: 0; background: #ffffff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }`
+    ? `@page { size: letter portrait; margin: 10mm; } html, body { height: auto; } #gest-print-wrap { break-inside: avoid; page-break-inside: avoid; } body { margin: 0; background: #ffffff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }`
     : defaultStyles;
 
   try {
@@ -90,10 +90,25 @@ export function triggerIframePrint(options: TriggerIframePrintOptions): void {
               window.onload = function() {
                 ${options.fitOnePage ? `
                 try {
+                  // Hoja carta vertical con márgenes de 10 mm: 196 x 259 mm útiles (≈ 740 x 978 px).
                   var w = document.getElementById('gest-print-wrap');
-                  var maxH = 975;
+                  var anchoHoja = 740, altoHoja = 960;
+                  var hijo = w.firstElementChild;
+                  if (hijo) { hijo.style.padding = '0'; hijo.style.border = 'none'; hijo.style.boxShadow = 'none'; hijo.style.maxWidth = 'none'; hijo.style.margin = '0'; }
+                  // Se mide con el ancho real de la hoja y se escala ancho y alto para que todo quepa en 1 hoja.
+                  w.style.width = anchoHoja + 'px';
+                  var ancho = Math.max(anchoHoja, w.scrollWidth);
+                  if (ancho > anchoHoja) { w.style.width = ancho + 'px'; }
                   var h0 = w.getBoundingClientRect().height;
-                  if (h0 > maxH) { w.style.zoom = Math.max(0.55, 0.97 * maxH / h0); }
+                  var z = Math.min(1, anchoHoja / ancho, altoHoja / h0);
+                  // el zoom no reduce exacto (redondeo de letras): se ajusta hasta que quepa
+                  for (var i = 0; i < 6 && z < 1; i++) {
+                    w.style.zoom = z;
+                    var h = w.getBoundingClientRect().height;
+                    if (h <= altoHoja) break;
+                    z = z * (altoHoja / h) * 0.99;
+                  }
+                  w.style.overflow = 'hidden';
                 } catch (e) {}` : ''}
                 setTimeout(() => {
                   window.focus();

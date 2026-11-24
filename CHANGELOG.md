@@ -9,6 +9,10 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.31.0 — 2026-11-24
+- "Sincronizar con SII" usa la API propia de Gest_OK (directo al SII con la clave tributaria de la empresa). Si la empresa no tiene clave tributaria guardada o el SII no responde, usa SimpleAPI como respaldo.
+- Si la descarga falla, ya no dice "con éxito / sin documentos": muestra qué falló.
+
 ## 1.30.0 — 2026-11-24
 - API propia de Gest_OK para el SII (primera versión, en prueba): entra al portal del SII con el RUT y la clave tributaria de la empresa, sin SimpleAPI. Lee los datos de la empresa (Mi SII), el RCV del mes (compras, ventas y resúmenes de boletas), las boletas de honorarios recibidas y los F29 presentados del año. Solo lectura.
 - Botón "API propia SII (prueba)" en el RCV, visible solo para Super Admin, para validarla empresa por empresa antes de reemplazar a SimpleAPI.

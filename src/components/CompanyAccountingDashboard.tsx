@@ -78,7 +78,7 @@ import * as XLSX from 'xlsx';
 import { useProcess } from '../context/ProcessContext';
 import { validateVoucherLine, isCustomAnalysisRequired, sanitizeVoucherLine, sanitizeVoucherLines } from '../utils/voucherValidation';
 import { getLatestOpenPeriod, getCurrentPeriodStr, checkIsPeriodClosed as checkIsPeriodClosedUtil, getNextOpenPeriodAndDate } from '../utils/periodUtils';
-import { fetchRcvFromSii, apiKeyGuardadaEnNavegador } from '../utils/siiRcvClient';
+import { fetchRcvFromSii, apiKeyGuardadaEnNavegador, consultarSiiDirecto } from '../utils/siiRcvClient';
 import { separarCredenciales, guardarSecretosSii } from '../utils/credencialesSii';
 import { formatRut } from '../utils/rutMatcher';
 import DemoFerreteriaManagerModal from './DemoFerreteriaManagerModal';
@@ -2657,14 +2657,20 @@ export default function CompanyAccountingDashboard({
     setIsRescatandoRcvApi(true);
     try {
       // Las credenciales del SII se resuelven en el servidor (cifradas). El navegador no las lee ni las envía.
-      const data = await fetchRcvFromSii({
-        studyId,
-        companyId: company.id,
-        year: parseInt(yearStr, 10),
-        month: monthStr,
-        tipo: 'ALL',
-        apiKeyNavegador: apiKeyGuardadaEnNavegador(),
-      });
+      // Primero la API propia de Gest_OK (directo al SII con la clave tributaria de la empresa).
+      // Si la empresa no tiene clave tributaria o el SII no responde, se usa SimpleAPI como respaldo.
+      let data: any = await consultarSiiDirecto({ studyId, companyId: company.id, accion: 'rcv', year: parseInt(yearStr, 10), month: parseInt(monthStr, 10) });
+      if (!data.success && !data.periodoCerrado) {
+        console.warn('API propia SII no disponible, se usa SimpleAPI:', data.error);
+        data = await fetchRcvFromSii({
+          studyId,
+          companyId: company.id,
+          year: parseInt(yearStr, 10),
+          month: monthStr,
+          tipo: 'ALL',
+          apiKeyNavegador: apiKeyGuardadaEnNavegador(),
+        });
+      }
 
       if (!data.success && data.needsCertificate) {
         setShowManualUpload(true);
@@ -2680,6 +2686,10 @@ export default function CompanyAccountingDashboard({
       }
 
       const fetchedDocs = data.documents || [];
+      if (fetchedDocs.length === 0 && data.apiErrors?.length) {
+        alert(`No se pudo descargar el período ${selectedRcvPeriod} desde el SII.\n\n${data.apiErrors.join('\n')}\n\nIntenta nuevamente en unos minutos o usa "Cargar CSV/TXT Manual".`);
+        return;
+      }
       if (fetchedDocs.length === 0) {
         alert(data.message || `Solicitud enviada a la API del SII con éxito para el período ${selectedRcvPeriod}.\n\nNo se encontraron nuevos documentos de Compras, Ventas u Honorarios en dicho período.`);
         return;

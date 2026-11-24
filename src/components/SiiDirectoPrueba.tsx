@@ -64,10 +64,10 @@ export default function SiiDirectoPrueba({ studyId, companyId, periodo, onClose 
         ))}
         {caja('f29', salida.f29?.success && (
           <table className="w-full">
-            <thead><tr className="text-left text-slate-500"><th>Período</th><th>Folio</th><th>Fecha</th><th className="text-right">Total</th><th>Estado</th></tr></thead>
+            <thead><tr className="text-left text-slate-500 [&>th]:pr-4"><th>Período</th><th>Folio</th><th>Fecha</th><th className="text-right">Total</th><th>Estado</th></tr></thead>
             <tbody>
               {(salida.f29.f29 || []).map((f: any, i: number) => (
-                <tr key={i}><td>{f.periodo}</td><td>{f.folio || '-'}</td><td>{f.fecha || '-'}</td><td className="text-right">{f.error ? '' : pesos(f.total)}</td><td>{f.error || f.estado}</td></tr>
+                <tr key={i} className="[&>td]:pr-4"><td>{f.periodo}</td><td>{f.folio || '-'}</td><td>{f.fecha || '-'}</td><td className="text-right">{f.error ? '' : pesos(f.total)}</td><td>{f.error || f.estado}</td></tr>
               ))}
               {(salida.f29.f29 || []).length === 0 && <tr><td colSpan={5}>Sin F29 presentados este año.</td></tr>}
             </tbody>

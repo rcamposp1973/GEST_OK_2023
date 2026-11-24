@@ -15,6 +15,7 @@ import {
   MasterAccountingParameters
 } from '../types';
 import { triggerIframePrint } from '../utils/printUtils';
+import { crearPdfLiquidacion, nombreArchivoLiquidacion } from '../utils/liquidacionPdf';
 import { 
   DEFAULT_PAYROLL_PARAMS_2026, DEFAULT_AFP_COMMISSIONS, PREVIRED_AFP_CODES,
   DEFAULT_PAYROLL_CONCEPTS, getPrevisionalParametersForPeriod, getLegalWeeklyHours,
@@ -1046,19 +1047,19 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
     document.body.removeChild(link);
   };
 
-  // Imprimir Liquidación Individual
+  // Liquidación en PDF real (texto nítido), 1 hoja carta por trabajador
+  const periodoTextoSlip = new Intl.DateTimeFormat('es-CL', { month: 'long', year: 'numeric' }).format(new Date(selectedYear, selectedMonth - 1, 1));
+  const empresaPdf = { nombre: companyName, rut: companyRut, direccion: companyAddress, giro: companyGiro };
   const handlePrintSlip = () => {
-    const slipElement = document.getElementById('printable-payroll-slip');
-    if (slipElement) {
-      triggerIframePrint({
-        title: `Liquidacion_Sueldo_${companyName}`,
-        useAppStyles: true,
-        fitOnePage: true,
-        htmlContent: slipElement.innerHTML
-      });
-    } else {
-      window.print();
-    }
+    if (!activeSlip) return;
+    crearPdfLiquidacion(activeSlip, empresaPdf, periodoTextoSlip, formatearRut).save(nombreArchivoLiquidacion(activeSlip));
+  };
+  const handlePrintAllSlips = () => {
+    if (!slipsForPeriod.length) return;
+    // un solo archivo, una hoja por trabajador
+    const pdf = crearPdfLiquidacion(slipsForPeriod[0], empresaPdf, periodoTextoSlip, formatearRut);
+    for (const sl of slipsForPeriod.slice(1)) crearPdfLiquidacion(sl, empresaPdf, periodoTextoSlip, formatearRut, pdf);
+    pdf.save(`${periodStr.replace('-', '')}_Liquidaciones_${companyName.replace(/\W+/g, '_')}.pdf`);
   };
 
   return (
@@ -1860,8 +1861,17 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
                 className="px-4 py-2 text-xs font-bold text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-lg border border-slate-300 transition-colors flex items-center gap-1.5 shadow-2xs"
               >
                 <Printer className="w-4 h-4" />
-                Imprimir / Exportar PDF
+                Descargar PDF (1 hoja carta)
               </button>
+              {slipsForPeriod.length > 1 && (
+                <button
+                  onClick={handlePrintAllSlips}
+                  className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors flex items-center gap-1.5 shadow-2xs"
+                >
+                  <Printer className="w-4 h-4" />
+                  Todas en un PDF ({slipsForPeriod.length})
+                </button>
+              )}
             </div>
           </div>
 

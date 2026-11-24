@@ -9,6 +9,10 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.27.0 — 2026-11-24
+- Liquidación de sueldo como PDF real (texto nítido, letra Helvetica, sin imagen): siempre 1 hoja carta, columnas Haberes y Descuentos lado a lado, solo conceptos con monto. Nombre de archivo AAAAMM_Nombre_Apellido.pdf.
+- Nuevo botón "Todas en un PDF": todas las liquidaciones del período en un solo archivo, una hoja por trabajador.
+
 ## 1.26.2 — 2026-11-24
 - Liquidación en 1 hoja (corrección): al imprimir, las columnas Haberes y Descuentos se apilaban una debajo de la otra (la hoja es más angosta que la pantalla) y la firma pasaba a la segunda hoja. Ahora se mantienen lado a lado también al imprimir.
 

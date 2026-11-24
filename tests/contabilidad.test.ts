@@ -316,4 +316,19 @@ import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } fro
   const f = new P.Frasco(); f.aplicar('https://zeusr.sii.cl/x',['TOKEN=abc; Domain=.sii.cl; Path=/','LOCAL=1; Path=/']);
   ok('SII propia: cookies por dominio', f.cabecera('https://www4.sii.cl/a').includes('TOKEN=abc') && !f.cabecera('https://www4.sii.cl/a').includes('LOCAL') && f.cabecera('https://zeusr.sii.cl/b').includes('LOCAL=1'));
 }
+{
+  const P = await import('../api/sii/portal');
+  const todos = [
+    { periodo:'2026-07', folio:'2', fecha:'2026-08-20', total:5, estadoCodigo:'70' },
+    { periodo:'2026-07', folio:'1', fecha:'2026-08-20', total:5, estadoCodigo:'1' },
+    { periodo:'2026-09', folio:'3', fecha:'2026-10-20', total:7, estadoCodigo:'70' },
+    { periodo:'2026-09', folio:'4', fecha:'2026-10-21', total:8, estadoCodigo:'70' },
+  ];
+  const r = P.consolidarF29(todos, 2026, 11, { dia20:true, inicio:'2026-07-01', termino:'', hoy:new Date('2026-11-24T12:00:00Z') });
+  const per = (p:string) => r.filter((f:any)=>f.periodo===p);
+  ok('F29: vigente gana a rechazado', per('2026-07').length===1 && per('2026-07')[0].folio==='1');
+  ok('F29: sin vigente, el último rechazado', per('2026-09').length===1 && per('2026-09')[0].folio==='4');
+  ok('F29: vencido sin declarar = PENDIENTE', per('2026-08')[0]?.estadoCodigo==='PENDIENTE' && per('2026-10')[0]?.estadoCodigo==='PENDIENTE');
+  ok('F29: mes sin vencer y antes del inicio no aparecen', per('2026-11').length===0 && per('2026-06').length===0);
+}
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

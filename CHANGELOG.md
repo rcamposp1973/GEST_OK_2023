@@ -9,6 +9,9 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.31.1 — 2026-11-24
+- F29 desde el SII: un registro por mes. Si hay uno vigente se muestra ese; si no, el último rechazado por pago inconcluso; si un mes ya vencido (día 12 o 20 del mes siguiente) no tiene nada, aparece "PENDIENTE" en rojo y negrita. Se leen todos los registros (quedan en "todos").
+
 ## 1.31.0 — 2026-11-24
 - "Sincronizar con SII" usa la API propia de Gest_OK (directo al SII con la clave tributaria de la empresa). Si la empresa no tiene clave tributaria guardada o el SII no responde, usa SimpleAPI como respaldo.
 - Si la descarga falla, ya no dice "con éxito / sin documentos": muestra qué falló.

@@ -372,6 +372,31 @@ export async function leerF29Anio(s: SesionSii, rutEmpresa: string, anio: number
   return out;
 }
 
+/** Un F29 por mes: el vigente si existe; si no, el último rechazado por pago inconcluso; si no hay nada y el
+ *  mes ya venció (día 12 o 20 del mes siguiente), PENDIENTE. Meses sin vencer o fuera de actividades no se muestran. */
+export function consolidarF29(todos: any[], anio: number, hastaMes: number, o: { dia20: boolean; inicio: string; termino: string; hoy?: Date }) {
+  const hoy = o.hoy || new Date(Date.now() - 3 * 3600 * 1000);
+  const hoyIso = hoy.toISOString().slice(0, 10);
+  const out: any[] = [];
+  for (let mes = 1; mes <= hastaMes; mes++) {
+    const periodo = `${anio}-${String(mes).padStart(2, '0')}`;
+    const delMes = todos.filter(f => f.periodo === periodo && !f.error);
+    const orden = (a: any, b: any) => (a.fecha || '').localeCompare(b.fecha || '') || (a.folio || '').localeCompare(b.folio || '');
+    const vigentes = delMes.filter(f => f.estadoCodigo === '1').sort(orden);
+    if (vigentes.length) { out.push(vigentes[vigentes.length - 1]); continue; }
+    const otros = delMes.sort(orden);
+    if (otros.length) { out.push(otros[otros.length - 1]); continue; }
+    const vence = new Date(Date.UTC(anio, mes, o.dia20 ? 20 : 12)).toISOString().slice(0, 10);
+    const finMes = new Date(Date.UTC(anio, mes, 0)).toISOString().slice(0, 10);
+    if (o.inicio && finMes < o.inicio) continue;            // antes del inicio de actividades
+    if (o.termino && `${periodo}-01` > o.termino) continue;  // después del término de giro
+    if (vence >= hoyIso) continue;                           // aún no vence
+    const error = todos.find(f => f.periodo === periodo && f.error)?.error;
+    out.push({ periodo, folio: '', fecha: '', total: 0, estadoCodigo: 'PENDIENTE', estado: 'PENDIENTE', vence, ...(error ? { error } : {}) });
+  }
+  return out;
+}
+
 // ─────────────────────────── Endpoint ───────────────────────────
 async function leerCuerpo(req: IncomingMessage): Promise<any> {
   return new Promise(resolve => { let b = ''; req.on('data', c => (b += c)); req.on('end', () => { try { resolve(b ? JSON.parse(b) : {}); } catch { resolve({}); } }); });
@@ -427,7 +452,10 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     } else {
       const anio = Number(b.year) || new Date().getFullYear();
       const hasta = anio === new Date().getFullYear() ? new Date().getMonth() + 1 : 12;
-      resultado = { f29: await leerF29Anio(s, c.rut, anio, hasta), anio };
+      const todos = await leerF29Anio(s, c.rut, anio, hasta);
+      let datos: any = null;
+      try { datos = await leerDatosEmpresa(s); } catch { /* sin datos: se asume día 20 */ }
+      resultado = { f29: consolidarF29(todos, anio, hasta, { dia20: datos ? datos.f29Dia20 : true, inicio: datos?.inicioActividades || '', termino: datos?.terminoGiro || '' }), todos, anio };
     }
     console.log(`[sii-portal] ${accion} empresa=${companyId} ok en ${Date.now() - inicio} ms`);
     return responder(200, { success: true, ...resultado });

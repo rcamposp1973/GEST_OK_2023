@@ -11,8 +11,7 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ## 1.29.0 — 2026-11-24
 - RCV desde el SII: un mes cerrado no se vuelve a descargar, también bloqueado en el servidor (no gasta cupo de SimpleAPI).
-- Aviso antes de sincronizar un mes que ya tiene documentos cargados.
-- Contador de consultas SimpleAPI del mes (todas las empresas), en systemUsage/simpleApi_AAAA-MM; se muestra al terminar cada sincronización. Límite configurable con SIMPLEAPI_LIMITE_MES (por defecto 30, el plan gratuito).
+- Contador interno de consultas SimpleAPI del mes (todas las empresas), en systemUsage/simpleApi_AAAA-MM. No se muestra al usuario: la descarga no tiene avisos de costo ni de cupo.
 
 ## 1.28.0 — 2026-11-24
 - Los finiquitos generados quedan guardados (antes solo se descargaba el PDF y no quedaba registro). Se guardan al generar el PDF, individual o masivo por obra, en studies/{s}/companies/{c}/finiquitos.

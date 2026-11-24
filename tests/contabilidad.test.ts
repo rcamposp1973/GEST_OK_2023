@@ -345,4 +345,8 @@ import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } fro
   const P = await import('../api/sii/portal');
   ok('XML SII: conteo del listado en cualquier orden', P.cantidadListado('<input type="hidden" value="3" name="cant_reg" id="cant_reg">')===3 && P.cantidadListado('<input id=cant_reg value=0>')===0 && P.cantidadListado('<p>No hay resultados</p>')===0 && P.cantidadListado('<p>x</p>')===null);
 }
+{
+  const T = await import('../src/utils/repararTexto');
+  ok('repara Ñ y tildes rotas', T.repararTexto('CARMONA NIEMANN Y COMPAÃ‘IA LIMITADA')==='CARMONA NIEMANN Y COMPAÑIA LIMITADA' && T.repararTexto('TelefÃ³nica MÃ³viles Chile S.A.')==='Telefónica Móviles Chile S.A.' && T.repararTexto('ÑUÑOA ÁREA')==='ÑUÑOA ÁREA');
+}
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

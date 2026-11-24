@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { cleanRutString, formatChileanRut, validateRutModulo11 } from '../utils/rutMatcher';
 import { analyzeRut } from './AuxiliariesGrid';
+import { repararTexto } from '../utils/repararTexto';
 
 export interface AuxiliaryUpgradeRow {
   rowIdx: number;
@@ -116,6 +117,7 @@ export default function AuxiliaryUpgradeModal({
 }: AuxiliaryUpgradeModalProps) {
   const [step, setStep] = useState<'upload' | 'preview' | 'processing' | 'completed'>('upload');
   const [parsedRows, setParsedRows] = useState<AuxiliaryUpgradeRow[]>([]);
+  const [cuentasFaltantes, setCuentasFaltantes] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'UPDATE' | 'NEW' | 'UNCHANGED' | 'ERROR'>('ALL');
   const [searchFilter, setSearchFilter] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
@@ -354,6 +356,7 @@ export default function AuxiliaryUpgradeModal({
 
   const processRawExcelRows = (rawRows: any[]) => {
     const processed: AuxiliaryUpgradeRow[] = [];
+    const faltantes = new Map<string, number>();
     let updatedCount = 0;
     let createdCount = 0;
     let unchangedCount = 0;
@@ -371,6 +374,14 @@ export default function AuxiliaryUpgradeModal({
         normalizedRow[cleanKey] = row[key];
       });
 
+      // Busca una columna por palabras: así se lee tanto la plantilla como el Excel que exporta la grilla
+      // ("Cuenta Deudor (Cliente)", "Codigo_Cuenta_Deudor", "Cta Proveedor", etc.)
+      const columna = (incluye: string[][], excluye: string[] = []) => {
+        const k = Object.keys(normalizedRow).find(key =>
+          incluye.every(grupo => grupo.some(t => key.includes(t))) && !excluye.some(t => key.includes(t)) && String(normalizedRow[key]).trim() !== '');
+        return k ? String(normalizedRow[k]).trim() : '';
+      };
+
       // Extraer campos con heurística flexible
       const rawRut = String(
         normalizedRow['rut'] || 
@@ -384,7 +395,7 @@ export default function AuxiliaryUpgradeModal({
         ''
       ).trim();
 
-      const name = String(
+      const name = repararTexto(String(
         normalizedRow['razonsocial'] || 
         normalizedRow['razonsocialnombre'] || 
         normalizedRow['nombre'] || 
@@ -394,7 +405,7 @@ export default function AuxiliaryUpgradeModal({
         row['Razón Social'] ||
         row['Nombre'] ||
         ''
-      ).trim();
+      ).trim());
 
       // Validación del RUT
       const cleanRut = cleanRutString(rawRut);
@@ -433,34 +444,21 @@ export default function AuxiliaryUpgradeModal({
       else if (rawTipoCuenta.includes('ahorro')) tipoCuenta = 'Ahorro';
       else if (rawTipoCuenta.includes('rut')) tipoCuenta = 'RUT';
 
-      const numeroCuenta = String(normalizedRow['numerocuenta'] || normalizedRow['nrocuenta'] || normalizedRow['cuenta'] || '').trim();
+      const numeroCuenta = String(normalizedRow['numerocuenta'] || normalizedRow['nrocuenta'] || normalizedRow['ncuenta'] || normalizedRow['nodecuenta'] || normalizedRow['cuenta'] || '').trim();
 
       // Cuentas contables
-      const rawDebtorAcc = String(
-        normalizedRow['codigocuentadeudor'] || 
-        normalizedRow['cuentadeudor'] || 
-        normalizedRow['cuentacliente'] || 
-        normalizedRow['codigocuentacliente'] || 
-        ''
-      ).trim();
+      const rawDebtorAcc = columna([['cuenta', 'cta'], ['deudor', 'cliente']], ['nombre']);
       const debtorMatch = findAccountMatch(rawDebtorAcc);
 
-      const rawCreditorAcc = String(
-        normalizedRow['codigocuentaacreedor'] || 
-        normalizedRow['cuentaacreedor'] || 
-        normalizedRow['cuentaproveedor'] || 
-        normalizedRow['codigocuentaproveedor'] || 
-        ''
-      ).trim();
+      const rawCreditorAcc = columna([['cuenta', 'cta'], ['acreedor', 'proveedor']], ['nombre']);
       const creditorMatch = findAccountMatch(rawCreditorAcc);
 
-      const rawExpenseAcc = String(
-        normalizedRow['codigocuentagastoingreso'] || 
-        normalizedRow['cuentagastoingreso'] || 
-        normalizedRow['cuentagasto'] || 
-        normalizedRow['cuentaingreso'] || 
-        ''
-      ).trim();
+      const rawExpenseAcc = columna([['cuenta', 'cta'], ['gasto', 'ingreso']], ['nombre']);
+      // Códigos escritos que no existen en el plan de cuentas: se avisan (antes se ignoraban en silencio)
+      const cuentasNoEncontradas = [
+        [rawDebtorAcc, 'deudor'], [rawCreditorAcc, 'acreedor'], [rawExpenseAcc, 'gasto/ingreso'],
+      ].filter(([raw, ]) => raw && !findAccountMatch(raw)).map(([raw, tipo]) => `${tipo} "${raw}"`);
+      cuentasNoEncontradas.forEach(c => faltantes.set(c, (faltantes.get(c) || 0) + 1));
       const expenseMatch = findAccountMatch(rawExpenseAcc);
 
       // Dimensiones de análisis y glosa
@@ -617,6 +615,7 @@ export default function AuxiliaryUpgradeModal({
     });
 
     setParsedRows(processed);
+    setCuentasFaltantes([...faltantes.entries()].map(([c, n]) => `Cuenta ${c} (${n} fila${n > 1 ? 's' : ''})`));
     setSummaryResults({
       updated: updatedCount,
       created: createdCount,
@@ -889,6 +888,14 @@ export default function AuxiliaryUpgradeModal({
           {/* PASO 2: PREVISUALIZACIÓN Y DIFF DETALLADO */}
           {step === 'preview' && (
             <div className="space-y-4">
+              {cuentasFaltantes.length > 0 && (
+                <div className="p-3 rounded-xl border border-amber-300 bg-amber-50 text-xs text-amber-900">
+                  <b>Estos códigos de cuenta no existen en el plan de cuentas de la empresa y no se asignarán:</b>
+                  <ul className="list-disc list-inside mt-1">{cuentasFaltantes.slice(0, 12).map(c => <li key={c}>{c}</li>)}</ul>
+                  {cuentasFaltantes.length > 12 && <div>… y {cuentasFaltantes.length - 12} más.</div>}
+                  <div className="mt-1">Revisa el código en el Plan de Cuentas (debe ser una cuenta de detalle) y vuelve a cargar el Excel.</div>
+                </div>
+              )}
               
               {/* TARJETAS DE RESUMEN DEL PARSEO */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

@@ -9,6 +9,11 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.32.2 — 2026-11-24
+- Maestro de Auxiliares, carga por Excel: no reconocía las columnas de cuentas del Excel que exporta la propia grilla ("Cuenta Deudor (Cliente)", "Cuenta Acreedor (Proveedor)", "Cuenta Ingreso / Gasto") y las ignoraba en silencio. Ahora las lee con cualquier nombre razonable (código solo, código con nombre, o plantilla).
+- Si un código de cuenta no existe en el plan de la empresa, se avisa en la vista previa en vez de ignorarlo.
+- Los nombres con tildes y Ñ rotas ("COMPAÃ‘IA", "TelefÃ³nica") se corrigen al cargar el Excel.
+
 ## 1.32.1 — 2026-11-24
 - XML del facturador SII: el SII responde "más de 20 documentos" también cuando un día no tiene documentos. Ahora se lee bien el conteo del listado y esos días se tratan como vacíos (antes aparecía una larga lista de "pendientes" falsos y la descarga tardaba más). El aviso de pendientes reales es corto.
 

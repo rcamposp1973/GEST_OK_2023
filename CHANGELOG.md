@@ -9,6 +9,9 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.32.4 — 2026-11-24
+- RCV "Contabilizar todos los pendientes": un documento que ya tenía comprobante pero había quedado como "Pendiente" (contabilización interrumpida) se saltaba en silencio y el aviso decía "0 documentos". Ahora queda enlazado a su comprobante (sin duplicar) y el aviso lo informa. Si un documento no se puede contabilizar (por ejemplo, falta una cuenta), se informa cuál y se continúa con los demás.
+
 ## 1.32.3 — 2026-11-24
 - Comprobante contable: agregar línea con la tecla Insert (Ins), con Alt+L (para notebooks sin tecla Insert) o con Enter en el Debe/Haber de la última línea. El cursor queda en la cuenta de la línea nueva. Aparece en la guía de atajos (F1).
 

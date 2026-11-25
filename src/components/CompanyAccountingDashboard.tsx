@@ -3714,6 +3714,7 @@ export default function CompanyAccountingDashboard({
   // Candado anti-duplicado: un documento del RCV solo puede tener UN comprobante de centralización.
   // Revisa en memoria (doble clic) y en la base de datos (pantalla desactualizada u otra pestaña).
   const contabilizandoRcv = useRef<Set<string>>(new Set());
+  const rcvEnlazados = useRef(0);
   const reservarContabilizacionRcv = async (docId: string): Promise<boolean> => {
     if (contabilizandoRcv.current.has(docId)) return false;
     contabilizandoRcv.current.add(docId);
@@ -3722,7 +3723,17 @@ export default function CompanyAccountingDashboard({
       const d: any = fresco.exists() ? fresco.data() : null;
       if (d?.estadoContabilizado === true && d?.voucherId) { contabilizandoRcv.current.delete(docId); return false; }
       const previos = await getDocs(query(collection(companyRef, 'vouchers'), where('createdFromRcvId', '==', docId)));
-      if (previos.docs.some(x => (x.data() as any).status !== 'ANULADO')) { contabilizandoRcv.current.delete(docId); return false; }
+      const vigente = previos.docs.find(x => (x.data() as any).status !== 'ANULADO');
+      if (vigente) {
+        // Ya tiene comprobante pero el documento quedó como "Pendiente" (p. ej. una contabilización interrumpida):
+        // se enlaza al comprobante existente en vez de dejarlo pendiente para siempre
+        if (!d?.estadoContabilizado || d?.voucherId !== vigente.id) {
+          await updateDoc(doc(companyRef, 'rcvDocuments', docId), { estadoContabilizado: true, voucherId: vigente.id });
+          rcvEnlazados.current += 1;
+        }
+        contabilizandoRcv.current.delete(docId);
+        return false;
+      }
       return true;
     } catch (e) {
       contabilizandoRcv.current.delete(docId);
@@ -3747,8 +3758,9 @@ export default function CompanyAccountingDashboard({
         return;
       }
 
+      rcvEnlazados.current = 0;
       if (!(await reservarContabilizacionRcv(docId))) {
-        alert('Este documento ya tiene comprobante (o se está contabilizando). No se creó otro. Actualizando la lista.');
+        alert(rcvEnlazados.current ? 'Este documento ya tenía comprobante: quedó enlazado a él (no se creó otro).' : 'Este documento ya tiene comprobante (o se está contabilizando). No se creó otro. Actualizando la lista.');
         await fetchData();
         return;
       }
@@ -3823,6 +3835,8 @@ export default function CompanyAccountingDashboard({
     try {
       let currentMaxNum = vouchers.reduce((max, v) => Math.max(max, v.voucherNumber || 0), 0);
       let count = 0;
+      rcvEnlazados.current = 0;
+      const errores: string[] = [];
       const targetIds = [...selectedRcvIds];
 
       await withProcess(
@@ -3869,7 +3883,7 @@ export default function CompanyAccountingDashboard({
       });
 
       setSelectedRcvIds([]);
-      alert(`Se contabilizaron ${count} documentos exitosamente y se generaron sus respectivos comprobantes.`);
+      alert(`Se contabilizaron ${count} documentos exitosamente y se generaron sus respectivos comprobantes.` + (rcvEnlazados.current ? `\n\n${rcvEnlazados.current} documento(s) ya tenían comprobante y quedaron enlazados a él (no se duplicó).` : '') + (errores.length ? `\n\nNo se pudieron contabilizar ${errores.length}:\n${errores.slice(0, 8).join('\n')}` : ''));
       await fetchData();
     } catch (err: any) {
       console.error("Error contabilizando seleccionados:", err);
@@ -3898,6 +3912,8 @@ export default function CompanyAccountingDashboard({
 
       let currentMaxNum = vouchers.reduce((max, v) => Math.max(max, v.voucherNumber || 0), 0);
       let count = 0;
+      rcvEnlazados.current = 0;
+      const errores: string[] = [];
 
       await withProcess(
         `Centralizando ${pendingDocs.length} documentos pendientes del período ${selectedRcvPeriod}...`,
@@ -3914,7 +3930,16 @@ export default function CompanyAccountingDashboard({
               stage: `${docItem.tipoRegistro} - ${docItem.razonSocialEmisor || docItem.rutEmisor}`
             });
 
-            const voucherData = buildVoucherForRcvDocument(docItem, currentMaxNum);
+            let voucherData: any;
+            try {
+              voucherData = buildVoucherForRcvDocument(docItem, currentMaxNum);
+            } catch (e: any) {
+              // p. ej. falta una cuenta en Parámetros RCV: se informa y se sigue con los demás
+              errores.push(`${docItem.tipoDoc} N° ${docItem.folio}: ${e?.message || e}`);
+              currentMaxNum--; count--;
+              liberarContabilizacionRcv(docItem.id);
+              continue;
+            }
             const newVoucherRef = await addDoc(collection(companyRef, 'vouchers'), voucherData);
 
             const docRef = doc(companyRef, 'rcvDocuments', docItem.id);
@@ -3939,7 +3964,9 @@ export default function CompanyAccountingDashboard({
         }
       });
 
-      alert(`Se contabilizaron ${count} documentos pendientes del período ${selectedRcvPeriod} en Comprobantes Contables.`);
+      alert(`Se contabilizaron ${count} documentos pendientes del período ${selectedRcvPeriod} en Comprobantes Contables.` +
+        (rcvEnlazados.current ? `\n\n${rcvEnlazados.current} documento(s) ya tenían comprobante y quedaron enlazados a él (no se duplicó).` : '') +
+        (errores.length ? `\n\nNo se pudieron contabilizar ${errores.length}:\n${errores.slice(0, 8).join('\n')}` : ''));
       await fetchData();
     } catch (err: any) {
       console.error("Error contabilizando pendientes:", err);

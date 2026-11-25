@@ -123,6 +123,8 @@ export function sanitizeVoucherLines<T extends VoucherLine>(
     })
     .map(line => {
       const acc = accountMap.get(line.accountId) || accountMap.get(line.accountCode);
+      // Ninguna línea con monto puede ir a una cuenta que no exista en el plan de la empresa
+      if (!acc) faltaCuenta(`${line.accountCode || ''} ${line.accountName || line.accountId || ''}`.trim());
       return sanitizeVoucherLine(line, acc);
     });
 }
@@ -331,4 +333,10 @@ export function isCustomAnalysisRequired(account: ChartOfAccount, colName: strin
     return normalized === 'si' || normalized === 'sí' || normalized === 'true' || normalized === '1' || normalized === 'x';
   }
   return Boolean(val);
+}
+
+/** Error que se lanza cuando un asiento necesita una cuenta que no existe en el plan de la empresa. El sistema no inventa cuentas. */
+export class CuentaFaltanteError extends Error {}
+export function faltaCuenta(concepto: string): never {
+  throw new CuentaFaltanteError(`Falta la cuenta "${concepto}" en el plan de cuentas de la empresa (o en sus parámetros). Créala o asígnala y vuelve a intentar. El sistema no inventa cuentas.`);
 }

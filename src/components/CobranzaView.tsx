@@ -1,3 +1,4 @@
+import { faltaCuenta } from '../utils/voucherValidation';
 import { formatearRut } from '../utils/rutFormato';
 import { getNextVoucherNumber } from '../utils/voucherCounter';
 import { exigirCuadre } from '../utils/capaContable';
@@ -410,11 +411,7 @@ export default function CobranzaView({
         a.code.startsWith('1102') || a.code.startsWith('1104') || 
         a.code.startsWith('1.1.04') ||
         a.name.toLowerCase().includes('cliente')
-      ) || {
-        id: 'acc_cli_default',
-        code: '1.1.02.01',
-        name: 'Clientes por Cobrar'
-      };
+      ) || faltaCuenta('Clientes por Cobrar');
 
       // 1. Líneas contables de Clientes por Cobrar por cada documento
       const customerLines = selectedItemsToCollect.items.map((it, idx) => {

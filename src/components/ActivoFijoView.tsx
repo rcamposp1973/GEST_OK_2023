@@ -1,3 +1,4 @@
+import { faltaCuenta } from '../utils/voucherValidation';
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Building2, Plus, Download, FileSpreadsheet, Calculator, 
@@ -221,13 +222,13 @@ export const ActivoFijoView: React.FC<ActivoFijoViewProps> = ({
         a.id === masterParams?.depreciacionGastoAccountId ||
         a.code.replace(/\./g, '').startsWith('4102') ||
         a.name.toLowerCase().includes('depreciacion')
-      ) || { id: 'acc_4102001', code: '4102001', name: 'GASTO DEPRECIACION ACTIVO FIJO' };
+      ) || faltaCuenta('GASTO DEPRECIACION ACTIVO FIJO');
 
       const accAcumulada = accounts.find(a => 
         a.id === masterParams?.depreciacionAcumuladaAccountId ||
         a.code.replace(/\./g, '').startsWith('1202') ||
         a.name.toLowerCase().includes('depreciacion acumulada')
-      ) || { id: 'acc_1202001', code: '1202001', name: 'DEPRECIACION ACUMULADA ACTIVO FIJO' };
+      ) || faltaCuenta('DEPRECIACION ACUMULADA ACTIVO FIJO');
 
       const voucher = {
         companyId: company.id,

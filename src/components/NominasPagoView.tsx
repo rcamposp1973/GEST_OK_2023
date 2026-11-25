@@ -1,3 +1,4 @@
+import { faltaCuenta } from '../utils/voucherValidation';
 import { formatearRut } from '../utils/rutFormato';
 import { getNextVoucherNumber } from '../utils/voucherCounter';
 import { exigirCuadre } from '../utils/capaContable';
@@ -332,11 +333,7 @@ export default function NominasPagoView({
       const nextVoucherNumber = await getNextVoucherNumber(studyId, company.id, 0, vouchers.reduce((m, v) => Math.max(m, v.voucherNumber || 0), 0));
 
       // 1. Prepare Voucher Lines for Egreso/Traspaso (Individual lines per document with RUT, Name and DocumentRef)
-      const supplierAcc = accounts.find(a => a.code.startsWith('2.1.01') || a.code.startsWith('2-1-01') || a.name.toLowerCase().includes('proveedor')) || {
-        id: 'acc_prov_default',
-        code: '2.1.01.001',
-        name: 'Proveedores por Pagar'
-      };
+      const supplierAcc = accounts.find(a => a.code.startsWith('2.1.01') || a.code.startsWith('2-1-01') || a.name.toLowerCase().includes('proveedor')) || faltaCuenta('Proveedores por Pagar');
 
       const supplierLines = combinedItems.map((it, idx) => {
         const isNC = isNotaCredito(it.tipoDoc);

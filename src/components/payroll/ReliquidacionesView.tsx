@@ -1,3 +1,4 @@
+import { faltaCuenta } from '../../utils/voucherValidation';
 import { formatearRut } from '../../utils/rutFormato';
 import React, { useState, useMemo } from 'react';
 import { 
@@ -150,29 +151,13 @@ export const ReliquidacionesView: React.FC<ReliquidacionesViewProps> = ({
     setIsCentralizing(true);
     try {
       // Cuentas contables para centralizar reliquidación
-      const expenseAcc = accounts.find(a => a.name.toLowerCase().includes('bono') || a.name.toLowerCase().includes('gratific') || a.code.startsWith('6104') || a.code.startsWith('6100')) || {
-        id: 'acc_gasto_bonos',
-        code: '6104',
-        name: 'Bonos y Gratificaciones del Personal'
-      };
+      const expenseAcc = accounts.find(a => a.name.toLowerCase().includes('bono') || a.name.toLowerCase().includes('gratific') || a.code.startsWith('6104') || a.code.startsWith('6100')) || faltaCuenta('Bonos y Gratificaciones del Personal');
 
-      const previredLiabilityAcc = accounts.find(a => a.name.toLowerCase().includes('imposic') || a.name.toLowerCase().includes('prevision') || a.code.startsWith('2105')) || {
-        id: 'acc_leyes_sociales',
-        code: '2105',
-        name: 'Instituciones de Previsión por Pagar'
-      };
+      const previredLiabilityAcc = accounts.find(a => a.name.toLowerCase().includes('imposic') || a.name.toLowerCase().includes('prevision') || a.code.startsWith('2105')) || faltaCuenta('Instituciones de Previsión por Pagar');
 
-      const taxLiabilityAcc = accounts.find(a => a.name.toLowerCase().includes('impuesto unico') || a.code.startsWith('2106')) || {
-        id: 'acc_impuesto_unico',
-        code: '2106',
-        name: 'Impuesto Único por Pagar (F29)'
-      };
+      const taxLiabilityAcc = accounts.find(a => a.name.toLowerCase().includes('impuesto unico') || a.code.startsWith('2106')) || faltaCuenta('Impuesto Único por Pagar (F29)');
 
-      const salaryPayableAcc = accounts.find(a => a.name.toLowerCase().includes('sueldos por pagar') || a.name.toLowerCase().includes('remuneraciones por pagar') || a.code.startsWith('2104')) || {
-        id: 'acc_sueldos_pagar',
-        code: '2104',
-        name: 'Remuneraciones y Bonos por Pagar'
-      };
+      const salaryPayableAcc = accounts.find(a => a.name.toLowerCase().includes('sueldos por pagar') || a.name.toLowerCase().includes('remuneraciones por pagar') || a.code.startsWith('2104')) || faltaCuenta('Remuneraciones y Bonos por Pagar');
 
       const lines = [
         {

@@ -1,3 +1,4 @@
+import { faltaCuenta } from '../utils/voucherValidation';
 import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useMemo } from 'react';
 import {
@@ -485,14 +486,14 @@ export const StockKardexView: React.FC<StockKardexViewProps> = ({
         a.code.replace(/\./g, '').startsWith('5101') ||
         a.name.toLowerCase().includes('costo de venta') ||
         a.name.toLowerCase().includes('costo de mercaderias')
-      ) || { id: 'acc_5101001', code: '5101001', name: 'COSTO DE VENTAS' };
+      ) || faltaCuenta('COSTO DE VENTAS');
 
       const accExistencias = accounts.find(a => 
         a.id === masterParams?.inventarioAccountId ||
         a.code.replace(/\./g, '').startsWith('1106') ||
         a.name.toLowerCase().includes('mercaderia') ||
         a.name.toLowerCase().includes('existencia')
-      ) || { id: 'acc_1106001', code: '1106001', name: 'EXISTENCIAS Y MERCADERIAS EN BODEGA' };
+      ) || faltaCuenta('EXISTENCIAS Y MERCADERIAS EN BODEGA');
 
       const voucher = {
         companyId,

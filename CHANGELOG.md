@@ -9,6 +9,13 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.34.0 — 2026-11-25
+- Regla general: el sistema NO inventa cuentas. Ningún comprobante puede llevar una cuenta que no exista en el plan de la empresa; si falta, se detiene y dice cuál crear o asignar.
+- F29 (centralización): ya no crea cuentas 1-1-07-01, 1-1-07-02, 1-1-07-03, 2-1-03-03, etc. Usa la cuenta de Parámetros F29, luego la de Parámetros RCV (IVA, retención), luego una cuenta de detalle del plan con nombre y naturaleza correctos (sin importar tildes, ej. "IVA CREDITO FICAL"). Si no hay, avisa.
+- F29: las retenciones (honorarios e impuesto único) ahora se traspasan a "Impuestos por pagar" (Debe retención / Haber impuestos por pagar). Antes quedaban solo al Haber y el asiento se "cuadraba" contra PPM. Ya no se cuadra a la fuerza: solo se ajusta redondeo hasta $10.
+- Mismo resguardo en Activo Fijo (depreciación), Rendición de Gastos, Kardex (costo de ventas), Cobranza, Nóminas de Pago y Reliquidaciones, y en la validación común de líneas de comprobantes.
+- Balance de 8 columnas: aviso rojo con los comprobantes que tienen cuentas que no existen en el plan, para eliminarlos o corregirlos.
+
 ## 1.33.1 — 2026-11-25
 - Boletas de honorarios traídas desde el SII (API propia y SimpleAPI) quedaban como tipo "Honorario" (sin s) y con los montos invertidos, por lo que no aparecían en la pestaña Honorarios. Corregido en la descarga, y las ya guardadas se corrigen solas al abrir el RCV (neto = bruto, IVA = retención, total = líquido).
 - Maestro de Auxiliares: nuevo rol "Prestador de Honorarios" (filtro, contador y color propios). La contabilización de boletas usa su cuenta acreedora (honorarios por pagar) y su contrapartida de gasto; si no tiene, las de Parámetros RCV.

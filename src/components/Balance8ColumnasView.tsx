@@ -560,8 +560,34 @@ export default function Balance8ColumnasView({
     }
   };
 
+  // Comprobantes con líneas en cuentas que NO existen en el plan (creadas por versiones antiguas del sistema)
+  const cuentasInexistentes = useMemo(() => {
+    const ids = new Set(accounts.map(a => a.id));
+    const codigos = new Set(accounts.map(a => a.code));
+    const mapa = new Map<string, Set<number>>();
+    for (const v of vouchers) {
+      if ((v as any).status === 'Anulado') continue;
+      for (const l of (v.lines || []) as any[]) {
+        if (!(Number(l.debit) || Number(l.credit))) continue;
+        if (ids.has(l.accountId) || codigos.has(l.accountCode)) continue;
+        const k = `${l.accountCode || ''} ${l.accountName || ''}`.trim();
+        if (!mapa.has(k)) mapa.set(k, new Set());
+        mapa.get(k)!.add(v.voucherNumber);
+      }
+    }
+    return [...mapa.entries()].map(([k, n]) => ({ cuenta: k, comprobantes: [...n].sort((a, b) => a - b) }));
+  }, [vouchers, accounts]);
+
   return (
     <div className="space-y-4">
+      {cuentasInexistentes.length > 0 && (
+        <div className="p-3 rounded-xl border border-rose-300 bg-rose-50 text-xs text-rose-900">
+          <b>Hay comprobantes con cuentas que no existen en el plan de cuentas de la empresa.</b> Elimínalos o corrígelos y vuelve a generarlos:
+          <ul className="list-disc list-inside mt-1">
+            {cuentasInexistentes.slice(0, 15).map(c => <li key={c.cuenta}><b>{c.cuenta}</b> en comprobante(s) N° {c.comprobantes.slice(0, 12).join(', ')}{c.comprobantes.length > 12 ? '…' : ''}</li>)}
+          </ul>
+        </div>
+      )}
       {/* Header */}
       <div className="bg-white px-4 py-2.5 rounded-xl border border-slate-200 shadow-xs flex flex-wrap justify-between items-center gap-2">
         <div className="flex items-center gap-2">

@@ -1,3 +1,4 @@
+import { getNaturaleza } from '../utils/ifrsClassification';
 import { formatearRut } from '../utils/rutFormato';
 import { getNextVoucherNumber } from '../utils/voucherCounter';
 import { exigirCuadre } from '../utils/capaContable';
@@ -733,28 +734,37 @@ export default function Formulario29View({
 
     setIsSubmitting(true);
     try {
-      const nextVoucherNumber = await getNextVoucherNumber(studyId, company.id, 0, vouchers.reduce((m, v) => Math.max(m, v.voucherNumber || 0), 0));
 
       // Helper para buscar cuenta asignada en parámetros o sugerida del plan de cuentas
-      const getAccountByIdOrPrefix = (accId: string | undefined, defaultPrefix: string, fallbackName: string) => {
-        if (accId) {
-          const acc = accounts.find(a => a.id === accId);
-          if (acc) return acc;
+      // Las cuentas salen SOLO del plan de cuentas de la empresa: 1. la configurada en Parámetros F29;
+      // 2. la configurada en Parámetros RCV (IVA y retención); 3. una cuenta de detalle del plan cuyo nombre calce y
+      // sea de la naturaleza correcta. Si no hay, NO se inventa: se detiene y se dice qué configurar.
+      const sinTilde = (t: string) => (t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      const esDetalle = (a: ChartOfAccount) => (a as any).isGroup !== true && (a as any).esGrupo !== true && !(a as any).hasChildren;
+      const rcvP: any = (company as any).rcvParams || {};
+      const faltantes: string[] = [];
+      const cuenta = (concepto: string, configurada: string | undefined, otras: (string | undefined)[], naturaleza: string | null, palabras: string[][], evitar: string[] = [], respaldo?: ChartOfAccount | null): any => {
+        for (const id of [configurada, ...otras]) {
+          const a = id ? accounts.find(x => x.id === id) : undefined;
+          if (a) return a;
         }
-        const found = accounts.find(a => a.code.startsWith(defaultPrefix) || a.name.toLowerCase().includes(fallbackName.toLowerCase()));
-        return found || { id: `acc_${defaultPrefix}`, code: defaultPrefix, name: fallbackName };
+        const encontrada = accounts.filter(a => esDetalle(a) && (!naturaleza || getNaturaleza(a as any) === naturaleza))
+          .find(a => { const n = sinTilde(`${a.name}`); return palabras.some(g => g.every(k => n.includes(k))) && !evitar.some(k => n.includes(k)); });
+        if (encontrada) return encontrada;
+        if (respaldo) return respaldo;
+        return { id: `FALTA::${concepto}`, code: '', name: concepto };
       };
 
-      const accIvaDebito = getAccountByIdOrPrefix(f29AccountParams.ivaDebitoAccountId, '2-1-03-01', 'IVA Débito Fiscal');
-      const accIvaCredito = getAccountByIdOrPrefix(f29AccountParams.ivaCreditoAccountId, '1-1-07-01', 'IVA Crédito Fiscal');
-      const accIvaPagar = getAccountByIdOrPrefix(f29AccountParams.ivaPagarAccountId, '2-1-03-02', 'IVA por Pagar');
-      const accRemanente = getAccountByIdOrPrefix(f29AccountParams.remanenteAccountId, '1-1-07-02', 'Remanente Crédito Fiscal');
-      const accCorreccionMonetaria = getAccountByIdOrPrefix(f29AccountParams.correccionMonetariaAccountId, '4-3-01-01', 'Corrección Monetaria / Reajuste Remanente');
-      const accIvaPostergado = getAccountByIdOrPrefix(f29AccountParams.ivaPostergadoAccountId, '2-1-03-05', 'IVA Postergado por Pagar');
-      const accPPMActivo = getAccountByIdOrPrefix(f29AccountParams.ppmAccountId, '1-1-07-03', 'Pagos Provisionales Mensuales (PPM)');
-      const accRetencionHonorarios = getAccountByIdOrPrefix(f29AccountParams.retencionHonorariosAccountId, '2-1-03-03', 'Retención Honorarios 2da Cat');
-      const accImpuestoUnico = getAccountByIdOrPrefix(f29AccountParams.impuestoUnicoAccountId, '2-1-03-04', 'Impuesto Único por Pagar');
-      const accImpuestosPorPagarTotal = getAccountByIdOrPrefix(f29AccountParams.impuestosPorPagarAccountId, '2-1-03-99', 'Impuestos Mensuales F29 por Pagar');
+      const accIvaDebito = cuenta('IVA Débito Fiscal', f29AccountParams.ivaDebitoAccountId, [rcvP.ivaDebitoAccountId], 'PASIVO', [['iva', 'debito']]);
+      const accIvaCredito = cuenta('IVA Crédito Fiscal', f29AccountParams.ivaCreditoAccountId, [rcvP.ivaCreditoAccountId], 'ACTIVO', [['iva', 'credito'], ['iva', 'cred']], ['remanente']);
+      const accImpuestosPorPagarTotal = cuenta('Impuestos por pagar (F29)', f29AccountParams.impuestosPorPagarAccountId, [], 'PASIVO', [['impuestos', 'pagar'], ['imptos', 'pagar'], ['impuesto', 'pagar']], ['unico', 'diferido']);
+      const accIvaPagar = cuenta('IVA por pagar', f29AccountParams.ivaPagarAccountId, [], 'PASIVO', [['iva', 'pagar']], [], accImpuestosPorPagarTotal.id.startsWith('FALTA::') ? null : accImpuestosPorPagarTotal);
+      const accRemanente = cuenta('Remanente de crédito fiscal', f29AccountParams.remanenteAccountId, [], 'ACTIVO', [['remanente']], [], accIvaCredito.id.startsWith('FALTA::') ? null : accIvaCredito);
+      const accCorreccionMonetaria = cuenta('Corrección monetaria', f29AccountParams.correccionMonetariaAccountId, [], null, [['correccion', 'monetaria'], ['reajuste']]);
+      const accIvaPostergado = cuenta('IVA postergado por pagar', f29AccountParams.ivaPostergadoAccountId, [], 'PASIVO', [['iva', 'postergado']]);
+      const accPPMActivo = cuenta('PPM (pagos provisionales mensuales)', f29AccountParams.ppmAccountId, [], 'ACTIVO', [['ppm'], ['pagos', 'provisionales'], ['pagos', 'prov']]);
+      const accRetencionHonorarios = cuenta('Retención honorarios 2ª categoría', f29AccountParams.retencionHonorariosAccountId, [rcvP.retencionBheAccountId], 'PASIVO', [['retencion', 'honorario'], ['retencion', '2']]);
+      const accImpuestoUnico = cuenta('Impuesto único trabajadores', f29AccountParams.impuestoUnicoAccountId, [], 'PASIVO', [['impuesto', 'unico'], ['impto', 'unico']], [], accImpuestosPorPagarTotal.id.startsWith('FALTA::') ? null : accImpuestosPorPagarTotal);
 
       const lines: any[] = [];
 
@@ -874,33 +884,15 @@ export default function Formulario29View({
         });
       }
 
-      // 6. Retenciones de Honorarios (Al HABER como pasivo exigible)
-      if (retencionesData.retencionHonorarios > 0) {
-        lines.push({
-          id: 'line_ret_hon',
-          accountId: accRetencionHonorarios.id,
-          accountCode: accRetencionHonorarios.code,
-          accountName: accRetencionHonorarios.name,
-          debit: 0,
-          credit: retencionesData.retencionHonorarios,
-          documentRef: `F29 ${selectedPeriod}`,
-          gloss: `Retención Boletas de Honorarios (${taxSettings.honorariosTaxRate}%) F29`
-        });
-      }
-
-      // 7. Retención Impuesto Único de Segunda Categoría
-      if (retencionesData.impuestoUnicoTrabajadores > 0) {
-        lines.push({
-          id: 'line_imp_unico',
-          accountId: accImpuestoUnico.id,
-          accountCode: accImpuestoUnico.code,
-          accountName: accImpuestoUnico.name,
-          debit: 0,
-          credit: retencionesData.impuestoUnicoTrabajadores,
-          documentRef: `F29 Cód 48`,
-          gloss: `Impuesto Único Sueldos Trabajadores F29 ${selectedPeriod}`
-        });
-      }
+      // 6 y 7. Retenciones (honorarios e impuesto único): ya están en el pasivo desde la contabilización de las boletas y
+      // de las remuneraciones. En el F29 se TRASPASAN a "Impuestos por pagar": Debe la retención, Haber impuestos por pagar.
+      const traspasar = (id: string, acc: any, monto: number, glosa: string, ref: string) => {
+        if (!(monto > 0) || acc.id === accImpuestosPorPagarTotal.id) return;
+        lines.push({ id: `${id}_deb`, accountId: acc.id, accountCode: acc.code, accountName: acc.name, debit: monto, credit: 0, documentRef: ref, gloss: glosa });
+        lines.push({ id: `${id}_cred`, accountId: accImpuestosPorPagarTotal.id, accountCode: accImpuestosPorPagarTotal.code, accountName: accImpuestosPorPagarTotal.name, debit: 0, credit: monto, documentRef: ref, gloss: `${glosa} a pagar en F29` });
+      };
+      traspasar('line_ret_hon', accRetencionHonorarios, retencionesData.retencionHonorarios, `Retención boletas de honorarios (${taxSettings.honorariosTaxRate}%)`, `F29 ${selectedPeriod}`);
+      traspasar('line_imp_unico', accImpuestoUnico, retencionesData.impuestoUnicoTrabajadores, 'Impuesto único trabajadores', 'F29 Cód 48');
 
       // 8. Códigos Adicionales por Giro
       customCodes.filter(c => c.active && (c.amount || 0) > 0).forEach((c, idx) => {
@@ -920,8 +912,12 @@ export default function Formulario29View({
       const totalDebit = lines.reduce((s, l) => s + (l.debit || 0), 0);
       const totalCredit = lines.reduce((s, l) => s + (l.credit || 0), 0);
 
-      // Check balance
+      // Check balance: solo se ajustan diferencias de redondeo; una diferencia mayor es un error y no se "cuadra" a la fuerza
       const diff = Math.abs(totalDebit - totalCredit);
+      if (diff > 10) {
+        alert(`El asiento del F29 no cuadra por $${Math.round(diff).toLocaleString('es-CL')} (Debe $${Math.round(totalDebit).toLocaleString('es-CL')} / Haber $${Math.round(totalCredit).toLocaleString('es-CL')}). No se generó. Revisa los montos del F29.`);
+        return;
+      }
       if (diff > 0.01) {
         // Balance adjustment if rounding difference exists
         if (totalDebit > totalCredit) {
@@ -948,6 +944,15 @@ export default function Formulario29View({
           });
         }
       }
+
+      // Ninguna línea puede quedar con una cuenta que no exista en el plan
+      const sinCuenta = [...new Set(lines.filter(l => String(l.accountId || '').startsWith('FALTA::')).map(l => String(l.accountId).slice(7)))];
+      if (sinCuenta.length) {
+        alert(`No se generó el asiento: faltan estas cuentas en el plan de cuentas de la empresa (o en Parámetros F29):\n\n• ${sinCuenta.join('\n• ')}\n\nCréalas en el Plan de Cuentas o asígnalas en la pestaña de parámetros del F29 y vuelve a contabilizar. El sistema no inventa cuentas.`);
+        return;
+      }
+      void faltantes;
+      const nextVoucherNumber = await getNextVoucherNumber(studyId, company.id, 0, vouchers.reduce((m, v) => Math.max(m, v.voucherNumber || 0), 0));
 
       const sanitizedLines = sanitizeVoucherLines(lines, accounts);
       const finalDebit = sanitizedLines.reduce((s, l) => s + (l.debit || 0), 0);

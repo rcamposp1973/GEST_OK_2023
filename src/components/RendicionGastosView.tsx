@@ -1,3 +1,4 @@
+import { faltaCuenta } from '../utils/voucherValidation';
 import React, { useState, useMemo, useEffect } from 'react';
 import {
   FileText,
@@ -348,14 +349,14 @@ export const RendicionGastosView: React.FC<RendicionGastosViewProps> = ({
           a.code.replace(/\./g, '').startsWith('1105') ||
           a.name.toLowerCase().includes('fondo por rendir') ||
           a.name.toLowerCase().includes('anticipo')
-      ) || { id: 'acc_1105001', code: '1105001', name: 'ANTICIPOS Y FONDOS POR RENDIR' };
+      ) || faltaCuenta('ANTICIPOS Y FONDOS POR RENDIR');
 
       const accReembolsoPorPagar = accounts.find(
         a =>
           a.code.replace(/\./g, '').startsWith('2103') ||
           a.name.toLowerCase().includes('sueldos por pagar') ||
           a.name.toLowerCase().includes('personal')
-      ) || { id: 'acc_2103001', code: '2103001', name: 'REMUNERACIONES Y COLABORADORES POR PAGAR' };
+      ) || faltaCuenta('REMUNERACIONES Y COLABORADORES POR PAGAR');
 
       const lines: VoucherLine[] = [];
       let lineIdx = 1;
@@ -363,11 +364,7 @@ export const RendicionGastosView: React.FC<RendicionGastosViewProps> = ({
       // 1. DÉBITOS: Agrupar gastos por cuenta contable
       const groupedExpenses: Record<string, { accountId: string; code: string; name: string; amount: number }> = {};
       rep.items.forEach(item => {
-        const acc = accounts.find(a => a.id === item.expenseAccountId) || {
-          id: 'acc_4201001',
-          code: '4201001',
-          name: 'GASTOS GENERALES Y MENORES'
-        };
+        const acc = accounts.find(a => a.id === item.expenseAccountId) || faltaCuenta('GASTOS GENERALES Y MENORES');
         const key = acc.id;
         if (!groupedExpenses[key]) {
           groupedExpenses[key] = { accountId: acc.id, code: acc.code, name: acc.name, amount: 0 };

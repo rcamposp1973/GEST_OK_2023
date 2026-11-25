@@ -28,7 +28,7 @@ export interface CockpitModuleItem {
   colorScheme: 'indigo' | 'emerald' | 'amber' | 'rose' | 'cyan' | 'purple' | 'blue' | 'slate';
   shortcut?: string;
   description: string;
-  requiere?: 'compras' | 'ventas' | 'agente'; // Módulo opcional que la empresa debe tener habilitado para ver este ítem
+  requiere?: 'compras' | 'ventas' | 'agente' | 'gestRta'; // Módulo opcional que la empresa debe tener habilitado para ver este ítem
 }
 
 export interface WorkspaceTab {
@@ -441,6 +441,16 @@ export const COCKPIT_MODULE_CATALOG: CockpitModuleItem[] = [
     icon: ShieldCheck,
     colorScheme: 'rose',
     description: 'Hoja de trabajo de renta líquida imponible y capital propio tributario por régimen'
+  },
+  {
+    id: 'gestRta',
+    label: 'Gest_Rta · Renta anual',
+    shortLabel: 'Gest_Rta',
+    category: 'IMPUESTOS',
+    icon: ShieldCheck,
+    colorScheme: 'rose',
+    description: 'Base imponible, capital propio, asignación a propietarios y propuesta F22 (módulo adicional)',
+    requiere: 'gestRta'
   },
   {
     id: 'controlFolios',

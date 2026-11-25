@@ -1,4 +1,5 @@
 import { separarCredenciales, guardarSecretosSii } from '../utils/credencialesSii';
+import { licenciaVigente, quedaCupo, type LicenciaGestRta } from '../utils/gestRta/licencia';
 import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useEffect } from 'react';
 import { provisionAuthUser } from '../utils/adminApi';
@@ -67,6 +68,9 @@ export default function StudyAdminDashboard({
   const comprasContratado = studyData?.modules?.compras === true;
   const ventasContratado = studyData?.modules?.ventas === true;
   const agenteContratado = studyData?.modules?.agente === true;
+  const gestRtaLic = ((studyData as any)?.gestRtaLicencia as LicenciaGestRta | undefined) || undefined;
+  const gestRtaContratado = studyData?.modules?.gestRta === true && licenciaVigente(gestRtaLic);
+  const gestRtaTodoEstudio = gestRtaContratado && gestRtaLic?.modalidad === 'ESTUDIO';
   const puedeAsignarAgenteAhora = puedeAsignarAgente(currentUserRole as string, agenteContratado);
 
   // Test Study Purge states
@@ -172,6 +176,7 @@ export default function StudyAdminDashboard({
     hasCertificadoDigital: false,
     comprasHabilitado: false,
     ventasHabilitado: false,
+    gestRtaHabilitado: false,
   };
   const [companyFormData, setCompanyFormData] = useState(emptyCompanyFormData);
 
@@ -227,6 +232,7 @@ export default function StudyAdminDashboard({
         hasCertificadoDigital: !!(dte.hasCertificadoDigital || dte.certificadoB64),
         comprasHabilitado: !!editingCompany.comprasHabilitado,
         ventasHabilitado: !!editingCompany.ventasHabilitado,
+        gestRtaHabilitado: !!(editingCompany as any).gestRtaHabilitado,
       });
     } else {
       setCompanyFormData(emptyCompanyFormData);
@@ -581,6 +587,7 @@ export default function StudyAdminDashboard({
         dteModuleEnabled: true,
         comprasHabilitado: !!companyFormData.comprasHabilitado && comprasContratado,
         ventasHabilitado: !!companyFormData.ventasHabilitado && ventasContratado,
+        gestRtaHabilitado: !!companyFormData.gestRtaHabilitado && gestRtaContratado,
         updatedAt: new Date()
       };
 
@@ -1407,6 +1414,30 @@ export default function StudyAdminDashboard({
                           />
                         </div>
                       </div>
+
+                      {(() => {
+                        const activasOtras = companies.filter(c => (c as any).gestRtaHabilitado && c.id !== editingCompany?.id).length;
+                        const sinCupo = !quedaCupo(gestRtaLic, activasOtras);
+                        const marcado = gestRtaTodoEstudio || (!!companyFormData.gestRtaHabilitado && gestRtaContratado);
+                        return (
+                          <label className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={marcado}
+                              disabled={!gestRtaContratado || gestRtaTodoEstudio || (!companyFormData.gestRtaHabilitado && sinCupo)}
+                              onChange={(e) => setCompanyFormData(prev => ({ ...prev, gestRtaHabilitado: e.target.checked }))}
+                              className="mt-1 h-4 w-4 accent-indigo-600"
+                            />
+                            <span>
+                              <span className="block text-sm font-semibold text-slate-800">Gest_Rta · Renta anual (adicional)</span>
+                              {!gestRtaContratado && <span className="block text-xs font-semibold text-amber-700">No está contratado (o la licencia no está vigente). Se contrata con el administrador del sistema.</span>}
+                              {gestRtaTodoEstudio && <span className="block text-xs text-emerald-700">Contratado para todo el estudio: activo en todas las empresas.</span>}
+                              {gestRtaContratado && gestRtaLic?.modalidad === 'CUPO_EMPRESAS' && <span className="block text-xs text-slate-600">Cupo: {activasOtras + (companyFormData.gestRtaHabilitado ? 1 : 0)} de {gestRtaLic?.cupoEmpresas ?? 0} empresas.{sinCupo && !companyFormData.gestRtaHabilitado ? ' Sin cupo disponible.' : ''}</span>}
+                              <span className="block text-xs text-slate-500">Base imponible, capital propio, asignación a propietarios y propuesta F22.</span>
+                            </span>
+                          </label>
+                        );
+                      })()}
 
                       <label className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer">
                         <input

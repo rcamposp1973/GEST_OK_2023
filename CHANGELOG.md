@@ -9,6 +9,14 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.38.0 — 2026-11-27
+- **Gest_Rta (módulo adicional de Renta anual), fase 1: Pro Pyme Transparente (14 D N° 8).**
+  - Propuesta del Recuadro N° 22 del F22 (códigos 1600 a 1630): ingresos percibidos y egresos pagados desde el RCV, cuentas corrientes de clientes/proveedores/honorarios al 31-12, liquidaciones de sueldo y pérdida de arrastre. Cada línea muestra su fuente y el detalle por documento; el contador ajusta cualquier línea con su motivo.
+  - Supermercados fuera por defecto (como la propuesta del SII), con opción de incluirlos.
+  - CPT simplificado, asignación a propietarios con PPM (base DJ 1947), saldos de apertura, cierre/reapertura con historial y exportación a Excel.
+- Licencia Gest_Rta en el Super Admin: contratado sí/no, modalidad (todo el estudio, por empresa o cupo de empresas), precio negociado (UF/CLP), periodicidad, vigencia y notas. El administrador del estudio lo activa por empresa respetando el cupo.
+- Reglas Firestore: los módulos contratados y la licencia sólo los cambia el super usuario (requiere publicar firestore.rules).
+
 ## 1.37.6 — 2026-11-26
 - F29 Gest_OK: misma estructura del F29 del SII (líneas 1 a 144, con sus códigos y signos), con diseño propio en tonos naranjos, pasteles y turquesa. Encabezado con período, RUT, razón social y folio.
 - Tasa PPM modificable directamente en el formulario (acepta coma decimal, permite 0). Al cambiar de régimen se propone su tasa, salvo que el contador haya fijado otra.

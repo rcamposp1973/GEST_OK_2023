@@ -27,7 +27,9 @@ service cloud.firestore {
       allow read: if isSuper() || inStudy(studyId);
       allow create, delete: if isSuper();
       // El administrador del estudio edita el estudio; cualquier usuario del estudio solo puede marcar su sesión activa
-      allow update: if isSuper() || (inStudy(studyId) && (isStudyAdmin()
+      // Los módulos contratados y la licencia de Gest_Rta sólo los cambia el super usuario
+      allow update: if isSuper() || (inStudy(studyId) && (
+        (isStudyAdmin() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['modules', 'gestRtaLicencia']))
         || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['activeSessionId'])));
 
       // Usuarios y asignaciones: solo el administrador del estudio (o el super usuario) los modifica

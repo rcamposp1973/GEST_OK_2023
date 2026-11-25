@@ -56,6 +56,8 @@ import { getNextVoucherNumber } from '../utils/voucherCounter';
 import { leerDtesXml } from '../utils/dteXmlImport';
 import AgenteReclasificadorView from './AgenteReclasificadorView';
 import { getNaturaleza } from '../utils/ifrsClassification';
+import { GestRtaView } from './GestRtaView';
+import { gestRtaActivo, type LicenciaGestRta } from '../utils/gestRta/licencia';
 import { RentaAnualView } from './RentaAnualView';
 import { validarNaturalezaParametros } from '../utils/validarParametros';
 import { puedeUsarAgente, AGENTE_FASE_PILOTO } from '../utils/agenteAcceso';
@@ -128,6 +130,7 @@ const QUICK_ACCESS_ITEMS = [
   { id: 'f29Codes', label: 'Parámetros y Códigos F.29', group: 'IMPUESTOS', icon: Sliders, tab: 'f29Codes' },
   { id: 'ddjj', label: 'Declaraciones Juradas SII', group: 'IMPUESTOS', icon: ShieldCheck, tab: 'ddjj' },
   { id: 'rentaAnual', label: 'Renta anual: RLI y capital propio', group: 'IMPUESTOS', icon: ShieldCheck, tab: 'rentaAnual' },
+  { id: 'gestRta', label: 'Gest_Rta · Renta anual (base imponible, CPT, F22)', group: 'IMPUESTOS', icon: ShieldCheck, tab: 'gestRta' },
   { id: 'controlFolios', label: 'Timbraje y Folios SII', group: 'IMPUESTOS', icon: Printer, tab: 'controlFolios' },
   { id: 'rendicionGastos', label: 'Rendición de Gastos & Viáticos', group: 'OPERACIONES', icon: Receipt, tab: 'rendicionGastos' },
   { id: 'operativaComercial', label: 'Gestión Comercial', group: 'OPERACIONES', icon: ShoppingCart, tab: 'operativaComercial' },
@@ -213,7 +216,9 @@ export default function CompanyAccountingDashboard({
   type RibbonGroup = 'FINANZAS' | 'OPERACIONES' | 'TESORERIA' | 'PERSONAL' | 'IMPORTACIONES' | 'IMPUESTOS' | 'INDICADORES' | 'CONFIGURACIONES' | 'FAVORITOS';
   const [activeRibbonGroup, setActiveRibbonGroup] = useState<RibbonGroup>('FINANZAS');
   const [studyModulesCompany, setStudyModulesCompany] = useState<Record<string, boolean | undefined>>({});
+  const [studyGestRtaLicencia, setStudyGestRtaLicencia] = useState<LicenciaGestRta | null>(null);
   const comprasActivo = !!company.comprasHabilitado && studyModulesCompany.compras === true;
+  const gestRtaActivoEmpresa = gestRtaActivo({ modules: studyModulesCompany, gestRtaLicencia: studyGestRtaLicencia }, company as any);
   const ventasActivo = !!company.ventasHabilitado && studyModulesCompany.ventas === true;
   const [usuarioAgenteHabilitado, setUsuarioAgenteHabilitado] = useState(false);
   const agenteActivo = puedeUsarAgente({ email: currentUserEmail, role: currentUserRole as string, estudioContrataAgente: studyModulesCompany.agente === true, usuarioHabilitado: usuarioAgenteHabilitado });
@@ -227,7 +232,7 @@ export default function CompanyAccountingDashboard({
       } catch { setUsuarioAgenteHabilitado(false); }
     })();
   }, [studyId, currentUserEmail]);
-  const [activeTab, setActiveTab] = useState<'rentaAnual' | 'agente' | 'ventas' | 'compras' | 'accounts' | 'auxiliaries' | 'periods' | 'rcv' | 'exchange' | 'rcvParams' | 'centralizaciones' | 'f29Codes' | 'vouchers' | 'libroDiario' | 'libroMayor' | 'balance8' | 'balanceIFRS' | 'analisisAuxiliares' | 'analisisCuentas' | 'planillaConsultas' | 'analyticsHud' | 'reportesAnaliticos' | 'estadoResultados' | 'indicadoresFinancieros' | 'auditorEstadosFinancieros' | 'smartNotebooks' | 'flujoDeCaja' | 'agingDeudas' | 'nominasPago' | 'cobranza' | 'conciliacionBancaria' | 'libroBancoColaborativo' | 'cargaMasiva' | 'formulario29' | 'plantillasCarga' | 'importacionInteligente' | 'cierreAnio' | 'informeMensual' | 'rendicionGastos' | 'emisionDte' | 'tablasAnalisis' | 'controlFolios' | 'productsServices' | 'operativaComercial' | 'stockKardex' | 'warehouses' | 'employees' | 'liquidaciones' | 'activoFijo' | 'ddjj' | 'agenticStudy2040' | 'agenticPyme2040' | 'home' | 'buscadorComprobantes'>('home');
+  const [activeTab, setActiveTab] = useState<'gestRta' | 'rentaAnual' | 'agente' | 'ventas' | 'compras' | 'accounts' | 'auxiliaries' | 'periods' | 'rcv' | 'exchange' | 'rcvParams' | 'centralizaciones' | 'f29Codes' | 'vouchers' | 'libroDiario' | 'libroMayor' | 'balance8' | 'balanceIFRS' | 'analisisAuxiliares' | 'analisisCuentas' | 'planillaConsultas' | 'analyticsHud' | 'reportesAnaliticos' | 'estadoResultados' | 'indicadoresFinancieros' | 'auditorEstadosFinancieros' | 'smartNotebooks' | 'flujoDeCaja' | 'agingDeudas' | 'nominasPago' | 'cobranza' | 'conciliacionBancaria' | 'libroBancoColaborativo' | 'cargaMasiva' | 'formulario29' | 'plantillasCarga' | 'importacionInteligente' | 'cierreAnio' | 'informeMensual' | 'rendicionGastos' | 'emisionDte' | 'tablasAnalisis' | 'controlFolios' | 'productsServices' | 'operativaComercial' | 'stockKardex' | 'warehouses' | 'employees' | 'liquidaciones' | 'activoFijo' | 'ddjj' | 'agenticStudy2040' | 'agenticPyme2040' | 'home' | 'buscadorComprobantes'>('home');
   const [auxSubTab, setAuxSubTab] = useState<'deudores' | 'acreedores'>('deudores');
   const [employeeSubTab, setEmployeeSubTab] = useState<'employees' | 'contracts' | 'attendance' | 'advances' | 'severance' | 'certificates'>('employees');
   const [payrollTab, setPayrollTab] = useState<'NOMINA' | 'LIQUIDACION_INDIVIDUAL' | 'LRD_DT' | 'PREVIRED' | 'PARAMETROS' | 'CONCEPTOS' | 'RELIQUIDACIONES'>('NOMINA');
@@ -1506,7 +1511,8 @@ export default function CompanyAccountingDashboard({
       try {
         const stSnap = await getDoc(doc(db, 'studies', studyId));
         setStudyModulesCompany(((stSnap.data() as any)?.modules) || {});
-      } catch { setStudyModulesCompany({}); }
+        setStudyGestRtaLicencia(((stSnap.data() as any)?.gestRtaLicencia) || null);
+      } catch { setStudyModulesCompany({}); setStudyGestRtaLicencia(null); }
       // Ya no se crean productos de ejemplo: el catálogo parte vacío y solo contiene lo que el usuario cree.
       setProducts(prodSnap.docs.map(d => ({ ...d.data(), id: d.id } as ProductService)));
 
@@ -7695,6 +7701,7 @@ export default function CompanyAccountingDashboard({
             comprasHabilitado={!!comprasActivo}
             ventasHabilitado={!!ventasActivo}
             agenteHabilitado={!!agenteActivo}
+            gestRtaHabilitado={!!gestRtaActivoEmpresa}
             stats={[
               { label: 'Comprobantes del período', value: n(delPeriodo.length), hint: `${n(vouchers.length)} en total` },
               { label: 'Movimiento del período', value: '$' + n(Math.round(delPeriodo.reduce((s, v) => s + (v.totalDebit || 0), 0))), hint: 'suma del debe' },
@@ -10049,6 +10056,14 @@ export default function CompanyAccountingDashboard({
         <RentaAnualView studyId={studyId} company={company} accounts={accounts} vouchers={vouchers} soloLectura={isReadOnly} />
       )}</PestanaViva>}
 
+      {pestanaViva('gestRta') && <PestanaViva visible={activeTab === 'gestRta'}>{(
+        gestRtaActivoEmpresa ? (
+          <GestRtaView studyId={studyId} company={company} accounts={accounts} vouchers={vouchers} rcvDocuments={rcvDocuments} payrollSlips={payrollSlips} rcvParams={rcvParams} soloLectura={isReadOnly} />
+        ) : (
+          <div className="p-8 max-w-xl text-sm text-slate-600">Gest_Rta es un módulo adicional. Este estudio o esta empresa no lo tiene habilitado; consulta con el administrador.</div>
+        )
+      )}</PestanaViva>}
+
       {pestanaViva('ddjj') && <PestanaViva visible={activeTab === 'ddjj'}>{(
         <DeclaracionesJuradasView
           studyId={studyId}
@@ -10281,7 +10296,7 @@ export default function CompanyAccountingDashboard({
               </p>
 
               <div className="space-y-1.5 pt-1">
-                {QUICK_ACCESS_ITEMS.filter(it => (it.id !== 'compras' || comprasActivo) && (it.id !== 'ventas' || ventasActivo) && (it.id !== 'agente' || agenteActivo)).map((item) => {
+                {QUICK_ACCESS_ITEMS.filter(it => (it.id !== 'gestRta' || gestRtaActivoEmpresa) && (it.id !== 'compras' || comprasActivo) && (it.id !== 'ventas' || ventasActivo) && (it.id !== 'agente' || agenteActivo)).map((item) => {
                   const IconComp = item.icon;
                   const isPinned = pinnedQuickAccessIds.includes(item.id);
                   return (

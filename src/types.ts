@@ -32,6 +32,7 @@ export interface StudyModulePermissions {
   copilotoIA?: boolean; // Cuadernos inteligentes y Copiloto IA
   compras?: boolean; // Módulo adicional: Órdenes de Compra, recepción y Facturas por Recibir (se contrata aparte)
   ventas?: boolean; // Módulo adicional: Órdenes de Venta, entrega y Facturas por Emitir (se contrata aparte)
+  gestRta?: boolean; // Módulo adicional Gest_Rta (renta anual): se contrata aparte, con licencia negociada
   agente?: boolean; // Agente de IA (piloto): lo asigna el Super Admin; el administrador del estudio lo asigna a sus usuarios
   [key: string]: boolean | undefined;
 }
@@ -210,6 +211,7 @@ export interface DTEDocument {
 export interface Company {
   id: string;
   comprasHabilitado?: boolean; // Módulo opcional de Compras (O/C, recepción, factura por recibir)
+  gestRtaHabilitado?: boolean; // Módulo adicional Gest_Rta activo en esta empresa (según la licencia del estudio)
   purchasesConfig?: PurchasesConfig;
   ventasHabilitado?: boolean; // Módulo opcional de Ventas (O/V, entrega, factura por emitir)
   salesConfig?: SalesConfig;

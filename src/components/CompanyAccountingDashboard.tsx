@@ -3979,6 +3979,66 @@ export default function CompanyAccountingDashboard({
     }
   };
 
+  // Descontabilizar un período completo del RCV: borra los comprobantes generados desde sus documentos y los deja
+  // Pendientes, sin borrar los documentos. No toca comprobantes manuales ni los que agrupan documentos de otros períodos;
+  // los comprobantes ya conciliados con el banco se dejan como están y se informan.
+  const handleDescontabilizarPeriodo = async () => {
+    if (isReadOnly) { alert('Modo Solo Lectura: el perfil Observador no puede descontabilizar.'); return; }
+    const periodCheck = checkIsPeriodClosed(selectedRcvPeriod);
+    if (periodCheck.isClosed) {
+      alert(`Acción bloqueada: el período ${selectedRcvPeriod} está CERRADO. Ábrelo en 'Configuraciones > Períodos Contables' para descontabilizar.`);
+      return;
+    }
+    // Con documentos marcados en la tabla se descontabilizan solo esos; si no hay marcados, todo el período
+    const marcados = selectedRcvIds.length > 0;
+    const docsPeriodo = rcvDocuments.filter(d => d.estadoContabilizado && (marcados ? selectedRcvIds.includes(d.id) : d.period === selectedRcvPeriod));
+    if (docsPeriodo.length === 0) { alert(marcados ? 'Ninguno de los documentos marcados está contabilizado.' : `No hay documentos contabilizados en el período ${selectedRcvPeriod}.`); return; }
+    const idsPeriodo = new Set(marcados ? docsPeriodo.map(d => d.id) : rcvDocuments.filter(d => d.period === selectedRcvPeriod).map(d => d.id));
+    // comprobantes de estos documentos
+    const comprobantes = vouchers.filter(v =>
+      (v.createdFromRcvId && idsPeriodo.has(v.createdFromRcvId)) || docsPeriodo.some(d => d.voucherId === v.id));
+    const recsSnap = await getDocs(collection(companyRef, 'bankReconciliations'));
+    const conciliados = new Set<string>();
+    recsSnap.forEach(r => (r.data() as BankReconciliation).lines?.forEach(l => l.matchedVoucherId && conciliados.add(l.matchedVoucherId)));
+    const aBorrar = comprobantes.filter(v => {
+      if (conciliados.has(v.id)) return false;
+      // si el comprobante agrupa documentos de otro período, no se toca
+      const ligados = rcvDocuments.filter(d => d.voucherId === v.id || d.id === v.createdFromRcvId);
+      return ligados.every(d => idsPeriodo.has(d.id));
+    });
+    const omitidos = comprobantes.length - aBorrar.length;
+    if (!window.confirm(`DESCONTABILIZAR ${marcados ? `${docsPeriodo.length} DOCUMENTO(S) MARCADO(S)` : `PERÍODO ${selectedRcvPeriod}`}\n\n• Se eliminarán ${aBorrar.length} comprobante(s) generados desde el RCV.\n• ${docsPeriodo.length} documento(s) quedarán como "Pendiente" (los documentos NO se borran).\n` +
+      (omitidos ? `• ${omitidos} comprobante(s) no se tocarán (conciliados con el banco o con documentos de otros períodos).\n` : '') +
+      `\nLuego puedes volver a contabilizarlos en el orden correcto. ¿Continuar?`)) return;
+    let borrados = 0;
+    try {
+      await withProcess(`Descontabilizando ${selectedRcvPeriod}...`, async (updateProgress) => {
+        for (let i = 0; i < aBorrar.length; i++) {
+          const v = aBorrar[i];
+          updateProgress({ current: i + 1, total: aBorrar.length, message: `Comprobante N° ${v.voucherNumber}`, stage: 'Eliminando comprobantes del RCV' });
+          for (const d of rcvDocuments.filter(d => d.voucherId === v.id || d.id === v.createdFromRcvId)) {
+            await updateDoc(doc(companyRef, 'rcvDocuments', d.id), { estadoContabilizado: false, voucherId: null });
+          }
+          await deleteDoc(doc(companyRef, 'vouchers', v.id));
+          borrados++;
+        }
+        // documentos marcados como contabilizados cuyo comprobante ya no existe: quedan Pendientes
+        const vigentes = new Set(vouchers.map(v => v.id));
+        for (const d of docsPeriodo) {
+          if (!d.voucherId || !vigentes.has(d.voucherId)) await updateDoc(doc(companyRef, 'rcvDocuments', d.id), { estadoContabilizado: false, voucherId: null });
+        }
+      });
+      logAuditEvent({ userId: auth.currentUser?.uid || 'anon', userEmail: auth.currentUser?.email || '', studyId, companyId: company.id,
+        action: 'ELIMINAR', module: 'COMPROBANTES', details: `Descontabilización del RCV ${selectedRcvPeriod}: ${borrados} comprobante(s) eliminados`, metadata: { periodo: selectedRcvPeriod, comprobantes: borrados } });
+      setSelectedRcvIds([]);
+      alert(`Listo: se eliminaron ${borrados} comprobante(s) y ${docsPeriodo.length} documento(s) quedaron como Pendientes.` + (omitidos ? `\n${omitidos} comprobante(s) no se tocaron (conciliados o con documentos de otros períodos).` : ''));
+      await fetchData();
+    } catch (err: any) {
+      alert('Error al descontabilizar: ' + (err?.message || err) + (borrados ? `\n(Se alcanzaron a eliminar ${borrados}.)` : ''));
+      await fetchData();
+    }
+  };
+
   // Voucher Management: Create, Edit, Anular, Delete
   const handleOpenCreateVoucher = () => {
     const nextVoucherNum = (vouchers.reduce((max, v) => Math.max(max, v.voucherNumber || 0), 0)) + 1;
@@ -6633,6 +6693,13 @@ export default function CompanyAccountingDashboard({
                   title="Auditar la base de datos y eliminar permanentemente cualquier documento duplicado de compras, ventas u honorarios"
                 >
                   <span>Depurar Duplicados</span>
+                </button>
+                <button
+                  onClick={handleDescontabilizarPeriodo}
+                  className="bg-white hover:bg-rose-50 text-rose-700 border border-rose-300 text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors shadow-sm cursor-pointer"
+                  title="Marca uno o varios documentos (o ninguno, para todo el período): se eliminan sus comprobantes y quedan Pendientes. Los documentos no se borran."
+                >
+                  {selectedRcvIds.length > 0 ? `Descontabilizar marcados (${selectedRcvIds.length})` : 'Descontabilizar período'}
                 </button>
                 <button
                   onClick={handleContabilizarAllPending}

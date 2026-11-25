@@ -9,6 +9,9 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.33.0 — 2026-11-25
+- RCV: botón "Descontabilizar". Con documentos marcados (uno, varios o todos con la casilla del encabezado) descontabiliza solo esos; sin marcados, todo el período. Elimina los comprobantes generados desde el RCV y deja los documentos como Pendientes; los documentos no se borran. Pide confirmación. No toca comprobantes manuales, conciliados con el banco ni los que agrupan documentos no incluidos. Queda en la auditoría.
+
 ## 1.32.5 — 2026-11-24
 - Facturas exentas de compra (por ejemplo, peajes): se usaba una sola cuenta "Exento / No Gravado" para compras y ventas, que no puede ser gasto e ingreso a la vez, y la compra exenta quedaba sin contabilizar. Ahora el monto exento de una compra va primero a la cuenta de gasto del proveedor (ficha del auxiliar), luego a la nueva "Cuenta Compras Exentas" de Parámetros RCV, y si no, a la cuenta de gastos por defecto. Las ventas exentas tienen su propia cuenta.
 

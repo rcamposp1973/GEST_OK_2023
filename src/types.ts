@@ -424,6 +424,9 @@ export interface RCVDocument {
   codigoIvaNoRec?: string | number; // Código SII de IVA No Recuperable (1, 2, 3, etc.)
   montoIvaUsoComun?: number; // IVA de compras destinadas simultáneamente a operaciones gravadas y exentas
   montoOtrosImpuestos?: number; // Impuestos adicionales (ILA, diesel, carnes, licores, etc.)
+  /** Detalle de otros impuestos tal como lo informa el Registro de Compras del SII (código, valor, tasa, sin derecho). */
+  otrosImpuestos?: { codigo: string; nombre: string; valor: number; tasa?: number | null; sinDerecho?: boolean }[];
+  montoIvaNoRetenido?: number;
   /** Tipo de compra del RCV: Giro, Supermercado, Activo Fijo, Uso Común, Bienes Raíces, No Recuperable */
   tipoCompra?: string;
   montoIvaActivoFijo?: number;
@@ -591,6 +594,8 @@ export interface RCVAccountingParams {
   retencionBheAccountId?: string; // IVA Retenido / Retención BHE (Honorarios)
   exentoAccountId?: string; // Impuesto Exento / No Gravado
   otrosImpuestosAccountId?: string; // Impuestos Adicionales (ILA, Harinas, Licores, etc.)
+  /** La empresa tiene derecho a recuperar el impuesto específico al diésel (Art. 7 Ley 18.502, F29 [127]). */
+  recuperaDiesel?: boolean;
   ceecAccountId?: string; // Cuenta Activo Crédito Especial Empresas Constructoras (Art. 21 D.L. 910)
   isEmpresaConstructora?: boolean; // Tratamiento Especial Constructoras (Rebaja Crédito CEEC en Ventas)
   defaultCustomerAccountId?: string; // Clientes por Cobrar por Defecto

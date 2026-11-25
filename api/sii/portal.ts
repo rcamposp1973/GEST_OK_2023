@@ -258,6 +258,62 @@ async function rcvPedir(s: SesionSii, op: string, data: any) {
   return Array.isArray(r?.data) ? r.data : Array.isArray(r?.datos) ? r.datos : [];
 }
 
+const CODIGOS_IMP: Record<string, string> = {
+  '23': 'Impuesto adicional Art. 37 letras a, b, c (oro, joyas, pieles...)',
+  '44': 'Impuesto adicional Art. 37 letras e, h, i, l (alfombras, casas rodantes, caviar, armas)',
+  '45': 'Impuesto adicional Art. 37 letra j (pirotecnia)',
+  '24': 'ILA licores, piscos, whisky, aguardientes y destilados', '25': 'ILA vinos', '26': 'ILA cervezas y bebidas alcohólicas',
+  '27': 'ILA bebidas analcohólicas y aguas minerales', '271': 'ILA bebidas analcohólicas con elevado contenido de azúcar',
+  '28': 'Impuesto específico al petróleo diésel', '35': 'Impuesto específico a la gasolina',
+};
+const nombreImp = (c: string) => CODIGOS_IMP[c] || (c ? `Impuesto código ${c} (sin catalogar)` : 'Impuesto sin código');
+const normCol = (x: string) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+export type ImpuestoRcv = { codigo: string; nombre: string; valor: number; tasa: number | null; sinDerecho?: boolean };
+
+/**
+ * Lee el CSV del Registro de Compras (getDetalleCompraExport) y devuelve, por documento, los otros impuestos tal como
+ * los informa el SII: código, valor y tasa ("Codigo/Valor/Tasa Otro Impuesto"), el "Impto. Sin Derecho a Credito" y
+ * los impuestos a los tabacos. Un documento con varios impuestos ocupa varias filas. Clave: `tipo|rutSinDv|folio`.
+ */
+export function leerImpuestosExportCompras(lineas: string[]): Map<string, ImpuestoRcv[]> {
+  const out = new Map<string, ImpuestoRcv[]>();
+  const filas = lineas.flatMap(l => String(l || '').split(/\r?\n/)).filter(l => l.trim());
+  if (filas.length < 2) return out;
+  const h = filas[0].split(';').map(normCol);
+  const col = (f: (c: string) => boolean) => h.findIndex(f);
+  const iTipo = col(c => c === 'tipo doc' || c === 'tipo docto');
+  const iRut = col(c => c.startsWith('rut'));
+  const iFolio = col(c => c === 'folio');
+  const iCod = col(c => c.includes('otro impuesto') && c.startsWith('cod'));
+  const iVal = col(c => c.includes('otro impuesto') && (c.startsWith('valor') || c.startsWith('monto')));
+  const iTasa = col(c => c.includes('otro impuesto') && c.startsWith('tasa'));
+  const iSd = col(c => (c.startsWith('impto') || c.startsWith('impuesto')) && c.includes('sin derecho'));
+  const tabacos: [number, string, string][] = [
+    [col(c => c.includes('tabaco') && c.includes('puro')), 'TAB-PUROS', 'Impuesto tabacos: puros'],
+    [col(c => c.includes('tabaco') && c.includes('cigarr')), 'TAB-CIG', 'Impuesto tabacos: cigarrillos'],
+    [col(c => c.includes('tabaco') && c.includes('elabor')), 'TAB-ELAB', 'Impuesto tabacos: tabaco elaborado'],
+  ];
+  if (iTipo < 0 || iRut < 0 || iFolio < 0) return out;
+  const v = (cols: string[], i: number) => (i >= 0 ? num(cols[i]) : 0);
+  for (const linea of filas.slice(1)) {
+    const c = linea.split(';');
+    const clave = `${String(c[iTipo] || '').trim()}|${String(c[iRut] || '').split('-')[0].replace(/\D/g, '')}|${String(c[iFolio] || '').replace(/\D/g, '')}`;
+    const lista = out.get(clave) || [];
+    const poner = (x: ImpuestoRcv) => {
+      if (!(x.valor > 0)) return;
+      if (lista.some(y => y.codigo === x.codigo && Boolean(y.sinDerecho) === Boolean(x.sinDerecho))) return;
+      lista.push(x);
+    };
+    const codigo = iCod >= 0 ? String(c[iCod] || '').trim() : '';
+    poner({ codigo, nombre: nombreImp(codigo), valor: v(c, iVal), tasa: iTasa >= 0 && String(c[iTasa] || '').trim() ? num(c[iTasa]) : null });
+    poner({ codigo: 'SD', nombre: 'Impuesto sin derecho a crédito (informado por el SII)', valor: v(c, iSd), tasa: null, sinDerecho: true });
+    for (const [i, cod, nom] of tabacos) poner({ codigo: cod, nombre: nom, valor: v(c, i), tasa: null, sinDerecho: true });
+    if (lista.length) out.set(clave, lista);
+  }
+  return out;
+}
+
 /** RCV de un mes (compras y ventas) en el mismo formato que usa la importación de Gest_OK. */
 export async function leerRcv(s: SesionSii, rutEmpresa: string, nombreEmpresa: string, anio: number, mes: number, lado: 'COMPRA' | 'VENTA') {
   const p = partirRut(rutEmpresa);
@@ -275,6 +331,18 @@ export async function leerRcv(s: SesionSii, rutEmpresa: string, nombreEmpresa: s
       detalle = await rcvPedir(s, lado === 'COMPRA' ? 'getDetalleCompra' : 'getDetalleVenta',
         { ...base, codTipoDoc: Number(tipo), accionRecaptcha: lado === 'COMPRA' ? 'RCV_DETC' : 'RCV_DETV', tokenRecaptcha: 't-o-k-e-n-web' });
     }
+    // Otros impuestos con código, valor y tasa: sólo vienen en el CSV del registro. Se pide únicamente si algún
+    // documento del tipo trae otros impuestos (para no cargar al SII con consultas innecesarias).
+    let impuestosExport: Map<string, ImpuestoRcv[]> | null = null;
+    if (lado === 'COMPRA' && detalle.some(d => num(d.totalDtoiMontoImp) > 0 || num(d.detMntSinCredito) > 0 || num(d.detTabPuros) + num(d.detTabCigarrillos) + num(d.detTabElaborado) > 0)) {
+      try {
+        const lineas = await rcvPedir(s, 'getDetalleCompraExport', { ...base, codTipoDoc: Number(tipo), accionRecaptcha: 'RCV_DETC', tokenRecaptcha: 't-o-k-e-n-web' });
+        impuestosExport = leerImpuestosExportCompras(lineas.map((x: any) => (typeof x === 'string' ? x : '')));
+        console.log('[sii-portal] otros impuestos', JSON.stringify({ tipo, filas: lineas.length, documentos: impuestosExport.size }));
+      } catch (e: any) {
+        console.log('[sii-portal] otros impuestos no disponibles', JSON.stringify({ tipo, error: String(e?.message || e).slice(0, 160) }));
+      }
+    }
     if (detalle.length) {
       for (const d of detalle) {
         const contra = d.detRutDoc ? `${d.detRutDoc}-${d.detDvDoc}` : '';
@@ -290,12 +358,20 @@ export async function leerRcv(s: SesionSii, rutEmpresa: string, nombreEmpresa: s
           fechaEmision: fechaIso(d.detFchDoc), montoNeto: neto, montoIva: iva, montoExento: exe,
           montoTotal: num(d.detMntTotal) || neto + iva + exe, period: periodo, origenDocumento: 'RCV_SII_PROPIO',
           // Cada monto en su casillero, tal como lo informa el SII
-          ...(lado === 'COMPRA' ? {
-            tipoCompra: String(d.descTipoTransaccion || '') || 'Del Giro',
-            montoIvaNoRecuperable: num(d.detMntIVANoRec), codigoIvaNoRec: num(d.detMntCodNoRec) ? String(d.detMntCodNoRec) : null,
-            montoIvaActivoFijo: num(d.detMntIVAActFijo), montoIvaUsoComun: num(d.detIVAUsoComun),
-            montoOtrosImpuestos: num(d.totalDtoiMontoImp),
-          } : {}),
+          ...(lado === 'COMPRA' ? (() => {
+            const detalleImp = impuestosExport?.get(`${tipo}|${String(d.detRutDoc ?? '').replace(/\D/g, '')}|${String(d.detNroDoc ?? '').replace(/\D/g, '')}`);
+            const ivaNoRec = num(d.detMntIVANoRec);
+            const resto = num(d.detMntTotal) - neto - exe - iva - ivaNoRec;
+            return {
+              tipoCompra: String(d.descTipoTransaccion || '') || 'Del Giro',
+              montoIvaNoRecuperable: ivaNoRec, codigoIvaNoRec: num(d.detMntCodNoRec) ? String(d.detMntCodNoRec) : null,
+              montoIvaActivoFijo: num(d.detMntIVAActFijo), montoIvaUsoComun: num(d.detIVAUsoComun),
+              montoIvaNoRetenido: num(d.detIVANoRetenido),
+              ...(detalleImp?.length
+                ? { otrosImpuestos: detalleImp, montoOtrosImpuestos: detalleImp.reduce((a, x) => a + x.valor, 0) }
+                : { montoOtrosImpuestos: num(d.totalDtoiMontoImp) || (resto > 0 ? resto : 0) }),
+            };
+          })() : {}),
         });
       }
     } else {

@@ -362,4 +362,33 @@ import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } fro
   ok('RCV: IVA sin derecho real se respeta', R.corregirIvaNoRecFalso(real)===real);
   ok('RCV: tipos de compra del SII', R.normalizarTipoCompra('Del Giro')==='Giro' && R.normalizarTipoCompra('Supermercados')==='Supermercado' && R.normalizarTipoCompra('IVA Uso Común')==='Uso Común' && R.normalizarTipoCompra('Activo Fijo')==='Activo Fijo');
 }
+{ const O = await import('../src/utils/otrosImpuestos'); const P = await import('../api/sii/portal');
+  const enc = 'Nro;Tipo Doc;Tipo Compra;RUT Proveedor;Razon Social;Folio;Fecha Docto;Fecha Recepcion;Fecha Acuse;Monto Exento;Monto Neto;Monto IVA Recuperable;Monto Iva No Recuperable;Codigo IVA No Rec.;Monto Total;Monto Neto Activo Fijo;IVA Activo Fijo;IVA uso Comun;Impto. Sin Derecho a Credito;IVA No Retenido;Tabacos Puros;Tabacos Cigarrillos;Tabacos Elaborados;NCE o NDE sobre Fact. de Compra;Codigo Otro Impuesto;Valor Otro Impuesto;Tasa Otro Impuesto';
+  // Factura de bencina: impuesto a la gasolina informado como sin derecho; factura de botillería con dos ILA en dos filas
+  const f1 = '1;33;Del Giro;96.000.000-1;COPEC;111;01/02/2025;;;0;18474;3510;0;;25494;0;0;0;3510;0;0;0;0;;;;';
+  const f2a = '2;33;Del Giro;77.000.000-2;BOTILLERIA;222;02/02/2025;;;0;100000;19000;0;;150000;0;0;0;0;0;0;0;0;;24;31500;31,5';
+  const f2b = '3;33;Del Giro;77.000.000-2;BOTILLERIA;222;02/02/2025;;;0;100000;19000;0;;150000;0;0;0;0;0;0;0;0;;27;10000;10';
+  const m = P.leerImpuestosExportCompras([enc, f1, f2a, f2b]);
+  const a = m.get('33|96000000|111') || [], b = m.get('33|77000000|222') || [];
+  ok('Otros impuestos: export SII sin derecho', a.length===1 && a[0].sinDerecho===true && a[0].valor===3510);
+  ok('Otros impuestos: varias filas = un documento con 2 ILA', b.length===2 && b[0].codigo==='24' && b[0].tasa===31.5 && b[1].codigo==='27' && b[1].valor===10000);
+  const idx = O.columnasImpuestosRcv(enc.split(';'));
+  const imp = O.impuestosDeFila(f2a.split(';'), idx);
+  ok('Otros impuestos: CSV fila', imp.length===1 && imp[0].codigo==='24' && imp[0].valor===31500 && imp[0].tasa===31.5);
+  const r1 = O.repartirOtrosImpuestos({ otrosImpuestos: b });
+  ok('Otros impuestos: ILA con crédito', r1.credito===41500 && r1.costo===0);
+  const r2 = O.repartirOtrosImpuestos({ otrosImpuestos: a });
+  ok('Otros impuestos: sin derecho va al costo', r2.costo===3510 && r2.credito===0);
+  const dsl = [{ codigo:'28', nombre:'', valor:5000 }];
+  ok('Otros impuestos: diésel según empresa', O.repartirOtrosImpuestos({ otrosImpuestos: dsl }).costo===5000 && O.repartirOtrosImpuestos({ otrosImpuestos: dsl }, { recuperaDiesel:true }).credito===5000);
+  const r3 = O.repartirOtrosImpuestos({ otrosImpuestos: [{ codigo:'999', nombre:'', valor:100 }] });
+  ok('Otros impuestos: código desconocido no se adivina', r3.sinCatalogar===100 && r3.codigosSinCatalogar[0]==='999');
+  ok('Otros impuestos: sin detalle = antiguo', O.repartirOtrosImpuestos({ montoOtrosImpuestos: 700 }).sinDetalle===700);
+  const c1 = O.completarImpuestosExistente({ tipoRegistro:'Compra', estadoContabilizado:true, montoOtrosImpuestos:0, montoIvaNoRecuperable:3510 }, { otrosImpuestos:a, montoIvaNoRecuperable:0 });
+  ok('Otros impuestos: contabilizado sólo agrega detalle', !!c1 && Object.keys(c1).join()==='otrosImpuestos');
+  const c2 = O.completarImpuestosExistente({ tipoRegistro:'Compra', estadoContabilizado:false, montoOtrosImpuestos:0, montoIvaNoRecuperable:3510 }, { otrosImpuestos:a, montoIvaNoRecuperable:0 });
+  ok('Otros impuestos: no contabilizado corrige montos', !!c2 && c2.montoOtrosImpuestos===3510 && c2.montoIvaNoRecuperable===0);
+  const res = O.resumenOtrosImpuestos([{ tipoRegistro:'Compra', tipoDoc:'33', otrosImpuestos:b }, { tipoRegistro:'Compra', tipoDoc:'61', otrosImpuestos:[{ codigo:'24', nombre:'', valor:1500 }] }]);
+  ok('Otros impuestos: resumen F29 por código con NC', res.length===2 && res[0].codigo==='24' && res[0].monto===30000 && res[0].documentos===2);
+}
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

@@ -9,6 +9,14 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.37.0 — 2026-11-25
+- **Otros impuestos del Registro de Compras, con su detalle.** IVA sin derecho, impuestos a combustibles, ILA, Art. 37 y tabacos se leen tal como los informa el SII (código, valor, tasa y si va como "Impto. Sin Derecho a Crédito"), por CSV y por la API propia (`getDetalleCompraExport`). Un documento con varios impuestos (varias filas) queda como un solo documento.
+- Corrección: la columna "Impto. Sin Derecho a Credito" del CSV del SII se leía como "IVA sin derecho". Ahora va separada.
+- Contabilización de compras: impuestos con derecho a crédito (ILA, Art. 37, diésel si la empresa lo recupera) a la cuenta de impuestos adicionales; sin derecho (gasolina, sin derecho, tabacos) al costo. Un código sin catalogar NO se contabiliza.
+- Parámetros RCV: opción "La empresa recupera el impuesto específico al diésel" (F29 [127]).
+- F29: tabla informativa de otros impuestos del período por código (no suman al crédito fiscal IVA).
+- Al volver a sincronizar o cargar el CSV, los documentos ya cargados reciben el detalle (si están contabilizados no se tocan sus montos).
+
 ## 1.36.0 — 2026-11-25
 - F29, crédito fiscal: un documento con "IVA sin derecho" perdía también su IVA recuperable (se excluía completo del cód. 520). Ahora cada casillero se alimenta como en el RCV del SII: el IVA recuperable va al crédito según el tipo de compra; el IVA sin derecho es informativo y no rebaja el recuperable.
 - RCV: la diferencia entre el total y neto + IVA + exento se registraba como "IVA sin derecho, Cód. 1" aunque fuera otro impuesto (combustibles, ILA). Ahora es "otros impuestos" salvo que el IVA recuperable venga en 0. Las compras ya guardadas con ese error se corrigen solas al abrir el RCV. Supermercados ya no se trata como IVA sin derecho.

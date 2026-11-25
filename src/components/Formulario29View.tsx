@@ -27,6 +27,7 @@ import {
   F29AccountingParams
 } from '../types';
 import { sanitizeVoucherLines } from '../utils/voucherValidation';
+import { resumenOtrosImpuestos } from '../utils/otrosImpuestos';
 import { Receipt, Download, Save, Zap, MessageSquare, Copy, X, Share2 } from 'lucide-react';
 
 interface Formulario29ViewProps {
@@ -37,9 +38,12 @@ interface Formulario29ViewProps {
   vouchers: Voucher[];
   fiscalYears: FiscalPeriodYear[];
   onVouchersUpdated?: () => void;
+  /** Parámetros RCV de la empresa (config/rcvParams): define si recupera el impuesto al diésel. */
+  recuperaDiesel?: boolean;
 }
 
 export default function Formulario29View({
+  recuperaDiesel = false,
   studyId,
   company,
   accounts,
@@ -271,6 +275,12 @@ export default function Formulario29View({
       return docPeriod === selectedPeriod;
     });
   }, [rcvDocuments, selectedPeriod]);
+
+  // Otros impuestos del Registro de Compras (ILA, combustibles, Art. 37...), tal como los informa el SII
+  const otrosImpuestosRegistro = useMemo(
+    () => resumenOtrosImpuestos(periodDocs as any, { recuperaDiesel }),
+    [periodDocs, recuperaDiesel]
+  );
 
   // 1. CALCULATE DÉBITO FISCAL (VENTAS)
   const debitoFiscalData: F29DebitoFiscal = useMemo(() => {
@@ -2039,6 +2049,30 @@ export default function Formulario29View({
                     <td className="py-2 px-3 font-sans">Sin derecho a crédito ({creditoFiscalData.cantNoRecuperable || 0} docs) · IVA no recuperable informativo</td>
                     <td className="py-2 px-3 text-right">-</td>
                     <td className="py-2 px-3 text-right">${(creditoFiscalData.ivaNoRecuperable || 0).toLocaleString('es-CL')} (no suma)</td>
+                  </tr>
+                  )}
+                  {otrosImpuestosRegistro.length > 0 && (
+                  <tr className="text-slate-600">
+                    <td colSpan={4} className="py-2 px-3">
+                      <div className="text-[11px] font-bold text-slate-700 mb-1">Otros impuestos del Registro de Compras (detalle informado por el SII)</div>
+                      <table className="w-full text-[11px]">
+                        <tbody>
+                          {otrosImpuestosRegistro.map(f => (
+                            <tr key={`${f.codigo}-${f.sinDerecho}`} className="border-t border-slate-100">
+                              <td className="py-1 pr-2 font-mono">{f.sinDerecho ? '—' : f.codigo}</td>
+                              <td className="py-1 pr-2">{f.nombre} ({f.documentos} docs)</td>
+                              <td className="py-1 pr-2">
+                                {f.tratamiento === 'credito' ? (f.codigo === '28' ? 'Recuperable · F29 [127] (completa m³ y componentes)' : 'Con derecho a crédito (impuesto adicional)')
+                                  : f.tratamiento === 'costo' ? 'Sin derecho a crédito · va al costo'
+                                  : <span className="text-rose-700 font-bold">Código sin catalogar: revisar antes de contabilizar</span>}
+                              </td>
+                              <td className="py-1 text-right font-mono">${f.monto.toLocaleString('es-CL')}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div className="text-[10px] text-slate-400 mt-1">No son IVA: no suman al crédito fiscal [520]/[537].</div>
+                    </td>
                   </tr>
                   )}
                   {f29CodeSettings.remanente504 !== false && (

@@ -12,6 +12,7 @@ import { LiquidacionSueldosView } from './LiquidacionSueldosView';
 import { syncOnlineChileanIndicators } from '../utils/chileanEconomicIndicators';
 import { logAuditEvent } from '../utils/auditLogger';
 import { ivaCreditoCoherente, normalizarIvaDocRcv, normalizarHonorario, normalizarTipoCompra, corregirIvaNoRecFalso } from '../utils/rcvIva';
+import { columnasImpuestosRcv, impuestosDeFila, totalOtrosImpuestos, agregarOtroImpuesto, numeroRcv, repartirOtrosImpuestos, completarImpuestosExistente } from '../utils/otrosImpuestos';
 import { notify } from '../context/ToastContext';
 import LibroDiarioView from './LibroDiarioView';
 import LibroMayorView from './LibroMayorView';
@@ -1923,6 +1924,16 @@ export default function CompanyAccountingDashboard({
           const tempMap: { [key: string]: number } = {};
 
           cols.forEach((col, idx) => {
+            // 0. Columnas de impuestos del Registro de Compras (Codigo/Valor/Tasa Otro Impuesto, Impto. Sin Derecho a
+            //    Crédito, IVA No Retenido, Tabacos): se leen aparte, tal como las informa el SII, y no deben confundirse
+            //    con el IVA sin derecho, el folio ni el IVA.
+            if (
+              (col.includes('otro') && col.includes('impuesto')) ||
+              ((col.startsWith('impto') || col.startsWith('impuesto')) && col.includes('sin derecho')) ||
+              col.includes('tabaco') || col === 'iva no retenido' || col.includes('nce o nde')
+            ) {
+              return;
+            }
             // 1. Folio / N°
             if (
               col === 'n°' || col === 'no' || col === 'n' || col === 'folio' || col === 'folio docto' || col === 'nro' || col === 'nro docto' || col === 'nro documento' || col === 'numero' || col === 'número' ||
@@ -2003,9 +2014,7 @@ export default function CompanyAccountingDashboard({
                   tempMap['razon'] = idx;
                   score += 2;
                 }
-              } else if (tempMap['otroImp'] === undefined && col.includes('otro') && col.includes('impuesto') && (col.includes('valor') || col.includes('monto'))) {
-              tempMap['otroImp'] = idx;
-            } else if (tempMap['razon'] === undefined && !col.includes('transportista') && !col.includes('chofer')) {
+              } else if (tempMap['razon'] === undefined && !col.includes('transportista') && !col.includes('chofer')) {
                 tempMap['razon'] = idx;
                 score += 2;
               }
@@ -2148,6 +2157,9 @@ export default function CompanyAccountingDashboard({
           headerMap = { folio: 0, fecha: 1, estado: 2, fechaAnulacion: 3, rut: 4, razon: 5, brutos: 7, neto: 7, retenido: 8, iva: 8, pagado: 9, total: 9 };
         }
 
+        // Columnas de "otros impuestos" del Registro de Compras (un documento con varios impuestos ocupa varias filas)
+        const idxImpuestos = columnasImpuestosRcv(headerRowIndex >= 0 ? tableRows[headerRowIndex] : []);
+        const archivoTraeImpuestos = idxImpuestos.valorOtro >= 0 || idxImpuestos.sinDerecho >= 0;
         const parsedDocs: Omit<RCVDocument, 'id'>[] = [];
         let readCount = 0;
         let nulasCount = 0;
@@ -2268,7 +2280,8 @@ export default function CompanyAccountingDashboard({
           let montoIvaNoRec = parseChileanNumber(headerMap['ivaNoRec'] !== undefined ? cols[headerMap['ivaNoRec']] : 0);
           let codIvaNoRec = headerMap['codIvaNoRec'] !== undefined ? String(cols[headerMap['codIvaNoRec']] || '').trim() : '';
           const rawTipoCompra = headerMap['tipoCompra'] !== undefined ? String(cols[headerMap['tipoCompra']] || '').trim().toLowerCase() : '';
-          let montoOtroImp = parseChileanNumber(headerMap['otroImp'] !== undefined ? cols[headerMap['otroImp']] : 0);
+          const impuestosFila = tipoRegistro === 'Compra' ? impuestosDeFila(cols, idxImpuestos) : [];
+          let montoOtroImp = totalOtrosImpuestos(impuestosFila);
           let montoIvaUsoComun = parseChileanNumber(headerMap['ivaUsoComun'] !== undefined ? cols[headerMap['ivaUsoComun']] : 0);
           let montoExento = parseChileanNumber(headerMap['exento'] !== undefined ? cols[headerMap['exento']] : 0);
           let montoTotal = parseChileanNumber(headerMap['pagado'] !== undefined ? cols[headerMap['pagado']] : (headerMap['total'] !== undefined ? cols[headerMap['total']] : cols[9]));
@@ -2294,7 +2307,9 @@ export default function CompanyAccountingDashboard({
               if (montoIva === 0 && Math.abs(diff - Math.round(montoNeto * 0.19)) <= 5) {
                 montoIvaNoRec = diff;
                 if (!codIvaNoRec) codIvaNoRec = '1';
-              } else if (headerMap['otroImp'] === undefined) {
+              } else if (!archivoTraeImpuestos) {
+                // Archivo sin las columnas de otros impuestos (formato antiguo): la diferencia queda como otros impuestos
+                // sin detalle; con el CSV oficial del SII se usan sólo los valores del registro.
                 montoOtroImp = diff;
               }
             }
@@ -2398,6 +2413,18 @@ export default function CompanyAccountingDashboard({
             }
           }
 
+          // Mismo documento en otra fila (otro impuesto adicional): se suma su impuesto al detalle, sin duplicar el documento
+          if (tipoRegistro === 'Compra') {
+            const previo = parsedDocs.find(p => p.tipoRegistro === 'Compra' && p.tipoDoc === tipoDoc && p.folio === folio && cleanRutForMatch(p.rutEmisor || '') === cleanRutForMatch(rutEmisor));
+            if (previo) {
+              let lista = previo.otrosImpuestos || [];
+              for (const imp of impuestosFila) lista = agregarOtroImpuesto(lista, imp);
+              previo.otrosImpuestos = lista;
+              previo.montoOtrosImpuestos = totalOtrosImpuestos(lista);
+              continue;
+            }
+          }
+
           const docRutEmisor = tipoRegistro === 'Venta' ? (company.rut || '76.000.000-0') : rutEmisor;
           const docRazonSocialEmisor = tipoRegistro === 'Venta' ? (company.name || company.razonSocial || 'Empresa') : razonSocialEmisor;
           const docRutReceptor = tipoRegistro === 'Venta' ? (rutEmisor || '76.000.000-0') : (company.rut || '76.000.000-0');
@@ -2421,6 +2448,8 @@ export default function CompanyAccountingDashboard({
             codigoIvaNoRec: codIvaNoRec || undefined,
             montoIvaUsoComun: montoIvaUsoComun > 0 ? montoIvaUsoComun : 0,
             montoOtrosImpuestos: montoOtroImp > 0 ? montoOtroImp : 0,
+            ...(impuestosFila.length ? { otrosImpuestos: impuestosFila.reduce((l, x) => agregarOtroImpuesto(l, x), [] as NonNullable<RCVDocument['otrosImpuestos']>) } : {}),
+            ...(tipoRegistro === 'Compra' && idxImpuestos.ivaNoRetenido >= 0 && numeroRcv(cols[idxImpuestos.ivaNoRetenido]) > 0 ? { montoIvaNoRetenido: numeroRcv(cols[idxImpuestos.ivaNoRetenido]) } : {}),
             tipoCompra: tipoRegistro === 'Compra' ? (normalizarTipoCompra(rawTipoCompra) || 'Giro') : undefined,
             montoExento,
             montoTotal,
@@ -2448,6 +2477,7 @@ export default function CompanyAccountingDashboard({
         let loaded = 0;
         let duplicates = 0;
         let newAuxCount = 0;
+        let impuestosCompletados = 0;
 
         const currentAuxSnap = await getDocs(collection(companyRef, 'auxiliaries'));
         const currentAuxs = currentAuxSnap.docs.map(d => ({ id: d.id, ...d.data() } as Auxiliary));
@@ -2508,6 +2538,12 @@ export default function CompanyAccountingDashboard({
 
           if (isDuplicate) {
             duplicates++;
+            // Si el registro del SII trae el detalle de otros impuestos, se completa en el documento ya cargado
+            const ex = currentRcvs.find(e => !e.id.startsWith('tmp_') && cleanRutForMatch(e.rutEmisor) === cleanItemRut && normalizeTipoDocCode(e.tipoDoc) === normalizeTipoDocCode(item.tipoDoc) && cleanFolioNumber(e.folio) === cleanFolioNumber(item.folio) && e.tipoRegistro === item.tipoRegistro);
+            const cambios = ex ? completarImpuestosExistente(ex, item) : null;
+            if (ex && cambios) {
+              try { await updateDoc(doc(companyRef, 'rcvDocuments', ex.id), cambios); impuestosCompletados++; } catch (e) { console.warn(e); }
+            }
             continue;
           }
 
@@ -2610,6 +2646,7 @@ export default function CompanyAccountingDashboard({
           `• Documentos vigentes importados: ${loaded}\n` +
           (nulasCount > 0 ? `• Boletas NULAS / ANULADAS excluidas: ${nulasCount}\n` : '') +
           (duplicates > 0 ? `• Documentos duplicados omitidos: ${duplicates}\n` : '') +
+          (impuestosCompletados > 0 ? `• Documentos ya cargados a los que se agregó el detalle de otros impuestos del SII: ${impuestosCompletados}\n` : '') +
           `• Nuevos auxiliares creados: ${newAuxCount}\n` +
           `• Período fiscal asignado: ${targetUploadPeriod}`;
 
@@ -2795,6 +2832,7 @@ export default function CompanyAccountingDashboard({
 
       let loadedCount = 0;
       let duplicateCount = 0;
+      let impuestosCompletadosApi = 0;
       let newAuxCount = 0;
 
       const userUid = auth.currentUser?.uid || 'import-api-sii';
@@ -2855,6 +2893,18 @@ export default function CompanyAccountingDashboard({
         const key = `${tipoReg}_${cleanPartyForDuplicity}_${cleanTipo}_${cleanFol}_${docPeriod}`;
         if (existingKeys.has(key)) {
           duplicateCount++;
+          // Documento ya cargado: si el SII trae el detalle de otros impuestos, se completa
+          if (tipoReg === 'Compra' && Array.isArray(item.otrosImpuestos) && item.otrosImpuestos.length) {
+            const exSnap = currentRcvSnap.docs.find(d => {
+              const x = d.data();
+              const per = x.period || (x.fechaEmision ? String(x.fechaEmision).slice(0, 7) : '');
+              return (x.tipoRegistro || 'Compra') === 'Compra' && cleanRutForMatch(x.rutEmisor || '') === cleanPartyForDuplicity && normalizeTipoDocCode(x.tipoDocumento || x.tipoDoc) === cleanTipo && cleanFolioNumber(x.folio) === cleanFol && per === docPeriod;
+            });
+            const cambios = exSnap ? completarImpuestosExistente({ ...(exSnap.data() as any), tipoRegistro: 'Compra' }, item) : null;
+            if (exSnap && cambios) {
+              try { await updateDoc(doc(companyRef, 'rcvDocuments', exSnap.id), cambios); impuestosCompletadosApi++; } catch (e) { console.warn(e); }
+            }
+          }
           continue;
         }
 
@@ -2923,6 +2973,8 @@ export default function CompanyAccountingDashboard({
             montoIvaActivoFijo: Number(item.montoIvaActivoFijo) || 0,
             montoIvaUsoComun: Number(item.montoIvaUsoComun) || 0,
             montoOtrosImpuestos: Number(item.montoOtrosImpuestos) || 0,
+            ...(Array.isArray(item.otrosImpuestos) && item.otrosImpuestos.length ? { otrosImpuestos: item.otrosImpuestos } : {}),
+            ...(Number(item.montoIvaNoRetenido) > 0 ? { montoIvaNoRetenido: Number(item.montoIvaNoRetenido) } : {}),
           } : {}),
           estado: 'Vigente',
           estadoContabilizado: false,
@@ -2954,6 +3006,7 @@ export default function CompanyAccountingDashboard({
         (boletasPisadasCount > 0 ? `• Boletas de descarga anterior pisadas y actualizadas: ${boletasPisadasCount} (se reemplazaron por el nuevo resumen oficial acumulado)\n` : '') +
         `• Nuevos auxiliares (Proveedores/Clientes) creados en el Maestro: ${newAuxCount}\n` +
         `• Duplicados ya existentes omitidos: ${duplicateCount}\n` +
+        (impuestosCompletadosApi > 0 ? `• Documentos ya cargados a los que se agregó el detalle de otros impuestos: ${impuestosCompletadosApi}\n` : '') +
         (data.message ? `\nDetalle: ${data.message}\n` : '') +
         `\n• Conexión: ${data.source || 'SimpleAPI.cl'}`
       );
@@ -3338,8 +3391,22 @@ export default function CompanyAccountingDashboard({
       const otrosImpuestosAmount = explicitOtros > 0 ? explicitOtros : (calculatedOtros > 0 ? calculatedOtros : 0);
 
       const hasConfiguredOtrosAcc = Boolean(rcvParams?.otrosImpuestosAccountId && accounts.some(a => a.id === rcvParams.otrosImpuestosAccountId));
-      // En la normativa tributaria chilena (Art. 31 LIR) e IFRS, el IVA sin derecho a crédito fiscal forma parte del costo/gasto de adquisición
-      const finalNetoDebit = (hasConfiguredOtrosAcc ? netoAmount : (netoAmount + otrosImpuestosAmount)) + ivaNoRecAmount;
+      // Otros impuestos: con el detalle del Registro de Compras cada impuesto va según su naturaleza
+      //  - con derecho a crédito (ILA, Art. 37, diésel recuperable) → cuenta de impuestos adicionales
+      //  - sin derecho a crédito (gasolina, "Impto. Sin Derecho a Crédito", tabacos, diésel no recuperable) → costo/gasto
+      //  - código sin catalogar → NO se contabiliza
+      const repartoOtros = repartirOtrosImpuestos(docItem, { recuperaDiesel: rcvParams?.recuperaDiesel });
+      if (repartoOtros.sinCatalogar > 0) {
+        throw new Error(`El documento ${docRefStr} trae otros impuestos con código sin catalogar (${repartoOtros.codigosSinCatalogar.join(', ')}) por $${repartoOtros.sinCatalogar.toLocaleString('es-CL')}. Revísalo antes de contabilizar. No se generó ningún comprobante.`);
+      }
+      const tieneDetalleOtros = (docItem.otrosImpuestos || []).length > 0;
+      const otrosCredito = tieneDetalleOtros ? repartoOtros.credito : (hasConfiguredOtrosAcc ? otrosImpuestosAmount : 0);
+      const otrosCosto = tieneDetalleOtros ? repartoOtros.costo : (hasConfiguredOtrosAcc ? 0 : otrosImpuestosAmount);
+      if (otrosCredito > 0 && !hasConfiguredOtrosAcc) {
+        throw new Error(`El documento ${docRefStr} trae impuestos con derecho a crédito (ILA / impuestos adicionales) por $${otrosCredito.toLocaleString('es-CL')}, y falta la cuenta "Impuestos adicionales" en Parámetros RCV. Configúrala y vuelve a intentar. No se generó ningún comprobante.`);
+      }
+      // En la normativa tributaria chilena (Art. 31 LIR) e IFRS, el IVA y los impuestos sin derecho a crédito forman parte del costo/gasto de adquisición
+      const finalNetoDebit = netoAmount + otrosCosto + ivaNoRecAmount;
 
       const isNotaCredito = docItem.tipoDoc === '61' || String(docItem.tipoDoc).includes('61');
 
@@ -3351,8 +3418,8 @@ export default function CompanyAccountingDashboard({
           lines.push(makeLine(expenseAcc, 0, finalNetoDebit, `Reverso Gasto ${docRefStr} - ${docItem.razonSocialEmisor}`, docItem.rutEmisor, docItem.razonSocialEmisor, docRefStr));
         }
 
-        if (hasConfiguredOtrosAcc && otrosImpuestosAmount > 0) {
-          lines.push(makeLine(otrosImpuestosAcc, 0, otrosImpuestosAmount, `Reverso Impuestos Adicionales ${docRefStr}`, docItem.rutEmisor, docItem.razonSocialEmisor, docRefStr));
+        if (otrosCredito > 0) {
+          lines.push(makeLine(otrosImpuestosAcc, 0, otrosCredito, `Reverso Impuestos Adicionales ${docRefStr}`, docItem.rutEmisor, docItem.razonSocialEmisor, docRefStr));
         }
 
         if (ivaAmount > 0) {
@@ -3379,7 +3446,7 @@ export default function CompanyAccountingDashboard({
         }
         const finalNetoGasto = fxrAccDoc ? finalNetoDebit - fxrNetoDoc : finalNetoDebit;
         if (finalNetoGasto > 0) {
-          const baseGastoGloss = otrosImpuestosAmount > 0 && !hasConfiguredOtrosAcc 
+          const baseGastoGloss = otrosCosto > 0 
             ? `Gasto e Impuestos Adicionales ${docRefStr} - ${docItem.razonSocialEmisor}`
             : `Gasto ${docRefStr} - ${docItem.razonSocialEmisor}`;
           const glossStr = aux?.defaultGloss 
@@ -3388,8 +3455,8 @@ export default function CompanyAccountingDashboard({
           lines.push(makeLine(expenseAcc, finalNetoGasto, 0, glossStr, docItem.rutEmisor, docItem.razonSocialEmisor, docRefStr));
         }
 
-        if (hasConfiguredOtrosAcc && otrosImpuestosAmount > 0) {
-          lines.push(makeLine(otrosImpuestosAcc, otrosImpuestosAmount, 0, `Impuestos Adicionales / ILA ${docRefStr}`, docItem.rutEmisor, docItem.razonSocialEmisor, docRefStr));
+        if (otrosCredito > 0) {
+          lines.push(makeLine(otrosImpuestosAcc, otrosCredito, 0, `Impuestos Adicionales / ILA ${docRefStr}`, docItem.rutEmisor, docItem.razonSocialEmisor, docRefStr));
         }
 
         if (ivaAmount > 0) {
@@ -5437,6 +5504,7 @@ export default function CompanyAccountingDashboard({
       exentoVentaAccountId: (formData.get('exentoVentaAccountId') as string) || '',
       exentoCompraAccountId: (formData.get('exentoCompraAccountId') as string) || '',
       otrosImpuestosAccountId: formData.get('otrosImpuestosAccountId') as string,
+      recuperaDiesel: formData.get('recuperaDiesel') === 'on',
       ceecAccountId: (formData.get('ceecAccountId') as string) || '',
       isEmpresaConstructora: formData.get('isEmpresaConstructora') === 'on',
       defaultCustomerAccountId: formData.get('defaultCustomerAccountId') as string,
@@ -6082,11 +6150,16 @@ export default function CompanyAccountingDashboard({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Cuenta Impuestos Adicionales / ILA</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Cuenta Impuestos Adicionales con derecho a crédito (ILA, Art. 37, diésel recuperable)</label>
                   <select name="otrosImpuestosAccountId" defaultValue={rcvParams?.otrosImpuestosAccountId || ''} className="border border-slate-300 p-2 w-full rounded-lg text-xs bg-white focus:ring-2 focus:ring-indigo-500">
                     <option value="">Seleccione una cuenta...</option>
                     {accounts.map(a => <option key={a.id} value={a.id}>[{a.code}] {a.name}</option>)}
                   </select>
+                  <p className="text-[11px] text-slate-500 mt-1">Los impuestos sin derecho a crédito (gasolina, "Impto. Sin Derecho a Crédito" del registro, tabacos) van al costo/gasto del documento.</p>
+                  <label className="flex items-start gap-2 mt-2 text-xs text-slate-700 cursor-pointer">
+                    <input type="checkbox" name="recuperaDiesel" defaultChecked={Boolean(rcvParams?.recuperaDiesel)} className="mt-0.5" />
+                    <span>La empresa recupera el impuesto específico al diésel (Art. 7 Ley 18.502, F29 código [127]). Si no se marca, el impuesto al diésel va al costo.</span>
+                  </label>
                 </div>
 
                 <div className="bg-amber-50/80 p-3.5 rounded-lg border border-amber-300">
@@ -7033,6 +7106,19 @@ export default function CompanyAccountingDashboard({
                               - CEEC: ${docItem.montoCeec.toLocaleString('es-CL')}
                             </div>
                           ) : null}
+                          {docItem.tipoRegistro === 'Compra' && (docItem.otrosImpuestos?.length ? (
+                            <div className="mt-0.5 space-y-0.5">
+                              {docItem.otrosImpuestos.map((imp, k) => (
+                                <div key={k} title={imp.nombre} className={`text-[10px] font-normal ${imp.sinDerecho ? 'text-amber-700' : 'text-indigo-700'}`}>
+                                  {imp.sinDerecho ? 'Sin derecho' : `Imp. ${imp.codigo}`}{imp.tasa ? ` (${imp.tasa}%)` : ''}: ${Number(imp.valor).toLocaleString('es-CL')}
+                                </div>
+                              ))}
+                            </div>
+                          ) : Number(docItem.montoOtrosImpuestos) > 0 ? (
+                            <div className="text-[10px] text-slate-500 font-normal" title="Monto sin detalle por código: vuelve a sincronizar con el SII o carga el CSV del Registro de Compras para ver el detalle.">
+                              Otros imp.: ${Number(docItem.montoOtrosImpuestos).toLocaleString('es-CL')} (sin detalle)
+                            </div>
+                          ) : null)}
                         </td>
                         <td className="p-3 text-center">
                           {docItem.estadoContabilizado ? (
@@ -9703,6 +9789,7 @@ export default function CompanyAccountingDashboard({
       {/* TAB: FORMULARIO 29 MENSUAL */}
       {activeTab === 'formulario29' && (
         <Formulario29View
+          recuperaDiesel={Boolean(rcvParams?.recuperaDiesel)}
           studyId={studyId}
           company={company}
           accounts={accounts}

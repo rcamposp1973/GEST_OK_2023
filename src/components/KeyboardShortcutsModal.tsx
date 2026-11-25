@@ -72,6 +72,13 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
       badge: 'Nuevo'
     },
     {
+      keys: ['Ins'],
+      description: 'Agregar línea al comprobante abierto (también Alt+L, o Enter en el Debe/Haber de la última línea)',
+      category: 'ACCIONES',
+      actionKey: 'ADD_VOUCHER_LINE',
+      badge: 'Nuevo'
+    },
+    {
       keys: ['Alt', 'C'],
       description: 'Abrir / Ocultar Calculadora Táctica Contable',
       category: 'ACCIONES',

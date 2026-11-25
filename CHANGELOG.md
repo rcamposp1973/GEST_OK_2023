@@ -9,6 +9,9 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.32.3 — 2026-11-24
+- Comprobante contable: agregar línea con la tecla Insert (Ins), con Alt+L (para notebooks sin tecla Insert) o con Enter en el Debe/Haber de la última línea. El cursor queda en la cuenta de la línea nueva. Aparece en la guía de atajos (F1).
+
 ## 1.32.2 — 2026-11-24
 - Maestro de Auxiliares, carga por Excel: no reconocía las columnas de cuentas del Excel que exporta la propia grilla ("Cuenta Deudor (Cliente)", "Cuenta Acreedor (Proveedor)", "Cuenta Ingreso / Gasto") y las ignoraba en silencio. Ahora las lee con cualquier nombre razonable (código solo, código con nombre, o plantilla).
 - Si un código de cuenta no existe en el plan de la empresa, se avisa en la vista previa en vez de ignorarlo.

@@ -190,6 +190,14 @@ export default function CompanyAccountingDashboard({
 }: CompanyAccountingDashboardProps) {
   const isSuperUser = currentUserRole === UserRole.SUPER_USER;
   const [showSiiDirecto, setShowSiiDirecto] = useState(false);
+  // Agrega una línea al comprobante (mismo efecto que el botón) y deja el cursor en la cuenta de la línea nueva
+  const agregarLineaComprobante = () => {
+    const boton = document.querySelector('[data-agregar-linea="true"]') as HTMLButtonElement | null;
+    if (!boton) return;
+    const n = document.querySelectorAll('[data-linea-cuenta]').length;
+    boton.click();
+    setTimeout(() => (document.querySelector(`[data-linea-cuenta="${n}"]`) as HTMLElement | null)?.focus(), 60);
+  };
   const [showDteEmitidos, setShowDteEmitidos] = useState(false);
   const isAnalyst = currentUserRole === UserRole.ANALYST;
   const isReadOnly = currentUserRole === UserRole.OBSERVER;
@@ -4111,6 +4119,14 @@ export default function CompanyAccountingDashboard({
           if (rcvForm) rcvForm.requestSubmit();
         }
         window.dispatchEvent(new CustomEvent('gestok-save-form'));
+        return;
+      }
+
+      // 3b. Agregar línea al comprobante abierto: tecla Insert (Ins) o Alt+L
+      if (voucherForm && distributingLineIdx === null && editingAnalysisLineIdx === null && (e.key === 'Insert' || (e.altKey && e.key.toLowerCase() === 'l'))) {
+        e.preventDefault();
+        e.stopPropagation();
+        agregarLineaComprobante();
         return;
       }
 
@@ -8403,9 +8419,11 @@ export default function CompanyAccountingDashboard({
                               };
                               setVoucherForm({ ...voucherForm, lines: [...voucherForm.lines, newLine] });
                             }}
+                            data-agregar-linea="true"
+                            title="Atajo: tecla Insert (Ins), Alt+L, o Enter en el Debe/Haber de la última línea"
                             className="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg font-semibold transition-colors flex items-center gap-1"
                           >
-                             Agregar Línea
+                             Agregar Línea <span className="text-[10px] font-mono text-indigo-400 ml-1">Ins</span>
                           </button>
                         </div>
                       </div>
@@ -8434,6 +8452,7 @@ export default function CompanyAccountingDashboard({
                                 <tr key={idx} className={`hover:bg-slate-50 ${hasMissing && line.accountId ? 'bg-amber-50/40' : ''}`}>
                                   <td className="p-2">
                                     <select
+                                      data-linea-cuenta={idx}
                                       value={line.accountId || ''}
                                       onChange={(e) => {
                                         const selectedAccId = e.target.value;
@@ -8615,7 +8634,7 @@ export default function CompanyAccountingDashboard({
                                       )}
                                     </div>
                                   </td>
-                                  <td className="p-2 text-right">
+                                  <td className="p-2 text-right" onKeyDown={(e) => { if (e.key === 'Enter' && idx === voucherForm.lines.length - 1) { e.preventDefault(); agregarLineaComprobante(); } }}>
                                     <FormattedAmountInput
                                       value={line.debit || 0}
                                       placeholder="0"
@@ -8631,7 +8650,7 @@ export default function CompanyAccountingDashboard({
                                       className="border border-slate-300 p-1.5 w-full rounded text-xs text-right font-medium font-mono focus:ring-1 focus:ring-indigo-500 bg-white"
                                     />
                                   </td>
-                                  <td className="p-2 text-right">
+                                  <td className="p-2 text-right" onKeyDown={(e) => { if (e.key === 'Enter' && idx === voucherForm.lines.length - 1) { e.preventDefault(); agregarLineaComprobante(); } }}>
                                     <FormattedAmountInput
                                       value={line.credit || 0}
                                       placeholder="0"

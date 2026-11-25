@@ -1,4 +1,6 @@
 import { formatearRut } from '../utils/rutFormato';
+import GestRtaLicenciaPanel from './GestRtaLicenciaPanel';
+import type { LicenciaGestRta } from '../utils/gestRta/licencia';
 import { useState, useEffect } from 'react';
 import { provisionAuthUser } from '../utils/adminApi';
 import { db } from '../lib/firebase';
@@ -41,6 +43,7 @@ export default function StudyDetails({ study: initialStudy, onBack, onCompanyCha
   });
   const [studySubStatus, setStudySubStatus] = useState<StudySubscriptionStatus>(study.subscriptionStatus || 'Vigente');
   const [studyPaymentNotes, setStudyPaymentNotes] = useState(study.paymentNotes || '');
+  const [gestRtaLicencia, setGestRtaLicencia] = useState<LicenciaGestRta>(() => ((study as any).gestRtaLicencia as LicenciaGestRta) || { modalidad: 'POR_EMPRESA', moneda: 'UF', periodicidad: 'ANUAL' });
 
   // Gestión de Administradores
   const [administrators, setAdministrators] = useState<StudyAdmin[]>([]);
@@ -147,6 +150,7 @@ export default function StudyDetails({ study: initialStudy, onBack, onCompanyCha
         modules: studyModules,
         subscriptionStatus: studySubStatus,
         paymentNotes: studyPaymentNotes,
+        gestRtaLicencia: studyModules.gestRta ? gestRtaLicencia : null,
         maxCompanies: Math.max(1, Number(dataToSave.maxCompanies) || 10),
         maxUsers: Math.max(1, Number(dataToSave.maxUsers) || 5),
         estado: dataToSave.estado || 'Vigente'
@@ -688,6 +692,14 @@ export default function StudyDetails({ study: initialStudy, onBack, onCompanyCha
           onMaxCompaniesChange={(v) => setStudyForm(prev => ({ ...prev, maxCompanies: v }))}
           onMaxUsersChange={(v) => setStudyForm(prev => ({ ...prev, maxUsers: v }))}
           onPaymentNotesChange={(txt) => setStudyPaymentNotes(txt)}
+        />
+
+        <GestRtaLicenciaPanel
+          activo={studyModules.gestRta === true}
+          licencia={gestRtaLicencia}
+          readOnly={!isEditingStudy}
+          onActivo={(v) => setStudyModules(prev => ({ ...prev, gestRta: v }))}
+          onChange={setGestRtaLicencia}
         />
 
         {!isEditingStudy && (

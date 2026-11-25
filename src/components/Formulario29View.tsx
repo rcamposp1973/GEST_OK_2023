@@ -3,7 +3,7 @@ import { formatearRut } from '../utils/rutFormato';
 import { getNextVoucherNumber } from '../utils/voucherCounter';
 import { exigirCuadre } from '../utils/capaContable';
 import { plazoPagoF29 } from '../utils/plazoPagoF29';
-import { ivaCreditoCoherente } from '../utils/rcvIva';
+import { ivaCreditoCoherente, normalizarTipoCompra } from '../utils/rcvIva';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import html2canvas from 'html2canvas';
 import { db } from '../lib/firebase';
@@ -356,7 +356,7 @@ export default function Formulario29View({
           }
         }
 
-        if (t === '39' || t === 'Boleta' || t === 'Boleta Electrónica') {
+        if (t === '39' || t === '35' || t === '48' || t === 'Boleta' || t === 'Boleta Electrónica' || String(doc.folio || '').startsWith('RESUMEN')) {
           ventasBoletasNeto += net;
           debitoBoletasEmitidas += iva;
         } else if (isND) {
@@ -406,37 +406,42 @@ export default function Formulario29View({
     let creditoFacturasRecibidas = 0;
     let comprasActivoFijoNeto = 0;
     let creditoActivoFijo = 0;
+    let creditoSupermercados = 0;
+    let creditoBienesRaices = 0;
     let creditoNotasDebitoRecibidas = 0;
     let debitoNotasCreditoRecibidas = 0;
     let ivaNoRecuperable = 0;
+    let netoNoRecuperable = 0;
     let ivaUsoComunTotal = 0;
+    let cantFacturasGiro = 0, cantActivoFijo = 0, cantSupermercados = 0, cantBienesRaices = 0, cantNotasCredito = 0, cantNotasDebito = 0, cantNoRecuperable = 0;
 
+    // Cada casillero se alimenta de lo que le corresponde (igual que el RCV del SII):
+    // - El IVA RECUPERABLE de cada documento (montoIva) va al crédito según su tipo de compra.
+    // - El IVA SIN DERECHO (montoIvaNoRecuperable) NO rebaja el IVA recuperable del mismo documento; es informativo.
+    // - Los "otros impuestos" (combustibles, ILA) no son IVA y no entran al crédito fiscal.
     comprasDocs.forEach(doc => {
-      const t = doc.tipoDoc;
+      const t = String(doc.tipoDoc || '').trim();
       const net = doc.montoNeto || 0;
       const iva = doc.montoIva || 0;
-      const ivaNoRec = doc.montoIvaNoRecuperable || 0;
-      const tipoCompra = (doc as any).tipoCompra || (ivaNoRec > 0 ? 'No Recuperable' : 'Giro');
+      const ivaNoRec = Number(doc.montoIvaNoRecuperable) || 0;
+      const tipoCompra = normalizarTipoCompra((doc as any).tipoCompra) || 'Giro';
+      const esNC = t === '61' || t === '60' || t === 'Nota de Crédito';
+      const esND = t === '56' || t === '55' || t === 'Nota de Débito';
+      const signo = esNC ? -1 : 1;
 
-      if (tipoCompra === 'Activo Fijo') {
-        comprasActivoFijoNeto += net;
-        creditoActivoFijo += iva;
-      } else if (tipoCompra === 'No Recuperable' || tipoCompra === 'Supermercado' || ivaNoRec > 0) {
-        ivaNoRecuperable += (ivaNoRec > 0 ? ivaNoRec : iva);
-      } else if (tipoCompra === 'Uso Común') {
-        ivaUsoComunTotal += iva;
-      } else {
-        if (t === '56' || t === 'Nota de Débito') {
-          creditoNotasDebitoRecibidas += iva;
-          comprasGiroNeto += net;
-        } else if (t === '61' || t === 'Nota de Crédito') {
-          debitoNotasCreditoRecibidas += iva;
-          comprasGiroNeto -= net;
-        } else {
-          comprasGiroNeto += net;
-          creditoFacturasRecibidas += iva;
-        }
-      }
+      if (ivaNoRec > 0) { ivaNoRecuperable += signo * ivaNoRec; netoNoRecuperable += signo * (iva > 0 ? 0 : net); cantNoRecuperable++; }
+      if (iva === 0) return; // sin IVA recuperable: no alimenta casilleros de crédito
+
+      if (esNC) { debitoNotasCreditoRecibidas += iva; comprasGiroNeto -= net; cantNotasCredito++; return; }
+      if (esND) { creditoNotasDebitoRecibidas += iva; comprasGiroNeto += net; cantNotasDebito++; return; }
+      if (tipoCompra === 'Activo Fijo' || (Number((doc as any).montoIvaActivoFijo) || 0) > 0) { comprasActivoFijoNeto += net; creditoActivoFijo += iva; cantActivoFijo++; return; }
+      if (tipoCompra === 'Supermercado') { creditoSupermercados += iva; cantSupermercados++; return; }
+      if (tipoCompra === 'Bienes Raíces') { creditoBienesRaices += iva; cantBienesRaices++; return; }
+      if (tipoCompra === 'Uso Común') { ivaUsoComunTotal += (Number((doc as any).montoIvaUsoComun) || iva); return; }
+      if (tipoCompra === 'No Recuperable') return;
+      comprasGiroNeto += net;
+      creditoFacturasRecibidas += iva;
+      cantFacturasGiro++;
     });
 
     const ivaUsoComunRecuperable = Math.round(ivaUsoComunTotal * (taxSettings.ivaUsoComunFactor || 1.0));
@@ -463,6 +468,8 @@ export default function Formulario29View({
     const totalCreditoFiscal = (
       creditoFacturasRecibidas +
       creditoActivoFijo +
+      creditoSupermercados +
+      creditoBienesRaices +
       creditoNotasDebitoRecibidas +
       ivaUsoComunRecuperable +
       remanenteMesAnteriorPesos -
@@ -478,6 +485,10 @@ export default function Formulario29View({
       creditoNotasDebitoRecibidas,
       debitoNotasCreditoRecibidas,
       ivaNoRecuperable,
+      netoNoRecuperable,
+      creditoSupermercados,
+      creditoBienesRaices,
+      cantFacturasGiro, cantActivoFijo, cantSupermercados, cantBienesRaices, cantNotasCredito, cantNotasDebito, cantNoRecuperable,
       ivaUsoComunTotal,
       ivaUsoComunRecuperable,
       remanenteMesAnteriorUTM,
@@ -606,7 +617,7 @@ export default function Formulario29View({
       ivaPagar = diffIVA;
     } else {
       remanenteParaSiguienteMes = Math.abs(diffIVA);
-      remanenteParaSiguienteMesUTM = taxSettings.utmValue > 0 ? parseFloat((remanenteParaSiguienteMes / taxSettings.utmValue).toFixed(2)) : 0;
+      remanenteParaSiguienteMesUTM = taxSettings.utmValue > 0 ? parseFloat((remanenteParaSiguienteMes / taxSettings.utmValue).toFixed(6)) : 0;
     }
 
     // Suma de Códigos Adicionales por Giro
@@ -1019,23 +1030,33 @@ export default function Formulario29View({
   const handleExportCSV = () => {
     const headers = ['Codigo SII', 'Concepto Tributario', 'Valor / Monto ($)'];
     const rows = [
-      ['503', 'Débito Fiscal Facturas Emitidas', debitoFiscalData.debitoFacturasEmitidas.toString()],
-      ['110', 'Débito Fiscal Boletas Emitidas', debitoFiscalData.debitoBoletasEmitidas.toString()],
-      ['512', 'Débito Fiscal Notas de Débito', debitoFiscalData.debitoNotasDebito.toString()],
-      ['509', 'Crédito Notas de Crédito Emitidas', debitoFiscalData.creditoNotasCreditoEmitidas.toString()],
-      ['538', 'TOTAL DÉBITO FISCAL', debitoFiscalData.totalDebitoFiscal.toString()],
-      ['520', 'Crédito Fiscal Facturas Recibidas', creditoFiscalData.creditoFacturasRecibidas.toString()],
-      ['525', 'Crédito Fiscal Activo Fijo', creditoFiscalData.creditoActivoFijo.toString()],
-      ['504', 'Remanente Crédito Fiscal Mes Anterior (UTM)', creditoFiscalData.remanenteMesAnteriorUTM.toString()],
-      ['563', 'Remanente Crédito Fiscal Mes Anterior ($)', creditoFiscalData.remanenteMesAnteriorPesos.toString()],
-      ['537', 'TOTAL CRÉDITO FISCAL', creditoFiscalData.totalCreditoFiscal.toString()],
-      ['89', 'IVA Determinado a Pagar', resumenF29.ivaPagar.toString()],
-      ['77', 'Remanente para Mes Siguiente ($)', resumenF29.remanenteParaSiguienteMes.toString()],
-      ['151', 'Retención Boletas de Honorarios (Segunda Cat)', retencionesData.retencionHonorarios.toString()],
-      ['48', 'Impuesto Único Segunda Categoría (Sueldos)', retencionesData.impuestoUnicoTrabajadores.toString()],
-      ['115', 'Tasa PPM Aplicada (%)', ppmData.tasaPPM.toString()],
-      ['62', 'Monto PPM Determinado', ppmData.montoPPM.toString()],
-      ['91', 'TOTAL A PAGAR EN GIRO F29', resumenF29.totalPagarF29.toString()]
+      ['502', 'Débito fiscal facturas emitidas', debitoFiscalData.debitoFacturasEmitidas.toString()],
+      ['111', 'Débito fiscal boletas', debitoFiscalData.debitoBoletasEmitidas.toString()],
+      ['513', 'Débito fiscal notas de débito emitidas', debitoFiscalData.debitoNotasDebito.toString()],
+      ['510', 'Notas de crédito emitidas (rebaja débito)', debitoFiscalData.creditoNotasCreditoEmitidas.toString()],
+      ['020', 'Exportaciones (monto)', (debitoFiscalData.ventasExportacionTotal || 0).toString()],
+      ['142', 'Ventas exentas o no gravadas', (debitoFiscalData.ventasExentasTotal || 0).toString()],
+      ['538', 'TOTAL DÉBITOS', debitoFiscalData.totalDebitoFiscal.toString()],
+      ['519', 'Cantidad facturas recibidas del giro', String(creditoFiscalData.cantFacturasGiro || 0)],
+      ['520', 'Crédito facturas recibidas del giro', creditoFiscalData.creditoFacturasRecibidas.toString()],
+      ['524', 'Cantidad facturas activo fijo', String(creditoFiscalData.cantActivoFijo || 0)],
+      ['525', 'Crédito facturas activo fijo', creditoFiscalData.creditoActivoFijo.toString()],
+      ['527', 'Cantidad notas de crédito recibidas', String(creditoFiscalData.cantNotasCredito || 0)],
+      ['528', 'Notas de crédito recibidas (rebaja crédito)', creditoFiscalData.debitoNotasCreditoRecibidas.toString()],
+      ['531', 'Cantidad notas de débito recibidas', String(creditoFiscalData.cantNotasDebito || 0)],
+      ['532', 'Notas de débito recibidas', creditoFiscalData.creditoNotasDebitoRecibidas.toString()],
+      ['761', 'Cantidad facturas supermercados', String(creditoFiscalData.cantSupermercados || 0)],
+      ['762', 'Crédito facturas supermercados', String(creditoFiscalData.creditoSupermercados || 0)],
+      ['504', 'Remanente crédito fiscal mes anterior', creditoFiscalData.remanenteMesAnteriorPesos.toString()],
+      ['537', 'TOTAL CRÉDITOS', creditoFiscalData.totalCreditoFiscal.toString()],
+      ['89', 'IVA determinado a pagar', resumenF29.ivaPagar.toString()],
+      ['77', 'Remanente para el mes siguiente', resumenF29.remanenteParaSiguienteMes.toString()],
+      ['151', 'Retención honorarios', retencionesData.retencionHonorarios.toString()],
+      ['48', 'Impuesto único segunda categoría', retencionesData.impuestoUnicoTrabajadores.toString()],
+      ['563', 'Base PPM (ingresos brutos)', ppmData.baseImponibleVentas.toString()],
+      ['115', 'Tasa PPM (%)', ppmData.tasaPPM.toString()],
+      ['62', 'PPM', ppmData.montoPPM.toString()],
+      ['91', 'TOTAL A PAGAR', resumenF29.totalPagarF29.toString()]
     ];
 
     const csvContent = '\uFEFF' + [headers.join(';'), ...rows.map(r => r.join(';'))].join('\n');
@@ -1973,33 +1994,57 @@ export default function Formulario29View({
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-[11px]">
                   <tr className="hover:bg-slate-50">
-                    <td className="py-2 px-3 font-bold text-indigo-700">[520 / 524]</td>
-                    <td className="py-2 px-3 font-sans text-slate-800">Facturas Recibidas del Giro (Recuperable 100%)</td>
+                    <td className="py-2 px-3 font-bold text-indigo-700">[519 / 520]</td>
+                    <td className="py-2 px-3 font-sans text-slate-800">Facturas recibidas del giro ({creditoFiscalData.cantFacturasGiro || 0} docs)</td>
                     <td className="py-2 px-3 text-right text-slate-600">${creditoFiscalData.comprasGiroNeto.toLocaleString('es-CL')}</td>
                     <td className="py-2 px-3 text-right font-bold text-slate-900">${creditoFiscalData.creditoFacturasRecibidas.toLocaleString('es-CL')}</td>
                   </tr>
                   <tr className="hover:bg-slate-50">
-                    <td className="py-2 px-3 font-bold text-indigo-700">[525 / 528]</td>
-                    <td className="py-2 px-3 font-sans text-slate-800">Facturas de Activo Fijo Recibidas</td>
+                    <td className="py-2 px-3 font-bold text-indigo-700">[524 / 525]</td>
+                    <td className="py-2 px-3 font-sans text-slate-800">Facturas activo fijo ({creditoFiscalData.cantActivoFijo || 0} docs)</td>
                     <td className="py-2 px-3 text-right text-slate-600">${creditoFiscalData.comprasActivoFijoNeto.toLocaleString('es-CL')}</td>
                     <td className="py-2 px-3 text-right font-bold text-slate-900">${creditoFiscalData.creditoActivoFijo.toLocaleString('es-CL')}</td>
                   </tr>
                   <tr className="hover:bg-slate-50">
-                    <td className="py-2 px-3 font-bold text-indigo-700">[532]</td>
-                    <td className="py-2 px-3 font-sans text-slate-800">Notas de Débito Recibidas de Proveedores</td>
+                    <td className="py-2 px-3 font-bold text-indigo-700">[531 / 532]</td>
+                    <td className="py-2 px-3 font-sans text-slate-800">Notas de débito recibidas ({creditoFiscalData.cantNotasDebito || 0} docs)</td>
                     <td className="py-2 px-3 text-right text-slate-600">-</td>
                     <td className="py-2 px-3 text-right font-bold text-slate-900">${creditoFiscalData.creditoNotasDebitoRecibidas.toLocaleString('es-CL')}</td>
                   </tr>
                   <tr className="hover:bg-slate-50">
-                    <td className="py-2 px-3 font-bold text-rose-700">[535]</td>
-                    <td className="py-2 px-3 font-sans text-slate-800">(-) Notas de Crédito Recibidas de Proveedores</td>
+                    <td className="py-2 px-3 font-bold text-rose-700">[527 / 528]</td>
+                    <td className="py-2 px-3 font-sans text-slate-800">(-) Notas de crédito recibidas ({creditoFiscalData.cantNotasCredito || 0} docs)</td>
                     <td className="py-2 px-3 text-right text-slate-600">-</td>
                     <td className="py-2 px-3 text-right font-bold text-rose-700">-${creditoFiscalData.debitoNotasCreditoRecibidas.toLocaleString('es-CL')}</td>
                   </tr>
+                  {(creditoFiscalData.creditoSupermercados || 0) > 0 && (
+                  <tr className="hover:bg-slate-50">
+                    <td className="py-2 px-3 font-bold text-indigo-700">[761 / 762]</td>
+                    <td className="py-2 px-3 font-sans text-slate-800">Facturas de supermercados y comercios similares ({creditoFiscalData.cantSupermercados || 0} docs)</td>
+                    <td className="py-2 px-3 text-right text-slate-600">-</td>
+                    <td className="py-2 px-3 text-right font-bold text-slate-900">${(creditoFiscalData.creditoSupermercados || 0).toLocaleString('es-CL')}</td>
+                  </tr>
+                  )}
+                  {(creditoFiscalData.creditoBienesRaices || 0) > 0 && (
+                  <tr className="hover:bg-slate-50">
+                    <td className="py-2 px-3 font-bold text-indigo-700">[765 / 766]</td>
+                    <td className="py-2 px-3 font-sans text-slate-800">Facturas por adquisición o construcción de bienes inmuebles ({creditoFiscalData.cantBienesRaices || 0} docs)</td>
+                    <td className="py-2 px-3 text-right text-slate-600">-</td>
+                    <td className="py-2 px-3 text-right font-bold text-slate-900">${(creditoFiscalData.creditoBienesRaices || 0).toLocaleString('es-CL')}</td>
+                  </tr>
+                  )}
+                  {(creditoFiscalData.ivaNoRecuperable || 0) !== 0 && (
+                  <tr className="hover:bg-slate-50 text-slate-500">
+                    <td className="py-2 px-3 font-bold">[564 / 521]</td>
+                    <td className="py-2 px-3 font-sans">Sin derecho a crédito ({creditoFiscalData.cantNoRecuperable || 0} docs) · IVA no recuperable informativo</td>
+                    <td className="py-2 px-3 text-right">-</td>
+                    <td className="py-2 px-3 text-right">${(creditoFiscalData.ivaNoRecuperable || 0).toLocaleString('es-CL')} (no suma)</td>
+                  </tr>
+                  )}
                   {f29CodeSettings.remanente504 !== false && (
                     <>
                       <tr className="bg-emerald-50/40 hover:bg-emerald-50/70 transition-colors">
-                        <td className="py-2 px-3 font-bold text-indigo-700">[504 / 563]</td>
+                        <td className="py-2 px-3 font-bold text-indigo-700">[504]</td>
                         <td className="py-2 px-3 font-sans text-slate-800">
                           <div>
                             <div className="flex items-center gap-2">

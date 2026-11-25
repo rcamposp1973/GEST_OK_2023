@@ -424,6 +424,9 @@ export interface RCVDocument {
   codigoIvaNoRec?: string | number; // Código SII de IVA No Recuperable (1, 2, 3, etc.)
   montoIvaUsoComun?: number; // IVA de compras destinadas simultáneamente a operaciones gravadas y exentas
   montoOtrosImpuestos?: number; // Impuestos adicionales (ILA, diesel, carnes, licores, etc.)
+  /** Tipo de compra del RCV: Giro, Supermercado, Activo Fijo, Uso Común, Bienes Raíces, No Recuperable */
+  tipoCompra?: string;
+  montoIvaActivoFijo?: number;
   isBoletaResumen?: boolean; // Identificador de resumen consolidado de boletas de venta
   totalDocumentos?: number; // Conteo de documentos agrupados en el resumen
   refFolioOrig?: string; // Folio de referencia para NC / ND
@@ -886,12 +889,16 @@ export interface F29DebitoFiscal {
 
 export interface F29CreditoFiscal {
   comprasGiroNeto: number;
-  creditoFacturasRecibidas: number; // Cód 520 / 524
+  creditoFacturasRecibidas: number; // Cód 520 (cantidad 519)
   comprasActivoFijoNeto: number;
-  creditoActivoFijo: number; // Cód 525 / 528
-  creditoNotasDebitoRecibidas: number; // Cód 532
-  debitoNotasCreditoRecibidas: number; // Cód 535
-  ivaNoRecuperable: number; // Cód 537
+  creditoActivoFijo: number; // Cód 525 (cantidad 524)
+  creditoSupermercados?: number; // Cód 762 (cantidad 761)
+  creditoBienesRaices?: number; // Cód 766 (cantidad 765)
+  cantFacturasGiro?: number; cantActivoFijo?: number; cantSupermercados?: number; cantBienesRaices?: number;
+  cantNotasCredito?: number; cantNotasDebito?: number; cantNoRecuperable?: number; netoNoRecuperable?: number;
+  creditoNotasDebitoRecibidas: number; // Cód 532 (cantidad 531)
+  debitoNotasCreditoRecibidas: number; // Cód 528 (cantidad 527)
+  ivaNoRecuperable: number; // Informativo: IVA sin derecho a crédito (cód. 564/521 son cantidad y neto)
   ivaUsoComunTotal: number;
   ivaUsoComunRecuperable: number;
   remanenteMesAnteriorUTM: number; // Cód 504

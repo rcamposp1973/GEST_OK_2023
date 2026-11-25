@@ -9,6 +9,13 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.36.0 — 2026-11-25
+- F29, crédito fiscal: un documento con "IVA sin derecho" perdía también su IVA recuperable (se excluía completo del cód. 520). Ahora cada casillero se alimenta como en el RCV del SII: el IVA recuperable va al crédito según el tipo de compra; el IVA sin derecho es informativo y no rebaja el recuperable.
+- RCV: la diferencia entre el total y neto + IVA + exento se registraba como "IVA sin derecho, Cód. 1" aunque fuera otro impuesto (combustibles, ILA). Ahora es "otros impuestos" salvo que el IVA recuperable venga en 0. Las compras ya guardadas con ese error se corrigen solas al abrir el RCV. Supermercados ya no se trata como IVA sin derecho.
+- F29: casilleros con sus códigos correctos: 519/520 facturas del giro, 524/525 activo fijo, 527/528 notas de crédito, 531/532 notas de débito, 761/762 supermercados, 765/766 bienes inmuebles, 564/521 sin derecho (informativo), 504 remanente. Cantidades de documentos por casillero. Boletas 35 y comprobantes 48 (POS) van a boletas. Exportación del resumen con los códigos reales (502, 111, 513, 510, 020, 142, 563…).
+- API propia del SII y carga CSV: se guardan tipo de compra, IVA no recuperable y su código, IVA activo fijo, IVA uso común y otros impuestos, cada uno en su campo.
+- Remanente en UTM para el mes siguiente se guarda sin redondear a 2 decimales.
+
 ## 1.35.0 — 2026-11-25
 - F29: cada concepto que mueve una cuenta (IVA débito, IVA crédito, IVA por pagar, remanente, corrección monetaria, IVA postergado, PPM, retención honorarios, impuesto único, impuestos por pagar) usa SOLO la cuenta que el usuario le asignó. La primera vez, y cada vez que aparece un concepto nuevo, el sistema pide la cuenta antes de contabilizar (con una sugerencia de su plan, que hay que confirmar) y la deja guardada para los meses siguientes. Sin cuenta, no se contabiliza.
 - Los parámetros de cuentas del F29 ya no se rellenan solos con cuentas adivinadas; los vacíos dicen "Sin asignar (se pedirá al contabilizar)".

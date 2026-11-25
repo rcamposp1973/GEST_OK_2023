@@ -289,6 +289,13 @@ export async function leerRcv(s: SesionSii, rutEmpresa: string, nombreEmpresa: s
           razonSocialReceptor: lado === 'COMPRA' ? nombreEmpresa : (d.detRznSoc || ''),
           fechaEmision: fechaIso(d.detFchDoc), montoNeto: neto, montoIva: iva, montoExento: exe,
           montoTotal: num(d.detMntTotal) || neto + iva + exe, period: periodo, origenDocumento: 'RCV_SII_PROPIO',
+          // Cada monto en su casillero, tal como lo informa el SII
+          ...(lado === 'COMPRA' ? {
+            tipoCompra: String(d.descTipoTransaccion || '') || 'Del Giro',
+            montoIvaNoRecuperable: num(d.detMntIVANoRec), codigoIvaNoRec: num(d.detMntCodNoRec) ? String(d.detMntCodNoRec) : null,
+            montoIvaActivoFijo: num(d.detMntIVAActFijo), montoIvaUsoComun: num(d.detIVAUsoComun),
+            montoOtrosImpuestos: num(d.totalDtoiMontoImp),
+          } : {}),
         });
       }
     } else {

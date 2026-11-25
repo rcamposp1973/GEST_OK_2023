@@ -354,4 +354,12 @@ import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } fro
   const h:any = R.normalizarHonorario({ tipoRegistro:'Honorario', montoNeto:862500, montoIva:137500, montoTotal:1000000 });
   ok('honorario antiguo se corrige (tipo y montos)', h.tipoRegistro==='Honorarios' && h.montoNeto===1000000 && h.montoIva===137500 && h.montoTotal===862500 && h.montoLiquido===862500);
 }
+{
+  const R = await import('../src/utils/rcvIva');
+  const d:any = R.corregirIvaNoRecFalso({ tipoRegistro:'Compra', montoNeto:34035, montoIva:6467, montoIvaNoRecuperable:3510, codigoIvaNoRec:'1', montoTotal:44012 });
+  ok('RCV: otro impuesto no es IVA sin derecho', d.montoIvaNoRecuperable===0 && d.montoOtrosImpuestos===3510 && d.montoIva===6467);
+  const real:any = { tipoRegistro:'Compra', montoNeto:10000, montoIva:0, montoIvaNoRecuperable:1900, montoTotal:11900 };
+  ok('RCV: IVA sin derecho real se respeta', R.corregirIvaNoRecFalso(real)===real);
+  ok('RCV: tipos de compra del SII', R.normalizarTipoCompra('Del Giro')==='Giro' && R.normalizarTipoCompra('Supermercados')==='Supermercado' && R.normalizarTipoCompra('IVA Uso Común')==='Uso Común' && R.normalizarTipoCompra('Activo Fijo')==='Activo Fijo');
+}
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

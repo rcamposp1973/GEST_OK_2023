@@ -37,3 +37,29 @@ export function normalizarHonorario<T extends Record<string, any>>(d: T): T {
   const liquido = bruto - ret;
   return { ...d, tipoRegistro: 'Honorarios', montoNeto: bruto, montoIva: ret, montoTotal: liquido, montoBruto: bruto, montoRetencion: ret, montoLiquido: liquido };
 }
+
+/** Tipo de compra del RCV del SII ("Del Giro", "Supermercados", "Activo Fijo", "IVA Uso Común", "Bienes Raíces"...). */
+export function normalizarTipoCompra(s: any): '' | 'Giro' | 'Supermercado' | 'Activo Fijo' | 'Uso Común' | 'Bienes Raíces' | 'No Recuperable' {
+  const t = String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+  if (!t) return '';
+  if (t.includes('supermerc') || t === '2') return 'Supermercado';
+  if (t.includes('activo fijo') || t === '4') return 'Activo Fijo';
+  if (t.includes('uso comun') || t === '3') return 'Uso Común';
+  if (t.includes('bienes raices') || t.includes('inmueble')) return 'Bienes Raíces';
+  if (t.includes('no rec') || t.includes('sin derecho') || t.includes('no acredit') || t === '5') return 'No Recuperable';
+  if (t.includes('giro') || t === '1') return 'Giro';
+  return '';
+}
+
+/**
+ * Corrige compras guardadas donde un "otro impuesto" (impuesto específico a combustibles, ILA, etc.) quedó como
+ * "IVA sin derecho a crédito" por la detección antigua (total > neto + IVA + exento). Si el IVA recuperable del
+ * documento ya es el 19% del neto, la diferencia NO es IVA: es otro impuesto. El IVA no recuperable real del SII
+ * viene con el IVA recuperable en 0.
+ */
+export function corregirIvaNoRecFalso<T extends Record<string, any>>(d: T): T {
+  if (d.tipoRegistro !== 'Compra') return d;
+  const noRec = Number(d.montoIvaNoRecuperable) || 0, iva = Number(d.montoIva) || 0, neto = Number(d.montoNeto) || 0;
+  if (noRec <= 0 || iva <= 0 || neto <= 0 || Math.abs(iva - Math.round(neto * 0.19)) > 2) return d;
+  return { ...d, montoIvaNoRecuperable: 0, codigoIvaNoRec: null, montoOtrosImpuestos: (Number(d.montoOtrosImpuestos) || 0) + noRec };
+}

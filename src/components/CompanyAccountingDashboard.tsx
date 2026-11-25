@@ -11,7 +11,7 @@ import { EmployeesView } from './EmployeesView';
 import { LiquidacionSueldosView } from './LiquidacionSueldosView';
 import { syncOnlineChileanIndicators } from '../utils/chileanEconomicIndicators';
 import { logAuditEvent } from '../utils/auditLogger';
-import { ivaCreditoCoherente, normalizarIvaDocRcv, normalizarHonorario } from '../utils/rcvIva';
+import { ivaCreditoCoherente, normalizarIvaDocRcv, normalizarHonorario, normalizarTipoCompra, corregirIvaNoRecFalso } from '../utils/rcvIva';
 import { notify } from '../context/ToastContext';
 import LibroDiarioView from './LibroDiarioView';
 import LibroMayorView from './LibroMayorView';
@@ -1457,7 +1457,9 @@ export default function CompanyAccountingDashboard({
           const h = normalizarHonorario(crudo);
           // se deja corregido en la base para que la contabilización y los informes lo lean bien
           if (h !== crudo) updateDoc(doc(companyRef, 'rcvDocuments', d.id), { tipoRegistro: h.tipoRegistro, montoNeto: h.montoNeto, montoIva: h.montoIva, montoTotal: h.montoTotal, montoBruto: h.montoBruto, montoRetencion: h.montoRetencion, montoLiquido: h.montoLiquido }).catch(() => {});
-          return normalizarIvaDocRcv(h as RCVDocument);
+          const c2 = corregirIvaNoRecFalso(h);
+          if (c2 !== h) updateDoc(doc(companyRef, 'rcvDocuments', d.id), { montoIvaNoRecuperable: 0, codigoIvaNoRec: null, montoOtrosImpuestos: c2.montoOtrosImpuestos }).catch(() => {});
+          return normalizarIvaDocRcv(corregirIvaNoRecFalso(h) as RCVDocument);
         });
       setRcvDocuments(filterAndPurgeDuplicateRcvDocs(cleanRcvDocs));
 
@@ -1568,7 +1570,9 @@ export default function CompanyAccountingDashboard({
           const h = normalizarHonorario(crudo);
           // se deja corregido en la base para que la contabilización y los informes lo lean bien
           if (h !== crudo) updateDoc(doc(companyRef, 'rcvDocuments', d.id), { tipoRegistro: h.tipoRegistro, montoNeto: h.montoNeto, montoIva: h.montoIva, montoTotal: h.montoTotal, montoBruto: h.montoBruto, montoRetencion: h.montoRetencion, montoLiquido: h.montoLiquido }).catch(() => {});
-          return normalizarIvaDocRcv(h as RCVDocument);
+          const c2 = corregirIvaNoRecFalso(h);
+          if (c2 !== h) updateDoc(doc(companyRef, 'rcvDocuments', d.id), { montoIvaNoRecuperable: 0, codigoIvaNoRec: null, montoOtrosImpuestos: c2.montoOtrosImpuestos }).catch(() => {});
+          return normalizarIvaDocRcv(corregirIvaNoRecFalso(h) as RCVDocument);
         });
       setRcvDocuments(filterAndPurgeDuplicateRcvDocs(cleanRcvDocs));
     }, (err) => console.warn("Realtime listener error rcv:", err));
@@ -1999,7 +2003,9 @@ export default function CompanyAccountingDashboard({
                   tempMap['razon'] = idx;
                   score += 2;
                 }
-              } else if (tempMap['razon'] === undefined && !col.includes('transportista') && !col.includes('chofer')) {
+              } else if (tempMap['otroImp'] === undefined && col.includes('otro') && col.includes('impuesto') && (col.includes('valor') || col.includes('monto'))) {
+              tempMap['otroImp'] = idx;
+            } else if (tempMap['razon'] === undefined && !col.includes('transportista') && !col.includes('chofer')) {
                 tempMap['razon'] = idx;
                 score += 2;
               }
@@ -2262,13 +2268,15 @@ export default function CompanyAccountingDashboard({
           let montoIvaNoRec = parseChileanNumber(headerMap['ivaNoRec'] !== undefined ? cols[headerMap['ivaNoRec']] : 0);
           let codIvaNoRec = headerMap['codIvaNoRec'] !== undefined ? String(cols[headerMap['codIvaNoRec']] || '').trim() : '';
           const rawTipoCompra = headerMap['tipoCompra'] !== undefined ? String(cols[headerMap['tipoCompra']] || '').trim().toLowerCase() : '';
+          let montoOtroImp = parseChileanNumber(headerMap['otroImp'] !== undefined ? cols[headerMap['otroImp']] : 0);
           let montoIvaUsoComun = parseChileanNumber(headerMap['ivaUsoComun'] !== undefined ? cols[headerMap['ivaUsoComun']] : 0);
           let montoExento = parseChileanNumber(headerMap['exento'] !== undefined ? cols[headerMap['exento']] : 0);
           let montoTotal = parseChileanNumber(headerMap['pagado'] !== undefined ? cols[headerMap['pagado']] : (headerMap['total'] !== undefined ? cols[headerMap['total']] : cols[9]));
 
           // Manejo normativo oficial SII: IVA Sin Derecho a Crédito Fiscal / IVA No Recuperable
           if (tipoRegistro === 'Compra') {
-            const isNoRecTipoCompra = rawTipoCompra === '5' || rawTipoCompra.includes('no rec') || rawTipoCompra.includes('sin derecho') || rawTipoCompra.includes('no acredit') || rawTipoCompra.includes('supermercado');
+            // Supermercados NO es IVA sin derecho: es crédito con tratamiento especial (Art. 23 N° 4, F29 cód. 761/762)
+            const isNoRecTipoCompra = rawTipoCompra === '5' || rawTipoCompra.includes('no rec') || rawTipoCompra.includes('sin derecho') || rawTipoCompra.includes('no acredit');
             if (isNoRecTipoCompra) {
               if (montoIvaNoRec === 0 && montoIva > 0) {
                 montoIvaNoRec = montoIva;
@@ -2279,12 +2287,15 @@ export default function CompanyAccountingDashboard({
               }
             }
 
-            // Detección matemática inteligente si el documento no trajo explícitamente la columna separada
-            if (montoIvaNoRec === 0 && montoNeto > 0 && montoTotal > (montoNeto + montoIva + montoExento)) {
-              const diff = montoTotal - (montoNeto + montoIva + montoExento);
-              if (montoIva === 0 || Math.abs(diff - Math.round(montoNeto * 0.19)) <= 5 || diff > 0) {
+            // Si el total trae más que neto + IVA + exento, la diferencia es IVA sin derecho SOLO si el IVA recuperable
+            // vino en 0; si el IVA recuperable ya es el 19% del neto, la diferencia es otro impuesto (combustibles, ILA...).
+            if (montoIvaNoRec === 0 && montoNeto > 0 && montoTotal > (montoNeto + montoIva + montoExento + montoOtroImp)) {
+              const diff = montoTotal - (montoNeto + montoIva + montoExento + montoOtroImp);
+              if (montoIva === 0 && Math.abs(diff - Math.round(montoNeto * 0.19)) <= 5) {
                 montoIvaNoRec = diff;
                 if (!codIvaNoRec) codIvaNoRec = '1';
+              } else if (headerMap['otroImp'] === undefined) {
+                montoOtroImp = diff;
               }
             }
           }
@@ -2409,6 +2420,8 @@ export default function CompanyAccountingDashboard({
             montoIvaNoRecuperable: montoIvaNoRec > 0 ? montoIvaNoRec : 0,
             codigoIvaNoRec: codIvaNoRec || undefined,
             montoIvaUsoComun: montoIvaUsoComun > 0 ? montoIvaUsoComun : 0,
+            montoOtrosImpuestos: montoOtroImp > 0 ? montoOtroImp : 0,
+            tipoCompra: tipoRegistro === 'Compra' ? (normalizarTipoCompra(rawTipoCompra) || 'Giro') : undefined,
             montoExento,
             montoTotal,
             montoBruto,
@@ -2903,6 +2916,14 @@ export default function CompanyAccountingDashboard({
           montoBruto: item.montoBruto !== undefined ? Number(item.montoBruto) : (tipoReg === 'Honorarios' ? (Number(item.montoNeto) || Number(item.montoTotal) || 0) : undefined),
           montoRetencion: item.montoRetencion !== undefined ? Number(item.montoRetencion) : (tipoReg === 'Honorarios' ? Number(item.montoIva) : undefined),
           montoLiquido: item.montoLiquido !== undefined ? Number(item.montoLiquido) : (tipoReg === 'Honorarios' ? (Number(item.montoTotal) || Number(item.montoNeto) || 0) : undefined),
+          ...(tipoReg === 'Compra' ? {
+            tipoCompra: normalizarTipoCompra(item.tipoCompra) || 'Giro',
+            montoIvaNoRecuperable: Number(item.montoIvaNoRecuperable) || 0,
+            ...(item.codigoIvaNoRec ? { codigoIvaNoRec: String(item.codigoIvaNoRec) } : {}),
+            montoIvaActivoFijo: Number(item.montoIvaActivoFijo) || 0,
+            montoIvaUsoComun: Number(item.montoIvaUsoComun) || 0,
+            montoOtrosImpuestos: Number(item.montoOtrosImpuestos) || 0,
+          } : {}),
           estado: 'Vigente',
           estadoContabilizado: false,
           createdBy: userUid,
@@ -6777,14 +6798,12 @@ export default function CompanyAccountingDashboard({
               const sumIvaCredito = periodDocs.reduce((acc, d) => acc + (d.tipoRegistro === 'Honorarios' ? (d.montoRetencion || 0) : (d.montoIva || 0)), 0);
               const sumIvaSinCredito = periodDocs.reduce((acc, d) => {
                 if (d.tipoRegistro !== 'Compra' && !isExportDoc(d)) return acc;
-                const noRec = Number(d.montoIvaNoRecuperable) || 
-                  (d.montoTotal > ((d.montoNeto || 0) + (d.montoIva || 0) + (d.montoExento || 0)) ? (d.montoTotal - ((d.montoNeto || 0) + (d.montoIva || 0) + (d.montoExento || 0))) : 0);
+                const noRec = Number(d.montoIvaNoRecuperable) || 0;
                 return acc + noRec;
               }, 0);
               const docsConIvaSinCredito = periodDocs.filter(d => {
                 if (d.tipoRegistro !== 'Compra' && !isExportDoc(d)) return false;
-                const noRec = Number(d.montoIvaNoRecuperable) || 
-                  (d.montoTotal > ((d.montoNeto || 0) + (d.montoIva || 0) + (d.montoExento || 0)) ? (d.montoTotal - ((d.montoNeto || 0) + (d.montoIva || 0) + (d.montoExento || 0))) : 0);
+                const noRec = Number(d.montoIvaNoRecuperable) || 0;
                 return noRec > 0;
               });
               const sumExportaciones = periodDocs.reduce((acc, d) => isExportDoc(d) ? acc + (d.montoNeto || 0) : acc, 0);
@@ -6893,10 +6912,8 @@ export default function CompanyAccountingDashboard({
                     const isBHE = docItem.tipoRegistro === 'Honorarios' || docItem.tipoDoc === 'BHE';
                     const displayNeto = isBHE ? (docItem.montoBruto || docItem.montoNeto || 0) : (docItem.montoNeto || 0);
                     const displayIva = isBHE ? (docItem.montoRetencion !== undefined ? docItem.montoRetencion : (docItem.montoIva || 0)) : (docItem.montoIva || 0);
-                    const displayIvaNoRec = Number(docItem.montoIvaNoRecuperable) || 
-                      (docItem.tipoRegistro === 'Compra' && (docItem.montoTotal || 0) > ((docItem.montoNeto || 0) + (docItem.montoIva || 0) + (docItem.montoExento || 0))
-                        ? ((docItem.montoTotal || 0) - ((docItem.montoNeto || 0) + (docItem.montoIva || 0) + (docItem.montoExento || 0)))
-                        : 0);
+                    // Solo el IVA sin derecho informado (no se deduce del total: la diferencia puede ser otro impuesto)
+                    const displayIvaNoRec = Number(docItem.montoIvaNoRecuperable) || 0;
                     const displayTotal = isBHE ? (docItem.montoLiquido !== undefined ? docItem.montoLiquido : (docItem.montoTotal || 0)) : (docItem.montoTotal || 0);
 
                     // Resolución de contraparte correcta para no mostrar a la propia empresa emisora como cliente

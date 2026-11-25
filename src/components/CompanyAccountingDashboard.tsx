@@ -3271,10 +3271,14 @@ export default function CompanyAccountingDashboard({
         'Proveedores Nacionales'
       );
 
-      // 4. Exento
+      // 4. Exento de compras: es un gasto. Prioridad: 1. Doc override → 2. Cuenta de gasto del proveedor → 3. Parámetro
+      //    "Compras exentas" → 4. Parámetro antiguo compartido (solo si es cuenta de gasto/costo) → 5. Gasto por defecto
+      const exentoAntiguo = accounts.find(a => a.id === rcvParams?.exentoAccountId);
+      const exentoAntiguoEsGasto = exentoAntiguo && getNaturaleza(exentoAntiguo as any) === 'GASTO';
       const exentoAcc = resolveAccountDetails(
-        rcvParams?.exentoAccountId,
-        ['4202002', '4202', 'exento', 'no gravado', 'no afecto'],
+        docItem.cuentaGastoId || aux?.defaultExpenseOrIncomeAccountId || rcvParams?.exentoCompraAccountId
+          || (exentoAntiguoEsGasto ? rcvParams?.exentoAccountId : '') || rcvParams?.defaultCostOrExpenseAccountId,
+        ['exento', 'no gravado', 'no afecto', 'gasto', 'costo', 'compra'],
         'Gasto',
         '4202002',
         'Gastos Exentos / No Gravados'
@@ -3397,8 +3401,9 @@ export default function CompanyAccountingDashboard({
       );
 
       // 4. Exento
+      const exentoVentaAntiguo = accounts.find(a => a.id === rcvParams?.exentoAccountId);
       const exentoAcc = resolveAccountDetails(
-        rcvParams?.exentoAccountId,
+        rcvParams?.exentoVentaAccountId || (exentoVentaAntiguo && getNaturaleza(exentoVentaAntiguo as any) === 'INGRESO' ? rcvParams?.exentoAccountId : ''),
         ['3101002', '3101', '3.1.01', '5101001', '5101', 'exenta', 'no afecta'],
         'Ingreso',
         '3101002',
@@ -5334,7 +5339,9 @@ export default function CompanyAccountingDashboard({
       ivaDebitoAccountId: formData.get('ivaDebitoAccountId') as string,
       ivaCreditoAccountId: formData.get('ivaCreditoAccountId') as string,
       retencionBheAccountId: formData.get('retencionBheAccountId') as string,
-      exentoAccountId: formData.get('exentoAccountId') as string,
+      exentoAccountId: (formData.get('exentoVentaAccountId') as string) || rcvParams?.exentoAccountId || '',
+      exentoVentaAccountId: (formData.get('exentoVentaAccountId') as string) || '',
+      exentoCompraAccountId: (formData.get('exentoCompraAccountId') as string) || '',
       otrosImpuestosAccountId: formData.get('otrosImpuestosAccountId') as string,
       ceecAccountId: (formData.get('ceecAccountId') as string) || '',
       isEmpresaConstructora: formData.get('isEmpresaConstructora') === 'on',
@@ -5964,8 +5971,17 @@ export default function CompanyAccountingDashboard({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Cuenta de Impuesto Exento / No Gravado</label>
-                  <select name="exentoAccountId" defaultValue={rcvParams?.exentoAccountId || ''} className="border border-slate-300 p-2 w-full rounded-lg text-xs bg-white focus:ring-2 focus:ring-indigo-500">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Cuenta Compras Exentas / No Gravadas (gasto)</label>
+                  <select name="exentoCompraAccountId" defaultValue={rcvParams?.exentoCompraAccountId || ''} className="border border-slate-300 p-2 w-full rounded-lg text-xs bg-white focus:ring-2 focus:ring-indigo-500">
+                    <option value="">Usar la cuenta de gasto del proveedor o la de gastos por defecto</option>
+                    {accounts.map(a => <option key={a.id} value={a.id}>[{a.code}] {a.name}</option>)}
+                  </select>
+                  <p className="text-[10px] text-slate-500 mt-0.5">Si el proveedor tiene cuenta de gasto en su ficha, se usa esa primero.</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Cuenta Ventas Exentas / No Afectas (ingreso)</label>
+                  <select name="exentoVentaAccountId" defaultValue={rcvParams?.exentoVentaAccountId || rcvParams?.exentoAccountId || ''} className="border border-slate-300 p-2 w-full rounded-lg text-xs bg-white focus:ring-2 focus:ring-indigo-500">
                     <option value="">Seleccione una cuenta...</option>
                     {accounts.map(a => <option key={a.id} value={a.id}>[{a.code}] {a.name}</option>)}
                   </select>

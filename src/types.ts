@@ -579,6 +579,10 @@ export interface CompanyBudget {
 }
 
 export interface RCVAccountingParams {
+  /** Compras exentas (gasto). Si falta, se usa la cuenta de gasto del proveedor o la de gastos por defecto. */
+  exentoCompraAccountId?: string;
+  /** Ventas exentas (ingreso). Si falta, se usa exentoAccountId (antiguo, compartido). */
+  exentoVentaAccountId?: string;
   ivaDebitoAccountId?: string; // IVA Débito Fiscal (Ventas)
   ivaCreditoAccountId?: string; // IVA Crédito Fiscal (Compras)
   retencionBheAccountId?: string; // IVA Retenido / Retención BHE (Honorarios)

@@ -9,6 +9,10 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.35.0 — 2026-11-25
+- F29: cada concepto que mueve una cuenta (IVA débito, IVA crédito, IVA por pagar, remanente, corrección monetaria, IVA postergado, PPM, retención honorarios, impuesto único, impuestos por pagar) usa SOLO la cuenta que el usuario le asignó. La primera vez, y cada vez que aparece un concepto nuevo, el sistema pide la cuenta antes de contabilizar (con una sugerencia de su plan, que hay que confirmar) y la deja guardada para los meses siguientes. Sin cuenta, no se contabiliza.
+- Los parámetros de cuentas del F29 ya no se rellenan solos con cuentas adivinadas; los vacíos dicen "Sin asignar (se pedirá al contabilizar)".
+
 ## 1.34.0 — 2026-11-25
 - Regla general: el sistema NO inventa cuentas. Ningún comprobante puede llevar una cuenta que no exista en el plan de la empresa; si falta, se detiene y dice cuál crear o asignar.
 - F29 (centralización): ya no crea cuentas 1-1-07-01, 1-1-07-02, 1-1-07-03, 2-1-03-03, etc. Usa la cuenta de Parámetros F29, luego la de Parámetros RCV (IVA, retención), luego una cuenta de detalle del plan con nombre y naturaleza correctos (sin importar tildes, ej. "IVA CREDITO FICAL"). Si no hay, avisa.

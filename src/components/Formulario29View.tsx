@@ -110,18 +110,11 @@ export default function Formulario29View({
   ]);
 
   // Cuentas Contables Configurables para Centralización F29 y Corrección Monetaria
-  const [f29AccountParams, setF29AccountParams] = useState<F29AccountingParams>(() => company.f29AccountParams || {
-    ivaDebitoAccountId: accounts.find(a => a.code.startsWith('2-1-03-01'))?.id || '',
-    ivaCreditoAccountId: accounts.find(a => a.code.startsWith('1-1-07-01'))?.id || '',
-    ivaPagarAccountId: accounts.find(a => a.code.startsWith('2-1-03-02'))?.id || '',
-    remanenteAccountId: accounts.find(a => a.code.startsWith('1-1-07-02'))?.id || '',
-    correccionMonetariaAccountId: accounts.find(a => a.code.startsWith('4-3-01-01') || a.code.startsWith('5-3-01-01') || a.name.toLowerCase().includes('correcci') || a.name.toLowerCase().includes('reajuste'))?.id || '',
-    ivaPostergadoAccountId: accounts.find(a => a.code.startsWith('2-1-03-05') || a.name.toLowerCase().includes('postergado'))?.id || '',
-    ppmAccountId: accounts.find(a => a.code.startsWith('1-1-07-03') || a.name.toLowerCase().includes('ppm'))?.id || '',
-    retencionHonorariosAccountId: accounts.find(a => a.code.startsWith('2-1-03-03'))?.id || '',
-    impuestoUnicoAccountId: accounts.find(a => a.code.startsWith('2-1-03-04'))?.id || '',
-    impuestosPorPagarAccountId: accounts.find(a => a.code.startsWith('2-1-03-99') || a.name.toLowerCase().includes('f29'))?.id || ''
-  });
+  // Solo cuentas confirmadas por el usuario (guardadas en la empresa). Nada se adivina en silencio.
+  const [f29AccountParams, setF29AccountParams] = useState<F29AccountingParams>(() => company.f29AccountParams || {});
+  // Conceptos del F29 que necesitan cuenta y aún no la tienen: se piden antes de contabilizar
+  const [mapeoPendiente, setMapeoPendiente] = useState<{ key: keyof F29AccountingParams; concepto: string; monto: number; sugerida: string }[] | null>(null);
+  const [mapeoElegido, setMapeoElegido] = useState<Record<string, string>>({});
 
   // Manual Adjustments for Audit & Additional Fields
   const [manualAdjustments, setManualAdjustments] = useState<{
@@ -727,8 +720,51 @@ export default function Formulario29View({
   };
 
   // Handle Centralize F29 in General Ledger (Asiento Contable de Liquidación de Impuestos con Corrección Monetaria)
-  const handleCentralizeF29Voucher = async () => {
-    if (!confirm(`¿Desea generar automáticamente el Asiento Contable de Centralización y Liquidación de Impuestos F29 para el período ${selectedPeriod}?`)) {
+  /** Conceptos del F29 de este período que mueven una cuenta (solo los que tienen monto). */
+  const conceptosF29 = (): { key: keyof F29AccountingParams; concepto: string; monto: number; naturaleza: string | null; palabras: string[][]; evitar?: string[] }[] => {
+    const out: any[] = [];
+    const add = (key: keyof F29AccountingParams, concepto: string, monto: number, naturaleza: string | null, palabras: string[][], evitar: string[] = []) => {
+      if (monto > 0 && !out.some(o => o.key === key)) out.push({ key, concepto, monto, naturaleza, palabras, evitar });
+    };
+    const reaj = creditoFiscalData.reajusteCorreccionMonetariaRemanente || 0;
+    add('remanenteAccountId', 'Remanente de crédito fiscal', reaj, 'ACTIVO', [['remanente']]);
+    add('correccionMonetariaAccountId', 'Corrección monetaria (reajuste del remanente)', reaj, null, [['correccion', 'monetaria'], ['reajuste']]);
+    add('ivaDebitoAccountId', 'IVA débito fiscal', debitoFiscalData.totalDebitoFiscal || 0, 'PASIVO', [['iva', 'debito']]);
+    add('ivaCreditoAccountId', 'IVA crédito fiscal', creditoFiscalData.totalCreditoFiscal || 0, 'ACTIVO', [['iva', 'credito'], ['iva', 'cred']], ['remanente']);
+    if ((resumenF29.ivaPagar || 0) > 0) {
+      add('ivaPostergadoAccountId', 'IVA postergado por pagar', resumenF29.ivaPostergado || 0, 'PASIVO', [['iva', 'postergado']]);
+      add('ivaPagarAccountId', 'IVA por pagar', resumenF29.ivaPagarNetoPostergacion || 0, 'PASIVO', [['iva', 'pagar']]);
+    } else {
+      add('remanenteAccountId', 'Remanente de crédito fiscal', resumenF29.remanenteParaSiguienteMes || 0, 'ACTIVO', [['remanente']]);
+    }
+    add('ppmAccountId', 'PPM (pagos provisionales mensuales)', ppmData.montoPPM || 0, 'ACTIVO', [['ppm'], ['pagos', 'provisionales'], ['pagos', 'prov']]);
+    add('retencionHonorariosAccountId', 'Retención honorarios 2ª categoría', retencionesData.retencionHonorarios || 0, 'PASIVO', [['retencion', 'honorario'], ['retencion', '2']]);
+    add('impuestoUnicoAccountId', 'Impuesto único trabajadores', retencionesData.impuestoUnicoTrabajadores || 0, 'PASIVO', [['impuesto', 'unico'], ['impto', 'unico']]);
+    const aPagar = (ppmData.montoPPM || 0) + (retencionesData.retencionHonorarios || 0) + (retencionesData.impuestoUnicoTrabajadores || 0)
+      + customCodes.filter(c => c.active && (c.amount || 0) > 0).reduce((t, c) => t + (c.amount || 0), 0);
+    add('impuestosPorPagarAccountId', 'Impuestos por pagar (F29)', aPagar, 'PASIVO', [['impuestos', 'pagar'], ['imptos', 'pagar'], ['impuesto', 'pagar']], ['unico', 'diferido']);
+    return out;
+  };
+
+  const handleCentralizeF29Voucher = async (yaConfirmado = false) => {
+    // Primero: cada concepto que mueve una cuenta debe tener su cuenta asignada por el usuario.
+    // Si falta alguna (primera vez, o un concepto nuevo este mes), se pide ANTES de contabilizar.
+    const sinTildeC = (t: string) => (t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const faltan = conceptosF29().filter(c => !(f29AccountParams[c.key] && accounts.some(a => a.id === f29AccountParams[c.key])));
+    if (faltan.length) {
+      const rcvP: any = (company as any).rcvParams || {};
+      const desdeRcv: Partial<Record<keyof F29AccountingParams, string>> = { ivaDebitoAccountId: rcvP.ivaDebitoAccountId, ivaCreditoAccountId: rcvP.ivaCreditoAccountId, retencionHonorariosAccountId: rcvP.retencionBheAccountId };
+      const pendientes = faltan.map(c => {
+        const porRcv = desdeRcv[c.key] && accounts.some(a => a.id === desdeRcv[c.key]) ? desdeRcv[c.key]! : '';
+        const porNombre = accounts.filter(a => !c.naturaleza || getNaturaleza(a as any) === c.naturaleza)
+          .find(a => { const n = sinTildeC(a.name); return c.palabras.some(g => g.every(k => n.includes(k))) && !(c.evitar || []).some(k => n.includes(k)); })?.id || '';
+        return { key: c.key, concepto: c.concepto, monto: c.monto, sugerida: porRcv || porNombre };
+      });
+      setMapeoElegido(Object.fromEntries(pendientes.map(p => [p.key, p.sugerida])));
+      setMapeoPendiente(pendientes);
+      return;
+    }
+    if (!yaConfirmado && !confirm(`¿Desea generar automáticamente el Asiento Contable de Centralización y Liquidación de Impuestos F29 para el período ${selectedPeriod}?`)) {
       return;
     }
 
@@ -736,35 +772,20 @@ export default function Formulario29View({
     try {
 
       // Helper para buscar cuenta asignada en parámetros o sugerida del plan de cuentas
-      // Las cuentas salen SOLO del plan de cuentas de la empresa: 1. la configurada en Parámetros F29;
-      // 2. la configurada en Parámetros RCV (IVA y retención); 3. una cuenta de detalle del plan cuyo nombre calce y
-      // sea de la naturaleza correcta. Si no hay, NO se inventa: se detiene y se dice qué configurar.
-      const sinTilde = (t: string) => (t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-      const esDetalle = (a: ChartOfAccount) => (a as any).isGroup !== true && (a as any).esGrupo !== true && !(a as any).hasChildren;
-      const rcvP: any = (company as any).rcvParams || {};
+      // Las cuentas salen SOLO de las asignadas por el usuario para cada concepto (Parámetros F29). Si falta, no se contabiliza.
       const faltantes: string[] = [];
-      const cuenta = (concepto: string, configurada: string | undefined, otras: (string | undefined)[], naturaleza: string | null, palabras: string[][], evitar: string[] = [], respaldo?: ChartOfAccount | null): any => {
-        for (const id of [configurada, ...otras]) {
-          const a = id ? accounts.find(x => x.id === id) : undefined;
-          if (a) return a;
-        }
-        const encontrada = accounts.filter(a => esDetalle(a) && (!naturaleza || getNaturaleza(a as any) === naturaleza))
-          .find(a => { const n = sinTilde(`${a.name}`); return palabras.some(g => g.every(k => n.includes(k))) && !evitar.some(k => n.includes(k)); });
-        if (encontrada) return encontrada;
-        if (respaldo) return respaldo;
-        return { id: `FALTA::${concepto}`, code: '', name: concepto };
-      };
-
-      const accIvaDebito = cuenta('IVA Débito Fiscal', f29AccountParams.ivaDebitoAccountId, [rcvP.ivaDebitoAccountId], 'PASIVO', [['iva', 'debito']]);
-      const accIvaCredito = cuenta('IVA Crédito Fiscal', f29AccountParams.ivaCreditoAccountId, [rcvP.ivaCreditoAccountId], 'ACTIVO', [['iva', 'credito'], ['iva', 'cred']], ['remanente']);
-      const accImpuestosPorPagarTotal = cuenta('Impuestos por pagar (F29)', f29AccountParams.impuestosPorPagarAccountId, [], 'PASIVO', [['impuestos', 'pagar'], ['imptos', 'pagar'], ['impuesto', 'pagar']], ['unico', 'diferido']);
-      const accIvaPagar = cuenta('IVA por pagar', f29AccountParams.ivaPagarAccountId, [], 'PASIVO', [['iva', 'pagar']], [], accImpuestosPorPagarTotal.id.startsWith('FALTA::') ? null : accImpuestosPorPagarTotal);
-      const accRemanente = cuenta('Remanente de crédito fiscal', f29AccountParams.remanenteAccountId, [], 'ACTIVO', [['remanente']], [], accIvaCredito.id.startsWith('FALTA::') ? null : accIvaCredito);
-      const accCorreccionMonetaria = cuenta('Corrección monetaria', f29AccountParams.correccionMonetariaAccountId, [], null, [['correccion', 'monetaria'], ['reajuste']]);
-      const accIvaPostergado = cuenta('IVA postergado por pagar', f29AccountParams.ivaPostergadoAccountId, [], 'PASIVO', [['iva', 'postergado']]);
-      const accPPMActivo = cuenta('PPM (pagos provisionales mensuales)', f29AccountParams.ppmAccountId, [], 'ACTIVO', [['ppm'], ['pagos', 'provisionales'], ['pagos', 'prov']]);
-      const accRetencionHonorarios = cuenta('Retención honorarios 2ª categoría', f29AccountParams.retencionHonorariosAccountId, [rcvP.retencionBheAccountId], 'PASIVO', [['retencion', 'honorario'], ['retencion', '2']]);
-      const accImpuestoUnico = cuenta('Impuesto único trabajadores', f29AccountParams.impuestoUnicoAccountId, [], 'PASIVO', [['impuesto', 'unico'], ['impto', 'unico']], [], accImpuestosPorPagarTotal.id.startsWith('FALTA::') ? null : accImpuestosPorPagarTotal);
+      const cuenta = (key: keyof F29AccountingParams, concepto: string): any =>
+        accounts.find(a => a.id === f29AccountParams[key]) || { id: `FALTA::${concepto}`, code: '', name: concepto };
+      const accIvaDebito = cuenta('ivaDebitoAccountId', 'IVA débito fiscal');
+      const accIvaCredito = cuenta('ivaCreditoAccountId', 'IVA crédito fiscal');
+      const accImpuestosPorPagarTotal = cuenta('impuestosPorPagarAccountId', 'Impuestos por pagar (F29)');
+      const accIvaPagar = cuenta('ivaPagarAccountId', 'IVA por pagar');
+      const accRemanente = cuenta('remanenteAccountId', 'Remanente de crédito fiscal');
+      const accCorreccionMonetaria = cuenta('correccionMonetariaAccountId', 'Corrección monetaria');
+      const accIvaPostergado = cuenta('ivaPostergadoAccountId', 'IVA postergado por pagar');
+      const accPPMActivo = cuenta('ppmAccountId', 'PPM');
+      const accRetencionHonorarios = cuenta('retencionHonorariosAccountId', 'Retención honorarios 2ª categoría');
+      const accImpuestoUnico = cuenta('impuestoUnicoAccountId', 'Impuesto único trabajadores');
 
       const lines: any[] = [];
 
@@ -934,9 +955,9 @@ export default function Formulario29View({
         } else {
           lines.push({
             id: 'line_round_deb',
-            accountId: accPPMActivo.id,
-            accountCode: accPPMActivo.code,
-            accountName: accPPMActivo.name,
+            accountId: accImpuestosPorPagarTotal.id,
+            accountCode: accImpuestosPorPagarTotal.code,
+            accountName: accImpuestosPorPagarTotal.name,
             debit: diff,
             credit: 0,
             documentRef: `F29 ${selectedPeriod}`,
@@ -1540,8 +1561,56 @@ export default function Formulario29View({
     }
   };
 
+  const guardarMapeoYContabilizar = async () => {
+    if (!mapeoPendiente) return;
+    const sinElegir = mapeoPendiente.filter(p => !mapeoElegido[p.key]);
+    if (sinElegir.length) { alert(`Falta elegir la cuenta para: ${sinElegir.map(p => p.concepto).join(', ')}.`); return; }
+    const nuevos = { ...f29AccountParams, ...Object.fromEntries(mapeoPendiente.map(p => [p.key, mapeoElegido[p.key]])) } as F29AccountingParams;
+    try {
+      await updateDoc(companyRef, { f29AccountParams: nuevos, updatedAt: new Date().toISOString() });
+    } catch (e: any) { alert('No se pudieron guardar las cuentas: ' + (e?.message || e)); return; }
+    // se usan de inmediato en esta misma contabilización (el estado de React se actualiza después)
+    Object.assign(f29AccountParams, nuevos);
+    setF29AccountParams(nuevos);
+    setMapeoPendiente(null);
+    await handleCentralizeF29Voucher(true);
+  };
+
   return (
     <div className="space-y-4">
+      {mapeoPendiente && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl w-full max-w-2xl p-5 space-y-4 my-8">
+            <div>
+              <h3 className="font-bold text-slate-900">Cuentas para centralizar el F29 {selectedPeriod}</h3>
+              <p className="text-xs text-slate-600 mt-1">Estos conceptos del F29 aún no tienen cuenta asignada. Elige una cuenta de tu plan para cada uno: quedarán guardadas para los meses siguientes (puedes cambiarlas en los parámetros del F29). La cuenta sugerida es solo una sugerencia; revísala.</p>
+            </div>
+            <table className="w-full text-xs">
+              <thead><tr className="text-left text-slate-500 border-b border-slate-200"><th className="p-2">Concepto</th><th className="p-2 text-right">Monto</th><th className="p-2">Cuenta</th></tr></thead>
+              <tbody>
+                {mapeoPendiente.map(p => (
+                  <tr key={p.key} className="border-b border-slate-100">
+                    <td className="p-2 font-semibold text-slate-800">{p.concepto}</td>
+                    <td className="p-2 text-right font-mono">$ {Math.round(p.monto).toLocaleString('es-CL')}</td>
+                    <td className="p-2">
+                      <select value={mapeoElegido[p.key] || ''} onChange={e => setMapeoElegido(m => ({ ...m, [p.key]: e.target.value }))}
+                        className={`w-full border rounded-lg p-1.5 text-xs bg-white ${mapeoElegido[p.key] ? 'border-slate-300' : 'border-rose-400'}`}>
+                        <option value="">Elegir cuenta…</option>
+                        {accounts.map(a => <option key={a.id} value={a.id}>[{a.code}] {a.name}{a.id === p.sugerida ? '  (sugerida)' : ''}</option>)}
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="text-[11px] text-slate-500">Si una cuenta no existe en tu plan, créala primero en el Plan de Cuentas. Sin cuenta, el F29 no se contabiliza.</p>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setMapeoPendiente(null)} className="px-3 py-2 rounded-lg bg-slate-100 text-xs font-bold">Cancelar</button>
+              <button onClick={guardarMapeoYContabilizar} className="px-3 py-2 rounded-lg bg-indigo-600 text-white text-xs font-bold">Guardar cuentas y contabilizar</button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* HEADER */}
       <div className="bg-white px-4 py-2.5 rounded-xl border border-slate-200 shadow-xs flex flex-wrap justify-between items-center gap-2">
         <div className="flex items-center gap-2">
@@ -1563,7 +1632,7 @@ export default function Formulario29View({
           </button>
 
           <button
-            onClick={handleCentralizeF29Voucher}
+            onClick={() => handleCentralizeF29Voucher()}
             disabled={isSubmitting}
             className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             title="Generar y contabilizar asiento de liquidación mensual F29 en Libro Diario"
@@ -2592,7 +2661,7 @@ export default function Formulario29View({
                   onChange={e => setF29AccountParams({ ...f29AccountParams, ivaDebitoAccountId: e.target.value })}
                   className="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1.5 font-sans"
                 >
-                  <option value="">-- Por defecto (2-1-03-01 / IVA Débito) --</option>
+                  <option value="">-- Sin asignar (se pedirá al contabilizar) --</option>
                   {accounts.map(a => (
                     <option key={a.id} value={a.id}>{a.code} - {a.name}</option>
                   ))}
@@ -2606,7 +2675,7 @@ export default function Formulario29View({
                   onChange={e => setF29AccountParams({ ...f29AccountParams, ivaCreditoAccountId: e.target.value })}
                   className="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1.5 font-sans"
                 >
-                  <option value="">-- Por defecto (1-1-07-01 / IVA Crédito) --</option>
+                  <option value="">-- Sin asignar (se pedirá al contabilizar) --</option>
                   {accounts.map(a => (
                     <option key={a.id} value={a.id}>{a.code} - {a.name}</option>
                   ))}
@@ -2620,7 +2689,7 @@ export default function Formulario29View({
                   onChange={e => setF29AccountParams({ ...f29AccountParams, remanenteAccountId: e.target.value })}
                   className="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1.5 font-sans"
                 >
-                  <option value="">-- Por defecto (1-1-07-02 / Remanente Crédito Fiscal) --</option>
+                  <option value="">-- Sin asignar (se pedirá al contabilizar) --</option>
                   {accounts.map(a => (
                     <option key={a.id} value={a.id}>{a.code} - {a.name}</option>
                   ))}
@@ -2634,7 +2703,7 @@ export default function Formulario29View({
                   onChange={e => setF29AccountParams({ ...f29AccountParams, correccionMonetariaAccountId: e.target.value })}
                   className="w-full bg-emerald-50 border border-emerald-300 rounded px-2.5 py-1.5 font-sans font-semibold text-emerald-900"
                 >
-                  <option value="">-- Por defecto (4-3-01-01 / Corrección Monetaria) --</option>
+                  <option value="">-- Sin asignar (se pedirá al contabilizar) --</option>
                   {accounts.map(a => (
                     <option key={a.id} value={a.id}>{a.code} - {a.name}</option>
                   ))}
@@ -2648,7 +2717,7 @@ export default function Formulario29View({
                   onChange={e => setF29AccountParams({ ...f29AccountParams, ivaPostergadoAccountId: e.target.value })}
                   className="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1.5 font-sans"
                 >
-                  <option value="">-- Por defecto (2-1-03-05 / IVA Postergado) --</option>
+                  <option value="">-- Sin asignar (se pedirá al contabilizar) --</option>
                   {accounts.map(a => (
                     <option key={a.id} value={a.id}>{a.code} - {a.name}</option>
                   ))}
@@ -2662,7 +2731,7 @@ export default function Formulario29View({
                   onChange={e => setF29AccountParams({ ...f29AccountParams, ivaPagarAccountId: e.target.value })}
                   className="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1.5 font-sans"
                 >
-                  <option value="">-- Por defecto (2-1-03-02 / IVA por Pagar) --</option>
+                  <option value="">-- Sin asignar (se pedirá al contabilizar) --</option>
                   {accounts.map(a => (
                     <option key={a.id} value={a.id}>{a.code} - {a.name}</option>
                   ))}
@@ -2676,7 +2745,7 @@ export default function Formulario29View({
                   onChange={e => setF29AccountParams({ ...f29AccountParams, ppmAccountId: e.target.value })}
                   className="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1.5 font-sans"
                 >
-                  <option value="">-- Por defecto (1-1-07-03 / PPM) --</option>
+                  <option value="">-- Sin asignar (se pedirá al contabilizar) --</option>
                   {accounts.map(a => (
                     <option key={a.id} value={a.id}>{a.code} - {a.name}</option>
                   ))}
@@ -2690,7 +2759,7 @@ export default function Formulario29View({
                   onChange={e => setF29AccountParams({ ...f29AccountParams, retencionHonorariosAccountId: e.target.value })}
                   className="w-full bg-slate-50 border border-slate-300 rounded px-2.5 py-1.5 font-sans"
                 >
-                  <option value="">-- Por defecto (2-1-03-03 / Retención Honorarios) --</option>
+                  <option value="">-- Sin asignar (se pedirá al contabilizar) --</option>
                   {accounts.map(a => (
                     <option key={a.id} value={a.id}>{a.code} - {a.name}</option>
                   ))}

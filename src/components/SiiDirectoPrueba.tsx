@@ -59,7 +59,7 @@ export default function SiiDirectoPrueba({ studyId, companyId, periodo, onClose 
           <div className="space-y-0.5">
             <div>Ventas: {rcv.resumen?.ventas} documentos · {pesos(sum('Venta'))}</div>
             <div>Compras: {rcv.resumen?.compras} documentos · {pesos(sum('Compra'))}</div>
-            <div>Honorarios: {rcv.resumen?.honorarios} boletas · {pesos(sum('Honorario'))}</div>
+            <div>Honorarios: {rcv.resumen?.honorarios} boletas · {pesos(sum('Honorarios'))}</div>
           </div>
         ))}
         {caja('f29', salida.f29?.success && (

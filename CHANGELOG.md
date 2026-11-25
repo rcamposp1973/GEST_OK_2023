@@ -9,6 +9,10 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.33.1 — 2026-11-25
+- Boletas de honorarios traídas desde el SII (API propia y SimpleAPI) quedaban como tipo "Honorario" (sin s) y con los montos invertidos, por lo que no aparecían en la pestaña Honorarios. Corregido en la descarga, y las ya guardadas se corrigen solas al abrir el RCV (neto = bruto, IVA = retención, total = líquido).
+- Maestro de Auxiliares: nuevo rol "Prestador de Honorarios" (filtro, contador y color propios). La contabilización de boletas usa su cuenta acreedora (honorarios por pagar) y su contrapartida de gasto; si no tiene, las de Parámetros RCV.
+
 ## 1.33.0 — 2026-11-25
 - RCV: botón "Descontabilizar". Con documentos marcados (uno, varios o todos con la casilla del encabezado) descontabiliza solo esos; sin marcados, todo el período. Elimina los comprobantes generados desde el RCV y deja los documentos como Pendientes; los documentos no se borran. Pide confirmación. No toca comprobantes manuales, conciliados con el banco ni los que agrupan documentos no incluidos. Queda en la auditoría.
 

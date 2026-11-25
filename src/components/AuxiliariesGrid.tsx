@@ -597,6 +597,9 @@ export default function AuxiliariesGrid({
             <span className="bg-orange-50 text-orange-800 px-2.5 py-1 rounded-lg border border-orange-200" title="Acreedores Varios (socios, previsión, bancos)">
                Acred. Varios: {uniqueAuxiliaries.filter(a => a.role === 'Acreedores Varios').length}
             </span>
+            <span className="bg-rose-50 text-rose-800 px-2.5 py-1 rounded-lg border border-rose-200" title="Prestadores de servicios con boleta de honorarios">
+               Honorarios: {uniqueAuxiliaries.filter(a => a.role === 'Honorarios').length}
+            </span>
             {garbageAuxiliaries.length > 0 && (
               <span className="bg-rose-100 text-rose-800 px-2.5 py-1 rounded-lg border border-rose-300 font-bold flex items-center gap-1">
                 <span> Malformados:</span>
@@ -810,6 +813,7 @@ export default function AuxiliariesGrid({
                     <option value="Personal"> Personal (Trabajadores)</option>
                     <option value="Deudores Varios"> Deudores Varios</option>
                     <option value="Acreedores Varios"> Acreedores Varios</option>
+                    <option value="Honorarios"> Honorarios (Prestadores)</option>
                     <option value="Ambos"> Ambos / Mixto</option>
                   </select>
                 </th>
@@ -978,6 +982,8 @@ export default function AuxiliariesGrid({
                             ? 'bg-cyan-100 text-cyan-800 border border-cyan-200'
                             : aux.role === 'Acreedores Varios'
                             ? 'bg-orange-100 text-orange-800 border border-orange-200'
+                            : aux.role === 'Honorarios'
+                            ? 'bg-rose-100 text-rose-800 border border-rose-200'
                             : 'bg-purple-100 text-purple-800 border border-purple-200'
                         }`}>
                           {aux.role === 'Deudor' && ''}

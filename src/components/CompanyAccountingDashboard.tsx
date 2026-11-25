@@ -11,7 +11,7 @@ import { EmployeesView } from './EmployeesView';
 import { LiquidacionSueldosView } from './LiquidacionSueldosView';
 import { syncOnlineChileanIndicators } from '../utils/chileanEconomicIndicators';
 import { logAuditEvent } from '../utils/auditLogger';
-import { ivaCreditoCoherente, normalizarIvaDocRcv } from '../utils/rcvIva';
+import { ivaCreditoCoherente, normalizarIvaDocRcv, normalizarHonorario } from '../utils/rcvIva';
 import { notify } from '../context/ToastContext';
 import LibroDiarioView from './LibroDiarioView';
 import LibroMayorView from './LibroMayorView';
@@ -1452,7 +1452,13 @@ export default function CompanyAccountingDashboard({
 
       const cleanRcvDocs = rcvSnap.docs
         .filter(d => !demoDocs.some(dd => dd.id === d.id))
-        .map(d => normalizarIvaDocRcv({ ...d.data(), id: d.id } as RCVDocument));
+        .map(d => {
+          const crudo: any = { ...d.data(), id: d.id };
+          const h = normalizarHonorario(crudo);
+          // se deja corregido en la base para que la contabilización y los informes lo lean bien
+          if (h !== crudo) updateDoc(doc(companyRef, 'rcvDocuments', d.id), { tipoRegistro: h.tipoRegistro, montoNeto: h.montoNeto, montoIva: h.montoIva, montoTotal: h.montoTotal, montoBruto: h.montoBruto, montoRetencion: h.montoRetencion, montoLiquido: h.montoLiquido }).catch(() => {});
+          return normalizarIvaDocRcv(h as RCVDocument);
+        });
       setRcvDocuments(filterAndPurgeDuplicateRcvDocs(cleanRcvDocs));
 
       const fetchedVouchers = vouchSnap.docs.map(d => ({ ...d.data(), id: d.id } as Voucher));
@@ -1557,7 +1563,13 @@ export default function CompanyAccountingDashboard({
           );
           return !isDemo;
         })
-        .map(d => normalizarIvaDocRcv({ ...d.data(), id: d.id } as RCVDocument));
+        .map(d => {
+          const crudo: any = { ...d.data(), id: d.id };
+          const h = normalizarHonorario(crudo);
+          // se deja corregido en la base para que la contabilización y los informes lo lean bien
+          if (h !== crudo) updateDoc(doc(companyRef, 'rcvDocuments', d.id), { tipoRegistro: h.tipoRegistro, montoNeto: h.montoNeto, montoIva: h.montoIva, montoTotal: h.montoTotal, montoBruto: h.montoBruto, montoRetencion: h.montoRetencion, montoLiquido: h.montoLiquido }).catch(() => {});
+          return normalizarIvaDocRcv(h as RCVDocument);
+        });
       setRcvDocuments(filterAndPurgeDuplicateRcvDocs(cleanRcvDocs));
     }, (err) => console.warn("Realtime listener error rcv:", err));
 
@@ -2778,10 +2790,11 @@ export default function CompanyAccountingDashboard({
       const cleanCompRut = (company.rut || '').replace(/[^0-9kK]/g, '').toUpperCase();
       const cleanCompRutWithDash = company.rut.includes('-') ? company.rut : `${company.rut.slice(0, -1)}-${company.rut.slice(-1)}`;
 
-      for (const item of fetchedDocs) {
+      for (let item of fetchedDocs) {
         const itemTipoDoc = String(item.tipoDocumento || item.tipoDoc || '33').trim();
         const itemFolio = String(item.folio || '0').trim();
         const docPeriod = item.period || selectedRcvPeriod;
+        if (item.tipoRegistro === 'Honorario') item = normalizarHonorario(item);
         const tipoReg = item.tipoRegistro || (['33', '34', '52', '56'].includes(itemTipoDoc) ? 'Compra' : ['BH', 'BHR'].includes(itemTipoDoc) ? 'Honorarios' : 'Venta');
         
         const isVenta = tipoReg === 'Venta';

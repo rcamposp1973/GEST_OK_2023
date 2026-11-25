@@ -24,3 +24,16 @@ export function normalizarIvaDocRcv<T extends { tipoRegistro?: string; montoIva?
   const iva = ivaCreditoCoherente(d as any);
   return iva === (Number(d.montoIva) || 0) ? d : { ...d, montoIva: iva };
 }
+
+/**
+ * Boletas de honorarios traídas desde el SII por la API (antes de la v1.33.1) quedaban con tipoRegistro 'Honorario'
+ * (sin "s") y con los montos al revés (neto = líquido, total = bruto). Así no aparecían en la pestaña Honorarios.
+ * Se corrigen al leer: tipoRegistro 'Honorarios', montoNeto = bruto, montoIva = retención, montoTotal = líquido.
+ */
+export function normalizarHonorario<T extends Record<string, any>>(d: T): T {
+  if (d.tipoRegistro !== 'Honorario') return d;
+  const bruto = Math.max(Number(d.montoTotal) || 0, Number(d.montoNeto) || 0);
+  const ret = Number(d.montoIva) || 0;
+  const liquido = bruto - ret;
+  return { ...d, tipoRegistro: 'Honorarios', montoNeto: bruto, montoIva: ret, montoTotal: liquido, montoBruto: bruto, montoRetencion: ret, montoLiquido: liquido };
+}

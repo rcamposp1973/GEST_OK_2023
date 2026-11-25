@@ -349,4 +349,9 @@ import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } fro
   const T = await import('../src/utils/repararTexto');
   ok('repara Ñ y tildes rotas', T.repararTexto('CARMONA NIEMANN Y COMPAÃ‘IA LIMITADA')==='CARMONA NIEMANN Y COMPAÑIA LIMITADA' && T.repararTexto('TelefÃ³nica MÃ³viles Chile S.A.')==='Telefónica Móviles Chile S.A.' && T.repararTexto('ÑUÑOA ÁREA')==='ÑUÑOA ÁREA');
 }
+{
+  const R = await import('../src/utils/rcvIva');
+  const h:any = R.normalizarHonorario({ tipoRegistro:'Honorario', montoNeto:862500, montoIva:137500, montoTotal:1000000 });
+  ok('honorario antiguo se corrige (tipo y montos)', h.tipoRegistro==='Honorarios' && h.montoNeto===1000000 && h.montoIva===137500 && h.montoTotal===862500 && h.montoLiquido===862500);
+}
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

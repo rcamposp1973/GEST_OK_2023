@@ -331,10 +331,12 @@ export async function leerHonorariosRecibidos(s: SesionSii, rutEmpresa: string, 
       if (f.estado === 'S') continue; // anulada
       const bruto = num(f.totalhonorarios), ret = num(f.retencion_receptor), liq = num(f.honorariosliquidos) || bruto - ret;
       docs.push({
-        tipoRegistro: 'Honorario', tipoDocumento: 'BH', tipoDoc: 'BH', nombreTipoDoc: 'Boleta de Honorarios Electrónica',
+        tipoRegistro: 'Honorarios', tipoDocumento: 'BH', tipoDoc: 'BH', nombreTipoDoc: 'Boleta de Honorarios Electrónica',
         folio: String(f.nroboleta || ''), rutEmisor: rut, razonSocialEmisor: f.nombre_emisor || '',
         rutReceptor: p.conGuion, razonSocialReceptor: nombreEmpresa, fechaEmision: fechaIso(f.fecha_boleta),
-        montoNeto: liq, montoIva: ret, montoExento: 0, montoTotal: bruto, period: `${anio}-${mm}`, origenDocumento: 'BHE_SII_PROPIO',
+        // Convención de Gest_OK para honorarios: neto = bruto, IVA = retención, total = líquido
+        montoNeto: bruto, montoIva: ret, montoExento: 0, montoTotal: liq, montoBruto: bruto, montoRetencion: ret, montoLiquido: liq,
+        period: `${anio}-${mm}`, origenDocumento: 'BHE_SII_PROPIO',
       });
     }
     const total = num(meta?.total_boletas);

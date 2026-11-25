@@ -327,6 +327,7 @@ export default function AuxiliaryModal({
                   <option value="Personal"> Personal (Trabajadores / Anticipos / Préstamos)</option>
                   <option value="Deudores Varios"> Deudores Varios (No relacionados con el giro)</option>
                   <option value="Acreedores Varios"> Acreedores Varios (Bancos / Socios / Previsión)</option>
+                  <option value="Honorarios"> Prestador de Honorarios (Boletas de honorarios)</option>
                   <option value="Ambos"> Ambos / Mixto (Cliente y Proveedor simultáneo)</option>
                 </select>
               </div>

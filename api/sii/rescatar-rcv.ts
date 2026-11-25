@@ -563,7 +563,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
             const montoLiquido = Number(item.montoLiquido || item.liquido || (montoBruto - retencion));
 
             docs.push({
-              tipoRegistro: 'Honorario',
+              tipoRegistro: 'Honorarios',
               tipoDocumento: 'BH',
               tipoDoc: 'BH',
               nombreTipoDoc: 'Boleta de Honorarios Electrónica',
@@ -573,10 +573,11 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
               rutReceptor: cleanCompanyRutWithDash,
               razonSocialReceptor: companyName || 'EMPRESA RECEPTORA',
               fechaEmision,
-              montoNeto: montoLiquido,
+              montoNeto: montoBruto,
               montoIva: retencion,
               montoExento: 0,
-              montoTotal: montoBruto,
+              montoTotal: montoLiquido,
+              montoBruto, montoRetencion: retencion, montoLiquido,
               period: `${yearNum}-${formattedMonth}`
             });
           }
@@ -593,7 +594,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     // Consumo de SimpleAPI: cada bloque de hasta 5.000 documentos devueltos es 1 consulta; una respuesta vacía no se cobra.
     let consumoMes: { usadas: number; limite: number; mes: string } | undefined;
     try {
-      const porTipo = ['Venta', 'Compra', 'Honorario'].map(t => docs.filter(d => d.tipoRegistro === t).length);
+      const porTipo = ['Venta', 'Compra', 'Honorarios'].map(t => docs.filter(d => d.tipoRegistro === t).length);
       const consultas = porTipo.reduce((a, n) => a + (n > 0 ? Math.ceil(n / 5000) : 0), 0);
       const mesActual = new Date(Date.now() - 3 * 3600 * 1000).toISOString().slice(0, 7); // hora de Chile aprox.
       const ref = adminDb.collection('systemUsage').doc(`simpleApi_${mesActual}`);

@@ -9,6 +9,11 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.37.4 — 2026-11-26
+- F29: el reajuste del remanente (Art. 27 DL 825) = UTMs que se arrastran × variación de la UTM entre el mes de origen y el mes declarado, redondeado a pesos. El remanente del mes = lo registrado en el F29 anterior + reajuste.
+- Asiento del F29: el crédito del mes se rebaja de IVA Crédito Fiscal y el remanente anterior reajustado de la cuenta Remanente (antes se rebajaba todo de IVA Crédito).
+- Contabilidad sin decimales: todo asiento se registra en pesos enteros (los cálculos pueden usar decimales).
+
 ## 1.37.3 — 2026-11-26
 - F29: el remanente (Cód. 504) se arrastra siempre del F29 del mes anterior, actualizado con la UTM del mes; también en borradores ya guardados. Se respeta lo declarado/pagado y el remanente fijado a mano (con botón para volver al arrastre). Avisa si falta guardar un mes intermedio.
 

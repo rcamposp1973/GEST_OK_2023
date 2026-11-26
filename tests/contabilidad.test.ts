@@ -431,4 +431,13 @@ import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } fro
   const d = P.separarSetDte(set)[0];
   ok('XML recibidos: lee proveedor', d.razonEmisor==='COMERCIALIZADORA MEPIACHE LTDA' && d.rutEmisor==='78427580-9' && d.folio==='29026' && d.total===77400);
 }
+{ const C = await import('../src/utils/cuentaPorPagar');
+  const accounts: any[] = [{ id:'p1', code:'2101001', name:'Cuentas por pagar comerciales', type:'Pasivo' }, { id:'g1', code:'4101', name:'Gasto', type:'Gasto' }, { id:'h1', code:'2101005', name:'Honorarios por pagar', type:'Pasivo' }];
+  const vouchers = [{ status:'Valido', lines:[{ accountId:'g1', debit:14750, auxiliaryRut:'78.866.720-5', documentRef:'33 #930867' }, { accountId:'p1', credit:17553, auxiliaryRut:'78866720-5', documentRef:'33 #930867' }] }];
+  const r1 = C.cuentaPorPagarDocumento({ rut:'78.866.720-5', tipoDoc:'33', folio:'930867' }, { accounts, vouchers });
+  ok('Nómina pago: usa la cuenta donde quedó registrada la factura', r1?.cuenta.id==='p1' && r1?.origen==='registro');
+  const r2 = C.cuentaPorPagarDocumento({ rut:'1-9', tipoDoc:'BHE', folio:'5', esHonorario:true }, { accounts, vouchers, defaultProveedores:'p1', defaultHonorarios:'h1' });
+  ok('Nómina pago: honorarios por parámetros', r2?.cuenta.id==='h1' && r2?.origen==='parametros');
+  ok('Nómina pago: sin cuenta no adivina', C.cuentaPorPagarDocumento({ rut:'1-9', tipoDoc:'33', folio:'5' }, { accounts, vouchers })===null);
+}
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

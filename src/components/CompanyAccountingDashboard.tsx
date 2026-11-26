@@ -9715,6 +9715,7 @@ export default function CompanyAccountingDashboard({
           vouchers={vouchers}
           fiscalYears={fiscalYears}
           onVouchersUpdated={fetchData}
+          rcvParams={rcvParams as any}
         />
       )}
 

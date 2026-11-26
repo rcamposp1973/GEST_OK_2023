@@ -104,9 +104,34 @@ export function sanitizeVoucherLine<T extends VoucherLine>(
   return clean;
 }
 
+/**
+ * La contabilidad se lleva en pesos chilenos SIN DECIMALES: los cálculos pueden usar decimales, pero cada línea se
+ * registra redondeada. Si al redondear el asiento (que estaba cuadrado) queda descuadrado por $1 o $2 de redondeo,
+ * la diferencia se lleva a la línea de mayor monto de ese lado. Sólo una contabilidad en otra moneda usaría decimales.
+ */
+export function redondearLineasAPesos<T extends VoucherLine>(lines: T[]): T[] {
+  const antesD = lines.reduce((s, l) => s + (Number(l.debit) || 0), 0);
+  const antesC = lines.reduce((s, l) => s + (Number(l.credit) || 0), 0);
+  const out = lines.map(l => ({ ...l, debit: Math.round(Number(l.debit) || 0), credit: Math.round(Number(l.credit) || 0) }));
+  if (Math.abs(antesD - antesC) < 0.5) {
+    const d = out.reduce((s, l) => s + l.debit, 0);
+    const c = out.reduce((s, l) => s + l.credit, 0);
+    const dif = d - c;
+    if (dif !== 0 && Math.abs(dif) <= Math.max(2, out.length)) {
+      // ajustar el lado con más monto en su línea mayor
+      const lado: 'debit' | 'credit' = dif > 0 ? 'debit' : 'credit';
+      let idx = -1;
+      out.forEach((l, i) => { if (l[lado] > 0 && (idx < 0 || l[lado] > out[idx][lado])) idx = i; });
+      if (idx >= 0) out[idx] = { ...out[idx], [lado]: out[idx][lado] - Math.abs(dif) };
+    }
+  }
+  return out;
+}
+
 export function sanitizeVoucherLines<T extends VoucherLine>(
   lines: T[],
-  accounts: ChartOfAccount[]
+  accounts: ChartOfAccount[],
+  opciones: { conDecimales?: boolean } = {}
 ): T[] {
   const accountMap = new Map<string, ChartOfAccount>();
   accounts.forEach(acc => {
@@ -114,7 +139,8 @@ export function sanitizeVoucherLines<T extends VoucherLine>(
     if (acc.code) accountMap.set(acc.code, acc);
   });
 
-  return lines
+  const base = opciones.conDecimales ? lines : redondearLineasAPesos(lines);
+  return base
     .filter(line => {
       // Excluir líneas vacías o en cero (ej. líneas de banco innecesarias con $0 al compensar NCs)
       const d = Number(line.debit) || 0;

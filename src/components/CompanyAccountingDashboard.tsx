@@ -183,6 +183,11 @@ async function archivarComprobanteAntesDeEliminar(companyRef: any, v: any, motiv
   });
 }
 
+/** Contenedor de una pestaña viva: visible sin alterar el diseño; oculta sin desmontarse. */
+const PestanaViva: React.FC<{ visible: boolean; children?: React.ReactNode }> = ({ visible, children }) => (
+  <div style={{ display: visible ? 'contents' : 'none' }} aria-hidden={!visible}>{children}</div>
+);
+
 export default function CompanyAccountingDashboard({ 
   studyId, 
   studyName,
@@ -355,6 +360,10 @@ export default function CompanyAccountingDashboard({
       return filtered;
     });
   };
+
+  // Pestañas "vivas" (como las hojas de Excel): un módulo abierto en una pestaña se mantiene montado mientras la pestaña
+  // exista, así conserva su período, filtros y lo que se estaba trabajando al ir y volver. Se descarta al cerrar la pestaña.
+  const pestanaViva = (moduleId: string) => activeTab === moduleId || openTabs.some(t => t.moduleId === moduleId);
 
   // Keep openTabs in sync if activeTab is changed from child component handlers
   useEffect(() => {
@@ -5959,16 +5968,16 @@ export default function CompanyAccountingDashboard({
 
 
       {/* TAB 1: PLAN DE CUENTAS (GRILLA DINÁMICA EXCEL) */}
-      {activeTab === 'accounts' && (
+      {pestanaViva('accounts') && <PestanaViva visible={activeTab === 'accounts'}>{(
         <PlanDeCuentasGrid
           studyId={studyId}
           company={company}
           onRefreshCompany={fetchData}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB 2: AUXILIARIES */}
-      {activeTab === 'auxiliaries' && (
+      {pestanaViva('auxiliaries') && <PestanaViva visible={activeTab === 'auxiliaries'}>{(
         <div className="space-y-4">
           <AuxiliariesGrid
             studyId={studyId}
@@ -6012,10 +6021,10 @@ export default function CompanyAccountingDashboard({
             isReadOnly={isReadOnly}
           />
         </div>
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: CENTRO DE CONTROL AGÉNTICO ESTUDIO 2040 (C1) */}
-      {activeTab === 'agenticStudy2040' && (
+      {pestanaViva('agenticStudy2040') && <PestanaViva visible={activeTab === 'agenticStudy2040'}>{(
         <AgenticStudyHub2040
           company={company}
           vouchers={vouchers}
@@ -6027,10 +6036,10 @@ export default function CompanyAccountingDashboard({
           }}
           onRefreshData={fetchData}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: CENTRO DE CONTROL AGÉNTICO PYME 2040 (C2) */}
-      {activeTab === 'agenticPyme2040' && (
+      {pestanaViva('agenticPyme2040') && <PestanaViva visible={activeTab === 'agenticPyme2040'}>{(
         <AgenticPymeHub2040
           company={company}
           rcvDocuments={rcvDocuments}
@@ -6040,18 +6049,18 @@ export default function CompanyAccountingDashboard({
             setActiveTab(targetTab as any);
           }}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* EXCHANGE RATES TAB: INDICADORES ECONÓMICOS OFICIALES DE CHILE */}
-      {activeTab === 'exchange' && (
+      {pestanaViva('exchange') && <PestanaViva visible={activeTab === 'exchange'}>{(
         <IndicadoresEconomicosView
           studyId={studyId}
           selectedYear={selectedYear}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: MOTOR DE CENTRALIZACIONES & PARAMETRIZACION MAESTRA (CAPA 2 ERP) */}
-      {activeTab === 'centralizaciones' && (
+      {pestanaViva('centralizaciones') && <PestanaViva visible={activeTab === 'centralizaciones'}>{(
         <CentralizacionesContablesView
           studyId={studyId}
           company={company}
@@ -6073,10 +6082,10 @@ export default function CompanyAccountingDashboard({
           exchangeRates={exchangeRates}
           checkIsPeriodClosed={checkIsPeriodClosed}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: RCV PARAMS */}
-      {activeTab === 'rcvParams' && (
+      {pestanaViva('rcvParams') && <PestanaViva visible={activeTab === 'rcvParams'}>{(
         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm max-w-5xl mx-auto space-y-6">
           <div className="border-b border-slate-200 pb-4">
             <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
@@ -6321,10 +6330,10 @@ export default function CompanyAccountingDashboard({
             </div>
           </form>
         </div>
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: F29 CODES CONFIGURATION */}
-      {activeTab === 'f29Codes' && (
+      {pestanaViva('f29Codes') && <PestanaViva visible={activeTab === 'f29Codes'}>{(
         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm max-w-4xl mx-auto space-y-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-200 pb-4 gap-4">
             <div>
@@ -6516,10 +6525,10 @@ export default function CompanyAccountingDashboard({
             </button>
           </div>
         </div>
-      )}
+      )}</PestanaViva>}
 
       {/* TAB AGÉNTICO 2040: ESTUDIO CONTABLE (VERSIÓN C1) */}
-      {activeTab === 'agenticStudy2040' && (
+      {pestanaViva('agenticStudy2040') && <PestanaViva visible={activeTab === 'agenticStudy2040'}>{(
         <AgenticStudyHub2040
           company={company}
           vouchers={vouchers}
@@ -6540,10 +6549,10 @@ export default function CompanyAccountingDashboard({
           }}
           onRefreshData={fetchData}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB AGÉNTICO 2040: PYME & EMPRESA (VERSIÓN C2) */}
-      {activeTab === 'agenticPyme2040' && (
+      {pestanaViva('agenticPyme2040') && <PestanaViva visible={activeTab === 'agenticPyme2040'}>{(
         <AgenticPymeHub2040
           company={company}
           rcvDocuments={rcvDocuments}
@@ -6557,10 +6566,10 @@ export default function CompanyAccountingDashboard({
             setActiveTab(t as any);
           }}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB 3: FISCAL PERIODS */}
-      {activeTab === 'periods' && (
+      {pestanaViva('periods') && <PestanaViva visible={activeTab === 'periods'}>{(
         <PeriodsGrid
           selectedYear={selectedYear}
           setSelectedYear={setSelectedYear}
@@ -6570,10 +6579,10 @@ export default function CompanyAccountingDashboard({
           onToggleMonthStatus={handleToggleMonthStatus}
           onEnsureFiscalYear={handleEnsureFiscalYear}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB 4: RCV & SII IMPORT */}
-      {activeTab === 'rcv' && (
+      {pestanaViva('rcv') && <PestanaViva visible={activeTab === 'rcv'}>{(
         <div className="space-y-6">
           {/* Executive Control Header */}
           <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -7684,10 +7693,10 @@ export default function CompanyAccountingDashboard({
             </div>
           )}
         </div>
-      )}
+      )}</PestanaViva>}
 
       {/* INICIO: panel de accesos a módulos */}
-      {activeTab === 'home' && (() => {
+      {pestanaViva('home') && <PestanaViva visible={activeTab === 'home'}>{(() => {
         const delPeriodo = vouchers.filter(v => v.period === selectedRcvPeriod);
         const docsPeriodo = rcvDocuments.filter(d => d.period === selectedRcvPeriod);
         const n = (x: number) => x.toLocaleString('es-CL');
@@ -7708,15 +7717,15 @@ export default function CompanyAccountingDashboard({
             ]}
           />
         );
-      })()}
+      })()}</PestanaViva>}
 
       {/* FINANZAS: buscador de comprobantes */}
-      {activeTab === 'buscadorComprobantes' && (
+      {pestanaViva('buscadorComprobantes') && <PestanaViva visible={activeTab === 'buscadorComprobantes'}>{(
         <BuscadorComprobantesView vouchers={vouchers} onOpenVoucher={(v) => handleOpenVoucherModal(v)} />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: COMPROBANTES CONTABLES */}
-      {activeTab === 'vouchers' && (
+      {pestanaViva('vouchers') && <PestanaViva visible={activeTab === 'vouchers'}>{(
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5">
           {/* Cabecera Estandarizada: Título y Botones de Acción */}
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 pb-4 border-b border-slate-200">
@@ -8160,7 +8169,7 @@ export default function CompanyAccountingDashboard({
             </table>
           </div>
         </div>
-      )}
+      )}</PestanaViva>}
 
       {/* ========================================================================= */}
       {/* MODALES GLOBALES DE COMPROBANTES CONTABLES                                */}
@@ -9423,7 +9432,7 @@ export default function CompanyAccountingDashboard({
           )}
 
       {/* TAB: LIBRO DIARIO */}
-      {activeTab === 'libroDiario' && (
+      {pestanaViva('libroDiario') && <PestanaViva visible={activeTab === 'libroDiario'}>{(
         <LibroDiarioView
           studyId={studyId}
           company={company}
@@ -9434,10 +9443,10 @@ export default function CompanyAccountingDashboard({
           onEditVoucher={handleOpenEditVoucher}
           onFixCeecVouchers={handleAutoFixCeecVouchers}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: LIBRO MAYOR */}
-      {activeTab === 'libroMayor' && (
+      {pestanaViva('libroMayor') && <PestanaViva visible={activeTab === 'libroMayor'}>{(
         <LibroMayorView
           studyId={studyId}
           company={company}
@@ -9446,10 +9455,10 @@ export default function CompanyAccountingDashboard({
           fiscalYears={fiscalYears}
           onViewVoucher={handleOpenVoucherModal}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: BALANCE DE 8 COLUMNAS */}
-      {activeTab === 'balance8' && (
+      {pestanaViva('balance8') && <PestanaViva visible={activeTab === 'balance8'}>{(
         <Balance8ColumnasView
           onOpenVoucher={(v) => handleOpenVoucherModal(v)}
           periodoGlobal={periodosPorPestana['balance8'] ?? selectedRcvPeriod}
@@ -9470,10 +9479,10 @@ export default function CompanyAccountingDashboard({
             setActiveRibbonGroup('INDICADORES');
           }}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: BALANCE CLASIFICADO IFRS */}
-      {activeTab === 'balanceIFRS' && (
+      {pestanaViva('balanceIFRS') && <PestanaViva visible={activeTab === 'balanceIFRS'}>{(
         <BalanceIFRSView
           onOpenVoucher={(v) => handleOpenVoucherModal(v)}
           periodoGlobal={periodosPorPestana['balanceIFRS'] ?? selectedRcvPeriod}
@@ -9492,10 +9501,10 @@ export default function CompanyAccountingDashboard({
             handleOpenModuleInTab('estadoResultados');
           }}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: ANALISIS DE AUXILIARES */}
-      {activeTab === 'analisisAuxiliares' && (
+      {pestanaViva('analisisAuxiliares') && <PestanaViva visible={activeTab === 'analisisAuxiliares'}>{(
         <AnalisisAuxiliaresView
           studyId={studyId}
           company={company}
@@ -9506,10 +9515,10 @@ export default function CompanyAccountingDashboard({
           fiscalYears={fiscalYears}
           onOpenVoucher={handleOpenVoucherModal}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: ANALISIS DE CUENTAS */}
-      {activeTab === 'analisisCuentas' && (
+      {pestanaViva('analisisCuentas') && <PestanaViva visible={activeTab === 'analisisCuentas'}>{(
         <AnalisisCuentasView
           studyId={studyId}
           company={company}
@@ -9521,10 +9530,10 @@ export default function CompanyAccountingDashboard({
           onVouchersUpdated={fetchData}
           onOpenVoucher={handleOpenVoucherModal}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: PLANILLA DINÁMICA DE CONSULTAS & COMPENSACIÓN */}
-      {activeTab === 'planillaConsultas' && (
+      {pestanaViva('planillaConsultas') && <PestanaViva visible={activeTab === 'planillaConsultas'}>{(
         <PlanillaConsultasDinamicasView
           studyId={studyId}
           company={company}
@@ -9541,10 +9550,10 @@ export default function CompanyAccountingDashboard({
           onOpenVoucher={handleOpenVoucherModal}
           onBackToTraditionalAnalysis={() => setActiveTab('analisisCuentas')}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: TABLERO ANALITICO HUD (POWER PIVOT & BI) */}
-      {activeTab === 'analyticsHud' && (
+      {pestanaViva('analyticsHud') && <PestanaViva visible={activeTab === 'analyticsHud'}>{(
         <AnalyticsHudDashboard
           company={company}
           accounts={accounts}
@@ -9554,10 +9563,10 @@ export default function CompanyAccountingDashboard({
           onOpenVoucherDetail={handleOpenVoucherModal}
           onClose={() => setActiveTab('home')}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: REPORTES ANALITICOS Y MATRIZ DINAMICA */}
-      {activeTab === 'reportesAnaliticos' && (
+      {pestanaViva('reportesAnaliticos') && <PestanaViva visible={activeTab === 'reportesAnaliticos'}>{(
         <ReportesAnaliticosView
           studyId={studyId}
           company={company}
@@ -9575,10 +9584,10 @@ export default function CompanyAccountingDashboard({
           defaultYear={selectedYear}
           isReadOnly={isReadOnly}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: ESTADO DE RESULTADOS */}
-      {activeTab === 'estadoResultados' && (
+      {pestanaViva('estadoResultados') && <PestanaViva visible={activeTab === 'estadoResultados'}>{(
         <EstadoResultadosView
           onOpenVoucher={(v) => handleOpenVoucherModal(v)}
           periodoGlobal={periodosPorPestana['estadoResultados'] ?? selectedRcvPeriod}
@@ -9595,10 +9604,10 @@ export default function CompanyAccountingDashboard({
             handleOpenModuleInTab('balanceIFRS');
           }}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: AUDITOR DE ESTADOS FINANCIEROS */}
-      {activeTab === 'auditorEstadosFinancieros' && (
+      {pestanaViva('auditorEstadosFinancieros') && <PestanaViva visible={activeTab === 'auditorEstadosFinancieros'}>{(
         <AuditorEstadosFinancierosView
           studyId={studyId}
           company={company}
@@ -9620,10 +9629,10 @@ export default function CompanyAccountingDashboard({
             }
           }}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: INDICADORES FINANCIEROS Y KPIS */}
-      {activeTab === 'indicadoresFinancieros' && (
+      {pestanaViva('indicadoresFinancieros') && <PestanaViva visible={activeTab === 'indicadoresFinancieros'}>{(
         isAnalyst ? (
           <div className="bg-amber-50 border border-amber-300 p-8 rounded-xl text-center text-amber-900 max-w-xl mx-auto my-8 shadow-xs">
             <div className="text-3xl mb-2">🔒</div>
@@ -9645,10 +9654,10 @@ export default function CompanyAccountingDashboard({
             canConfigureKpis={currentUserRole === UserRole.SUPER_USER || currentUserRole === UserRole.STUDY_ADMIN || currentUserRole === UserRole.ACCOUNTANT}
           />
         )
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: EMPLEADOS Y CONTRATOS */}
-      {activeTab === 'employees' && (
+      {pestanaViva('employees') && <PestanaViva visible={activeTab === 'employees'}>{(
         <EmployeesView
           studyId={studyId}
           projects={projects}
@@ -9672,10 +9681,10 @@ export default function CompanyAccountingDashboard({
             setShowSiiCertModal(true);
           }}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: LIQUIDACIONES Y PREVIRED */}
-      {activeTab === 'liquidaciones' && (
+      {pestanaViva('liquidaciones') && <PestanaViva visible={activeTab === 'liquidaciones'}>{(
         <LiquidacionSueldosView
           companyId={company.id}
           companyName={company.name}
@@ -9702,10 +9711,10 @@ export default function CompanyAccountingDashboard({
             setActiveTab('employees');
           }}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: NÓMINAS DE PAGO */}
-      {activeTab === 'nominasPago' && (
+      {pestanaViva('nominasPago') && <PestanaViva visible={activeTab === 'nominasPago'}>{(
         <NominasPagoView
           studyId={studyId}
           company={company}
@@ -9717,10 +9726,10 @@ export default function CompanyAccountingDashboard({
           onVouchersUpdated={fetchData}
           rcvParams={rcvParams as any}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: COBRANZA */}
-      {activeTab === 'cobranza' && (
+      {pestanaViva('cobranza') && <PestanaViva visible={activeTab === 'cobranza'}>{(
         <CobranzaView
           studyId={studyId}
           company={company}
@@ -9731,10 +9740,10 @@ export default function CompanyAccountingDashboard({
           fiscalYears={fiscalYears}
           onVouchersUpdated={fetchData}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: FLUJO DE CAJA REAL */}
-      {activeTab === 'flujoDeCaja' && (
+      {pestanaViva('flujoDeCaja') && <PestanaViva visible={activeTab === 'flujoDeCaja'}>{(
         <FlujoDeCajaView
           studyId={studyId}
           company={company}
@@ -9743,7 +9752,7 @@ export default function CompanyAccountingDashboard({
           fiscalYears={fiscalYears}
           rcvDocuments={rcvDocuments}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: CONCILIACIÓN BANCARIA (Se mantiene montado para preservar el trabajo en progreso al navegar por las pestañas) */}
       <div className={activeTab === 'conciliacionBancaria' ? 'block' : 'hidden'}>
@@ -9770,7 +9779,7 @@ export default function CompanyAccountingDashboard({
       </div>
 
       {/* TAB: LIBRO BANCO & CARTOLA COLABORATIVA */}
-      {activeTab === 'libroBancoColaborativo' && (
+      {pestanaViva('libroBancoColaborativo') && <PestanaViva visible={activeTab === 'libroBancoColaborativo'}>{(
         <LibroBancoColaborativoView
           studyId={studyId}
           company={company}
@@ -9786,10 +9795,10 @@ export default function CompanyAccountingDashboard({
           onNavigateToConciliacion={() => setActiveTab('conciliacionBancaria')}
           onClose={() => setActiveTab('home')}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: CARGA MASIVA COMPROBANTES */}
-      {activeTab === 'cargaMasiva' && (
+      {pestanaViva('cargaMasiva') && <PestanaViva visible={activeTab === 'cargaMasiva'}>{(
         <CargaMasivaComprobantesView
           studyId={studyId}
           company={company}
@@ -9799,10 +9808,10 @@ export default function CompanyAccountingDashboard({
           onVouchersUpdated={fetchData}
           onNavigateTab={(tab) => setActiveTab(tab as any)}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: FORMULARIO 29 MENSUAL */}
-      {activeTab === 'formulario29' && (
+      {pestanaViva('formulario29') && <PestanaViva visible={activeTab === 'formulario29'}>{(
         <Formulario29View
           recuperaDiesel={Boolean(rcvParams?.recuperaDiesel)}
           studyId={studyId}
@@ -9813,10 +9822,10 @@ export default function CompanyAccountingDashboard({
           fiscalYears={fiscalYears}
           onVouchersUpdated={fetchData}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: PLANTILLAS Y CARGAS MASIVAS (PLAN DE CUENTAS, AUXILIARES, ETC) */}
-      {activeTab === 'plantillasCarga' && (
+      {pestanaViva('plantillasCarga') && <PestanaViva visible={activeTab === 'plantillasCarga'}>{(
         <PlantillasYCargaMasivaView
           studyId={studyId}
           company={company}
@@ -9824,22 +9833,22 @@ export default function CompanyAccountingDashboard({
           auxiliaries={auxiliaries}
           onRefreshData={fetchData}
         />
-      )}
+      )}</PestanaViva>}
 
-      {activeTab === 'informeMensual' && (
+      {pestanaViva('informeMensual') && <PestanaViva visible={activeTab === 'informeMensual'}>{(
         <InformeMensualView studyId={studyId} company={company} accounts={accounts} vouchers={vouchers} canEdit={!isReadOnly} />
-      )}
+      )}</PestanaViva>}
 
-      {activeTab === 'cierreAnio' && (
+      {pestanaViva('cierreAnio') && <PestanaViva visible={activeTab === 'cierreAnio'}>{(
         <CierreAperturaAnioView studyId={studyId} company={company} accounts={accounts} vouchers={vouchers} fiscalYears={fiscalYears} onVouchersUpdated={fetchData} />
-      )}
+      )}</PestanaViva>}
 
-      {activeTab === 'importacionInteligente' && (
+      {pestanaViva('importacionInteligente') && <PestanaViva visible={activeTab === 'importacionInteligente'}>{(
         <ImportacionInteligenteView studyId={studyId} company={company} accounts={accounts} />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: EMISIÓN DIRECTA DTE (FACTURADOR SII) */}
-      {activeTab === 'emisionDte' && (
+      {pestanaViva('emisionDte') && <PestanaViva visible={activeTab === 'emisionDte'}>{(
         <EmisionDteView
           studyId={studyId}
           company={company}
@@ -9848,10 +9857,10 @@ export default function CompanyAccountingDashboard({
           vouchers={vouchers}
           onRefreshData={fetchData}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: TABLAS Y CATÁLOGOS MAESTROS DE ANÁLISIS */}
-      {activeTab === 'tablasAnalisis' && (
+      {pestanaViva('tablasAnalisis') && <PestanaViva visible={activeTab === 'tablasAnalisis'}>{(
         <TablasAnalisisMasterView
           studyId={studyId}
           company={company}
@@ -9864,19 +9873,19 @@ export default function CompanyAccountingDashboard({
           customAnalysisItems={customAnalysisItems}
           onRefreshData={fetchData}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: CONTROL DE FOLIOS Y TIMBRAJE SII */}
-      {activeTab === 'controlFolios' && (
+      {pestanaViva('controlFolios') && <PestanaViva visible={activeTab === 'controlFolios'}>{(
         <SiiFolioControlView
           studyId={studyId}
           company={company}
           isReadOnly={isAnalyst}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: CATÁLOGO DE PRODUCTOS & SERVICIOS */}
-      {activeTab === 'productsServices' && (
+      {pestanaViva('productsServices') && <PestanaViva visible={activeTab === 'productsServices'}>{(
         <ProductsServicesView
           companyId={company.id}
           companyName={company.name}
@@ -9890,10 +9899,10 @@ export default function CompanyAccountingDashboard({
           onProductsChange={() => fetchData()}
           isReadOnly={isAnalyst || isReadOnly}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: OPERATIVA COMERCIAL ERP (COMPRAS & VENTAS) */}
-      {activeTab === 'operativaComercial' && (
+      {pestanaViva('operativaComercial') && <PestanaViva visible={activeTab === 'operativaComercial'}>{(
         <OperativaComercialView
           companyId={company.id}
           companyName={company.name}
@@ -9910,10 +9919,10 @@ export default function CompanyAccountingDashboard({
           }}
           isReadOnly={isAnalyst || isReadOnly}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: COMPRAS (módulo opcional) */}
-      {activeTab === 'compras' && (
+      {pestanaViva('compras') && <PestanaViva visible={activeTab === 'compras'}>{(
         comprasActivo ? (
           <ComprasView
             studyId={studyId}
@@ -9934,10 +9943,10 @@ export default function CompanyAccountingDashboard({
             El módulo de Compras no está habilitado para esta empresa. Se activa en el panel del estudio, ficha de la empresa → “Módulo de Compras”.
           </div>
         )
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: AGENTE DE RECLASIFICACIÓN (piloto) */}
-      {activeTab === 'agente' && (
+      {pestanaViva('agente') && <PestanaViva visible={activeTab === 'agente'}>{(
         agenteActivo ? (
           <AgenteReclasificadorView
             studyId={studyId}
@@ -9953,10 +9962,10 @@ export default function CompanyAccountingDashboard({
             El agente está en fase piloto y no está habilitado para tu usuario o tu estudio.
           </div>
         )
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: VENTAS (módulo opcional) */}
-      {activeTab === 'ventas' && (
+      {pestanaViva('ventas') && <PestanaViva visible={activeTab === 'ventas'}>{(
         ventasActivo ? (
           <VentasView
             studyId={studyId}
@@ -9977,10 +9986,10 @@ export default function CompanyAccountingDashboard({
             El módulo de Ventas no está habilitado para esta empresa. Se activa en el panel del estudio, ficha de la empresa → “Módulo de Ventas”.
           </div>
         )
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: CONTROL DE INVENTARIO & KARDEX PMP */}
-      {activeTab === 'stockKardex' && (
+      {pestanaViva('stockKardex') && <PestanaViva visible={activeTab === 'stockKardex'}>{(
         <StockKardexView
           companyId={company.id}
           companyName={company.name}
@@ -10008,10 +10017,10 @@ export default function CompanyAccountingDashboard({
           }}
           isReadOnly={isAnalyst || isReadOnly}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: MAESTRO MULTI-BODEGA ERP (FASE 1) */}
-      {activeTab === 'warehouses' && (
+      {pestanaViva('warehouses') && <PestanaViva visible={activeTab === 'warehouses'}>{(
         <WarehousesView
           companyId={company.id}
           companyName={company.name}
@@ -10022,10 +10031,10 @@ export default function CompanyAccountingDashboard({
           onSetDefaultWarehouse={handleSetDefaultWarehouse}
           isReadOnly={isAnalyst || isReadOnly}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: ACTIVO FIJO Y DEPRECIACIÓN DUAL (ART. 31 LIR / IFRS) */}
-      {activeTab === 'activoFijo' && (
+      {pestanaViva('activoFijo') && <PestanaViva visible={activeTab === 'activoFijo'}>{(
         <ActivoFijoView
           studyId={studyId}
           company={company}
@@ -10047,22 +10056,22 @@ export default function CompanyAccountingDashboard({
             else setActiveTab('libroDiario');
           }}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: DECLARACIONES JURADAS SII (DDJJ RENTA) */}
-      {activeTab === 'rentaAnual' && (
+      {pestanaViva('rentaAnual') && <PestanaViva visible={activeTab === 'rentaAnual'}>{(
         <RentaAnualView studyId={studyId} company={company} accounts={accounts} vouchers={vouchers} soloLectura={isReadOnly} />
-      )}
+      )}</PestanaViva>}
 
-      {activeTab === 'gestRta' && (
+      {pestanaViva('gestRta') && <PestanaViva visible={activeTab === 'gestRta'}>{(
         gestRtaActivoEmpresa ? (
           <GestRtaView studyId={studyId} company={company} accounts={accounts} vouchers={vouchers} rcvDocuments={rcvDocuments} payrollSlips={payrollSlips} rcvParams={rcvParams} soloLectura={isReadOnly} />
         ) : (
           <div className="p-8 max-w-xl text-sm text-slate-600">Gest_Rta es un módulo adicional. Este estudio o esta empresa no lo tiene habilitado; consulta con el administrador.</div>
         )
-      )}
+      )}</PestanaViva>}
 
-      {activeTab === 'ddjj' && (
+      {pestanaViva('ddjj') && <PestanaViva visible={activeTab === 'ddjj'}>{(
         <DeclaracionesJuradasView
           studyId={studyId}
           company={company}
@@ -10072,10 +10081,10 @@ export default function CompanyAccountingDashboard({
           accounts={accounts}
           vouchers={vouchers}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: RENDICIONES DE GASTOS & VIÁTICOS (CAPA 1) */}
-      {activeTab === 'rendicionGastos' && (
+      {pestanaViva('rendicionGastos') && <PestanaViva visible={activeTab === 'rendicionGastos'}>{(
         <RendicionGastosView
           studyId={studyId}
           company={company}
@@ -10101,10 +10110,10 @@ export default function CompanyAccountingDashboard({
           }}
           isReadOnly={isAnalyst || isReadOnly}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* TAB: AGING DE DEUDAS & CARTERA GERENCIAL (CAPA 4) */}
-      {activeTab === 'agingDeudas' && (
+      {pestanaViva('agingDeudas') && <PestanaViva visible={activeTab === 'agingDeudas'}>{(
         <AgingDeudasView
           company={company}
           rcvDocuments={rcvDocuments}
@@ -10120,7 +10129,7 @@ export default function CompanyAccountingDashboard({
             else setActiveTab('libroDiario');
           }}
         />
-      )}
+      )}</PestanaViva>}
 
       {/* COMMAND PALETTE OMNISEARCH CMD+K */}
       <CommandPaletteModal

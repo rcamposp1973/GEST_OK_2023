@@ -53,7 +53,13 @@ export default function Formulario29View({
   onVouchersUpdated
 }: Formulario29ViewProps) {
   // Default tax period: most recent open month in the system
-  const [selectedPeriod, setSelectedPeriod] = useState<string>(() => getLatestOpenPeriod(fiscalYears));
+  // El período elegido se recuerda en la sesión (al cambiar de pestaña o salir y volver a la empresa no se pierde)
+  const clavePeriodo = `gestok:f29:periodo:${company.id}`;
+  const [selectedPeriod, setSelectedPeriod] = useState<string>(() => {
+    try { const g = sessionStorage.getItem(clavePeriodo); if (g && /^\d{4}-\d{2}$/.test(g)) return g; } catch { /* sin almacenamiento */ }
+    return getLatestOpenPeriod(fiscalYears);
+  });
+  useEffect(() => { try { sessionStorage.setItem(clavePeriodo, selectedPeriod); } catch { /* sin almacenamiento */ } }, [clavePeriodo, selectedPeriod]);
   const [activeTab, setActiveTab] = useState<'formulario' | 'auditoria' | 'parametros' | 'historial'>('formulario');
   const [loading, setLoading] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);

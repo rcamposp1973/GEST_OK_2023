@@ -897,6 +897,7 @@ export interface F29DebitoFiscal {
 }
 
 export interface F29CreditoFiscal {
+  creditoDelMes?: number; // Crédito del mes sin el remanente anterior
   comprasGiroNeto: number;
   creditoFacturasRecibidas: number; // Cód 520 (cantidad 519)
   comprasActivoFijoNeto: number;

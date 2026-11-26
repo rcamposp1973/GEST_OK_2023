@@ -449,4 +449,15 @@ import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } fro
   ok('F29 remanente: enero toma diciembre', R.remanenteArrastrado(decl, '2025-01').periodoOrigen==='2024-12');
   ok('F29 remanente: inicial y pesos con UTM del mes', R.remanenteArrastrado([], '2025-01', { utm: 5 }).origen==='inicial' && R.remanenteEnPesos(16.123456, 67429)===1087189);
 }
+{ const R = await import('../src/utils/f29Remanente'); const V = await import('../src/utils/voucherValidation');
+  // 16,123456 UTM; UTM ene 67.429, feb 67.794 -> reajuste = 16,123456 × 365 = 5.885,06 -> 5.885
+  const r = R.reajusteRemanente({ utm: 16.123456, utmOrigen: 67429, utmActual: 67794, pesosOrigen: 1087189 });
+  ok('F29 reajuste: UTMs × variación UTM, redondeado', r.reajuste === 5885 && r.remanenteMes === 1087189 + 5885 && Number.isInteger(r.remanenteMes));
+  const r2 = R.reajusteRemanente({ utm: 10, utmOrigen: 67794, utmActual: 67794 });
+  ok('F29 reajuste: sin variación = 0', r2.reajuste === 0 && r2.remanenteMes === 677940);
+  const l = V.redondearLineasAPesos([{ debit: 1.09, credit: 0 }, { debit: 0, credit: 1.09 }, { debit: 151949.4, credit: 0 }, { debit: 0, credit: 151949.4 }] as any);
+  ok('Asientos sin decimales', l.every((x: any) => Number.isInteger(x.debit) && Number.isInteger(x.credit)) && l.reduce((a: number, x: any) => a + x.debit - x.credit, 0) === 0);
+  const l2 = V.redondearLineasAPesos([{ debit: 0.6, credit: 0 }, { debit: 0.6, credit: 0 }, { debit: 0, credit: 1.2 }] as any);
+  ok('Asientos sin decimales: cuadra tras redondear', l2.reduce((a: number, x: any) => a + x.debit - x.credit, 0) === 0);
+}
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

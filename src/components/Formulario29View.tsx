@@ -28,7 +28,7 @@ import {
 } from '../types';
 import { sanitizeVoucherLines } from '../utils/voucherValidation';
 import { resumenOtrosImpuestos } from '../utils/otrosImpuestos';
-import { remanenteArrastrado, remanenteEnPesos, RemanenteArrastrado } from '../utils/f29Remanente';
+import { remanenteArrastrado, remanenteEnPesos, reajusteRemanente, RemanenteArrastrado } from '../utils/f29Remanente';
 import { Receipt, Download, Save, Zap, MessageSquare, Copy, X, Share2 } from 'lucide-react';
 
 interface Formulario29ViewProps {
@@ -414,7 +414,7 @@ export default function Formulario29View({
       }
     });
 
-    const totalDebitoFiscal = Math.max(0, debitoFacturasEmitidas + debitoBoletasEmitidas + debitoNotasDebito - creditoNotasCreditoEmitidas - ceecCreditoConstructora + manualAdjustments.debitoAjuste);
+    const totalDebitoFiscal = Math.round(Math.max(0, debitoFacturasEmitidas + debitoBoletasEmitidas + debitoNotasDebito - creditoNotasCreditoEmitidas - ceecCreditoConstructora + manualAdjustments.debitoAjuste));
 
     return {
       ventasAfectasNeto,
@@ -485,21 +485,31 @@ export default function Formulario29View({
     const prevMonthNum = currMonth === 1 ? 12 : currMonth - 1;
     const prevYearNum = currMonth === 1 ? currYear - 1 : currYear;
     const prevPeriodStr = `${prevYearNum}-${String(prevMonthNum).padStart(2, '0')}`;
-    const prevMonthUTM = getOfficialUTM(prevPeriodStr);
+    // UTM del mes de origen del remanente (normalmente el mes anterior)
+    const periodoOrigenRem = infoRemanente?.periodoOrigen || prevPeriodStr;
+    const utmOrigen = getOfficialUTM(periodoOrigenRem);
 
     const remanenteMesAnteriorUTM = taxSettings.previousMonthRemanenteUTM || 0;
-    const remanenteHistoricoPesos = Math.round(remanenteMesAnteriorUTM * prevMonthUTM);
-    const remanenteMesAnteriorPesos = manualAdjustments.remanenteManualPesos > 0
-      ? manualAdjustments.remanenteManualPesos
-      : Math.round(remanenteMesAnteriorUTM * taxSettings.utmValue);
-    
-    // Reajuste DL 825 Art. 27: Variación UTM = (UTM Actual - UTM Anterior) * Remanente UTM
-    const reajusteCorreccionMonetariaRemanente = Math.max(0, remanenteMesAnteriorPesos - remanenteHistoricoPesos);
+    let remanenteHistoricoPesos: number;
+    let remanenteMesAnteriorPesos: number;
+    let reajusteCorreccionMonetariaRemanente: number;
+    if (taxSettings.remanenteFijadoManual && manualAdjustments.remanenteManualPesos > 0) {
+      // Fijado a mano: manda el monto ingresado; el reajuste es la diferencia con el valor histórico
+      remanenteMesAnteriorPesos = Math.round(manualAdjustments.remanenteManualPesos);
+      remanenteHistoricoPesos = Math.round(remanenteMesAnteriorUTM * utmOrigen);
+      reajusteCorreccionMonetariaRemanente = Math.max(0, remanenteMesAnteriorPesos - remanenteHistoricoPesos);
+    } else {
+      // Reajuste Art. 27 DL 825 = UTMs arrastradas × (UTM del mes − UTM del mes de origen), redondeado a pesos
+      const r = reajusteRemanente({ utm: remanenteMesAnteriorUTM, utmOrigen, utmActual: taxSettings.utmValue, pesosOrigen: infoRemanente && Math.abs((infoRemanente.utm || 0) - remanenteMesAnteriorUTM) < 0.000001 ? infoRemanente.pesosOrigen : undefined });
+      remanenteHistoricoPesos = r.pesosOrigen;
+      reajusteCorreccionMonetariaRemanente = r.reajuste;
+      remanenteMesAnteriorPesos = r.remanenteMes;
+    }
 
     //  CRUCIAL: El Total Crédito Fiscal NO debe recortarse a 0 con Math.max
     // Si las notas de crédito recibidas (debitoNotasCreditoRecibidas) son mayores a las facturas recibidas,
     // el saldo neto es negativo y debe fluir con su signo negativo para liquidarse en F29 o aumentar el impuesto a pagar.
-    const totalCreditoFiscal = (
+    const totalCreditoFiscal = Math.round(
       creditoFacturasRecibidas +
       creditoActivoFijo +
       creditoSupermercados +
@@ -530,9 +540,11 @@ export default function Formulario29View({
       remanenteHistoricoPesos,
       reajusteCorreccionMonetariaRemanente,
       totalCreditoFiscal,
+      /** Crédito fiscal del mes, sin el remanente anterior (es lo que se rebaja de la cuenta IVA Crédito Fiscal) */
+      creditoDelMes: totalCreditoFiscal - remanenteMesAnteriorPesos,
       docsCount: comprasDocs.length
     };
-  }, [periodDocs, taxSettings, selectedPeriod, manualAdjustments.creditoAjuste, manualAdjustments.remanenteManualPesos]);
+  }, [periodDocs, taxSettings, selectedPeriod, manualAdjustments.creditoAjuste, manualAdjustments.remanenteManualPesos, infoRemanente]);
 
   // 3. CALCULATE RETENCIONES (HONORARIOS & SUELDOS)
   const retencionesData: F29Retenciones = useMemo(() => {
@@ -775,7 +787,8 @@ export default function Formulario29View({
     add('remanenteAccountId', 'Remanente de crédito fiscal', reaj, 'ACTIVO', [['remanente']]);
     add('correccionMonetariaAccountId', 'Corrección monetaria (reajuste del remanente)', reaj, null, [['correccion', 'monetaria'], ['reajuste']]);
     add('ivaDebitoAccountId', 'IVA débito fiscal', debitoFiscalData.totalDebitoFiscal || 0, 'PASIVO', [['iva', 'debito']]);
-    add('ivaCreditoAccountId', 'IVA crédito fiscal', creditoFiscalData.totalCreditoFiscal || 0, 'ACTIVO', [['iva', 'credito'], ['iva', 'cred']], ['remanente']);
+    add('remanenteAccountId', 'Remanente de crédito fiscal', creditoFiscalData.remanenteMesAnteriorPesos || 0, 'ACTIVO', [['remanente']]);
+    add('ivaCreditoAccountId', 'IVA crédito fiscal', Math.abs(Number((creditoFiscalData as any).creditoDelMes ?? creditoFiscalData.totalCreditoFiscal) || 0), 'ACTIVO', [['iva', 'credito'], ['iva', 'cred']], ['remanente']);
     if ((resumenF29.ivaPagar || 0) > 0) {
       add('ivaPostergadoAccountId', 'IVA postergado por pagar', resumenF29.ivaPostergado || 0, 'PASIVO', [['iva', 'postergado']]);
       add('ivaPagarAccountId', 'IVA por pagar', resumenF29.ivaPagarNetoPostergacion || 0, 'PASIVO', [['iva', 'pagar']]);
@@ -844,7 +857,7 @@ export default function Formulario29View({
           debit: creditoFiscalData.reajusteCorreccionMonetariaRemanente,
           credit: 0,
           documentRef: `F29 ${selectedPeriod}`,
-          gloss: `Reajuste Art. 27 DL 825 Remanente (${creditoFiscalData.remanenteMesAnteriorUTM} UTM) F29 ${selectedPeriod}`
+          gloss: `Reajuste Art. 27 DL 825 Remanente (${Number(creditoFiscalData.remanenteMesAnteriorUTM || 0).toFixed(2)} UTM × variación UTM) F29 ${selectedPeriod}`
         });
         lines.push({
           id: 'line_reajuste_remanente_haber',
@@ -872,17 +885,32 @@ export default function Formulario29View({
         });
       }
 
-      // 3. Liquidación IVA Crédito (Al HABER para saldar la cuenta activa de IVA Crédito acumulada en compras)
-      if (creditoFiscalData.totalCreditoFiscal > 0) {
+      // 3. Liquidación IVA Crédito: se rebaja SÓLO el crédito del mes de la cuenta IVA Crédito Fiscal;
+      //    el remanente anterior (ya reajustado) se rebaja de la cuenta Remanente, que es donde está.
+      const creditoMes = Math.round(Number((creditoFiscalData as any).creditoDelMes ?? creditoFiscalData.totalCreditoFiscal) || 0);
+      if (creditoMes !== 0) {
         lines.push({
           id: 'line_credito',
           accountId: accIvaCredito.id,
           accountCode: accIvaCredito.code,
           accountName: accIvaCredito.name,
-          debit: 0,
-          credit: creditoFiscalData.totalCreditoFiscal,
+          debit: creditoMes < 0 ? Math.abs(creditoMes) : 0,
+          credit: creditoMes > 0 ? creditoMes : 0,
           documentRef: `F29 ${selectedPeriod}`,
           gloss: `Liquidación mensual IVA Crédito Fiscal ${selectedPeriod}`
+        });
+      }
+      const remanenteUsado = Math.round(creditoFiscalData.remanenteMesAnteriorPesos || 0);
+      if (remanenteUsado > 0) {
+        lines.push({
+          id: 'line_remanente_anterior',
+          accountId: accRemanente.id,
+          accountCode: accRemanente.code,
+          accountName: accRemanente.name,
+          debit: 0,
+          credit: remanenteUsado,
+          documentRef: `F29 ${selectedPeriod}`,
+          gloss: `Imputación remanente mes anterior reajustado (${Number(creditoFiscalData.remanenteMesAnteriorUTM || 0).toFixed(2)} UTM) F29 ${selectedPeriod}`
         });
       }
 
@@ -922,7 +950,7 @@ export default function Formulario29View({
           debit: resumenF29.remanenteParaSiguienteMes,
           credit: 0,
           documentRef: `F29 ${selectedPeriod}`,
-          gloss: `Nuevo Remanente Crédito Fiscal para el mes siguiente (${resumenF29.remanenteParaSiguienteMesUTM} UTM)`
+          gloss: `Nuevo Remanente Crédito Fiscal para el mes siguiente (${Number(resumenF29.remanenteParaSiguienteMesUTM || 0).toFixed(2)} UTM)`
         });
       }
 
@@ -974,6 +1002,9 @@ export default function Formulario29View({
         });
       });
 
+      // Contabilidad en pesos: sin decimales
+      lines.forEach(l => { l.debit = Math.round(Number(l.debit) || 0); l.credit = Math.round(Number(l.credit) || 0); });
+
       // Calculate Total Debit and Credit
       const totalDebit = lines.reduce((s, l) => s + (l.debit || 0), 0);
       const totalCredit = lines.reduce((s, l) => s + (l.credit || 0), 0);
@@ -984,7 +1015,7 @@ export default function Formulario29View({
         alert(`El asiento del F29 no cuadra por $${Math.round(diff).toLocaleString('es-CL')} (Debe $${Math.round(totalDebit).toLocaleString('es-CL')} / Haber $${Math.round(totalCredit).toLocaleString('es-CL')}). No se generó. Revisa los montos del F29.`);
         return;
       }
-      if (diff > 0.01) {
+      if (diff >= 1) {
         // Balance adjustment if rounding difference exists
         if (totalDebit > totalCredit) {
           lines.push({

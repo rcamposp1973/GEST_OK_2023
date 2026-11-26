@@ -869,6 +869,8 @@ export interface F29TaxSettings {
   regimenTributario: '14_D3_PROPYME_GENERAL' | '14_D8_PROPYME_TRANSPARENTE' | '14_A_SEMI_INTEGRADO' | 'RENTA_PRESUNTA';
   ppmRate: number; // Porcentaje, ej: 0.25, 0.5, 1.0, 1.25
   previousMonthRemanenteUTM: number;
+  /** El usuario fijó a mano el remanente de este mes: no se reemplaza por el arrastre del mes anterior. */
+  remanenteFijadoManual?: boolean;
   utmValue: number; // Valor UTM del mes tributario
   honorariosTaxRate: number; // Porcentaje de retención, ej: 13.75, 14.5
   impuestoUnicoSegundaCategoria: number; // Retención sueldos/salarios

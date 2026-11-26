@@ -28,6 +28,7 @@ import {
 } from '../types';
 import { sanitizeVoucherLines } from '../utils/voucherValidation';
 import { resumenOtrosImpuestos } from '../utils/otrosImpuestos';
+import { remanenteArrastrado, remanenteEnPesos, RemanenteArrastrado } from '../utils/f29Remanente';
 import { Receipt, Download, Save, Zap, MessageSquare, Copy, X, Share2 } from 'lucide-react';
 
 interface Formulario29ViewProps {
@@ -150,6 +151,7 @@ export default function Formulario29View({
   });
 
   // Declaration Status, Folio & PDF Summary
+  const [infoRemanente, setInfoRemanente] = useState<(RemanenteArrastrado & { difiereDeclarado?: number }) | null>(null);
   const [declarationStatus, setDeclarationStatus] = useState<'Borrador' | 'Validado' | 'Declarado' | 'Pagado'>('Borrador');
   const [folioSII, setFolioSII] = useState<string>('');
   const [pdfResumenUrl, setPdfResumenUrl] = useState<string>('');
@@ -193,6 +195,22 @@ export default function Formulario29View({
           prestamoSolidarioManual: existing.retenciones?.prestamoSolidario || 0,
           notes: existing.notes || ''
         });
+        // Remanente: se arrastra SIEMPRE del F29 del mes anterior, actualizado con la UTM de este mes.
+        // Excepción: declaración ya presentada/pagada (manda lo declarado) o remanente fijado a mano por el usuario.
+        {
+          const arr = remanenteArrastrado(list, selectedPeriod, { utm: company.initialRemanenteUTM });
+          const utmMes = existing.settings?.utmValue || getOfficialUTM(selectedPeriod);
+          const presentada = existing.status === 'Declarado' || existing.status === 'Pagado';
+          const fijado = Boolean(existing.settings?.remanenteFijadoManual);
+          const guardadoUTM = Number(existing.settings?.previousMonthRemanenteUTM) || 0;
+          if (!presentada && !fijado && arr.origen !== 'sin_datos') {
+            setTaxSettings(prev => ({ ...prev, previousMonthRemanenteUTM: arr.utm }));
+            setManualAdjustments(prev => ({ ...prev, remanenteManualPesos: remanenteEnPesos(arr.utm, utmMes) }));
+            setInfoRemanente(arr);
+          } else {
+            setInfoRemanente({ ...arr, difiereDeclarado: Math.abs(guardadoUTM - arr.utm) > 0.000001 ? guardadoUTM : undefined, advertencia: presentada ? 'Declaración presentada: se mantiene el remanente declarado.' : fijado ? 'Remanente fijado a mano en este mes.' : arr.advertencia });
+          }
+        }
       } else {
         // PERIODO NUEVO / SIN GUARDAR
         if (company.f29CodeSettings) {
@@ -206,7 +224,7 @@ export default function Formulario29View({
         const prevYearNum = currMonth === 1 ? currYear - 1 : currYear;
         const prevPeriodStr = `${prevYearNum}-${String(prevMonthNum).padStart(2, '0')}`;
 
-        const prevDec = list.find(d => d.period === prevPeriodStr) || list.find(d => d.period < selectedPeriod);
+        const prevDec = list.find(d => d.period === prevPeriodStr) || [...list].filter(d => d.period < selectedPeriod).sort((a, b) => b.period.localeCompare(a.period))[0];
         
         let inheritedPpmRate = 0.25;
         let inheritedRemanenteUTM = company.initialRemanenteUTM || 0;
@@ -229,11 +247,11 @@ export default function Formulario29View({
           if (prevDec.retenciones?.impuestoUnicoTrabajadores) {
             inheritedImpuestoUnico = prevDec.retenciones.impuestoUnicoTrabajadores;
           }
-          // Si el mes anterior generó remanente a favor para el siguiente mes (Cód. 77)
-          if (prevDec.resumen?.remanenteParaSiguienteMesUTM !== undefined) {
-            inheritedRemanenteUTM = prevDec.resumen.remanenteParaSiguienteMesUTM;
-          }
         }
+        // Remanente: siempre el que dejó el F29 del mes anterior (o el último guardado, con aviso)
+        const arrNuevo = remanenteArrastrado(list, selectedPeriod, { utm: company.initialRemanenteUTM });
+        if (arrNuevo.origen !== 'sin_datos') inheritedRemanenteUTM = arrNuevo.utm;
+        setInfoRemanente(arrNuevo);
 
         const periodUTM = getOfficialUTM(selectedPeriod);
         const initialPesos = inheritedRemanenteUTM > 0 
@@ -2094,8 +2112,20 @@ export default function Formulario29View({
                               </span>
                             </div>
                             <span className="text-[10px] text-slate-500 block mt-0.5">
-                              Ingreso inicial / arrastre: Puede editar directamente en UTM o en Pesos ($).
+                              {infoRemanente?.origen === 'mes_anterior' && !taxSettings.remanenteFijadoManual
+                                ? `Arrastrado del F29 ${infoRemanente.periodoOrigen}, actualizado con la UTM de este mes.`
+                                : infoRemanente?.origen === 'inicial' ? 'Remanente inicial de la empresa.' : 'Puede editar directamente en UTM o en Pesos ($).'}
                             </span>
+                            {infoRemanente?.advertencia && <span className="text-[10px] text-amber-700 block mt-0.5">{infoRemanente.advertencia}</span>}
+                            {infoRemanente?.difiereDeclarado !== undefined && <span className="text-[10px] text-rose-700 block mt-0.5">El mes anterior deja {infoRemanente.utm.toFixed(2)} UTM; este F29 tiene {infoRemanente.difiereDeclarado.toFixed(2)} UTM.</span>}
+                            {taxSettings.remanenteFijadoManual && declarationStatus !== 'Declarado' && declarationStatus !== 'Pagado' && (
+                              <button type="button" className="text-[10px] text-indigo-700 underline mt-0.5" onClick={() => {
+                                const arr = remanenteArrastrado(savedDeclarations, selectedPeriod, { utm: company.initialRemanenteUTM });
+                                setTaxSettings({ ...taxSettings, previousMonthRemanenteUTM: arr.utm, remanenteFijadoManual: false });
+                                setManualAdjustments({ ...manualAdjustments, remanenteManualPesos: remanenteEnPesos(arr.utm, taxSettings.utmValue) });
+                                setInfoRemanente(arr);
+                              }}>Volver al arrastre del mes anterior</button>
+                            )}
                           </div>
                         </td>
                         <td className="py-2 px-3 text-right text-slate-600">
@@ -2107,7 +2137,7 @@ export default function Formulario29View({
                               onChange={e => {
                                 const valUTM = parseFloat(e.target.value) || 0;
                                 const valPesos = Math.round(valUTM * taxSettings.utmValue);
-                                setTaxSettings({ ...taxSettings, previousMonthRemanenteUTM: valUTM });
+                                setTaxSettings({ ...taxSettings, previousMonthRemanenteUTM: valUTM, remanenteFijadoManual: true });
                                 setManualAdjustments({ ...manualAdjustments, remanenteManualPesos: valPesos });
                               }}
                               placeholder="0.00"
@@ -2127,7 +2157,7 @@ export default function Formulario29View({
                                 const valPesos = parseFloat(e.target.value) || 0;
                                 const valUTM = taxSettings.utmValue > 0 ? parseFloat((valPesos / taxSettings.utmValue).toFixed(2)) : 0;
                                 setManualAdjustments({ ...manualAdjustments, remanenteManualPesos: valPesos });
-                                setTaxSettings({ ...taxSettings, previousMonthRemanenteUTM: valUTM });
+                                setTaxSettings({ ...taxSettings, previousMonthRemanenteUTM: valUTM, remanenteFijadoManual: true });
                               }}
                               placeholder="0"
                               className="w-28 bg-white border border-emerald-300 rounded px-1.5 py-0.5 text-right font-mono font-bold text-emerald-900 text-xs focus:ring-2 focus:ring-emerald-500"

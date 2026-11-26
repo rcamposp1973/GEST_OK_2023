@@ -9,6 +9,11 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.37.5 — 2026-11-26
+- **Crédito Especial Empresas Constructoras (CEEC) corregido.** Ya no rebaja el débito IVA: va en Créditos especiales (Cód. 126 del mes + 128 remanente anterior reajustado = 571) y se imputa contra PPM, retenciones e IVA (Cód. 547). Lo que sobra queda como remanente CEEC (Cód. 130), separado del remanente de IVA; el de diciembre se recupera en la Renta y no pasa a enero.
+- Asiento del F29: reajuste del remanente CEEC y su imputación (primero contra PPM/retenciones, luego contra IVA por pagar); pide la cuenta "Crédito especial empresas constructoras" la primera vez.
+- **F29 Gest_OK:** nueva pestaña con la estructura del F29 del SII (secciones, líneas y códigos) con diseño propio. Compacto = sólo lo que afecta a la empresa; Completo = todo el formulario.
+
 ## 1.37.4 — 2026-11-26
 - F29: el reajuste del remanente (Art. 27 DL 825) = UTMs que se arrastran × variación de la UTM entre el mes de origen y el mes declarado, redondeado a pesos. El remanente del mes = lo registrado en el F29 anterior + reajuste.
 - Asiento del F29: el crédito del mes se rebaja de IVA Crédito Fiscal y el remanente anterior reajustado de la cuenta Remanente (antes se rebajaba todo de IVA Crédito).

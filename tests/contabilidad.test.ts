@@ -426,4 +426,9 @@ import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } fro
   ok('Gest_Rta: licencia vencida o no contratada', !Lc.gestRtaActivo(est, { gestRtaHabilitado:true }, '2027-01-01') && !Lc.gestRtaActivo({ modules:{} }, { gestRtaHabilitado:true }));
   ok('Gest_Rta: todo el estudio y cupo', Lc.gestRtaActivo({ modules:{gestRta:true}, gestRtaLicencia:{ modalidad:'ESTUDIO' } }, {}) && !Lc.quedaCupo({ modalidad:'CUPO_EMPRESAS', cupoEmpresas:2 }, 2) && Lc.quedaCupo({ modalidad:'CUPO_EMPRESAS', cupoEmpresas:2 }, 1));
 }
+{ const P = await import('../api/sii/portal');
+  const set = '<SetDTE><Caratula><NroResol>0</NroResol></Caratula><DTE><Documento><Encabezado><IdDoc><TipoDTE>33</TipoDTE><Folio>29026</Folio><FchEmis>2026-11-11</FchEmis></IdDoc><Emisor><RUTEmisor>78427580-9</RUTEmisor><RznSoc>COMERCIALIZADORA MEPIACHE LTDA</RznSoc></Emisor><Receptor><RUTRecep>77236574-8</RUTRecep><RznSocRecep>CFI</RznSocRecep></Receptor><Totales><MntTotal>77400</MntTotal></Totales></Encabezado></Documento></DTE></SetDTE>';
+  const d = P.separarSetDte(set)[0];
+  ok('XML recibidos: lee proveedor', d.razonEmisor==='COMERCIALIZADORA MEPIACHE LTDA' && d.rutEmisor==='78427580-9' && d.folio==='29026' && d.total===77400);
+}
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

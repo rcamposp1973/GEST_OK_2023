@@ -202,7 +202,7 @@ export default function CompanyAccountingDashboard({
     boton.click();
     setTimeout(() => (document.querySelector(`[data-linea-cuenta="${n}"]`) as HTMLElement | null)?.focus(), 60);
   };
-  const [showDteEmitidos, setShowDteEmitidos] = useState(false);
+  const [showDteEmitidos, setShowDteEmitidos] = useState<false | 'EMITIDO' | 'RECIBIDO'>(false);
   const isAnalyst = currentUserRole === UserRole.ANALYST;
   const isReadOnly = currentUserRole === UserRole.OBSERVER;
   const { currentFormat, formatInfo, isAgentic, isPymeFormat, isStudyFormat } = useSystemFormat();
@@ -6623,10 +6623,17 @@ export default function CompanyAccountingDashboard({
               </div>
 
               <div className="pt-3.5">
-                <button type="button" onClick={() => setShowDteEmitidos(true)}
+                <button type="button" onClick={() => setShowDteEmitidos('EMITIDO')}
                   className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs px-3 py-2 rounded-lg border border-slate-300 whitespace-nowrap"
                   title="XML y versión imprimible de las ventas emitidas en el facturador gratuito del SII">
                   Documentos emitidos (XML)
+                </button>
+              </div>
+              <div className="pt-3.5">
+                <button type="button" onClick={() => setShowDteEmitidos('RECIBIDO')}
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs px-3 py-2 rounded-lg border border-slate-300 whitespace-nowrap"
+                  title="XML y versión imprimible de las facturas de compra recibidas en el facturador gratuito del SII">
+                  Documentos recibidos (XML)
                 </button>
               </div>
               {isSuperUser && (
@@ -10193,7 +10200,7 @@ export default function CompanyAccountingDashboard({
 
 
       {showDteEmitidos && (
-        <DteEmitidosView studyId={studyId} companyId={company.id} periodo={selectedRcvPeriod} unidadSii={(company as any).siiUnidadOperativa} onClose={() => setShowDteEmitidos(false)} />
+        <DteEmitidosView studyId={studyId} companyId={company.id} periodo={selectedRcvPeriod} lado={showDteEmitidos} unidadSii={(company as any).siiUnidadOperativa} onClose={() => setShowDteEmitidos(false)} />
       )}
       {showSiiDirecto && (
         <SiiDirectoPrueba studyId={studyId} companyId={company.id} periodo={selectedRcvPeriod} onClose={() => setShowSiiDirecto(false)} />

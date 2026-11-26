@@ -5,7 +5,7 @@ import { db } from '../lib/firebase';
 import { consultarSiiDirecto } from '../utils/siiRcvClient';
 import { leerDte, crearPdfDte, textoTimbre, NOMBRE_DTE } from '../utils/dteRepresentacion';
 
-interface DteGuardado { id: string; tipo: string; folio: string; fecha: string; rutReceptor: string; razonReceptor: string; total: number; xml: string; nroResol?: string; fchResol?: string }
+interface DteGuardado { id: string; tipo: string; folio: string; fecha: string; rutEmisor?: string; razonEmisor?: string; rutReceptor: string; razonReceptor: string; total: number; xml: string; nroResol?: string; fchResol?: string; lado?: 'EMITIDO' | 'RECIBIDO' }
 
 function timbrePng(ted: string): string | undefined {
   if (!ted) return undefined;
@@ -18,23 +18,31 @@ function timbrePng(ted: string): string | undefined {
 
 export function pdfDeDte(g: DteGuardado, unidadSii?: string, cedible = false) {
   const d = leerDte(g.xml);
-  return crearPdfDte(d, { timbrePng: timbrePng(d.ted), resolucion: { numero: g.nroResol || '', fecha: g.fchResol || '' }, unidadSii: unidadSii ? `S.I.I. - ${unidadSii}` : undefined, cedible });
+  // Documento recibido: la resolución y la unidad del SII son del PROVEEDOR y el respaldo no las trae; no se inventan
+  const recibido = g.lado === 'RECIBIDO';
+  return crearPdfDte(d, {
+    timbrePng: timbrePng(d.ted),
+    resolucion: recibido ? undefined : { numero: g.nroResol || '', fecha: g.fchResol || '' },
+    unidadSii: !recibido && unidadSii ? `S.I.I. - ${unidadSii}` : undefined,
+    cedible,
+  });
 }
 
-export default function DteEmitidosView({ studyId, companyId, periodo, unidadSii, onClose }: { studyId: string; companyId: string; periodo: string; unidadSii?: string; onClose: () => void }) {
+export default function DteEmitidosView({ studyId, companyId, periodo, unidadSii, onClose, lado = 'EMITIDO' }: { studyId: string; companyId: string; periodo: string; unidadSii?: string; onClose: () => void; lado?: 'EMITIDO' | 'RECIBIDO' }) {
+  const recibidos = lado === 'RECIBIDO';
   const [docs, setDocs] = useState<DteGuardado[]>([]);
   const [cargando, setCargando] = useState(false);
   const [aviso, setAviso] = useState('');
   const [viendo, setViendo] = useState<{ g: DteGuardado; url: string; cedible: boolean } | null>(null);
   useEffect(() => {
     const q = query(collection(db, 'studies', studyId, 'companies', companyId, 'dteXml'), where('period', '==', periodo));
-    return onSnapshot(q, s => setDocs(s.docs.map(d => ({ id: d.id, ...(d.data() as any) })).sort((a, b) => (a.fecha + a.tipo + a.folio.padStart(10, '0')).localeCompare(b.fecha + b.tipo + b.folio.padStart(10, '0')))), () => setDocs([]));
-  }, [studyId, companyId, periodo]);
+    return onSnapshot(q, s => setDocs(s.docs.map(d => ({ id: d.id, ...(d.data() as any) } as DteGuardado)).filter(d => (d.lado === 'RECIBIDO') === recibidos).sort((a, b) => (a.fecha + a.tipo + a.folio.padStart(10, '0')).localeCompare(b.fecha + b.tipo + b.folio.padStart(10, '0')))), () => setDocs([]));
+  }, [studyId, companyId, periodo, recibidos]);
 
   const descargarDesdeSii = async () => {
     const [y, m] = periodo.split('-').map(Number);
     setCargando(true); setAviso('');
-    const r = await consultarSiiDirecto({ studyId, companyId, accion: 'xml', year: y, month: m });
+    const r = await consultarSiiDirecto({ studyId, companyId, accion: 'xml', year: y, month: m, origen: recibidos ? 'recibidos' : 'emitidos' });
     setCargando(false);
     if (!r.success) { setAviso(r.error || 'No se pudo descargar desde el SII.'); return; }
     const pend: string[] = r.pendientes || [];
@@ -45,7 +53,7 @@ export default function DteEmitidosView({ studyId, companyId, periodo, unidadSii
     const url = URL.createObjectURL(pdfDeDte(g, unidadSii, cedible).output('blob'));
     setViendo({ g, url, cedible });
   };
-  const nombreArchivo = (g: DteGuardado, ext: string) => `DTE_${g.tipo}_${g.folio}.${ext}`;
+  const nombreArchivo = (g: DteGuardado, ext: string) => `DTE_${recibidos ? `${(g.rutEmisor || '').replace(/[^0-9kK]/g, '')}_` : ''}${g.tipo}_${g.folio}.${ext}`;
   const bajarPdf = (g: DteGuardado, cedible = false) => pdfDeDte(g, unidadSii, cedible).save(nombreArchivo(g, 'pdf'));
   const bajarXml = (g: DteGuardado) => {
     const a = document.createElement('a');
@@ -59,8 +67,10 @@ export default function DteEmitidosView({ studyId, companyId, periodo, unidadSii
       <div className="bg-white rounded-2xl w-full max-w-5xl p-5 space-y-4 my-8">
         <div className="flex flex-wrap justify-between items-start gap-3">
           <div>
-            <h3 className="font-bold text-slate-900">Documentos emitidos {periodo} (XML del SII)</h3>
-            <p className="text-xs text-slate-500">Ventas emitidas en el facturador gratuito del SII. Se guarda el XML (el documento tributario) y Gest_OK arma su versión impresa.</p>
+            <h3 className="font-bold text-slate-900">Documentos {recibidos ? 'recibidos' : 'emitidos'} {periodo} (XML del SII)</h3>
+            <p className="text-xs text-slate-500">{recibidos
+              ? 'Facturas y notas de compra recibidas de proveedores en el facturador gratuito del SII. Se guarda el XML (el documento tributario) y Gest_OK arma su versión impresa. Sólo aparecen los documentos que llegaron a la casilla del SII.'
+              : 'Ventas emitidas en el facturador gratuito del SII. Se guarda el XML (el documento tributario) y Gest_OK arma su versión impresa.'}</p>
           </div>
           <div className="flex gap-2">
             <button disabled={cargando} onClick={descargarDesdeSii} className="px-3 py-2 rounded-lg bg-indigo-600 disabled:bg-slate-400 text-white text-xs font-bold">
@@ -76,7 +86,7 @@ export default function DteEmitidosView({ studyId, companyId, periodo, unidadSii
             <div className="flex flex-wrap gap-2 items-center">
               <button onClick={() => { URL.revokeObjectURL(viendo.url); setViendo(null); }} className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-semibold">← Volver a la lista</button>
               <span className="text-xs font-semibold text-slate-700">{NOMBRE_DTE[viendo.g.tipo] || viendo.g.tipo} N° {viendo.g.folio}</span>
-              {['33', '34', '46', '52'].includes(viendo.g.tipo) && (
+              {!recibidos && ['33', '34', '46', '52'].includes(viendo.g.tipo) && (
                 <button onClick={() => ver(viendo.g, !viendo.cedible)} className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-semibold">
                   {viendo.cedible ? 'Ver original' : 'Ver copia cedible'}
                 </button>
@@ -92,7 +102,7 @@ export default function DteEmitidosView({ studyId, companyId, periodo, unidadSii
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead><tr className="text-left text-slate-500 border-b border-slate-200">
-                <th className="p-2">Fecha</th><th className="p-2">Documento</th><th className="p-2">Folio</th><th className="p-2">Receptor</th><th className="p-2 text-right">Total</th><th className="p-2"></th>
+                <th className="p-2">Fecha</th><th className="p-2">Documento</th><th className="p-2">Folio</th><th className="p-2">{recibidos ? 'Proveedor' : 'Receptor'}</th><th className="p-2 text-right">Total</th><th className="p-2"></th>
               </tr></thead>
               <tbody>
                 {docs.map(g => (
@@ -100,7 +110,7 @@ export default function DteEmitidosView({ studyId, companyId, periodo, unidadSii
                     <td className="p-2 font-mono">{g.fecha}</td>
                     <td className="p-2">{NOMBRE_DTE[g.tipo] || g.tipo}</td>
                     <td className="p-2 font-mono">{g.folio}</td>
-                    <td className="p-2">{g.razonReceptor}<span className="block text-[10px] text-slate-500">{g.rutReceptor}</span></td>
+                    <td className="p-2">{recibidos ? g.razonEmisor : g.razonReceptor}<span className="block text-[10px] text-slate-500">{recibidos ? g.rutEmisor : g.rutReceptor}</span></td>
                     <td className="p-2 text-right font-mono">{['110', '111', '112'].includes(g.tipo) ? g.total.toLocaleString('es-CL', { minimumFractionDigits: 2 }) : '$ ' + Math.round(g.total).toLocaleString('es-CL')}</td>
                     <td className="p-2 whitespace-nowrap text-right">
                       <button onClick={() => ver(g)} className="px-2 py-1 rounded-md bg-indigo-600 text-white font-semibold mr-1">Ver</button>

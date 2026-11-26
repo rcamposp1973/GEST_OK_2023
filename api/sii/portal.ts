@@ -488,6 +488,10 @@ export function consolidarF29(todos: any[], anio: number, hastaMes: number, o: {
 // y trunca sin avisar en rangos anchos: se pide de a 7 días como máximo y se parte por día y por tipo si se excede.
 const MIPE = 'https://www1.sii.cl/cgi-bin/Portal001';
 const TIPOS_DTE_VENTA = ['33', '34', '39', '41', '43', '46', '52', '56', '61', '110', '111', '112'];
+// Lo que una empresa puede RECIBIR en el facturador gratuito (facturas, liquidaciones, guías y notas)
+const TIPOS_DTE_COMPRA = ['33', '34', '43', '46', '52', '56', '61'];
+/** ENV = documentos emitidos por la empresa; RCP = documentos recibidos de proveedores. */
+export type OrigenXml = 'ENV' | 'RCP';
 
 /** Selecciona la empresa en el portal de facturación gratuita. Devuelve false si la cuenta no está autorizada para ella. */
 export async function seleccionarEmpresaMipyme(s: SesionSii, rutEmpresa: string): Promise<boolean> {
@@ -509,7 +513,7 @@ export function separarSetDte(xml: string) {
   return dtes.map(d => {
     const t = (n: string) => new RegExp(`<${n}>([\\s\\S]*?)</${n}>`).exec(d)?.[1]?.trim() || '';
     return { xml: d, tipo: t('TipoDTE'), folio: t('Folio'), fecha: t('FchEmis'), rutEmisor: t('RUTEmisor'), rutReceptor: t('RUTRecep'),
-      razonReceptor: t('RznSocRecep'), total: Number(t('MntTotal')) || 0, nroResol, fchResol };
+      razonEmisor: t('RznSoc') || t('RznSocEmisor'), razonReceptor: t('RznSocRecep'), total: Number(t('MntTotal')) || 0, nroResol, fchResol };
   }).filter(d => d.tipo && d.folio);
 }
 
@@ -534,13 +538,13 @@ export function cantidadListado(html: string): number | null {
   return null;
 }
 
-async function descargarTramoXml(s: SesionSii, rut: { cuerpo: string; dv: string }, desde: string, hasta: string, tipo = '') {
+async function descargarTramoXml(s: SesionSii, rut: { cuerpo: string; dv: string }, desde: string, hasta: string, tipo = '', origen: OrigenXml = 'ENV') {
   const comunes: Record<string, string> = { RUT_EMP: rut.cuerpo, DV_EMP: rut.dv, RUT_RECP: '', FOLIO: '', RZN_SOC: '', FEC_DESDE: desde, FEC_HASTA: hasta,
     TPO_DOC: tipo, ESTADO: '', ORDEN: '', FOLIOHASTA: '' };
-  const listado = await s.pedir(`${MIPE}/lista_documentos.cgi`, { method: 'POST', body: new URLSearchParams({ ...comunes, TPO_ARCHIVO: 'dte', ORIGEN: 'ENV', NUM_PAG: '1' }).toString(),
+  const listado = await s.pedir(`${MIPE}/lista_documentos.cgi`, { method: 'POST', body: new URLSearchParams({ ...comunes, TPO_ARCHIVO: 'dte', ORIGEN: origen, NUM_PAG: '1' }).toString(),
     headers: { 'content-type': 'application/x-www-form-urlencoded', origin: 'https://www1.sii.cl', referer: `${MIPE}/auth.cgi` } });
   const cant = cantidadListado(listado.texto);
-  const r = await s.pedir(`${MIPE}/download.cgi?${new URLSearchParams({ ...comunes, ORIGEN: 'ENV', DOWNLOAD: 'XML' }).toString()}`);
+  const r = await s.pedir(`${MIPE}/download.cgi?${new URLSearchParams({ ...comunes, ORIGEN: origen, DOWNLOAD: 'XML' }).toString()}`);
   if (new URL(r.url).hostname === LOGIN_HOST) throw new ErrorSii('La sesión del SII se cerró durante la descarga de XML.', 'SESION');
   // El SII responde "demasiados documentos" también cuando el filtro no trae nada: se mira el listado para distinguir
   if (/demasiados Documentos electr/i.test(r.texto)) {
@@ -555,8 +559,8 @@ async function descargarTramoXml(s: SesionSii, rut: { cuerpo: string; dv: string
   return { xml: r.texto };
 }
 
-/** XML de todos los documentos emitidos en el facturador gratuito durante el mes. */
-export async function leerXmlEmitidos(s: SesionSii, rutEmpresa: string, anio: number, mes: number, limiteMs = 240000) {
+/** XML de los documentos del mes en el facturador gratuito: emitidos (ENV) o recibidos de proveedores (RCP). */
+export async function leerXmlEmitidos(s: SesionSii, rutEmpresa: string, anio: number, mes: number, limiteMs = 240000, origen: OrigenXml = 'ENV') {
   const t0 = Date.now();
   await s.pedir(`${MIPE}/auth.cgi`);
   const rut = partirRut(rutEmpresa);
@@ -566,15 +570,15 @@ export async function leerXmlEmitidos(s: SesionSii, rutEmpresa: string, anio: nu
   const pendientes: string[] = [];
   const procesar = async (a: string, b: string, tipo = ''): Promise<void> => {
     if (Date.now() - t0 > limiteMs) { pendientes.push(`${a}${a !== b ? ` al ${b}` : ''}${tipo ? ` (tipo ${tipo})` : ''}: falta tiempo, vuelve a descargar`); return; }
-    const r = await descargarTramoXml(s, rut, a, b, tipo);
+    const r = await descargarTramoXml(s, rut, a, b, tipo, origen);
     if ('xml' in r) { documentos.push(...separarSetDte(r.xml as string)); return; }
     if ('vacio' in r) return;
     if (a !== b) { for (const [x, y] of partirEnTramos(a, b, 1)) await procesar(x, y, tipo); return; }
-    if (!tipo) { for (const t of TIPOS_DTE_VENTA) await procesar(a, b, t); return; }
+    if (!tipo) { for (const t of (origen === 'RCP' ? TIPOS_DTE_COMPRA : TIPOS_DTE_VENTA)) await procesar(a, b, t); return; }
     pendientes.push(`${a} tipo ${tipo}`);
   };
   for (const [a, b] of partirEnTramos(desde, hasta, 7)) await procesar(a, b);
-  const unicos = new Map(documentos.map(d => [`${d.tipo}_${d.folio}`, d]));
+  const unicos = new Map(documentos.map(d => [`${d.rutEmisor}_${d.tipo}_${d.folio}`, d]));
   return { documentos: [...unicos.values()], pendientes };
 }
 
@@ -653,19 +657,21 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
         if (!(await seleccionarEmpresaMipyme(s, c.rut))) return responder(200, { success: false, error: 'Ni la empresa ni su representante están autorizados para esta empresa en el facturador gratuito del SII.' });
         cuenta = 'representante';
       }
-      const { documentos, pendientes } = await leerXmlEmitidos(s, c.rut, anio, mes);
+      const origen: OrigenXml = b.origen === 'recibidos' ? 'RCP' : 'ENV';
+      const { documentos, pendientes } = await leerXmlEmitidos(s, c.rut, anio, mes, 240000, origen);
       const col = comp.ref.collection('dteXml');
       let nuevos = 0;
       for (let i = 0; i < documentos.length; i += 400) {
         const lote = adminDb.batch();
         for (const d of documentos.slice(i, i + 400)) {
           const id = `${partirRut(d.rutEmisor || c.rut).cuerpo}_${d.tipo}_${d.folio}`;
-          lote.set(col.doc(id), { ...d, period: d.fecha.slice(0, 7), origen: 'SII_FACTURADOR_GRATUITO', descargadoEn: new Date().toISOString() }, { merge: true });
+          lote.set(col.doc(id), { ...d, period: d.fecha.slice(0, 7), origen: 'SII_FACTURADOR_GRATUITO', lado: origen === 'RCP' ? 'RECIBIDO' : 'EMITIDO', descargadoEn: new Date().toISOString() }, { merge: true });
           nuevos++;
         }
         await lote.commit();
       }
-      resultado = { cantidad: nuevos, pendientes, cuenta, period: `${anio}-${String(mes).padStart(2, '0')}` };
+      resultado = { cantidad: nuevos, pendientes, cuenta, lado: origen === 'RCP' ? 'RECIBIDO' : 'EMITIDO', period: `${anio}-${String(mes).padStart(2, '0')}` };
+      console.log('[sii-portal] xml', JSON.stringify({ origen, cantidad: nuevos, pendientes: pendientes.length }));
     } else {
       const anio = Number(b.year) || new Date().getFullYear();
       const hasta = anio === new Date().getFullYear() ? new Date().getMonth() + 1 : 12;

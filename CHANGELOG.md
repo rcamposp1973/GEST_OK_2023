@@ -9,6 +9,10 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.39.0 — 2026-11-25
+- **Compras: XML de los documentos recibidos desde el facturador gratuito del SII.** Botón "Documentos recibidos (XML)" en el RCV: descarga los XML del mes (respaldo de documentos recibidos del portal MIPYME), los guarda y muestra la versión impresa en pantalla, PDF y XML. Sólo están los documentos que llegaron a la casilla del SII.
+- En los recibidos no se imprime resolución ni unidad del SII del proveedor (el respaldo no las trae; no se inventan).
+
 ## 1.38.0 — 2026-11-25
 - **Gest_Rta (módulo adicional de Renta anual), fase 1: Pro Pyme Transparente (14 D N° 8).**
   - Propuesta del Recuadro N° 22 del F22 (códigos 1600 a 1630): ingresos percibidos y egresos pagados desde el RCV, cuentas corrientes de clientes/proveedores/honorarios al 31-12, liquidaciones de sueldo y pérdida de arrastre. Cada línea muestra su fuente y el detalle por documento; el contador ajusta cualquier línea con su motivo.

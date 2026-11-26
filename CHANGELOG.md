@@ -9,6 +9,9 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.37.3 — 2026-11-26
+- F29: el remanente (Cód. 504) se arrastra siempre del F29 del mes anterior, actualizado con la UTM del mes; también en borradores ya guardados. Se respeta lo declarado/pagado y el remanente fijado a mano (con botón para volver al arrastre). Avisa si falta guardar un mes intermedio.
+
 ## 1.37.2 — 2026-11-26
 - **Pestañas como hojas de Excel:** cada módulo abierto en una pestaña queda vivo mientras la pestaña exista; al ir a otra pestaña y volver conserva su período, filtros y lo que se estaba trabajando. Se descarta al cerrar la pestaña.
 - F29: el período elegido se recuerda durante la sesión, también al salir y volver a la empresa.

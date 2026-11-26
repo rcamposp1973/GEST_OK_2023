@@ -9,6 +9,12 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.39.0 — 2026-11-27
+- **Compras: XML de los documentos recibidos desde el facturador gratuito del SII.** Botón "Documentos recibidos (XML)" en el RCV: descarga los XML del mes (respaldo de documentos recibidos del portal MIPYME), los guarda y muestra la versión impresa en pantalla, PDF y XML. Sólo están los documentos que llegaron a la casilla del SII.
+- En los recibidos no se imprime resolución ni unidad del SII del proveedor (el respaldo no las trae; no se inventan).
+
+## 1.38.0 — 2026-11-25
+
 ## 1.38.4 — 2026-11-27
 - Firmas del contador sin la mención al Colegio de Contadores (en Chile no es obligatorio colegiarse): Balance 8 columnas, Balance IFRS y Estado de Resultados, en impresión y PDF.
 

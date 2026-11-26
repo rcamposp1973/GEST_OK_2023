@@ -9,6 +9,10 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.37.2 — 2026-11-26
+- **Pestañas como hojas de Excel:** cada módulo abierto en una pestaña queda vivo mientras la pestaña exista; al ir a otra pestaña y volver conserva su período, filtros y lo que se estaba trabajando. Se descarta al cerrar la pestaña.
+- F29: el período elegido se recuerda durante la sesión, también al salir y volver a la empresa.
+
 ## 1.37.1 — 2026-11-25
 - Nóminas de pago: cada documento se cancela contra la cuenta por pagar donde quedó registrado (o la del auxiliar, o la de Parámetros RCV). Ya no se busca la cuenta por nombre; si no hay cuenta definida, avisa qué documentos y no contabiliza.
 

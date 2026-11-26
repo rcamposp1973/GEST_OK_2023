@@ -400,4 +400,13 @@ import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } fro
   ok('Nómina pago: honorarios por parámetros', r2?.cuenta.id==='h1' && r2?.origen==='parametros');
   ok('Nómina pago: sin cuenta no adivina', C.cuentaPorPagarDocumento({ rut:'1-9', tipoDoc:'33', folio:'5' }, { accounts, vouchers })===null);
 }
+{ const R = await import('../src/utils/f29Remanente');
+  const decl = [{ period:'2025-01', resumen:{ remanenteParaSiguienteMesUTM: 16.123456 } }, { period:'2024-12', resumen:{ remanenteParaSiguienteMesUTM: 20 } }];
+  const a = R.remanenteArrastrado(decl, '2025-02');
+  ok('F29 remanente: arrastra del mes anterior', a.origen==='mes_anterior' && a.utm===16.123456 && a.periodoOrigen==='2025-01');
+  const b = R.remanenteArrastrado(decl, '2025-04');
+  ok('F29 remanente: último guardado con aviso', b.origen==='ultimo_guardado' && b.periodoOrigen==='2025-01' && !!b.advertencia);
+  ok('F29 remanente: enero toma diciembre', R.remanenteArrastrado(decl, '2025-01').periodoOrigen==='2024-12');
+  ok('F29 remanente: inicial y pesos con UTM del mes', R.remanenteArrastrado([], '2025-01', { utm: 5 }).origen==='inicial' && R.remanenteEnPesos(16.123456, 67429)===1087189);
+}
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

@@ -28,7 +28,8 @@ import {
 } from '../types';
 import { sanitizeVoucherLines } from '../utils/voucherValidation';
 import { resumenOtrosImpuestos } from '../utils/otrosImpuestos';
-import { remanenteArrastrado, remanenteEnPesos, reajusteRemanente, RemanenteArrastrado } from '../utils/f29Remanente';
+import F29GestOk from './F29GestOk';
+import { remanenteArrastrado, remanenteEnPesos, reajusteRemanente, RemanenteArrastrado, remanenteCeecArrastrado, aplicarCreditosEspeciales } from '../utils/f29Remanente';
 import { Receipt, Download, Save, Zap, MessageSquare, Copy, X, Share2 } from 'lucide-react';
 
 interface Formulario29ViewProps {
@@ -61,7 +62,7 @@ export default function Formulario29View({
     return getLatestOpenPeriod(fiscalYears);
   });
   useEffect(() => { try { sessionStorage.setItem(clavePeriodo, selectedPeriod); } catch { /* sin almacenamiento */ } }, [clavePeriodo, selectedPeriod]);
-  const [activeTab, setActiveTab] = useState<'formulario' | 'auditoria' | 'parametros' | 'historial'>('formulario');
+  const [activeTab, setActiveTab] = useState<'gestok' | 'formulario' | 'auditoria' | 'parametros' | 'historial'>('gestok');
   const [loading, setLoading] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [savedDeclarations, setSavedDeclarations] = useState<F29Declaration[]>([]);
@@ -320,6 +321,7 @@ export default function Formulario29View({
     let creditoNotasCreditoEmitidas = 0;
     let ventasExentasTotal = 0;
     let ceecCreditoConstructora = 0;
+    let cantFacturasEmitidas = 0, cantBoletas = 0, cantNDEmitidas = 0, cantNCEmitidas = 0, cantExentas = 0;
 
     const isConstructora = company.isEmpresaConstructora || 
       (company.razonSocial && (company.razonSocial.toUpperCase().includes('CONSTRUCTORA') || company.razonSocial.toUpperCase().includes('CONSTRUCCION'))) ||
@@ -371,6 +373,7 @@ export default function Formulario29View({
           ventasExportacionTotal += expAmt;
         }
       } else if (isExentoDoc) {
+        cantExentas++;
         if (isNC) {
           ventasExentasTotal -= exento;
         } else {
@@ -393,11 +396,14 @@ export default function Formulario29View({
         if (t === '39' || t === '35' || t === '48' || t === 'Boleta' || t === 'Boleta Electrónica' || String(doc.folio || '').startsWith('RESUMEN')) {
           ventasBoletasNeto += net;
           debitoBoletasEmitidas += iva;
+          cantBoletas++;
         } else if (isND) {
           debitoNotasDebito += iva;
           ventasAfectasNeto += net;
+          cantNDEmitidas++;
         } else if (isNC) {
           creditoNotasCreditoEmitidas += iva;
+          cantNCEmitidas++;
           ventasAfectasNeto -= net;
           if (isConstructora) {
             if (doc.montoCeec && doc.montoCeec > 0) {
@@ -410,11 +416,13 @@ export default function Formulario29View({
         } else {
           ventasAfectasNeto += net;
           debitoFacturasEmitidas += iva;
+          cantFacturasEmitidas++;
         }
       }
     });
 
-    const totalDebitoFiscal = Math.round(Math.max(0, debitoFacturasEmitidas + debitoBoletasEmitidas + debitoNotasDebito - creditoNotasCreditoEmitidas - ceecCreditoConstructora + manualAdjustments.debitoAjuste));
+    const totalDebitoFiscal = Math.round(Math.max(0, debitoFacturasEmitidas + debitoBoletasEmitidas + debitoNotasDebito - creditoNotasCreditoEmitidas + manualAdjustments.debitoAjuste));
+    // El CEEC NO rebaja el débito: es un crédito especial (Cód. 126) que se imputa contra PPM, retenciones e IVA (Cód. 571)
 
     return {
       ventasAfectasNeto,
@@ -425,8 +433,9 @@ export default function Formulario29View({
       debitoBoletasEmitidas,
       debitoNotasDebito,
       creditoNotasCreditoEmitidas,
-      ceecCreditoConstructora: Math.max(0, ceecCreditoConstructora),
+      ceecCreditoConstructora: Math.max(0, Math.round(ceecCreditoConstructora)),
       totalDebitoFiscal,
+      cantFacturasEmitidas, cantBoletas, cantNDEmitidas, cantNCEmitidas, cantExentas,
       ventasExentasTotal,
       docsCount: ventasDocs.length
     };
@@ -682,7 +691,14 @@ export default function Formulario29View({
     const ppmPagar = ppmData.montoPPM + (manualAdjustments.ppmAdicionalManual || 0);
     const otrosImpuestos = (taxSettings.retencionCambioSujeto || 0) + (manualAdjustments.otrosImpuestosManual || 0);
 
-    const totalPagarF29 = ivaPagarNetoPostergacion + retencionesPagar + ppmPagar + otrosImpuestos + totalCustomCodes;
+    // Impuesto determinado (Cód. 595) y créditos especiales (CEEC Art. 21 DL 910: 126 + 128 = 571)
+    const determinado595 = Math.round(ivaPagarNetoPostergacion + retencionesPagar + ppmPagar + otrosImpuestos + totalCustomCodes);
+    const ceecMes = Math.round(debitoFiscalData.ceecCreditoConstructora || 0);
+    const arrCeec = remanenteCeecArrastrado(savedDeclarations as any, selectedPeriod);
+    const ceecReaj = reajusteRemanente({ utm: arrCeec.utm, utmOrigen: arrCeec.periodoOrigen ? getOfficialUTM(arrCeec.periodoOrigen) : taxSettings.utmValue, utmActual: taxSettings.utmValue, pesosOrigen: arrCeec.pesosOrigen });
+    const ceecRemanenteAnterior = arrCeec.utm > 0 || arrCeec.pesosOrigen > 0 ? ceecReaj.remanenteMes : 0;
+    const especiales = aplicarCreditosEspeciales({ determinado595, ceecMes, ceecRemanenteAnterior });
+    const totalPagarF29 = especiales.pagar91;
 
     return {
       ivaPagar,
@@ -695,9 +711,62 @@ export default function Formulario29View({
       ppmPagar,
       otrosImpuestos,
       customCodesTotal: totalCustomCodes,
-      totalPagarF29
+      totalPagarF29,
+      determinado595,
+      ceecMes,
+      ceecRemanenteAnterior,
+      ceecRemanenteAnteriorUTM: arrCeec.utm,
+      ceecReajuste: ceecRemanenteAnterior > 0 ? ceecReaj.reajuste : 0,
+      ceecTotal571: especiales.c571,
+      ceecImputado: especiales.ceecImputado,
+      totalDeterminado547: especiales.total547,
+      remanenteCeec: especiales.remanente130,
+      remanenteCeecUTM: taxSettings.utmValue > 0 ? parseFloat((especiales.remanente130 / taxSettings.utmValue).toFixed(6)) : 0,
+      notaCeec: arrCeec.nota,
     };
-  }, [debitoFiscalData, creditoFiscalData, retencionesData, ppmData, taxSettings, manualAdjustments, ivaPostergadoActivo, ivaPostergadoMonto, customCodes]);
+  }, [debitoFiscalData, creditoFiscalData, retencionesData, ppmData, taxSettings, manualAdjustments, ivaPostergadoActivo, ivaPostergadoMonto, customCodes, savedDeclarations, selectedPeriod]);
+
+  // Valores por código del F29 (para el formulario Gest_OK con la estructura del SII)
+  const valoresF29 = useMemo(() => {
+    const d: any = debitoFiscalData, c: any = creditoFiscalData, r: any = resumenF29;
+    const v: Record<string, number> = {
+      '585': d.docsExportCount || 0, '20': d.ventasExportacionTotal || 0,
+      '586': d.cantExentas || 0, '142': d.ventasExentasTotal || 0,
+      '503': d.cantFacturasEmitidas || 0, '502': d.debitoFacturasEmitidas || 0,
+      '110': d.cantBoletas || 0, '111': d.debitoBoletasEmitidas || 0,
+      '512': d.cantNDEmitidas || 0, '513': d.debitoNotasDebito || 0,
+      '509': d.cantNCEmitidas || 0, '510': d.creditoNotasCreditoEmitidas || 0,
+      '538': d.totalDebitoFiscal || 0,
+      '511': Math.round((c.creditoFacturasRecibidas || 0) + (c.creditoActivoFijo || 0) + (c.creditoSupermercados || 0) + (c.creditoBienesRaices || 0) + (c.creditoNotasDebitoRecibidas || 0)),
+      '514': c.ivaNoRecuperable || 0,
+      '564': c.cantNoRecuperable || 0, '521': c.netoNoRecuperable || 0,
+      '519': c.cantFacturasGiro || 0, '520': c.creditoFacturasRecibidas || 0,
+      '761': c.cantSupermercados || 0, '762': c.creditoSupermercados || 0,
+      '765': c.cantBienesRaices || 0, '766': c.creditoBienesRaices || 0,
+      '524': c.cantActivoFijo || 0, '525': c.creditoActivoFijo || 0,
+      '527': c.cantNotasCredito || 0, '528': c.debitoNotasCreditoRecibidas || 0,
+      '531': c.cantNotasDebito || 0, '532': c.creditoNotasDebitoRecibidas || 0,
+      '504': c.remanenteMesAnteriorPesos || 0,
+      '537': c.totalCreditoFiscal || 0,
+      '77': r.remanenteParaSiguienteMes || 0, '89': r.ivaPagar || 0, '756': r.ivaPostergado || 0,
+      '48': retencionesData.impuestoUnicoTrabajadores || 0,
+      '151': retencionesData.retencionHonorarios || 0,
+      '563': ppmData.baseImponibleVentas || 0, '115': ppmData.montoPPM ? ppmData.tasaPPM : 0, '62': ppmData.montoPPM || 0,
+      '595': r.determinado595 || 0,
+      '126': r.ceecMes || 0, '128': r.ceecRemanenteAnterior || 0, '571': r.ceecTotal571 || 0,
+      '547': r.totalDeterminado547 ?? 0, '130': r.remanenteCeec || 0,
+      '91': r.totalPagarF29 || 0,
+    };
+    return v;
+  }, [debitoFiscalData, creditoFiscalData, resumenF29, retencionesData, ppmData]);
+
+  const extrasF29 = useMemo(() => [
+    ...customCodes.filter(c => c.active && (c.amount || 0) > 0).map(c => ({ codigo: c.code, glosa: c.name, monto: c.amount || 0 })),
+    { glosa: 'Préstamo solidario (retención 3%)', codigo: '49 / 155', monto: retencionesData.prestamoSolidario || 0 },
+    { glosa: 'Retención a terceros', monto: retencionesData.retencionTerceros || 0 },
+    { glosa: 'PPM adicional (ajuste manual)', monto: manualAdjustments.ppmAdicionalManual || 0 },
+    { glosa: 'Otros impuestos (cambio de sujeto / ajuste manual)', monto: resumenF29.otrosImpuestos || 0 },
+  ], [customCodes, retencionesData, manualAdjustments.ppmAdicionalManual, resumenF29.otrosImpuestos]);
 
   // Handle Save F29 Declaration to Firestore
   const handleSaveDeclaration = async () => {
@@ -801,6 +870,10 @@ export default function Formulario29View({
     const aPagar = (ppmData.montoPPM || 0) + (retencionesData.retencionHonorarios || 0) + (retencionesData.impuestoUnicoTrabajadores || 0)
       + customCodes.filter(c => c.active && (c.amount || 0) > 0).reduce((t, c) => t + (c.amount || 0), 0);
     add('impuestosPorPagarAccountId', 'Impuestos por pagar (F29)', aPagar, 'PASIVO', [['impuestos', 'pagar'], ['imptos', 'pagar'], ['impuesto', 'pagar']], ['unico', 'diferido']);
+    const ceecUso = (resumenF29.ceecImputado || 0) + (resumenF29.ceecReajuste || 0);
+    add('ceecAccountId', 'Crédito especial empresas constructoras (CEEC)', ceecUso, 'ACTIVO', [['constructora'], ['ceec'], ['credito', 'emp']]);
+    if ((resumenF29.ceecReajuste || 0) > 0) add('correccionMonetariaAccountId', 'Corrección monetaria (reajuste remanentes)', resumenF29.ceecReajuste || 0, null, [['correccion', 'monetaria'], ['reajuste']]);
+    if ((resumenF29.ceecImputado || 0) > ((resumenF29.ppmPagar || 0) + (resumenF29.retencionesPagar || 0) + (resumenF29.otrosImpuestos || 0) + (resumenF29.customCodesTotal || 0))) add('ivaPagarAccountId', 'IVA por pagar', resumenF29.ceecImputado || 0, 'PASIVO', [['iva', 'pagar']]);
     return out;
   };
 
@@ -844,6 +917,8 @@ export default function Formulario29View({
       const accPPMActivo = cuenta('ppmAccountId', 'PPM');
       const accRetencionHonorarios = cuenta('retencionHonorariosAccountId', 'Retención honorarios 2ª categoría');
       const accImpuestoUnico = cuenta('impuestoUnicoAccountId', 'Impuesto único trabajadores');
+      const usaCeec = (resumenF29.ceecImputado || 0) > 0 || (resumenF29.ceecReajuste || 0) > 0;
+      const accCeec = usaCeec ? cuenta('ceecAccountId', 'Crédito especial empresas constructoras (CEEC)') : null;
 
       const lines: any[] = [];
 
@@ -1002,6 +1077,25 @@ export default function Formulario29View({
         });
       });
 
+      // 9. Crédito Especial Empresas Constructoras (Art. 21 DL 910): reajuste del remanente y su imputación contra
+      //    PPM y retenciones (primero) y luego contra el IVA a pagar. El saldo no imputado (Cód. 130) queda en la cuenta.
+      if (accCeec) {
+        const reajCeec = Math.round(resumenF29.ceecReajuste || 0);
+        if (reajCeec > 0) {
+          lines.push({ id: 'line_ceec_reaj_deb', accountId: accCeec.id, accountCode: accCeec.code, accountName: accCeec.name, debit: reajCeec, credit: 0, documentRef: `F29 Cód 128`, gloss: `Reajuste Art. 27 remanente CEEC F29 ${selectedPeriod}` });
+          lines.push({ id: 'line_ceec_reaj_cred', accountId: accCorreccionMonetaria.id, accountCode: accCorreccionMonetaria.code, accountName: accCorreccionMonetaria.name, debit: 0, credit: reajCeec, documentRef: `F29 Cód 128`, gloss: `Corrección monetaria remanente CEEC F29 ${selectedPeriod}` });
+        }
+        const imputado = Math.round(resumenF29.ceecImputado || 0);
+        if (imputado > 0) {
+          const otrosPorPagar = Math.round((resumenF29.ppmPagar || 0) + (resumenF29.retencionesPagar || 0) + (resumenF29.otrosImpuestos || 0) + (resumenF29.customCodesTotal || 0));
+          const contraOtros = Math.min(imputado, otrosPorPagar);
+          const contraIva = imputado - contraOtros;
+          lines.push({ id: 'line_ceec_cred', accountId: accCeec.id, accountCode: accCeec.code, accountName: accCeec.name, debit: 0, credit: imputado, documentRef: `F29 Cód 571`, gloss: `Imputación crédito especial empresas constructoras F29 ${selectedPeriod}` });
+          if (contraOtros > 0) lines.push({ id: 'line_ceec_imp', accountId: accImpuestosPorPagarTotal.id, accountCode: accImpuestosPorPagarTotal.code, accountName: accImpuestosPorPagarTotal.name, debit: contraOtros, credit: 0, documentRef: `F29 Cód 571`, gloss: `CEEC imputado a PPM y retenciones F29 ${selectedPeriod}` });
+          if (contraIva > 0) lines.push({ id: 'line_ceec_iva', accountId: accIvaPagar.id, accountCode: accIvaPagar.code, accountName: accIvaPagar.name, debit: contraIva, credit: 0, documentRef: `F29 Cód 571`, gloss: `CEEC imputado al IVA a pagar F29 ${selectedPeriod}` });
+        }
+      }
+
       // Contabilidad en pesos: sin decimales
       lines.forEach(l => { l.debit = Math.round(Number(l.debit) || 0); l.credit = Math.round(Number(l.credit) || 0); });
 
@@ -1121,6 +1215,12 @@ export default function Formulario29View({
       ['563', 'Base PPM (ingresos brutos)', ppmData.baseImponibleVentas.toString()],
       ['115', 'Tasa PPM (%)', ppmData.tasaPPM.toString()],
       ['62', 'PPM', ppmData.montoPPM.toString()],
+      ['595', 'Sub total impuesto determinado', String(resumenF29.determinado595 || 0)],
+      ['126', 'Crédito especial empresas constructoras del mes', String(resumenF29.ceecMes || 0)],
+      ['128', 'Remanente CEEC mes anterior (reajustado)', String(resumenF29.ceecRemanenteAnterior || 0)],
+      ['571', 'Total crédito especial empresas constructoras', String(resumenF29.ceecTotal571 || 0)],
+      ['547', 'TOTAL DETERMINADO', String(resumenF29.totalDeterminado547 ?? 0)],
+      ['130', 'Remanente crédito especial empresas constructoras', String(resumenF29.remanenteCeec || 0)],
       ['91', 'TOTAL A PAGAR', resumenF29.totalPagarF29.toString()]
     ];
 
@@ -1886,7 +1986,9 @@ export default function Formulario29View({
               : `$${resumenF29.remanenteParaSiguienteMes.toLocaleString('es-CL')}`}
           </span>
           <span className="text-[10px] text-slate-600 font-medium">
-            {resumenF29.totalPagarF29 > 0
+            {(resumenF29.ceecTotal571 || 0) > 0
+              ? `Determinado $${(resumenF29.determinado595 || 0).toLocaleString('es-CL')} − CEEC $${(resumenF29.ceecTotal571 || 0).toLocaleString('es-CL')}${(resumenF29.remanenteCeec || 0) > 0 ? ` · Remanente CEEC $${(resumenF29.remanenteCeec || 0).toLocaleString('es-CL')}` : ''}`
+              : resumenF29.totalPagarF29 > 0
               ? `IVA: $${resumenF29.ivaPagar.toLocaleString('es-CL')} + Otros: $${(resumenF29.ppmPagar + resumenF29.retencionesPagar).toLocaleString('es-CL')}`
               : `Remanente acumulado: ${resumenF29.remanenteParaSiguienteMesUTM} UTM`}
           </span>
@@ -1896,6 +1998,14 @@ export default function Formulario29View({
       {/* TABS */}
       <div className="flex border-b border-slate-200 bg-white rounded-t-xl px-4 pt-2 gap-2">
         <button
+          onClick={() => setActiveTab('gestok')}
+          className={`px-4 py-2 text-xs font-bold border-b-2 flex items-center gap-1.5 transition-colors ${
+            activeTab === 'gestok' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <span>F29 Gest_OK</span>
+        </button>
+        <button
           onClick={() => setActiveTab('formulario')}
           className={`px-4 py-2 text-xs font-bold border-b-2 flex items-center gap-1.5 transition-colors ${
             activeTab === 'formulario'
@@ -1903,7 +2013,7 @@ export default function Formulario29View({
               : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
-          <span> Formulario 29 Oficial (SII)</span>
+          <span> Detalle de cálculo</span>
         </button>
 
         <button
@@ -1943,6 +2053,21 @@ export default function Formulario29View({
       </div>
 
       {/* TAB 1: FORMULARIO 29 OFICIAL (FORMATO SII) */}
+      {activeTab === 'gestok' && (
+        <F29GestOk
+          periodo={selectedPeriod}
+          empresa={company.razonSocial || company.name}
+          rut={company.rut}
+          valores={valoresF29}
+          extras={extrasF29}
+          avisos={[
+            ...(infoRemanente?.advertencia ? [infoRemanente.advertencia] : []),
+            ...((resumenF29.remanenteCeec || 0) > 0 && selectedPeriod.endsWith('-12') ? ['El remanente del crédito especial de empresas constructoras (Cód. 130) de diciembre se recupera en la Declaración Anual de Renta (F22).'] : []),
+            ...(resumenF29.notaCeec && (debitoFiscalData.ceecCreditoConstructora || 0) > 0 ? [resumenF29.notaCeec] : []),
+          ]}
+        />
+      )}
+
       {activeTab === 'formulario' && (
         <div className="bg-white rounded-b-xl border border-slate-200 shadow-xs p-5 space-y-6">
           {/* SECCIÓN I: DÉBITO FISCAL */}
@@ -2010,11 +2135,11 @@ export default function Formulario29View({
                     <tr className="bg-amber-50/60 hover:bg-amber-50">
                       <td className="py-2 px-3 font-bold text-amber-800">[126 / 128]</td>
                       <td className="py-2 px-3 font-sans text-amber-900">
-                        <span className="font-bold block">(-) Crédito Especial Empresas Constructoras - CEEC (Art. 21 D.L. 910)</span>
-                        <span className="text-[10px] text-amber-700">Deducción de franquicia tributaria habitacional sobre ventas de construcción</span>
+                        <span className="font-bold block">Crédito Especial Empresas Constructoras - CEEC (Art. 21 D.L. 910) · informativo</span>
+                        <span className="text-[10px] text-amber-700">No rebaja el débito: va en Créditos especiales (Cód. 126 + 128 = 571) y se imputa contra PPM, retenciones e IVA. Ver "F29 Gest_OK".</span>
                       </td>
                       <td className="py-2 px-3 text-right text-slate-600">-</td>
-                      <td className="py-2 px-3 text-right font-black text-amber-900">-${debitoFiscalData.ceecCreditoConstructora?.toLocaleString('es-CL')}</td>
+                      <td className="py-2 px-3 text-right font-black text-amber-900">${debitoFiscalData.ceecCreditoConstructora?.toLocaleString('es-CL')}</td>
                     </tr>
                   )}
                   <tr className="hover:bg-slate-50">

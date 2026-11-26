@@ -49,3 +49,26 @@ export function reajusteRemanente(p: { utm: number; utmOrigen: number; utmActual
   const reajuste = Math.max(0, Math.round(utm * ((Number(p.utmActual) || 0) - (Number(p.utmOrigen) || 0))));
   return { pesosOrigen, reajuste, remanenteMes: pesosOrigen + reajuste };
 }
+
+/**
+ * Remanente del Crédito Especial Empresas Constructoras (Cód. 130 del mes anterior → Cód. 128, reajustado Art. 27).
+ * El remanente de diciembre NO pasa a enero: se recupera en la Declaración Anual de Renta (F22 Cód. 83).
+ */
+export function remanenteCeecArrastrado(declaraciones: { period: string; resumen?: any }[], periodo: string) {
+  if (periodo.endsWith('-01')) return { utm: 0, pesosOrigen: 0, periodoOrigen: undefined as string | undefined, nota: 'El remanente CEEC de diciembre se recupera en la Renta (F22), no pasa a enero.' };
+  const ant = periodoAnterior(periodo);
+  const previo = declaraciones.find(d => d.period === ant);
+  if (!previo) return { utm: 0, pesosOrigen: 0, periodoOrigen: undefined as string | undefined, nota: undefined as string | undefined };
+  return { utm: Number(previo.resumen?.remanenteCeecUTM) || 0, pesosOrigen: Math.round(Number(previo.resumen?.remanenteCeec) || 0), periodoOrigen: ant, nota: undefined as string | undefined };
+}
+
+/**
+ * Créditos especiales contra el impuesto determinado (Cód. 595): el CEEC del mes (126) + remanente reajustado (128)
+ * = 571, se rebaja de PPM, retenciones e IVA. Si sobra, es remanente (130); si no, el saldo es el total a pagar (91).
+ */
+export function aplicarCreditosEspeciales(p: { determinado595: number; ceecMes: number; ceecRemanenteAnterior: number }) {
+  const d595 = Math.round(p.determinado595 || 0);
+  const c571 = Math.round((p.ceecMes || 0) + (p.ceecRemanenteAnterior || 0));
+  const t547 = d595 - c571;
+  return { c571, total547: t547, remanente130: t547 < 0 ? -t547 : 0, pagar91: Math.max(t547, 0), ceecImputado: Math.min(c571, Math.max(d595, 0)) };
+}

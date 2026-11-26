@@ -861,6 +861,7 @@ export interface F29AccountingParams {
   retencionHonorariosAccountId?: string;
   impuestoUnicoAccountId?: string;
   impuestosPorPagarAccountId?: string;
+  ceecAccountId?: string; // Crédito especial empresas constructoras por recuperar (activo)
 }
 
 export interface F29TaxSettings {
@@ -890,8 +891,9 @@ export interface F29DebitoFiscal {
   creditoNotasCreditoEmitidas: number; // Cód 509 / 510
   ceecCreditoConstructora?: number; // Cód 126 / 128 (-) Crédito Especial Empresas Constructoras Art. 21 DL 910
   totalDebitoFiscal: number; // Cód 538
-  ventasExentasTotal: number; // Cód 585 / 142
+  ventasExentasTotal: number; // Cód 586 / 142
   docsCount: number;
+  cantFacturasEmitidas?: number; cantBoletas?: number; cantNDEmitidas?: number; cantNCEmitidas?: number; cantExentas?: number;
 }
 
 export interface F29CreditoFiscal {
@@ -980,6 +982,17 @@ export interface F29ResumenTotal {
   otrosImpuestos: number;
   customCodesTotal?: number;
   totalPagarF29: number; // Cód 91
+  determinado595?: number; // Sub total impuesto determinado
+  ceecMes?: number; // Cód 126
+  ceecRemanenteAnterior?: number; // Cód 128 (reajustado)
+  ceecRemanenteAnteriorUTM?: number;
+  ceecReajuste?: number;
+  ceecTotal571?: number; // Cód 571
+  ceecImputado?: number;
+  totalDeterminado547?: number; // Cód 547
+  remanenteCeec?: number; // Cód 130
+  remanenteCeecUTM?: number;
+  notaCeec?: string;
 }
 
 export interface F29Declaration {

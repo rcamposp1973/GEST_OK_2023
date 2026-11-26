@@ -420,4 +420,17 @@ import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } fro
   const l2 = V.redondearLineasAPesos([{ debit: 0.6, credit: 0 }, { debit: 0.6, credit: 0 }, { debit: 0, credit: 1.2 }] as any);
   ok('Asientos sin decimales: cuadra tras redondear', l2.reduce((a: number, x: any) => a + x.debit - x.credit, 0) === 0);
 }
+{ const R = await import('../src/utils/f29Remanente'); const E = await import('../src/utils/f29Estructura');
+  // Caso CFI junio 2025: IVA a pagar 11.455.642 − créditos; PPM y retenciones; CEEC 7.446.167
+  const a = R.aplicarCreditosEspeciales({ determinado595: 4058477, ceecMes: 7446167, ceecRemanenteAnterior: 0 });
+  ok('CEEC: se rebaja del total determinado y deja remanente 130', a.c571===7446167 && a.total547===4058477-7446167 && a.remanente130===3387690 && a.pagar91===0 && a.ceecImputado===4058477);
+  const b = R.aplicarCreditosEspeciales({ determinado595: 1000000, ceecMes: 200000, ceecRemanenteAnterior: 50000 });
+  ok('CEEC: con saldo a pagar', b.pagar91===750000 && b.remanente130===0);
+  ok('CEEC: diciembre no pasa a enero', R.remanenteCeecArrastrado([{ period:'2025-12', resumen:{ remanenteCeecUTM: 10, remanenteCeec: 690000 } }], '2026-01').utm===0);
+  const c = R.remanenteCeecArrastrado([{ period:'2025-06', resumen:{ remanenteCeecUTM: 49.97, remanenteCeec: 3387690 } }], '2025-07');
+  ok('CEEC: remanente del mes anterior', c.utm===49.97 && c.pesosOrigen===3387690);
+  const lin = E.F29_ESTRUCTURA.flatMap(x => x.lineas);
+  ok('F29 estructura: líneas y códigos clave', lin.find(l=>l.linea===24)?.codigos[0].cod==='538' && lin.find(l=>l.linea===138)?.codigos.some(x=>x.cod==='126') && lin.find(l=>l.linea===141)?.codigos[0].cod==='547' && lin.find(l=>l.linea===148)?.codigos[0].cod==='91');
+  ok('F29 compacto: sólo líneas con monto y totales', E.lineaConValor(lin.find(l=>l.linea===7)!, { '502': 100 }) && !E.lineaConValor(lin.find(l=>l.linea===8)!, {}) && E.lineaConValor(lin.find(l=>l.linea===24)!, {}));
+}
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

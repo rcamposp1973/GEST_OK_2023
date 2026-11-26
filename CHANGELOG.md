@@ -9,6 +9,9 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.37.1 — 2026-11-25
+- Nóminas de pago: cada documento se cancela contra la cuenta por pagar donde quedó registrado (o la del auxiliar, o la de Parámetros RCV). Ya no se busca la cuenta por nombre; si no hay cuenta definida, avisa qué documentos y no contabiliza.
+
 ## 1.37.0 — 2026-11-25
 - **Otros impuestos del Registro de Compras, con su detalle.** IVA sin derecho, impuestos a combustibles, ILA, Art. 37 y tabacos se leen tal como los informa el SII (código, valor, tasa y si va como "Impto. Sin Derecho a Crédito"), por CSV y por la API propia (`getDetalleCompraExport`). Un documento con varios impuestos (varias filas) queda como un solo documento.
 - Corrección: la columna "Impto. Sin Derecho a Credito" del CSV del SII se leía como "IVA sin derecho". Ahora va separada.

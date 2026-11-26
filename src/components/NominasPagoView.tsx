@@ -1,4 +1,4 @@
-import { faltaCuenta } from '../utils/voucherValidation';
+import { cuentaPorPagarDocumento } from '../utils/cuentaPorPagar';
 import { formatearRut } from '../utils/rutFormato';
 import { getNextVoucherNumber } from '../utils/voucherCounter';
 import { exigirCuadre } from '../utils/capaContable';
@@ -21,6 +21,8 @@ interface NominasPagoViewProps {
   vouchers: Voucher[];
   fiscalYears: FiscalPeriodYear[];
   onVouchersUpdated?: () => void;
+  /** Parámetros RCV: cuentas por defecto de proveedores y honorarios por pagar */
+  rcvParams?: { defaultSupplierAccountId?: string; defaultHonorariosAccountId?: string } | null;
 }
 
 
@@ -37,7 +39,8 @@ export default function NominasPagoView({
   rcvDocuments,
   vouchers,
   fiscalYears,
-  onVouchersUpdated
+  onVouchersUpdated,
+  rcvParams
 }: NominasPagoViewProps) {
   const [paymentBatches, setPaymentBatches] = useState<PaymentBatch[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -333,12 +336,28 @@ export default function NominasPagoView({
       const nextVoucherNumber = await getNextVoucherNumber(studyId, company.id, 0, vouchers.reduce((m, v) => Math.max(m, v.voucherNumber || 0), 0));
 
       // 1. Prepare Voucher Lines for Egreso/Traspaso (Individual lines per document with RUT, Name and DocumentRef)
-      const supplierAcc = accounts.find(a => a.code.startsWith('2.1.01') || a.code.startsWith('2-1-01') || a.name.toLowerCase().includes('proveedor')) || faltaCuenta('Proveedores por Pagar');
+      // Cada documento se cancela contra la cuenta donde quedó registrado (o la del auxiliar / Parámetros RCV).
+      // Si no hay cuenta definida, no se contabiliza: el sistema no adivina ni inventa cuentas.
+      const sinCuenta: string[] = [];
+      const cuentasItems = combinedItems.map(it => {
+        const doc = it.rcvDocId ? rcvDocuments.find(d => d.id === it.rcvDocId) : undefined;
+        const aux = auxMap.get((it.rut || '').toUpperCase().replace(/\./g, '').trim());
+        const r = cuentaPorPagarDocumento(
+          { rut: it.rut, tipoDoc: String(it.tipoDoc), folio: String(it.folio), esHonorario: doc?.tipoRegistro === 'Honorarios', esNotaCredito: isNotaCredito(it.tipoDoc) },
+          { accounts, vouchers, cuentaAcreedorAuxiliar: (aux as any)?.defaultCreditorAccountId, defaultProveedores: rcvParams?.defaultSupplierAccountId, defaultHonorarios: rcvParams?.defaultHonorariosAccountId },
+        );
+        if (!r) sinCuenta.push(`${it.tipoDoc} N° ${it.folio} (${it.razonSocial})`);
+        return r?.cuenta;
+      });
+      if (sinCuenta.length) {
+        throw new Error(`No se sabe contra qué cuenta por pagar cancelar: ${sinCuenta.slice(0, 5).join('; ')}${sinCuenta.length > 5 ? ` y ${sinCuenta.length - 5} más` : ''}. Estos documentos no tienen registro contable y falta la cuenta "Proveedores por pagar" (u "Honorarios por pagar") en Parámetros Contables RCV. Configúrala y vuelve a intentar. El sistema no inventa cuentas.`);
+      }
 
       const supplierLines = combinedItems.map((it, idx) => {
         const isNC = isNotaCredito(it.tipoDoc);
         const amount = Math.abs(it.montoPagar);
         const docRefStr = `${it.tipoDoc} N° ${it.folio}`;
+        const supplierAcc = cuentasItems[idx]!;
 
         return {
           id: `line_supp_${idx + 1}`,
@@ -425,8 +444,9 @@ export default function NominasPagoView({
 
       await addDoc(collection(companyRef, 'paymentBatches'), newBatchData);
 
-      // 4. Si es compensación pura sin banco, registrar en accountMatches
-      if (!isBankUsed) {
+      // 4. Si es compensación pura sin banco, registrar en accountMatches (cuando todo se canceló contra una misma cuenta)
+      const supplierAcc = cuentasItems.every(c => c!.id === cuentasItems[0]!.id) ? cuentasItems[0]! : null;
+      if (!isBankUsed && supplierAcc) {
         try {
           const matchId = `match_pay_${voucherDocRef.id}`;
           const matchedLinesRef: MatchedLineRef[] = voucherLines

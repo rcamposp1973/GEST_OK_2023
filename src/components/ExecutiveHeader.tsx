@@ -1,8 +1,9 @@
 import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useEffect } from 'react';
+import { abrirConfigInactividad } from './InactividadGuard';
 import { UserRole, Company, Study } from '../types';
 import { generateOfficialChileanIndicators, syncOnlineChileanIndicators, DailyIndicator } from '../utils/chileanEconomicIndicators';
-import { Building2, Home, LogOut, Settings, BarChart3, ChevronDown, Check, X, Key, Activity, ShieldCheck, Sparkles } from 'lucide-react';
+import { Building2, Home, LogOut, Settings, BarChart3, ChevronDown, Check, X, Key, Activity, ShieldCheck, Sparkles, Timer } from 'lucide-react';
 import ChangePasswordModal from './ChangePasswordModal';
 import { APP_VERSION_FULL } from '../constants/version';
 import FormatSwitcherDropdown from './FormatSwitcherDropdown';
@@ -267,6 +268,15 @@ export default function ExecutiveHeader({
                     <Key className="w-3.5 h-3.5" />
                   </button>
                 )}
+
+                <button
+                  type="button"
+                  onClick={abrirConfigInactividad}
+                  className="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-white rounded transition-colors cursor-pointer"
+                  title="Cierre de sesión por inactividad"
+                >
+                  <Timer className="w-3.5 h-3.5" />
+                </button>
 
                 <button
                   type="button"

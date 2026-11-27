@@ -3,11 +3,22 @@ import { signOut } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { User as FirebaseUser } from 'firebase/auth';
 
-const STORAGE_KEY = 'gestok_last_user_activity';
-// Tiempo de inactividad global antes de cerrar sesión (30 minutos)
-export const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
-// Intervalo para verificar el estado de inactividad global (10 segundos)
-const CHECK_INTERVAL_MS = 10 * 1000;
+export const STORAGE_KEY = 'gestok_last_user_activity';
+// Tiempo de inactividad: lo elige cada usuario entre 5 y 60 minutos (por defecto 30). Nunca más de 60.
+export const MAX_INACTIVIDAD_MIN = 60;
+export const MIN_INACTIVIDAD_MIN = 5;
+export const DEFAULT_INACTIVIDAD_MIN = 30;
+export const claveMinutosInactividad = (uid: string) => `gestok:inactividadMin:${uid}`;
+export const leerMinutosInactividad = (uid: string) => {
+  try {
+    const n = Number(localStorage.getItem(claveMinutosInactividad(uid)));
+    return Number.isFinite(n) && n >= MIN_INACTIVIDAD_MIN ? Math.min(n, MAX_INACTIVIDAD_MIN) : DEFAULT_INACTIVIDAD_MIN;
+  } catch { return DEFAULT_INACTIVIDAD_MIN; }
+};
+/** Evento con los segundos que faltan para el cierre (o -1 si ya no hay aviso). */
+export const EVENTO_AVISO_INACTIVIDAD = 'gestok:aviso-inactividad';
+// Intervalo para verificar el estado de inactividad global
+const CHECK_INTERVAL_MS = 5 * 1000;
 // Throttle para actualizar el almacenamiento local (máximo una vez cada 3 segundos)
 const THROTTLE_MS = 3000;
 
@@ -77,9 +88,10 @@ export function useCrossTabSessionSync(currentUser: FirebaseUser | null) {
     });
 
     // Sincronizar cuando el usuario cambia o regresa a esta pestaña
+    // Al volver a la pestaña: primero se revisa si ya venció el tiempo (si no, volver contaría como actividad y nunca cerraría)
     const handleVisibilityOrFocus = () => {
       if (!document.hidden) {
-        recordActivity();
+        if (!revisar()) recordActivity();
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityOrFocus);
@@ -96,8 +108,8 @@ export function useCrossTabSessionSync(currentUser: FirebaseUser | null) {
     };
     window.addEventListener('storage', handleStorageEvent);
 
-    // Verificación periódica del tiempo de inactividad global
-    const interval = setInterval(() => {
+    // Verificación del tiempo de inactividad global. Devuelve true si cerró la sesión.
+    const revisar = (): boolean => {
       let lastActivity = Date.now();
       try {
         const stored = localStorage.getItem(STORAGE_KEY);
@@ -113,8 +125,12 @@ export function useCrossTabSessionSync(currentUser: FirebaseUser | null) {
 
       const elapsed = Date.now() - lastActivity;
 
+      const limiteMs = leerMinutosInactividad(currentUser.uid) * 60 * 1000;
+      const restante = Math.ceil((limiteMs - elapsed) / 1000);
+      window.dispatchEvent(new CustomEvent(EVENTO_AVISO_INACTIVIDAD, { detail: restante <= 60 && restante > 0 ? restante : -1 }));
+
       // Si ha pasado más del tiempo límite de inactividad SIN actividad en NINGUNA pestaña
-      if (elapsed >= INACTIVITY_TIMEOUT_MS) {
+      if (elapsed >= limiteMs) {
         console.info(`[Sesión Gest_OK] Inactividad global detectada (${Math.round(elapsed / 60000)} min). Cerrando sesión.`);
         if (broadcastChannelRef.current) {
           try {
@@ -122,8 +138,11 @@ export function useCrossTabSessionSync(currentUser: FirebaseUser | null) {
           } catch {}
         }
         signOut(auth).catch(() => {});
+        return true;
       }
-    }, CHECK_INTERVAL_MS);
+      return false;
+    };
+    const interval = setInterval(revisar, CHECK_INTERVAL_MS);
 
     // Registrar actividad inicial
     recordActivity();

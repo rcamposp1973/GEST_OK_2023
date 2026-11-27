@@ -2,6 +2,7 @@ import { separarCredenciales, guardarSecretosSii } from '../utils/credencialesSi
 import { licenciaVigente, quedaCupo, type LicenciaGestRta } from '../utils/gestRta/licencia';
 import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useEffect } from 'react';
+import { abrirConfigInactividad } from './InactividadGuard';
 import { provisionAuthUser } from '../utils/adminApi';
 import { db } from '../lib/firebase';
 import { collection, getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc, setDoc } from 'firebase/firestore';
@@ -9,7 +10,7 @@ import { puedeAsignarAgente } from '../utils/agenteAcceso';
 import { User, Company, UserRole, Assignment, Study, ChartOfAccount, Voucher, RCVDocument, BankReconciliation, FiscalPeriodYear, DTEConfig } from '../types';
 import CompanyAccountingDashboard from './CompanyAccountingDashboard';
 import ClientExecutiveManagementView from './ClientExecutiveManagementView';
-import { ShieldAlert, Users, Building2, UserCheck, Shield, Key, LogOut, Trash2, RefreshCw, AlertTriangle, CheckCircle2, Lock, Eye, EyeOff, FileText, Upload, Sparkles, Server, Check, ArrowRight, Activity, X } from 'lucide-react';
+import { ShieldAlert, Users, Building2, UserCheck, Shield, Key, LogOut, Trash2, RefreshCw, AlertTriangle, CheckCircle2, Lock, Eye, EyeOff, FileText, Upload, Sparkles, Server, Check, ArrowRight, Activity, X, Timer } from 'lucide-react';
 import ChangePasswordModal from './ChangePasswordModal';
 import ClientesGrid from './ClientesGrid';
 import { isTestStudy, executeTestStudyDataPurge, TestStudyPurgeStats } from '../utils/testStudyPurgeUtils';
@@ -1052,6 +1053,16 @@ export default function StudyAdminDashboard({
                 <span>Clave</span>
               </button>
             )}
+
+            <button
+              type="button"
+              onClick={abrirConfigInactividad}
+              className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg border border-slate-200 flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+              title="Cierre de sesión por inactividad"
+            >
+              <Timer className="w-3.5 h-3.5 text-slate-500" />
+              <span>Inactividad</span>
+            </button>
 
             {onLogout && (
               <button

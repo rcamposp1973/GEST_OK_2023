@@ -12,6 +12,7 @@ import Login from './components/Login';
 import Register from './components/Register';
 import CreateStudy from './components/CreateStudy';
 import React, { useEffect, useState } from 'react';
+import InactividadGuard from './components/InactividadGuard';
 import { instalarCierreConEscape } from './utils/escapeCloser';
 import { doc, collection, collectionGroup, onSnapshot, deleteDoc, getDoc, getDocs, query, where, addDoc } from 'firebase/firestore';
 import { db, auth } from './lib/firebase';
@@ -275,6 +276,7 @@ function Dashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col text-slate-900">
+      {currentUser && <InactividadGuard uid={currentUser.uid} onLogout={handleLogout} />}
       {/* Encabezado Principal Persistente (Executive Header para Vistas Generales) */}
       {!activeCompany && (
         <ExecutiveHeader

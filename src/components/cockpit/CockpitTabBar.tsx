@@ -1,10 +1,12 @@
 import { formatearRut } from '../../utils/rutFormato';
 import React, { useRef, useState, useEffect } from 'react';
+import { abrirConfigInactividad } from '../InactividadGuard';
 import { 
   X, Plus, Maximize2, Minimize2, ArrowLeft, Lock, Unlock, 
   Search, Pin, LayoutGrid,
   ChevronLeft, ChevronRight, Keyboard,
-  Activity, Settings, Key, LogOut, Check, Sparkles, Presentation
+  Activity, Settings, Key, LogOut, Check, Sparkles, Presentation,
+  Timer,
 } from 'lucide-react';
 import { WorkspaceTab, DockPosition, CATEGORY_COLORS, COCKPIT_MODULE_CATALOG } from './cockpitTypes';
 import { Company, FiscalPeriodYear, UserRole } from '../../types';
@@ -382,6 +384,15 @@ export const CockpitTabBar: React.FC<CockpitTabBarProps> = ({
                 title="Cambiar contraseña de acceso"
               >
                 <Key className="w-3.5 h-3.5" />
+              </button>
+
+              {/* Cierre por inactividad */}
+              <button
+                onClick={abrirConfigInactividad}
+                className="p-1 hover:bg-slate-200 text-slate-500 hover:text-slate-800 rounded transition-colors cursor-pointer"
+                title="Cierre de sesión por inactividad"
+              >
+                <Timer className="w-3.5 h-3.5" />
               </button>
 
               {/* Botón Cerrar Sesión */}

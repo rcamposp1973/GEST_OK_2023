@@ -9,17 +9,57 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
-## 1.39.0 — 2026-11-25
+## 1.39.0 — 2026-11-27
 - **Compras: XML de los documentos recibidos desde el facturador gratuito del SII.** Botón "Documentos recibidos (XML)" en el RCV: descarga los XML del mes (respaldo de documentos recibidos del portal MIPYME), los guarda y muestra la versión impresa en pantalla, PDF y XML. Sólo están los documentos que llegaron a la casilla del SII.
 - En los recibidos no se imprime resolución ni unidad del SII del proveedor (el respaldo no las trae; no se inventan).
 
 ## 1.38.0 — 2026-11-25
+
+## 1.38.4 — 2026-11-27
+- Firmas del contador sin la mención al Colegio de Contadores (en Chile no es obligatorio colegiarse): Balance 8 columnas, Balance IFRS y Estado de Resultados, en impresión y PDF.
+
+## 1.38.3 — 2026-11-27
+- Renta anual y Gest_Rta: casillero de corrección monetaria (reajuste) de los PPM; PPM actualizados como crédito y en la asignación a propietarios.
+- Balance 8 columnas: firmas centradas en la impresión y en el PDF; si no caben en la última hoja, van en una página nueva.
+
+## 1.38.2 — 2026-11-27
+- Formato chileno en los casilleros numéricos de Renta anual, Gest_Rta, licencia Gest_Rta y F29: miles con punto y decimales con coma (77.000.000 · 12,5%). Se puede escribir o pegar con o sin puntos.
+
+## 1.38.1 — 2026-11-27
+- Renta anual y Gest_Rta se actualizan en línea con la contabilidad, igual que el Balance de 8 columnas:
+  - Renta anual: el capital aportado sigue a las cuentas de capital (salvo que el contador lo fije a mano; botón "Seguir a la contabilidad").
+  - Gest_Rta: el CPT inicial sigue al CPT final del año anterior o a los saldos de apertura (salvo ajuste manual); el año anterior y los saldos de apertura se escuchan en tiempo real.
+  - Liquidaciones de sueldo, trabajadores y parámetros RCV ahora se actualizan en tiempo real en toda la empresa.
+
+## 1.38.0 — 2026-11-27
 - **Gest_Rta (módulo adicional de Renta anual), fase 1: Pro Pyme Transparente (14 D N° 8).**
   - Propuesta del Recuadro N° 22 del F22 (códigos 1600 a 1630): ingresos percibidos y egresos pagados desde el RCV, cuentas corrientes de clientes/proveedores/honorarios al 31-12, liquidaciones de sueldo y pérdida de arrastre. Cada línea muestra su fuente y el detalle por documento; el contador ajusta cualquier línea con su motivo.
   - Supermercados fuera por defecto (como la propuesta del SII), con opción de incluirlos.
   - CPT simplificado, asignación a propietarios con PPM (base DJ 1947), saldos de apertura, cierre/reapertura con historial y exportación a Excel.
 - Licencia Gest_Rta en el Super Admin: contratado sí/no, modalidad (todo el estudio, por empresa o cupo de empresas), precio negociado (UF/CLP), periodicidad, vigencia y notas. El administrador del estudio lo activa por empresa respetando el cupo.
 - Reglas Firestore: los módulos contratados y la licencia sólo los cambia el super usuario (requiere publicar firestore.rules).
+
+## 1.37.6 — 2026-11-26
+- F29 Gest_OK: misma estructura del F29 del SII (líneas 1 a 144, con sus códigos y signos), con diseño propio en tonos naranjos, pasteles y turquesa. Encabezado con período, RUT, razón social y folio.
+- Tasa PPM modificable directamente en el formulario (acepta coma decimal, permite 0). Al cambiar de régimen se propone su tasa, salvo que el contador haya fijado otra.
+- Remanentes del mes anterior modificables en el formulario: crédito fiscal IVA (504) y crédito empresas constructoras (128), con opción de volver al arrastre automático.
+
+## 1.37.5 — 2026-11-26
+- **Crédito Especial Empresas Constructoras (CEEC) corregido.** Ya no rebaja el débito IVA: va en Créditos especiales (Cód. 126 del mes + 128 remanente anterior reajustado = 571) y se imputa contra PPM, retenciones e IVA (Cód. 547). Lo que sobra queda como remanente CEEC (Cód. 130), separado del remanente de IVA; el de diciembre se recupera en la Renta y no pasa a enero.
+- Asiento del F29: reajuste del remanente CEEC y su imputación (primero contra PPM/retenciones, luego contra IVA por pagar); pide la cuenta "Crédito especial empresas constructoras" la primera vez.
+- **F29 Gest_OK:** nueva pestaña con la estructura del F29 del SII (secciones, líneas y códigos) con diseño propio. Compacto = sólo lo que afecta a la empresa; Completo = todo el formulario.
+
+## 1.37.4 — 2026-11-26
+- F29: el reajuste del remanente (Art. 27 DL 825) = UTMs que se arrastran × variación de la UTM entre el mes de origen y el mes declarado, redondeado a pesos. El remanente del mes = lo registrado en el F29 anterior + reajuste.
+- Asiento del F29: el crédito del mes se rebaja de IVA Crédito Fiscal y el remanente anterior reajustado de la cuenta Remanente (antes se rebajaba todo de IVA Crédito).
+- Contabilidad sin decimales: todo asiento se registra en pesos enteros (los cálculos pueden usar decimales).
+
+## 1.37.3 — 2026-11-26
+- F29: el remanente (Cód. 504) se arrastra siempre del F29 del mes anterior, actualizado con la UTM del mes; también en borradores ya guardados. Se respeta lo declarado/pagado y el remanente fijado a mano (con botón para volver al arrastre). Avisa si falta guardar un mes intermedio.
+
+## 1.37.2 — 2026-11-26
+- **Pestañas como hojas de Excel:** cada módulo abierto en una pestaña queda vivo mientras la pestaña exista; al ir a otra pestaña y volver conserva su período, filtros y lo que se estaba trabajando. Se descarta al cerrar la pestaña.
+- F29: el período elegido se recuerda durante la sesión, también al salir y volver a la empresa.
 
 ## 1.37.1 — 2026-11-25
 - Nóminas de pago: cada documento se cancela contra la cuenta por pagar donde quedó registrado (o la del auxiliar, o la de Parámetros RCV). Ya no se busca la cuenta por nombre; si no hay cuenta definida, avisa qué documentos y no contabiliza.

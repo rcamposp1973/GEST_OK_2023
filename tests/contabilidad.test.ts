@@ -391,46 +391,6 @@ import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } fro
   const res = O.resumenOtrosImpuestos([{ tipoRegistro:'Compra', tipoDoc:'33', otrosImpuestos:b }, { tipoRegistro:'Compra', tipoDoc:'61', otrosImpuestos:[{ codigo:'24', nombre:'', valor:1500 }] }]);
   ok('Otros impuestos: resumen F29 por código con NC', res.length===2 && res[0].codigo==='24' && res[0].monto===30000 && res[0].documentos===2);
 }
-{ const T = await import('../src/utils/gestRta/transparente'); const Lc = await import('../src/utils/gestRta/licencia');
-  const rcv = [
-    { tipoRegistro:'Venta', tipoDoc:'33', folio:'1', fechaEmision:'2026-03-10', rutReceptor:'11.111.111-1', montoNeto:1000000, montoExento:0, montoIva:190000, montoTotal:1190000 },
-    { tipoRegistro:'Venta', tipoDoc:'33', folio:'2', fechaEmision:'2026-12-20', rutReceptor:'11.111.111-1', montoNeto:500000, montoExento:0, montoIva:95000, montoTotal:595000 },
-    { tipoRegistro:'Venta', tipoDoc:'61', folio:'3', fechaEmision:'2026-05-01', rutReceptor:'11.111.111-1', montoNeto:100000, montoExento:0, montoIva:19000, montoTotal:119000 },
-    { tipoRegistro:'Venta', tipoDoc:'33', folio:'9', fechaEmision:'2025-12-15', rutReceptor:'22.222.222-2', montoNeto:200000, montoExento:0, montoIva:38000, montoTotal:238000 },
-    { tipoRegistro:'Compra', tipoDoc:'33', folio:'50', fechaEmision:'2026-04-01', rutEmisor:'33.333.333-3', montoNeto:300000, montoExento:0, montoIva:57000, montoTotal:357000, tipoCompra:'Del Giro' },
-    { tipoRegistro:'Compra', tipoDoc:'33', folio:'51', fechaEmision:'2026-04-02', rutEmisor:'44.444.444-4', montoNeto:80000, montoExento:0, montoIva:15200, montoTotal:95200, tipoCompra:'Supermercado' },
-    { tipoRegistro:'Compra', tipoDoc:'33', folio:'52', fechaEmision:'2026-06-02', rutEmisor:'55.555.555-5', montoNeto:2000000, montoExento:0, montoIva:380000, montoTotal:2380000, tipoCompra:'Activo Fijo' },
-    { tipoRegistro:'Compra', tipoDoc:'33', folio:'53', fechaEmision:'2026-07-02', rutEmisor:'96.000.000-1', montoNeto:18474, montoExento:0, montoIva:3510, montoTotal:25494, tipoCompra:'Del Giro', otrosImpuestos:[{codigo:'SD',nombre:'',valor:3510,sinDerecho:true}], montoOtrosImpuestos:3510 },
-    { tipoRegistro:'Honorarios', tipoDoc:'BHE', folio:'7', fechaEmision:'2026-08-01', rutEmisor:'66.666.666-6', montoNeto:500000, montoIva:72500, montoTotal:427500 },
-    { tipoRegistro:'Venta', tipoDoc:'33', folio:'99', fechaEmision:'2026-08-01', rutReceptor:'1-9', montoNeto:1, montoTotal:1, estado:'Anulado' },
-  ];
-  const r = T.propuestaTransparente({ anio:2026, rcv: rcv as any,
-    pendientesCierre: [{ tipoRegistro:'Venta', tipoDoc:'33', folio:'2', rut:'11111111-1', saldo:595000 }],
-    pendientesCierreAnterior: [{ tipoRegistro:'Venta', tipoDoc:'33', folio:'9', rut:'22222222-2', saldo:238000 }],
-    remuneraciones: [{ period:'2026-01', costoTotalEmpresa:700000 }, { period:'2025-12', costoTotalEmpresa:999 }],
-    perdidaAnterior: 50000, ajustes: { '1622': 10000 } });
-  const L = (c: string) => r.lineas.find(l => l.codigo===c)!.final;
-  ok('Gest_Rta: ventas percibidas (pendiente y NC)', L('1600')===900000);
-  ok('Gest_Rta: ventas año anterior cobradas', L('1819')===200000);
-  ok('Gest_Rta: compras giro con impuesto sin derecho, sin supermercado', L('1614')===300000+18474+3510 && r.supermercadoExcluido===80000);
-  ok('Gest_Rta: activo fijo, honorarios, remuneraciones, pérdida', L('1618')===2000000 && L('1617')===500000 && L('1616')===700000 && L('1627')===50000);
-  ok('Gest_Rta: ajuste manual y totales', L('1622')===10000 && L('1610')===1100000 && L('1629')===300000+21984+2000000+500000+700000+50000+10000 && L('1630')===L('1610')-L('1629'));
-  const r2 = T.propuestaTransparente({ anio:2026, rcv: rcv as any, pendientesCierre:null, pendientesCierreAnterior:null, remuneraciones:[], perdidaAnterior:0, ajustes:{}, incluirSupermercado:true });
-  ok('Gest_Rta: sin cuentas corrientes avisa y supermercado opcional', r2.avisos.some(a=>a.includes('Parámetros RCV')) && r2.lineas.find(l=>l.codigo==='1614')!.final===300000+21984+80000 && r2.lineas.find(l=>l.codigo==='1600')!.final===1400000);
-  const c = T.calcularCptSimplificado({ cptInicial:1000000, aumentosCapital:0, disminucionesCapital:0, retiros:300000, otrasAgregar:0, otrasDeducir:0 }, -200000);
-  ok('Gest_Rta: CPT simplificado', c.final===500000 && c.positivo===500000);
-  const a = T.asignarPropietarios([{rut:'1',nombre:'A',porcentaje:60},{rut:'2',nombre:'B',porcentaje:40}], 1000000, 50000);
-  ok('Gest_Rta: asignación propietarios', a.cuadra && a.filas[0].base===600000 && a.filas[1].ppm===20000);
-  const est = { modules:{ gestRta:true }, gestRtaLicencia:{ modalidad:'POR_EMPRESA' as const, vigenciaHasta:'2026-12-31' } };
-  ok('Gest_Rta: licencia por empresa', Lc.gestRtaActivo(est, { gestRtaHabilitado:true }, '2026-11-25') && !Lc.gestRtaActivo(est, {}, '2026-11-25'));
-  ok('Gest_Rta: licencia vencida o no contratada', !Lc.gestRtaActivo(est, { gestRtaHabilitado:true }, '2027-01-01') && !Lc.gestRtaActivo({ modules:{} }, { gestRtaHabilitado:true }));
-  ok('Gest_Rta: todo el estudio y cupo', Lc.gestRtaActivo({ modules:{gestRta:true}, gestRtaLicencia:{ modalidad:'ESTUDIO' } }, {}) && !Lc.quedaCupo({ modalidad:'CUPO_EMPRESAS', cupoEmpresas:2 }, 2) && Lc.quedaCupo({ modalidad:'CUPO_EMPRESAS', cupoEmpresas:2 }, 1));
-}
-{ const P = await import('../api/sii/portal');
-  const set = '<SetDTE><Caratula><NroResol>0</NroResol></Caratula><DTE><Documento><Encabezado><IdDoc><TipoDTE>33</TipoDTE><Folio>29026</Folio><FchEmis>2026-11-11</FchEmis></IdDoc><Emisor><RUTEmisor>78427580-9</RUTEmisor><RznSoc>COMERCIALIZADORA MEPIACHE LTDA</RznSoc></Emisor><Receptor><RUTRecep>77236574-8</RUTRecep><RznSocRecep>CFI</RznSocRecep></Receptor><Totales><MntTotal>77400</MntTotal></Totales></Encabezado></Documento></DTE></SetDTE>';
-  const d = P.separarSetDte(set)[0];
-  ok('XML recibidos: lee proveedor', d.razonEmisor==='COMERCIALIZADORA MEPIACHE LTDA' && d.rutEmisor==='78427580-9' && d.folio==='29026' && d.total===77400);
-}
 { const C = await import('../src/utils/cuentaPorPagar');
   const accounts: any[] = [{ id:'p1', code:'2101001', name:'Cuentas por pagar comerciales', type:'Pasivo' }, { id:'g1', code:'4101', name:'Gasto', type:'Gasto' }, { id:'h1', code:'2101005', name:'Honorarios por pagar', type:'Pasivo' }];
   const vouchers = [{ status:'Valido', lines:[{ accountId:'g1', debit:14750, auxiliaryRut:'78.866.720-5', documentRef:'33 #930867' }, { accountId:'p1', credit:17553, auxiliaryRut:'78866720-5', documentRef:'33 #930867' }] }];
@@ -481,5 +441,45 @@ import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } fro
   ok('PPM: tasa sugerida por régimen', P.tasaPpmSugerida('14_D3_PROPYME_GENERAL').tasa===0.25 && P.tasaPpmSugerida('14_D8_PROPYME_TRANSPARENTE').tasa===0.2 && P.tasaPpmSugerida('14_A_SEMI_INTEGRADO').tasa===null);
   ok('PPM: lee tasas con coma o punto', P.leerNumero('0,125')===0.125 && P.leerNumero('0.5')===0.5 && P.leerNumero('1,5')===1.5);
   ok('Montos: lee miles con punto', P.leerNumero('1.234.567')===1234567 && P.leerNumero('3.387.690')===3387690 && P.leerNumero('$ 12.500')===12500 && P.leerNumero('')===null);
+}
+{ const T = await import('../src/utils/gestRta/transparente'); const Lc = await import('../src/utils/gestRta/licencia');
+  const rcv = [
+    { tipoRegistro:'Venta', tipoDoc:'33', folio:'1', fechaEmision:'2026-03-10', rutReceptor:'11.111.111-1', montoNeto:1000000, montoExento:0, montoIva:190000, montoTotal:1190000 },
+    { tipoRegistro:'Venta', tipoDoc:'33', folio:'2', fechaEmision:'2026-12-20', rutReceptor:'11.111.111-1', montoNeto:500000, montoExento:0, montoIva:95000, montoTotal:595000 },
+    { tipoRegistro:'Venta', tipoDoc:'61', folio:'3', fechaEmision:'2026-05-01', rutReceptor:'11.111.111-1', montoNeto:100000, montoExento:0, montoIva:19000, montoTotal:119000 },
+    { tipoRegistro:'Venta', tipoDoc:'33', folio:'9', fechaEmision:'2025-12-15', rutReceptor:'22.222.222-2', montoNeto:200000, montoExento:0, montoIva:38000, montoTotal:238000 },
+    { tipoRegistro:'Compra', tipoDoc:'33', folio:'50', fechaEmision:'2026-04-01', rutEmisor:'33.333.333-3', montoNeto:300000, montoExento:0, montoIva:57000, montoTotal:357000, tipoCompra:'Del Giro' },
+    { tipoRegistro:'Compra', tipoDoc:'33', folio:'51', fechaEmision:'2026-04-02', rutEmisor:'44.444.444-4', montoNeto:80000, montoExento:0, montoIva:15200, montoTotal:95200, tipoCompra:'Supermercado' },
+    { tipoRegistro:'Compra', tipoDoc:'33', folio:'52', fechaEmision:'2026-06-02', rutEmisor:'55.555.555-5', montoNeto:2000000, montoExento:0, montoIva:380000, montoTotal:2380000, tipoCompra:'Activo Fijo' },
+    { tipoRegistro:'Compra', tipoDoc:'33', folio:'53', fechaEmision:'2026-07-02', rutEmisor:'96.000.000-1', montoNeto:18474, montoExento:0, montoIva:3510, montoTotal:25494, tipoCompra:'Del Giro', otrosImpuestos:[{codigo:'SD',nombre:'',valor:3510,sinDerecho:true}], montoOtrosImpuestos:3510 },
+    { tipoRegistro:'Honorarios', tipoDoc:'BHE', folio:'7', fechaEmision:'2026-08-01', rutEmisor:'66.666.666-6', montoNeto:500000, montoIva:72500, montoTotal:427500 },
+    { tipoRegistro:'Venta', tipoDoc:'33', folio:'99', fechaEmision:'2026-08-01', rutReceptor:'1-9', montoNeto:1, montoTotal:1, estado:'Anulado' },
+  ];
+  const r = T.propuestaTransparente({ anio:2026, rcv: rcv as any,
+    pendientesCierre: [{ tipoRegistro:'Venta', tipoDoc:'33', folio:'2', rut:'11111111-1', saldo:595000 }],
+    pendientesCierreAnterior: [{ tipoRegistro:'Venta', tipoDoc:'33', folio:'9', rut:'22222222-2', saldo:238000 }],
+    remuneraciones: [{ period:'2026-01', costoTotalEmpresa:700000 }, { period:'2025-12', costoTotalEmpresa:999 }],
+    perdidaAnterior: 50000, ajustes: { '1622': 10000 } });
+  const L = (c: string) => r.lineas.find(l => l.codigo===c)!.final;
+  ok('Gest_Rta: ventas percibidas (pendiente y NC)', L('1600')===900000);
+  ok('Gest_Rta: ventas año anterior cobradas', L('1819')===200000);
+  ok('Gest_Rta: compras giro con impuesto sin derecho, sin supermercado', L('1614')===300000+18474+3510 && r.supermercadoExcluido===80000);
+  ok('Gest_Rta: activo fijo, honorarios, remuneraciones, pérdida', L('1618')===2000000 && L('1617')===500000 && L('1616')===700000 && L('1627')===50000);
+  ok('Gest_Rta: ajuste manual y totales', L('1622')===10000 && L('1610')===1100000 && L('1629')===300000+21984+2000000+500000+700000+50000+10000 && L('1630')===L('1610')-L('1629'));
+  const r2 = T.propuestaTransparente({ anio:2026, rcv: rcv as any, pendientesCierre:null, pendientesCierreAnterior:null, remuneraciones:[], perdidaAnterior:0, ajustes:{}, incluirSupermercado:true });
+  ok('Gest_Rta: sin cuentas corrientes avisa y supermercado opcional', r2.avisos.some(a=>a.includes('Parámetros RCV')) && r2.lineas.find(l=>l.codigo==='1614')!.final===300000+21984+80000 && r2.lineas.find(l=>l.codigo==='1600')!.final===1400000);
+  const c = T.calcularCptSimplificado({ cptInicial:1000000, aumentosCapital:0, disminucionesCapital:0, retiros:300000, otrasAgregar:0, otrasDeducir:0 }, -200000);
+  ok('Gest_Rta: CPT simplificado', c.final===500000 && c.positivo===500000);
+  const a = T.asignarPropietarios([{rut:'1',nombre:'A',porcentaje:60},{rut:'2',nombre:'B',porcentaje:40}], 1000000, 50000);
+  ok('Gest_Rta: asignación propietarios', a.cuadra && a.filas[0].base===600000 && a.filas[1].ppm===20000);
+  const est = { modules:{ gestRta:true }, gestRtaLicencia:{ modalidad:'POR_EMPRESA' as const, vigenciaHasta:'2026-12-31' } };
+  ok('Gest_Rta: licencia por empresa', Lc.gestRtaActivo(est, { gestRtaHabilitado:true }, '2026-11-25') && !Lc.gestRtaActivo(est, {}, '2026-11-25'));
+  ok('Gest_Rta: licencia vencida o no contratada', !Lc.gestRtaActivo(est, { gestRtaHabilitado:true }, '2027-01-01') && !Lc.gestRtaActivo({ modules:{} }, { gestRtaHabilitado:true }));
+  ok('Gest_Rta: todo el estudio y cupo', Lc.gestRtaActivo({ modules:{gestRta:true}, gestRtaLicencia:{ modalidad:'ESTUDIO' } }, {}) && !Lc.quedaCupo({ modalidad:'CUPO_EMPRESAS', cupoEmpresas:2 }, 2) && Lc.quedaCupo({ modalidad:'CUPO_EMPRESAS', cupoEmpresas:2 }, 1));
+}
+{ const P = await import('../api/sii/portal');
+  const set = '<SetDTE><Caratula><NroResol>0</NroResol></Caratula><DTE><Documento><Encabezado><IdDoc><TipoDTE>33</TipoDTE><Folio>29026</Folio><FchEmis>2026-11-11</FchEmis></IdDoc><Emisor><RUTEmisor>78427580-9</RUTEmisor><RznSoc>COMERCIALIZADORA MEPIACHE LTDA</RznSoc></Emisor><Receptor><RUTRecep>77236574-8</RUTRecep><RznSocRecep>CFI</RznSocRecep></Receptor><Totales><MntTotal>77400</MntTotal></Totales></Encabezado></Documento></DTE></SetDTE>';
+  const d = P.separarSetDte(set)[0];
+  ok('XML recibidos: lee proveedor', d.razonEmisor==='COMERCIALIZADORA MEPIACHE LTDA' && d.rutEmisor==='78427580-9' && d.folio==='29026' && d.total===77400);
 }
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

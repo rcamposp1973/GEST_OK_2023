@@ -36,6 +36,8 @@ interface HojaGestRta {
   incluirSupermercado: boolean;
   cuentaPpmId?: string;
   ppmManual: number;
+  /** Corrección monetaria (reajuste) de los PPM al 31-12, si no está contabilizada en la cuenta de PPM. */
+  ppmCm?: number;
   cpt: CptSimplificado;
   /** El CPT inicial lo fijó el contador; si no, sigue en línea al CPT final del año anterior (o a los saldos de apertura). */
   cptInicialManual?: boolean;
@@ -143,7 +145,9 @@ export const GestRtaView: React.FC<Props> = ({ studyId, company, accounts, vouch
   const cptInicialAuto = anterior ? anterior.cptFinal : (saldos && saldos.anioInicio === anio ? saldos.cptInicial : null);
   const cptHoja: CptSimplificado = (hoja.cptInicialManual || cptInicialAuto === null) ? hoja.cpt : { ...hoja.cpt, cptInicial: cptInicialAuto };
   const cpt = calcularCptSimplificado(cptHoja, res.baseImponible);
-  const asignacion = asignarPropietarios(hoja.propietarios, res.baseImponible, ppm);
+  const ppmCm = Math.round(Number(hoja.ppmCm) || 0);
+  const ppmActualizado = ppm + ppmCm;
+  const asignacion = asignarPropietarios(hoja.propietarios, res.baseImponible, ppmActualizado);
 
   const registrar = (accion: string, h: HojaGestRta): HojaGestRta => ({ ...h, historial: [...(h.historial || []), { fecha: new Date().toISOString(), usuario: auth.currentUser?.email || '', accion }].slice(-30) });
 
@@ -153,7 +157,7 @@ export const GestRtaView: React.FC<Props> = ({ studyId, company, accounts, vouch
       const conHistorial = registrar(accion, h);
       await setDoc(refAnio, {
         hoja: { ...conHistorial, cpt: (h.cptInicialManual || cptInicialAuto === null) ? h.cpt : { ...h.cpt, cptInicial: cptInicialAuto } }, anioComercial: anio, regimen: h.regimen,
-        resumen: { baseImponible: res.baseImponible, totalIngresos: res.totalIngresos, totalEgresos: res.totalEgresos, cptFinal: cpt.final, ppm },
+        resumen: { baseImponible: res.baseImponible, totalIngresos: res.totalIngresos, totalEgresos: res.totalEgresos, cptFinal: cpt.final, ppm: ppmActualizado, ppmHistorico: ppm, ppmCm },
         actualizadoPor: auth.currentUser?.email || '', actualizadoEn: new Date().toISOString(),
       });
       setHoja(conHistorial);
@@ -189,7 +193,7 @@ export const GestRtaView: React.FC<Props> = ({ studyId, company, accounts, vouch
       ['Otras partidas a deducir', -hoja.cpt.otrasDeducir], ['CPT simplificado final', cpt.final]];
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(c), 'CPT simplificado');
     const p = [...cab, ['RUT', 'Nombre', '% participación', 'Base imponible asignada', 'PPM asignado'],
-      ...asignacion.filas.map(f => [f.rut, f.nombre, f.porcentaje, f.base, f.ppm]), [], ['PPM del año', ppm]];
+      ...asignacion.filas.map(f => [f.rut, f.nombre, f.porcentaje, f.base, f.ppm]), [], ['PPM del año (histórico)', ppm], ['Corrección monetaria PPM', ppmCm], ['PPM actualizados', ppmActualizado]];
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(p), 'Propietarios DJ 1947');
     XLSX.writeFile(wb, `Gest_Rta_AT${anio + 1}_${(company.rut || '').replace(/[^0-9kK]/g, '')}.xlsx`);
   };
@@ -336,6 +340,10 @@ export const GestRtaView: React.FC<Props> = ({ studyId, company, accounts, vouch
               {accounts.map(a => <option key={a.id} value={a.id}>[{a.code}] {a.name}</option>)}
             </select>
             {hoja.cuentaPpmId ? <span className="font-mono">{pesos(ppm)}</span> : <MontoConSigno value={hoja.ppmManual} disabled={bloqueado} onChange={n => set({ ppmManual: n })} />}
+            <span className="text-slate-600 ml-2" title="Reajuste de los PPM con los factores de actualización del SII. Si ya contabilizaste la CM en la cuenta de PPM, déjalo en 0 para no contarla dos veces.">+ Corrección monetaria PPM:</span>
+            <MontoConSigno value={hoja.ppmCm || 0} disabled={bloqueado} onChange={n => set({ ppmCm: n })} />
+            <span className="text-slate-600 ml-2">= PPM actualizados:</span>
+            <span className="font-mono font-semibold">{pesos(ppmActualizado)}</span>
           </div>
           <div className="overflow-x-auto border border-slate-200 rounded-xl bg-white">
             <table className="w-full text-xs">

@@ -101,8 +101,10 @@ export const BalancePrintModal: React.FC<BalancePrintModalProps> = ({
                 .bg-result { background-color: #ecfdf5; font-weight: bold; }
                 .bg-totals { background-color: #e2e8f0; font-weight: bold; }
                 .header-container { display: flex; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 6px; margin-bottom: 6px; }
-                .signatures { margin-top: 30px; display: flex; justify-content: space-around; text-align: center; font-size: 8px; }
-                .sig-line { width: 180px; border-top: 1px solid #0f172a; margin: 0 auto 4px auto; }
+                .signatures { margin-top: 48px; display: flex; justify-content: space-around; align-items: flex-start; text-align: center; font-size: 8px; page-break-inside: avoid; }
+                .sig { width: 40%; text-align: center; }
+                .sig div { text-align: center; }
+                .sig-line { width: 200px; border-top: 1px solid #0f172a; margin: 0 auto 4px auto; }
               </style>
             </head>
             <body>
@@ -303,15 +305,15 @@ export const BalancePrintModal: React.FC<BalancePrintModalProps> = ({
             </div>
 
             {/* Firmas Oficiales */}
-            <div className="pt-8 flex flex-col sm:flex-row justify-around items-center text-center gap-6 text-[10px] text-slate-600">
-              <div className="space-y-1">
-                <div className="w-48 border-t border-slate-800 mx-auto"></div>
+            <div className="signatures pt-12 flex flex-col sm:flex-row justify-around items-center text-center gap-6 text-[10px] text-slate-600">
+              <div className="sig space-y-1 text-center">
+                <div className="sig-line w-48 border-t border-slate-800 mx-auto"></div>
                 <div className="font-bold text-slate-900 uppercase">FIRMA REPRESENTANTE LEGAL</div>
                 <div>RUT: {company.legalRepRut || company.rut || '-'}</div>
               </div>
 
-              <div className="space-y-1">
-                <div className="w-48 border-t border-slate-800 mx-auto"></div>
+              <div className="sig space-y-1 text-center">
+                <div className="sig-line w-48 border-t border-slate-800 mx-auto"></div>
                 <div className="font-bold text-slate-900 uppercase">FIRMA CONTADOR GENERAL</div>
                 <div>REGISTRO COLEGIO DE CONTADORES DE CHILE</div>
               </div>

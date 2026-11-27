@@ -247,24 +247,27 @@ export function generateBalance8ColumnasPDF(options: GenerateBalancePDFOptions):
   });
 
   // Final Signatures block on last page
+  // Firmas centradas, cada una en su mitad de la hoja. Si no caben en la última página, van en una página nueva.
   const finalY = (doc as any).lastAutoTable?.finalY || 160;
-  if (finalY + 30 <= pageHeight - 15) {
-    // Fits on last page
+  if (finalY + 30 > pageHeight - 15) doc.addPage();
+  {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.5);
     doc.setTextColor(71, 85, 105);
+    doc.setDrawColor(15, 23, 42);
 
     const sigY = pageHeight - 18;
-    const col1X = 50;
-    const col2X = pageWidth - 90;
+    const c1 = pageWidth * 0.28;
+    const c2 = pageWidth * 0.72;
+    const medio = 35;
 
-    doc.line(col1X - 25, sigY - 5, col1X + 45, sigY - 5);
-    doc.text('FIRMA REPRESENTANTE LEGAL', col1X + 10, sigY, { align: 'center' });
-    doc.text(`RUT: ${company.legalRepRut || company.rut || '-'}`, col1X + 10, sigY + 4, { align: 'center' });
+    doc.line(c1 - medio, sigY - 5, c1 + medio, sigY - 5);
+    doc.text('FIRMA REPRESENTANTE LEGAL', c1, sigY, { align: 'center' });
+    doc.text(`RUT: ${company.legalRepRut || company.rut || '-'}`, c1, sigY + 4, { align: 'center' });
 
-    doc.line(col2X - 25, sigY - 5, col2X + 45, sigY - 5);
-    doc.text('FIRMA CONTADOR GENERAL', col2X + 10, sigY, { align: 'center' });
-    doc.text('REGISTRO COLEGIO DE CONTADORES DE CHILE', col2X + 10, sigY + 4, { align: 'center' });
+    doc.line(c2 - medio, sigY - 5, c2 + medio, sigY - 5);
+    doc.text('FIRMA CONTADOR GENERAL', c2, sigY, { align: 'center' });
+    doc.text('REGISTRO COLEGIO DE CONTADORES DE CHILE', c2, sigY + 4, { align: 'center' });
   }
 
   const cleanRut = (company.rut || 'EMPRESA').replace(/[^0-9kK]/g, '');

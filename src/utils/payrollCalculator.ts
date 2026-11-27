@@ -20,29 +20,30 @@ export const DEFAULT_AFP_COMMISSIONS: Record<PensionSystem, number> = {
   JUBILADO_NO_COTIZA: 0.0
 };
 
+// Códigos oficiales Previred (Tabla N° 10 AFP y Tabla N° 16 instituciones de salud, formato 105 campos v58)
 export const PREVIRED_AFP_CODES: Record<PensionSystem, string> = {
-  CAPITAL: '34',
+  CAPITAL: '33',
   CUPRUM: '03',
   HABITAT: '05',
-  MODELO: '32',
-  PLANVITAL: '08',
-  PROVIDA: '29',
-  UNO: '33',
-  INP: '01',
-  JUBILADO_COTIZA: '34',
+  MODELO: '34',
+  PLANVITAL: '29',
+  PROVIDA: '08',
+  UNO: '35',
+  INP: '00',
+  JUBILADO_COTIZA: '00',
   JUBILADO_NO_COTIZA: '00'
 };
 
 export const PREVIRED_HEALTH_CODES: Record<HealthSystem, string> = {
-  FONASA: '01',
-  BANMEDICA: '02',
-  COLMENA: '03',
-  CONSALUD: '04',
+  FONASA: '07',
+  BANMEDICA: '01',
+  COLMENA: '04',
+  CONSALUD: '02',
   CRUZ_BLANCA: '05',
-  NUEVA_MASVIDA: '06',
-  VIDA_TRES: '07',
-  ESENCIAL: '08',
-  ISALUD: '09'
+  NUEVA_MASVIDA: '10',
+  VIDA_TRES: '03',
+  ESENCIAL: '28',
+  ISALUD: '11'
 };
 
 export const DEFAULT_PAYROLL_PARAMS_2026: PayrollParameters = {

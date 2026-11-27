@@ -9764,6 +9764,7 @@ export default function CompanyAccountingDashboard({
           onResetPayrollSlips={handleResetPayrollSlips}
           onCentralizePayrollVoucher={handleCentralizePayrollVoucher}
           onSaveMasterParams={async (patch) => { await setDoc(doc(companyRef, 'config', 'rcvParams'), patch, { merge: true }); }}
+          studyId={studyId}
           onNavigateToLibroDiario={(vId) => setActiveTab('libroDiario')}
           onOpenVoucher={handleOpenVoucherModal}
           savedSlips={payrollSlips}

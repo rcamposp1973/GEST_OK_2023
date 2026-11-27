@@ -526,4 +526,15 @@ import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } fro
   const r2 = R.calcularRegistros('14_A', saldos, { ...mov, retiros: 15000000 }, { cptFinal: 5000000, idpcDelAnio: 0, tasaIdpc: 27 });
   ok('Registros: orden RAI → REX → capital y exceso', r2.raiDeterminado === 9000000 && r2.imputacion.rai === 9000000 && r2.imputacion.rex === 1000000 && r2.imputacion.capital === 5000000 && r2.imputacion.exceso === 0);
 }
+{ const P = await import('../src/utils/previred105');
+  const slip: any = { employeeId: 'e1', employeeRut: '12.345.678-5', employeeName: 'Juan Andrés Pérez Soto', pensionSystem: 'HABITAT', healthSystem: 'FONASA', diasTrabajados: 30,
+    baseImponibleAfp: 1000000, afpMonto: 112700, sisMonto: 15400, saludLegal7: 70000, saludAdicionalIsapre: 0, saludMontoTotal: 70000, baseImponibleAfc: 1000000, afcTrabajadorMonto: 6000, afcEmpleadorMonto: 24000, mutualMonto: 9300, asignacionFamiliar: 0, apvMonto: 0, cotizacionEmpleadorLey21735: 10000 };
+  const g = P.generarArchivoPrevired105([slip], [{ id: 'e1', rut: '12.345.678-5', gender: 'M', cargasFamiliares: 0, tramoCargaFamiliar: 'D' } as any], '2025-09', { codigoMutual: '01', codigoCcaf: '00' });
+  const c = g.texto.split(';');
+  ok('Previred 105: 105 campos, RUT, período mmaaaa y códigos oficiales', c.length === 105 && c[0] === '12345678' && c[1] === '5' && c[8] === '092025' && c[25] === '05' && c[74] === '07');
+  ok('Previred 105: Ley 21.735 0,1% al campo 28 y resto al 94; mutual ACHS', c[27] === String(112700 + 1000) && c[93] === '9000' && c[95] === '01' && c[97] === '9300' && c[70] === '0');
+  ok('Previred 105: apellidos y nombres', c[2] === 'PEREZ' && c[3] === 'SOTO' && c[4] === 'JUAN ANDRES');
+  const l = P.leerArchivoPrevired105(g.texto);
+  ok('Previred 105: lectura del archivo y totales por institución', l.filas.length === 1 && l.filas[0].periodo === '2025-09' && l.filas[0].fonasa === 70000 && P.totalesPorInstitucion(l.filas).find(t => t.institucion === 'AFP Habitat')?.monto === 113700);
+}
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

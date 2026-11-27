@@ -1,5 +1,7 @@
 import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useMemo, useEffect } from 'react';
+import { generarArchivoPrevired105, NOMBRE_MUTUAL, NOMBRE_CCAF } from '../utils/previred105';
+import PreviredLibroView from './payroll/PreviredLibroView';
 import { db } from '../lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { 
@@ -49,6 +51,8 @@ interface LiquidacionSueldosViewProps {
   onCentralizePayrollVoucher: (voucher: Omit<Voucher, 'id' | 'createdAt'>, anularIds?: string[]) => Promise<string>;
   /** Guarda las cuentas de remuneraciones elegidas por el usuario (en Parámetros contables de la empresa). */
   onSaveMasterParams?: (patch: Record<string, string>) => Promise<void>;
+  /** Para el libro desde archivos Previred */
+  studyId?: string;
   onNavigateToLibroDiario?: (voucherId: string) => void;
   onOpenVoucher?: (voucherRef: Voucher | string | number) => void;
   savedSlips?: PayrollSlip[];
@@ -94,7 +98,8 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
   defaultYear = 2026,
   defaultMonth = 1,
   masterParams,
-  onSaveMasterParams
+  onSaveMasterParams,
+  studyId
 }) => {
   // Estado de Período
   const [selectedYear, setSelectedYear] = useState<number>(() => defaultYear || 2026);
@@ -894,7 +899,9 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
       return;
     }
 
-    const txtContent = generatePreviredTxt(slipsForPeriod, companyRut, periodStr);
+    const mp: any = masterParams || {};
+    const { texto: txtContent, avisos } = generarArchivoPrevired105(slipsForPeriod, employees, periodStr, { codigoMutual: mp.previredMutual || '00', codigoCcaf: mp.previredCcaf || '00' });
+    if (avisos.length) alert('Revisa antes de subir a Previred:\n\n• ' + avisos.join('\n• '));
     const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -2280,6 +2287,23 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
               Descargar Archivo Previred (.txt)
             </button>
           </div>
+
+          <div className="bg-white p-4 rounded-xl border border-slate-200 flex flex-wrap items-center gap-4 text-xs">
+            <span className="font-semibold text-slate-700">Datos del empleador para el archivo:</span>
+            <label className="flex items-center gap-2">Mutualidad
+              <select defaultValue={(masterParams as any)?.previredMutual || '00'} onChange={e => onSaveMasterParams?.({ previredMutual: e.target.value })} className="border border-slate-300 rounded-md px-2 py-1">
+                {Object.entries(NOMBRE_MUTUAL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+            </label>
+            <label className="flex items-center gap-2">Caja de compensación
+              <select defaultValue={(masterParams as any)?.previredCcaf || '00'} onChange={e => onSaveMasterParams?.({ previredCcaf: e.target.value })} className="border border-slate-300 rounded-md px-2 py-1">
+                {Object.entries(NOMBRE_CCAF).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+            </label>
+            <span className="text-slate-500">Formato oficial Previred de 105 campos separado por punto y coma (versión 58), con los aportes de la Ley 21.735.</span>
+          </div>
+
+          {studyId && <PreviredLibroView studyId={studyId} companyId={companyId} companyName={companyName} companyRut={companyRut} anioInicial={selectedYear} />}
 
           {/* Resumen por Institución Previsional Previred */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

@@ -1,7 +1,6 @@
 import React from 'react';
-import { InputNumeroEvento } from './ui/NumeroCL';
-import { InputNumeroCL } from './ui/NumeroCL';
-import { LicenciaGestRta, ModalidadGestRta, NOMBRE_MODALIDAD, NOMBRE_PERIODICIDAD, licenciaVigente } from '../utils/gestRta/licencia';
+import { InputNumeroEvento, InputNumeroCL } from './ui/NumeroCL';
+import { LicenciaGestRta, ModalidadGestRta, NOMBRE_MODALIDAD, NOMBRE_PERIODICIDAD, NOMBRE_CONDICION, CondicionCobro, licenciaVigente, resumenCondicion } from '../utils/gestRta/licencia';
 
 interface Props {
   activo: boolean;
@@ -36,7 +35,17 @@ export default function GestRtaLicenciaPanel({ activo, licencia, readOnly, onAct
           </label>
           {licencia.modalidad === 'CUPO_EMPRESAS' && (
             <label className="flex flex-col gap-1">Cupo de empresas
-              <InputNumeroEvento disabled={readOnly} min={0} className={campo} value={licencia.cupoEmpresas ?? 0} onChange={e => set({ cupoEmpresas: Math.max(0, Number(e.target.value) || 0) })} decimales={4} />
+              <InputNumeroEvento disabled={readOnly} min={0} className={campo} value={licencia.cupoEmpresas ?? 0} onChange={e => set({ cupoEmpresas: Math.max(0, Number(e.target.value) || 0) })} decimales={0} />
+            </label>
+          )}
+          <label className="flex flex-col gap-1">Condición de cobro
+            <select disabled={readOnly} className={campo} value={licencia.condicion || ((Number(licencia.precioAcordado) || 0) > 0 ? 'COBRO' : 'SIN_COSTO')} onChange={e => set({ condicion: e.target.value as CondicionCobro })}>
+              {Object.entries(NOMBRE_CONDICION).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+          </label>
+          {licencia.condicion === 'MESES_GRATIS' && (
+            <label className="flex flex-col gap-1">Meses gratis
+              <InputNumeroCL disabled={readOnly} decimales={0} className={campo} value={licencia.mesesGratis ?? 0} onChange={n => set({ mesesGratis: Math.max(0, n) })} />
             </label>
           )}
           <label className="flex flex-col gap-1">Precio acordado
@@ -61,6 +70,7 @@ export default function GestRtaLicenciaPanel({ activo, licencia, readOnly, onAct
           </label>
           <div className={`md:col-span-3 ${vigente ? 'text-emerald-700' : 'text-rose-700'}`}>
             {vigente ? 'Licencia vigente.' : 'Licencia fuera de vigencia: el módulo no se muestra en las empresas.'}
+            {' '}<strong>{resumenCondicion(licencia)}.</strong> Incluye Renta anual (RLI y capital propio).
             {licencia.modalidad !== 'ESTUDIO' && ' El administrador del estudio activa Gest_Rta en cada empresa.'}
           </div>
         </div>

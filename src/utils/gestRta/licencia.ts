@@ -13,7 +13,40 @@ export interface LicenciaGestRta {
   periodicidad?: 'MENSUAL' | 'ANUAL' | 'TEMPORADA_RENTA' | 'PAGO_UNICO';
   vigenciaDesde?: string; // YYYY-MM-DD
   vigenciaHasta?: string; // YYYY-MM-DD (vacío = sin término)
+  /** Condición comercial que decide el Super Admin: cobrar, sin costo, o meses gratis y luego cobrar. */
+  condicion?: CondicionCobro;
+  /** Sólo MESES_GRATIS: cantidad de meses sin costo desde "vigente desde". */
+  mesesGratis?: number;
   notas?: string;
+}
+
+export type CondicionCobro = 'COBRO' | 'SIN_COSTO' | 'MESES_GRATIS';
+export const NOMBRE_CONDICION: Record<CondicionCobro, string> = {
+  COBRO: 'Se cobra el precio acordado',
+  SIN_COSTO: 'Sin costo ($0)',
+  MESES_GRATIS: 'Meses gratis y luego se cobra',
+};
+
+/** Fecha desde la que corresponde cobrar (null = no se cobra). El acceso no depende de esto, sólo de la vigencia. */
+export function cobroDesde(l: LicenciaGestRta | null | undefined): string | null {
+  if (!l) return null;
+  const cond = l.condicion || ((Number(l.precioAcordado) || 0) > 0 ? 'COBRO' : 'SIN_COSTO');
+  if (cond === 'SIN_COSTO') return null;
+  const inicio = l.vigenciaDesde || new Date().toISOString().slice(0, 10);
+  if (cond === 'COBRO') return inicio;
+  const [y, m, d] = inicio.split('-').map(Number);
+  const f = new Date(Date.UTC(y, (m - 1) + Math.max(0, Math.round(Number(l.mesesGratis) || 0)), d));
+  return f.toISOString().slice(0, 10);
+}
+
+/** Texto corto de la condición comercial para mostrar en pantalla. */
+export function resumenCondicion(l: LicenciaGestRta | null | undefined): string {
+  if (!l) return '';
+  const desde = cobroDesde(l);
+  const precio = (Number(l.precioAcordado) || 0) > 0 ? `${(Number(l.precioAcordado)).toLocaleString('es-CL')} ${l.moneda || 'UF'}${l.periodicidad ? ' ' + NOMBRE_PERIODICIDAD[l.periodicidad].toLowerCase() : ''}` : '';
+  if (!desde) return 'Sin costo';
+  if ((l.condicion || 'COBRO') === 'MESES_GRATIS') return `Gratis hasta ${desde.split('-').reverse().join('-')}${precio ? `, luego ${precio}` : ''}`;
+  return precio ? `Se cobra ${precio}` : 'Se cobra (precio por definir)';
 }
 
 export const NOMBRE_MODALIDAD: Record<ModalidadGestRta, string> = {

@@ -440,7 +440,8 @@ export const COCKPIT_MODULE_CATALOG: CockpitModuleItem[] = [
     category: 'IMPUESTOS',
     icon: ShieldCheck,
     colorScheme: 'rose',
-    description: 'Hoja de trabajo de renta líquida imponible y capital propio tributario por régimen'
+    description: 'Hoja de trabajo de renta líquida imponible y capital propio tributario por régimen (incluido en Gest_Rta)',
+    requiere: 'gestRta'
   },
   {
     id: 'gestRta',

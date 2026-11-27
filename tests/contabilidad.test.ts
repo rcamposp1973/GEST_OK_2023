@@ -496,4 +496,8 @@ import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } fro
   const r2 = I.calcularIlaF29([{ tipoRegistro: 'Compra', tipoDoc: '33', otrosImpuestos: [{ codigo: '25', valor: 4100 }] }] as any);
   ok('ILA: sin ventas queda remanente 507', r2.remanente507===4100 && r2.determinado506===0 && r2.codigos['33']===4100);
 }
+{ const Lc = await import('../src/utils/gestRta/licencia');
+  ok('Licencia: meses gratis corre la fecha de cobro', Lc.cobroDesde({ modalidad: 'ESTUDIO', condicion: 'MESES_GRATIS', mesesGratis: 3, vigenciaDesde: '2026-12-01', precioAcordado: 2 } as any) === '2027-03-01');
+  ok('Licencia: sin costo no cobra', Lc.cobroDesde({ modalidad: 'ESTUDIO', condicion: 'SIN_COSTO' } as any) === null && Lc.resumenCondicion({ modalidad: 'ESTUDIO', condicion: 'SIN_COSTO' } as any) === 'Sin costo');
+}
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

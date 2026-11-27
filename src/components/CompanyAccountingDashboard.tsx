@@ -10125,6 +10125,12 @@ export default function CompanyAccountingDashboard({
 
       {/* TAB: DECLARACIONES JURADAS SII (DDJJ RENTA) */}
       {pestanaViva('rentaAnual') && <PestanaViva visible={activeTab === 'rentaAnual'}>{(
+        !gestRtaActivoEmpresa ? (
+          <div className="max-w-xl mx-auto mt-10 bg-white border border-slate-200 rounded-2xl p-6 text-center space-y-2">
+            <h3 className="text-base font-bold text-slate-900">Renta anual es parte de Gest_Rta</h3>
+            <p className="text-sm text-slate-600">La hoja de RLI y capital propio, y la propuesta de renta por régimen, están incluidas en el módulo Gest_Rta. Para habilitarlo en esta empresa, contacta al administrador de Gest_OK.</p>
+          </div>
+        ) :
         <RentaAnualView studyId={studyId} company={company} accounts={accounts} vouchers={vouchers} soloLectura={isReadOnly} />
       )}</PestanaViva>}
 
@@ -10368,7 +10374,7 @@ export default function CompanyAccountingDashboard({
               </p>
 
               <div className="space-y-1.5 pt-1">
-                {QUICK_ACCESS_ITEMS.filter(it => (it.id !== 'gestRta' || gestRtaActivoEmpresa) && (it.id !== 'compras' || comprasActivo) && (it.id !== 'ventas' || ventasActivo) && (it.id !== 'agente' || agenteActivo)).map((item) => {
+                {QUICK_ACCESS_ITEMS.filter(it => ((it.id !== 'gestRta' && it.id !== 'rentaAnual') || gestRtaActivoEmpresa) && (it.id !== 'compras' || comprasActivo) && (it.id !== 'ventas' || ventasActivo) && (it.id !== 'agente' || agenteActivo)).map((item) => {
                   const IconComp = item.icon;
                   const isPinned = pinnedQuickAccessIds.includes(item.id);
                   return (

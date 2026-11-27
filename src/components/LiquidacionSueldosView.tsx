@@ -45,7 +45,10 @@ interface LiquidacionSueldosViewProps {
   vouchers: Voucher[];
   onSavePayrollSlips: (slips: PayrollSlip[]) => Promise<void>;
   onResetPayrollSlips?: (periodToReset?: string) => Promise<void>;
-  onCentralizePayrollVoucher: (voucher: Omit<Voucher, 'id' | 'createdAt'>) => Promise<string>;
+  /** Registra el comprobante; si se indican, anula en la misma operación los comprobantes anteriores del período. */
+  onCentralizePayrollVoucher: (voucher: Omit<Voucher, 'id' | 'createdAt'>, anularIds?: string[]) => Promise<string>;
+  /** Guarda las cuentas de remuneraciones elegidas por el usuario (en Parámetros contables de la empresa). */
+  onSaveMasterParams?: (patch: Record<string, string>) => Promise<void>;
   onNavigateToLibroDiario?: (voucherId: string) => void;
   onOpenVoucher?: (voucherRef: Voucher | string | number) => void;
   savedSlips?: PayrollSlip[];
@@ -90,7 +93,8 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
   onSaveReliquidation,
   defaultYear = 2026,
   defaultMonth = 1,
-  masterParams
+  masterParams,
+  onSaveMasterParams
 }) => {
   // Estado de Período
   const [selectedYear, setSelectedYear] = useState<number>(() => defaultYear || 2026);
@@ -580,8 +584,8 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
   };
 
   // Buscar comprobante de centralización de remuneraciones existente para el período
-  const existingPayrollVoucher = useMemo(() => {
-    return vouchers.find(v => 
+  const existingPayrollVouchers = useMemo(() => {
+    return vouchers.filter(v => v.status !== 'Anulado' &&
       (v.origin === 'REMUNERACIONES' || 
        v.origin === 'RRHH' ||
        v.gloss?.toLowerCase().includes(`remuneraciones ${periodStr}`) ||
@@ -591,6 +595,13 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
       (v.period === periodStr || v.date?.startsWith(periodStr))
     );
   }, [vouchers, periodStr]);
+  const existingPayrollVoucher = existingPayrollVouchers[0];
+
+  // Cuentas de la centralización: las elige el usuario la primera vez (como en el F29). El sistema no inventa cuentas.
+  const [mapeoRemu, setMapeoRemu] = useState<{ key: string; concepto: string; monto: number; sugerida: string }[] | null>(null);
+  const [mapeoRemuElegido, setMapeoRemuElegido] = useState<Record<string, string>>({});
+  const cuentasRemuRef = React.useRef<Record<string, string>>({});
+  const cuentasMovibles = useMemo(() => accounts.filter(a => (a as any).allowsMovement !== false && !(a as any).isGroup), [accounts]);
 
   // Centralización Contable Automática
   const handleCentralizePayroll = async () => {
@@ -599,12 +610,42 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
       return;
     }
 
-    if (existingPayrollVoucher) {
-      const reConfirm = confirm(`Ya existe el comprobante de centralización Folio #${existingPayrollVoucher.voucherNumber || existingPayrollVoucher.id} para el período ${periodStr}.\n\n¿Desea generar un comprobante adicional de ajuste de nómina?`);
-      if (!reConfirm) return;
+    // 1) Cuentas: cada concepto con monto debe tener una cuenta real del plan, elegida por el usuario
+    const mp: any = { ...(masterParams || {}), ...cuentasRemuRef.current };
+    const conceptos = [
+      { key: 'sueldosGastoAccountId', concepto: 'Gasto remuneraciones imponibles', monto: totals.totalImponible, codes: ['4201001', '420101'], kw: ['sueldo', 'remuneracion'] },
+      { key: 'asignacionesGastoAccountId', concepto: 'Gasto asignaciones no imponibles (colación, movilización)', monto: totals.totalNoImponible, codes: ['4201003', '420103'], kw: ['colacion', 'movilizacion'] },
+      { key: 'imposicionesGastoAccountId', concepto: 'Gasto aportes del empleador (SIS, AFC, mutual)', monto: totals.totalAportesPatronales, codes: ['4201004', '420104'], kw: ['leyes sociales', 'aporte patronal'] },
+      { key: 'sueldosPorPagarAccountId', concepto: 'Remuneraciones por pagar (líquidos)', monto: totals.totalLiquido, codes: ['2103001', '2101003'], kw: ['sueldos por pagar', 'remuneraciones por pagar'] },
+      { key: 'retencionSegundaCatAccountId', concepto: 'Impuesto único 2ª categoría por pagar', monto: totals.totalImpuestoUnico, codes: ['2104003'], kw: ['impuesto unico', 'segunda categoria'] },
+      { key: 'leyesSocialesPorPagarAccountId', concepto: 'AFP por pagar', monto: totals.totalAfp, codes: ['2105001'], kw: ['afp', 'cotizaciones previsionales', 'imposiciones'] },
+      { key: 'saludPorPagarAccountId', concepto: 'Salud por pagar (Fonasa / Isapre)', monto: totals.totalSalud, codes: ['2105002'], kw: ['salud', 'fonasa', 'isapre', 'cotizaciones previsionales'] },
+      { key: 'afcPorPagarAccountId', concepto: 'Seguro de cesantía (AFC) por pagar', monto: totals.totalAfcTrabajador + totals.totalAfcEmpleador, codes: ['2105003'], kw: ['cesantia', 'afc', 'cotizaciones previsionales'] },
+      { key: 'sisMutualPorPagarAccountId', concepto: 'SIS y mutualidad por pagar', monto: totals.totalSis + totals.totalMutual, codes: ['2105004'], kw: ['mutual', 'sis', 'cotizaciones previsionales'] },
+      { key: 'anticiposPersonalAccountId', concepto: 'Anticipos y préstamos al personal (descuento)', monto: totals.totalAnticipos, codes: ['1105001'], kw: ['anticipo', 'prestamo'] },
+    ].filter(c => c.monto > 0);
+    const sinTilde = (t: string) => (t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const faltan = conceptos.filter(c => !(mp[c.key] && accounts.some(a => a.id === mp[c.key])));
+    if (faltan.length) {
+      const pend = faltan.map(c => {
+        const sug = cuentasMovibles.find(a => c.codes.some(k => String(a.code || '').replace(/\./g, '') === k)) ||
+          cuentasMovibles.find(a => c.kw.some(k => sinTilde(a.name).includes(k)));
+        return { key: c.key, concepto: c.concepto, monto: c.monto, sugerida: sug?.id || '' };
+      });
+      setMapeoRemuElegido(Object.fromEntries(pend.map(p => [p.key, p.sugerida])));
+      setMapeoRemu(pend);
+      return;
     }
+    const cuenta = (key: string) => {
+      const a = accounts.find(x => x.id === mp[key])!;
+      return { id: a.id, code: a.code, name: a.name, type: a.type };
+    };
+
+    // 2) Comprobante anterior del período: se anula al registrar el nuevo (con aviso)
+    const anteriores = existingPayrollVouchers;
 
     const confirmMsg = `¿Desea generar el comprobante contable de Centralización de Remuneraciones para el período ${periodStr}?\n\n` +
+      (anteriores.length ? `⚠️ Ya existe el comprobante N° ${anteriores.map(v => v.voucherNumber || v.id).join(', ')} de este período. Si confirmas, se ANULARÁ y se registrará el nuevo.\n\n` : '') +
       `• Total Haberes Imponibles (Gasto Sueldos): $${totals.totalImponible.toLocaleString('es-CL')}\n` +
       `• Total Asignaciones No Imponibles (Gasto Colación/Mov.): $${totals.totalNoImponible.toLocaleString('es-CL')}\n` +
       `• Aportes Patronales (Gasto SIS/AFC Empleador/Mutual): $${totals.totalAportesPatronales.toLocaleString('es-CL')}\n` +
@@ -617,50 +658,16 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
     try {
       setIsCentralizing(true);
 
-      // Helper para buscar ID de cuenta en el plan de cuentas de la empresa
-      const findAccount = (preferredCodes: string[], keywords: string[], fallbackCode: string, fallbackName: string, fallbackType: string) => {
-        const found = accounts.find(a => 
-          preferredCodes.some(c => (a.code || '').replace(/\./g, '').startsWith(c.replace(/\./g, ''))) ||
-          keywords.some(k => (a.name || '').toLowerCase().includes(k))
-        );
-        return {
-          id: found ? found.id : `acc_${fallbackCode.replace(/\./g, '')}`,
-          code: found ? found.code : fallbackCode,
-          name: found ? found.name : fallbackName,
-          type: found ? found.type : fallbackType
-        };
-      };
-
-      // Cuentas de Gasto (Débitos) - Respetando Master Parameters si están configuradas
-      const accGastoSueldos = masterParams?.sueldosGastoAccountId
-        ? accounts.find(a => a.id === masterParams.sueldosGastoAccountId) || findAccount(['4201001', '420101', '4.2.01.001'], ['sueldo', 'remuneracion'], '4201001', 'Sueldos y Gratificaciones', 'Gasto')
-        : findAccount(['4201001', '420101', '4.2.01.001'], ['sueldo', 'remuneracion', 'gratificacion'], '4201001', 'Sueldos y Gratificaciones', 'Gasto');
-
-      const accGastoNoImponible = masterParams?.asignacionesGastoAccountId
-        ? accounts.find(a => a.id === masterParams.asignacionesGastoAccountId) || findAccount(['4201003', '420103', '4.2.01.003'], ['colacion', 'movilizacion'], '4201003', 'Gastos Colación y Movilización', 'Gasto')
-        : findAccount(['4201003', '420103', '4.2.01.003'], ['colacion', 'movilizacion', 'no imponible'], '4201003', 'Gastos Colación y Movilización', 'Gasto');
-
-      const accGastoLeyesSociales = masterParams?.imposicionesGastoAccountId
-        ? accounts.find(a => a.id === masterParams.imposicionesGastoAccountId) || findAccount(['4201004', '420104', '4.2.01.004'], ['leyes sociales', 'aporte patronal'], '4201004', 'Leyes Sociales y Aportes Patronales', 'Gasto')
-        : findAccount(['4201004', '420104', '4.2.01.004'], ['leyes sociales', 'aporte patronal', 'sis', 'afc empleador'], '4201004', 'Leyes Sociales y Aportes Patronales', 'Gasto');
-
-      // Cuentas de Pasivo / Contrapartidas (Créditos)
-      const accSueldosPorPagar = masterParams?.sueldosPorPagarAccountId
-        ? accounts.find(a => a.id === masterParams.sueldosPorPagarAccountId) || findAccount(['2103001', '2101003', '2.1.03.001'], ['sueldos por pagar'], '2103001', 'Sueldos por Pagar', 'Pasivo')
-        : findAccount(['2103001', '2101003', '2.1.03.001'], ['sueldos por pagar', 'remuneraciones por pagar'], '2103001', 'Sueldos por Pagar', 'Pasivo');
-
-      const accImpuestoUnicoPorPagar = masterParams?.retencionSegundaCatAccountId
-        ? accounts.find(a => a.id === masterParams.retencionSegundaCatAccountId) || findAccount(['2104003', '2.1.04.003', '2103003'], ['impuesto unico'], '2104003', 'Impuesto Único 2da Categoría por Pagar', 'Pasivo')
-        : findAccount(['2104003', '2.1.04.003', '2103003'], ['impuesto unico', 'retencion segunda', 'segunda categoria', 'art 43'], '2104003', 'Impuesto Único 2da Categoría por Pagar', 'Pasivo');
-
-      const accAfpPorPagar = masterParams?.leyesSocialesPorPagarAccountId
-        ? accounts.find(a => a.id === masterParams.leyesSocialesPorPagarAccountId) || findAccount(['2105001', '2.1.05.001', '2103004'], ['afp por pagar'], '2105001', 'AFP e Imposiciones Previsionales por Pagar', 'Pasivo')
-        : findAccount(['2105001', '2.1.05.001', '2103004'], ['afp por pagar', 'fondos de pensiones'], '2105001', 'AFP e Imposiciones Previsionales por Pagar', 'Pasivo');
-
-      const accSaludPorPagar = findAccount(['2105002', '2.1.05.002', '2103005'], ['salud por pagar', 'fonasa', 'isapre'], '2105002', 'Instituciones de Salud por Pagar', 'Pasivo');
-      const accAfcPorPagar = findAccount(['2105003', '2.1.05.003', '2103006'], ['afc por pagar', 'seguro de cesantia'], '2105003', 'AFC Seguro de Cesantía por Pagar', 'Pasivo');
-      const accSisMutualPorPagar = findAccount(['2105004', '2.1.05.004', '2103007'], ['sis por pagar', 'mutual', 'seguridad laboral'], '2105004', 'SIS y Mutualidad por Pagar', 'Pasivo');
-      const accAnticiposPersonal = findAccount(['1105001', '1.1.05.001', '1104003'], ['anticipo', 'prestamo personal'], '1105001', 'Anticipos al Personal', 'Activo');
+      const accGastoSueldos = conceptos.some(c => c.key === 'sueldosGastoAccountId') ? cuenta('sueldosGastoAccountId') : null as any;
+      const accGastoNoImponible = conceptos.some(c => c.key === 'asignacionesGastoAccountId') ? cuenta('asignacionesGastoAccountId') : null as any;
+      const accGastoLeyesSociales = conceptos.some(c => c.key === 'imposicionesGastoAccountId') ? cuenta('imposicionesGastoAccountId') : null as any;
+      const accSueldosPorPagar = conceptos.some(c => c.key === 'sueldosPorPagarAccountId') ? cuenta('sueldosPorPagarAccountId') : null as any;
+      const accImpuestoUnicoPorPagar = conceptos.some(c => c.key === 'retencionSegundaCatAccountId') ? cuenta('retencionSegundaCatAccountId') : null as any;
+      const accAfpPorPagar = conceptos.some(c => c.key === 'leyesSocialesPorPagarAccountId') ? cuenta('leyesSocialesPorPagarAccountId') : null as any;
+      const accSaludPorPagar = conceptos.some(c => c.key === 'saludPorPagarAccountId') ? cuenta('saludPorPagarAccountId') : null as any;
+      const accAfcPorPagar = conceptos.some(c => c.key === 'afcPorPagarAccountId') ? cuenta('afcPorPagarAccountId') : null as any;
+      const accSisMutualPorPagar = conceptos.some(c => c.key === 'sisMutualPorPagarAccountId') ? cuenta('sisMutualPorPagarAccountId') : null as any;
+      const accAnticiposPersonal = conceptos.some(c => c.key === 'anticiposPersonalAccountId') ? cuenta('anticiposPersonalAccountId') : null as any;
 
       const lines: VoucherLine[] = [];
       let lineIndex = 1;
@@ -846,14 +853,14 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
 
       // Si existe una discrepancia por redondeo menor a $10, se ajusta en Sueldos por Pagar
       if (Math.abs(difference) > 0 && Math.abs(difference) < 10) {
-        const sueldosLine = lines.find(l => l.accountId === accSueldosPorPagar.id);
+        const sueldosLine = accSueldosPorPagar && lines.find(l => l.accountId === accSueldosPorPagar.id);
         if (sueldosLine) {
           sueldosLine.credit += difference;
         }
       }
 
       const voucherPayload: Omit<Voucher, 'id' | 'createdAt'> = {
-        voucherNumber: selectedYear * 10000 + selectedMonth * 100 + 1,
+        voucherNumber: 0, // el número correlativo lo asigna el Libro Diario al registrar
         date: `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${new Date(selectedYear, selectedMonth, 0).getDate()}`,
         period: periodStr,
         type: 'Traspaso',
@@ -863,16 +870,14 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
         totalCredit: totalCredit
       };
 
-      const newVoucherId = await onCentralizePayrollVoucher(voucherPayload);
+      const newVoucherId = await onCentralizePayrollVoucher(voucherPayload, anteriores.map(v => v.id));
       setCreatedVoucherId(newVoucherId);
       await onSavePayrollSlips(slipsForPeriod.map(s => ({ ...s, estado: 'CENTRALIZADA', voucherId: newVoucherId })));
 
-      alert(`Comprobante Contable de Remuneraciones Generado con Éxito!\n\n` +
-        `• Folio: ${voucherPayload.voucherNumber}\n` +
-        `• Tipo: Traspaso\n` +
+      alert(`Comprobante de remuneraciones ${periodStr} registrado.\n\n` +
         `• Total Debe: $${lines.reduce((sum, l) => sum + (l.debit || 0), 0).toLocaleString('es-CL')}\n` +
-        `• Total Haber: $${lines.reduce((sum, l) => sum + (l.credit || 0), 0).toLocaleString('es-CL')}\n` +
-        `• Estado: Balance Cuadrado al Centavo en el Libro Diario.`);
+        `• Total Haber: $${lines.reduce((sum, l) => sum + (l.credit || 0), 0).toLocaleString('es-CL')}` +
+        (anteriores.length ? `\n\nSe anuló el comprobante anterior N° ${anteriores.map(v => v.voucherNumber || v.id).join(', ')}.` : ''));
 
     } catch (err) {
       console.error('Error al centralizar nómina:', err);
@@ -1064,6 +1069,41 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
 
   return (
     <div className="space-y-6">
+      {mapeoRemu && (
+        <div className="fixed inset-0 z-[80] bg-slate-900/50 flex items-center justify-center p-4" onClick={() => setMapeoRemu(null)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-5 space-y-3" onClick={e => e.stopPropagation()}>
+            <h3 className="text-base font-bold text-slate-900">Cuentas de la centralización de remuneraciones</h3>
+            <p className="text-xs text-slate-600">Elige la cuenta del plan para cada concepto. Se guardan en los parámetros de la empresa y no se vuelven a pedir. El sistema no crea ni inventa cuentas: si falta una, créala primero en el Plan de Cuentas.</p>
+            <div className="space-y-2 max-h-[55vh] overflow-y-auto">
+              {mapeoRemu.map(m => (
+                <div key={m.key} className="grid grid-cols-1 sm:grid-cols-[1fr_auto_260px] gap-2 items-center text-sm">
+                  <span className="text-slate-700">{m.concepto}</span>
+                  <span className="font-mono text-slate-500 text-xs text-right">${Math.round(m.monto).toLocaleString('es-CL')}</span>
+                  <select value={mapeoRemuElegido[m.key] || ''} onChange={e => setMapeoRemuElegido(prev => ({ ...prev, [m.key]: e.target.value }))}
+                    className={`border rounded-lg px-2 py-1 text-xs ${mapeoRemuElegido[m.key] ? 'border-slate-300' : 'border-rose-300 bg-rose-50'}`}>
+                    <option value="">— Elegir cuenta —</option>
+                    {cuentasMovibles.map(a => <option key={a.id} value={a.id}>{a.code} · {a.name}</option>)}
+                  </select>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button onClick={() => setMapeoRemu(null)} className="px-3 py-2 rounded-lg border border-slate-300 text-xs font-semibold">Cancelar</button>
+              <button
+                disabled={mapeoRemu.some(m => !mapeoRemuElegido[m.key])}
+                onClick={async () => {
+                  const patch = Object.fromEntries(mapeoRemu.map(m => [m.key, mapeoRemuElegido[m.key]]));
+                  if (!onSaveMasterParams) { alert('No se pudieron guardar las cuentas.'); return; }
+                  await onSaveMasterParams(patch);
+                  cuentasRemuRef.current = { ...cuentasRemuRef.current, ...patch };
+                  setMapeoRemu(null);
+                  setTimeout(() => handleCentralizePayroll(), 50);
+                }}
+                className="px-3 py-2 rounded-lg bg-indigo-600 disabled:bg-slate-300 text-white text-xs font-bold">Guardar cuentas y centralizar</button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* HEADER ESTANDARIZADO DE MÓDULO */}
       <StandardModuleHeader
         title="Remuneraciones"

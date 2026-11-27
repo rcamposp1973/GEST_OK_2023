@@ -5,7 +5,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import HomeModulesView from './HomeModulesView';
 import BuscadorComprobantesView from './BuscadorComprobantesView';
 import { db, auth } from '../lib/firebase';
-import { collection, getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc, setDoc, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, getDocs, getDoc, addDoc, updateDoc, deleteDoc, doc, setDoc, onSnapshot, query, where, writeBatch } from 'firebase/firestore';
 import { Company, DTEConfig, ChartOfAccount, Auxiliary, ExchangeRate, FiscalPeriodYear, RCVDocument, Voucher, VoucherLine, RCVAccountingParams, MasterAccountingParameters, BankReconciliation, UserRole, CostCenterMaster, ExpenseItemMaster, NonSiiDocTypeMaster, ProjectMaster, ProductMaster, CustomAnalysisTableItem, CommercialDocument, InventoryMovement, ProductService, Employee, PayrollSlip, Warehouse } from '../types';
 import { EmployeesView } from './EmployeesView';
 import { LiquidacionSueldosView } from './LiquidacionSueldosView';
@@ -53,6 +53,7 @@ import { OperativaComercialView } from './OperativaComercialView';
 import ComprasView from './ComprasView';
 import VentasView from './VentasView';
 import { getNextVoucherNumber } from '../utils/voucherCounter';
+import { exigirCuadre } from '../utils/capaContable';
 import { leerDtesXml } from '../utils/dteXmlImport';
 import AgenteReclasificadorView from './AgenteReclasificadorView';
 import { getNaturaleza } from '../utils/ifrsClassification';
@@ -607,14 +608,28 @@ export default function CompanyAccountingDashboard({
     }
   };
 
-  const handleCentralizePayrollVoucher = async (voucherPayload: Omit<Voucher, 'id' | 'createdAt'>) => {
+  const handleCentralizePayrollVoucher = async (voucherPayload: Omit<Voucher, 'id' | 'createdAt'>, anularIds: string[] = []) => {
     try {
-      const newVoucherRef = await addDoc(collection(companyRef, 'vouchers'), {
-        ...voucherPayload,
-        createdAt: new Date().toISOString()
-      });
+      // Número correlativo del Libro Diario, líneas en pesos y cuadradas; anulación del anterior en la misma operación
+      const numero = await getNextVoucherNumber(studyId, company.id, 0, vouchers.reduce((m, v) => Math.max(m, v.voucherNumber || 0), 0));
+      const lines = sanitizeVoucherLines(voucherPayload.lines || [], accounts);
+      exigirCuadre(lines as any);
+      const totalDebit = lines.reduce((t, l) => t + (l.debit || 0), 0);
+      const totalCredit = lines.reduce((t, l) => t + (l.credit || 0), 0);
+      const ref = doc(collection(companyRef, 'vouchers'));
+      const ahora = new Date().toISOString();
+      const lote = writeBatch(db);
+      lote.set(ref, { ...voucherPayload, voucherNumber: numero, lines, totalDebit, totalCredit, status: 'Valido', origin: 'REMUNERACIONES', createdAt: ahora });
+      for (const id of anularIds) {
+        lote.update(doc(companyRef, 'vouchers', id), {
+          status: 'Anulado', anuladoAt: ahora,
+          anuladoReason: `Reemplazado por el comprobante N° ${numero} (remuneraciones ${voucherPayload.period} re-centralizadas)`,
+          lastModifiedBy: auth.currentUser?.email || auth.currentUser?.uid || 'sistema', lastModifiedAt: ahora,
+        });
+      }
+      await lote.commit();
       await fetchData();
-      return newVoucherRef.id;
+      return ref.id;
     } catch (e: any) {
       console.error("Error centralizing payroll voucher:", e);
       alert("Error al generar comprobante de remuneraciones: " + e.message);
@@ -9748,6 +9763,7 @@ export default function CompanyAccountingDashboard({
           onSavePayrollSlips={handleSavePayrollSlips}
           onResetPayrollSlips={handleResetPayrollSlips}
           onCentralizePayrollVoucher={handleCentralizePayrollVoucher}
+          onSaveMasterParams={async (patch) => { await setDoc(doc(companyRef, 'config', 'rcvParams'), patch, { merge: true }); }}
           onNavigateToLibroDiario={(vId) => setActiveTab('libroDiario')}
           onOpenVoucher={handleOpenVoucherModal}
           savedSlips={payrollSlips}

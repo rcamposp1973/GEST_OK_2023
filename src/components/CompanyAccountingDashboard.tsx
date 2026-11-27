@@ -1,4 +1,4 @@
-import DteEmitidosView from './DteEmitidosView';
+import DteEmitidosView, { pdfDeDte } from './DteEmitidosView';
 import SiiDirectoPrueba from './SiiDirectoPrueba';
 import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
@@ -184,6 +184,9 @@ async function archivarComprobanteAntesDeEliminar(companyRef: any, v: any, motiv
 }
 
 /** Contenedor de una pestaña viva: visible sin alterar el diseño; oculta sin desmontarse. */
+/** Tipos de DTE de los que el SII entrega XML (facturas, notas, guías, liquidación y exportación). */
+const TIPOS_DTE_CON_XML = new Set(['33', '34', '43', '46', '52', '56', '61', '110', '111', '112']);
+
 const PestanaViva: React.FC<{ visible: boolean; children?: React.ReactNode }> = ({ visible, children }) => (
   <div style={{ display: visible ? 'contents' : 'none' }} aria-hidden={!visible}>{children}</div>
 );
@@ -3878,6 +3881,31 @@ export default function CompanyAccountingDashboard({
   };
   const liberarContabilizacionRcv = (docId: string) => { contabilizandoRcv.current.delete(docId); };
 
+  // Ver la versión impresa del DTE (XML descargado del SII y guardado en dteXml) desde la fila del RCV
+  const verXmlDocumentoRcv = async (docItem: any, rutEmisor: string) => {
+    const limpio = String(rutEmisor || '').replace(/[^0-9kK]/g, '');
+    const cuerpo = limpio.slice(0, -1);
+    const tipo = String(docItem.tipoDoc);
+    const folio = String(docItem.folio).replace(/[^0-9]/g, '');
+    const ventana = window.open('', '_blank');
+    try {
+      const snap = await getDoc(doc(db, 'studies', studyId, 'companies', company.id, 'dteXml', `${cuerpo}_${tipo}_${folio}`));
+      if (!snap.exists()) {
+        ventana?.close();
+        const lado = docItem.tipoRegistro === 'Venta' ? 'Documentos emitidos (XML)' : 'Documentos recibidos (XML)';
+        alert(`Este documento aún no está descargado desde el SII.\n\nAbre "${lado}" en el RCV del mes de emisión (${String(docItem.fechaEmision || '').slice(0, 7)}) y pulsa "Descargar desde el SII". Luego vuelve a pulsar "Ver".`);
+        return;
+      }
+      const g = { id: snap.id, ...(snap.data() as any) };
+      const url = URL.createObjectURL(pdfDeDte(g, (company as any).siiUnidadOperativa).output('blob'));
+      if (ventana) ventana.location.href = url; else window.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (e: any) {
+      ventana?.close();
+      alert('No se pudo abrir el documento: ' + (e?.message || e));
+    }
+  };
+
   const handleContabilizarSingle = async (docId: string) => {
     if (isReadOnly) {
       alert('Modo Solo Lectura: El perfil Observador no puede contabilizar documentos contables ni generar comprobantes.');
@@ -7092,7 +7120,13 @@ export default function CompanyAccountingDashboard({
                         <td className="p-3 font-medium text-slate-900" title={displayRazon}>{displayRazon}</td>
                         <td className="p-3">
                           <div className="font-semibold text-slate-800 text-[11px]">{formatChileanDteType(docItem.tipoDoc)}</div>
-                          <div className="text-slate-500 font-mono text-[10px]">Folio #{docItem.folio}</div>
+                          <div className="text-slate-500 font-mono text-[10px] flex items-center gap-1.5">Folio #{docItem.folio}
+                            {TIPOS_DTE_CON_XML.has(String(docItem.tipoDoc)) && (
+                              <button type="button" onClick={() => verXmlDocumentoRcv(docItem, docItem.tipoRegistro === 'Venta' ? company.rut : (cleanEmisorRut && cleanEmisorRut !== cleanCompRut ? docItem.rutEmisor : (docItem.rutReceptor || docItem.rutEmisor)))}
+                                title="Ver el documento (XML descargado del SII) en versión impresa"
+                                className="px-1.5 py-[1px] rounded border border-teal-200 bg-teal-50 text-teal-700 hover:bg-teal-100 font-sans font-semibold text-[10px]">Ver</button>
+                            )}
+                          </div>
                           {docItem.refFolioOrig && (
                             <div className="text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded text-[10px] font-mono mt-0.5 inline-block font-semibold">
                               ↪ Modifica Factura #{docItem.refFolioOrig}

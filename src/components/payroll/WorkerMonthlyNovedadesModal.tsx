@@ -1,5 +1,6 @@
 import { formatearRut } from '../../utils/rutFormato';
 import React, { useState } from 'react';
+import { InputNumeroEvento } from '../ui/NumeroCL';
 import { Employee, PayrollParameters } from '../../types';
 import { MonthPayrollInput, getLegalWeeklyHours } from '../../utils/payrollCalculator';
 import { 
@@ -258,70 +259,65 @@ export const WorkerMonthlyNovedadesModal: React.FC<WorkerMonthlyNovedadesModalPr
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   Comisiones por Ventas ($)
                 </label>
-                <input
-                  type="number"
+                <InputNumeroEvento
                   min={0}
-                  step={1000}
                   value={formData.comisionesVentas ?? 0}
                   onChange={(e) => setFormData({ ...formData, comisionesVentas: Number(e.target.value) })}
                   className="w-full px-3 py-2 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-xl"
-                />
+  decimales={0}
+/>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   Bonos de Producción / Metas ($)
                 </label>
-                <input
-                  type="number"
+                <InputNumeroEvento
                   min={0}
-                  step={1000}
                   value={formData.bonosImponibles ?? 0}
                   onChange={(e) => setFormData({ ...formData, bonosImponibles: Number(e.target.value) })}
                   className="w-full px-3 py-2 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-xl"
-                />
+  decimales={0}
+/>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   Asignación de Colación ($ No Imp.)
                 </label>
-                <input
-                  type="number"
+                <InputNumeroEvento
                   min={0}
-                  step={1000}
                   value={formData.asignacionColacion ?? 0}
                   onChange={(e) => setFormData({ ...formData, asignacionColacion: Number(e.target.value) })}
                   className="w-full px-3 py-2 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-xl"
-                />
+  decimales={0}
+/>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   Asignación Movilización ($ No Imp.)
                 </label>
-                <input
-                  type="number"
+                <InputNumeroEvento
                   min={0}
-                  step={1000}
                   value={formData.asignacionMovilizacion ?? 0}
                   onChange={(e) => setFormData({ ...formData, asignacionMovilizacion: Number(e.target.value) })}
                   className="w-full px-3 py-2 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-xl"
-                />
+  decimales={0}
+/>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   Viáticos de Faena / Traslado ($)
                 </label>
-                <input
-                  type="number"
+                <InputNumeroEvento
                   min={0}
-                  step={1000}
                   value={formData.viaticos ?? 0}
                   onChange={(e) => setFormData({ ...formData, viaticos: Number(e.target.value) })}
                   className="w-full px-3 py-2 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-xl"
-                />
+  decimales={0}
+/>
               </div>
             </div>
           </div>
@@ -356,28 +352,26 @@ export const WorkerMonthlyNovedadesModal: React.FC<WorkerMonthlyNovedadesModalPr
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   Anticipos de Sueldo Otorgados ($)
                 </label>
-                <input
-                  type="number"
+                <InputNumeroEvento
                   min={0}
-                  step={1000}
                   value={formData.anticipos ?? 0}
                   onChange={(e) => setFormData({ ...formData, anticipos: Number(e.target.value) })}
                   className="w-full px-3 py-2 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-xl"
-                />
+  decimales={0}
+/>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   Cuota Préstamo de la Empresa ($)
                 </label>
-                <input
-                  type="number"
+                <InputNumeroEvento
                   min={0}
-                  step={1000}
                   value={formData.prestamosEmpresa ?? 0}
                   onChange={(e) => setFormData({ ...formData, prestamosEmpresa: Number(e.target.value) })}
                   className="w-full px-3 py-2 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-xl"
-                />
+  decimales={0}
+/>
               </div>
             </div>
           </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { InputNumeroEvento } from './ui/NumeroCL';
 import { db } from '../lib/firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { 
@@ -196,35 +197,32 @@ export const AdminPrevisionalLoader: React.FC = () => {
             <div className="space-y-2.5 text-xs">
               <div>
                 <label className="block text-slate-400 font-semibold mb-1">Valor UF del Período ($):</label>
-                <input
-                  type="number"
-                  step="0.01"
+                <InputNumeroEvento
                   value={params.uf || 0}
                   onChange={e => setParams(prev => ({ ...prev, uf: parseFloat(e.target.value) || 0 }))}
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                />
+  decimales={2}
+/>
               </div>
 
               <div>
                 <label className="block text-slate-400 font-semibold mb-1">Valor UTM del Período ($):</label>
-                <input
-                  type="number"
-                  step="1"
+                <InputNumeroEvento
                   value={params.utm || 0}
                   onChange={e => setParams(prev => ({ ...prev, utm: parseFloat(e.target.value) || 0 }))}
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                />
+  decimales={0}
+/>
               </div>
 
               <div>
                 <label className="block text-slate-400 font-semibold mb-1">Ingreso Mínimo Mensual - IMM ($):</label>
-                <input
-                  type="number"
-                  step="1000"
+                <InputNumeroEvento
                   value={params.imm || 0}
                   onChange={e => setParams(prev => ({ ...prev, imm: parseFloat(e.target.value) || 0 }))}
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-emerald-400 font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                />
+  decimales={0}
+/>
                 <span className="text-[10px] text-slate-500 mt-0.5 block">Ley 21.830 (desde mayo 2026): $553.553</span>
               </div>
             </div>
@@ -240,13 +238,12 @@ export const AdminPrevisionalLoader: React.FC = () => {
               <div>
                 <label className="block text-slate-400 font-semibold mb-1">Tope Imponible AFP / Salud (UF):</label>
                 <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    step="0.1"
+                  <InputNumeroEvento
                     value={params.topeImponibleAfpUf || 0}
                     onChange={e => setParams(prev => ({ ...prev, topeImponibleAfpUf: parseFloat(e.target.value) || 0 }))}
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                  />
+  decimales={1}
+/>
                   <span className="text-xs font-mono font-bold text-indigo-400 shrink-0">
                     ${Math.round((params.topeImponibleAfpUf || 0) * (params.uf || 0)).toLocaleString('es-CL')}
                   </span>
@@ -257,13 +254,12 @@ export const AdminPrevisionalLoader: React.FC = () => {
               <div>
                 <label className="block text-slate-400 font-semibold mb-1">Tope Seguro de Cesantía - AFC (UF):</label>
                 <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    step="0.1"
+                  <InputNumeroEvento
                     value={params.topeImponibleAfcUf || 0}
                     onChange={e => setParams(prev => ({ ...prev, topeImponibleAfcUf: parseFloat(e.target.value) || 0 }))}
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                  />
+  decimales={1}
+/>
                   <span className="text-xs font-mono font-bold text-indigo-400 shrink-0">
                     ${Math.round((params.topeImponibleAfcUf || 0) * (params.uf || 0)).toLocaleString('es-CL')}
                   </span>
@@ -293,13 +289,12 @@ export const AdminPrevisionalLoader: React.FC = () => {
                     </div>
 
                     <div className="flex items-center gap-1.5">
-                      <input
-                        type="number"
-                        step="0.01"
+                      <InputNumeroEvento
                         value={val}
                         onChange={e => handleSetAfpCommission(afp.id, parseFloat(e.target.value) || 0)}
                         className="w-20 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-right text-emerald-400 font-mono font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none text-xs"
-                      />
+  decimales={2}
+/>
                       <span className="text-xs font-bold text-slate-400">%</span>
                     </div>
                   </div>
@@ -311,25 +306,23 @@ export const AdminPrevisionalLoader: React.FC = () => {
           <div className="pt-3 border-t border-slate-800/80 grid grid-cols-2 gap-3 text-xs">
             <div>
               <label className="block text-slate-400 font-semibold mb-1">Tasa SIS Empleador (%):</label>
-              <input
-                type="number"
-                step="0.01"
+              <InputNumeroEvento
                 value={params.tasaSisPercent || 0}
                 onChange={e => setParams(prev => ({ ...prev, tasaSisPercent: parseFloat(e.target.value) || 0 }))}
                 className="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-white font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-              />
+  decimales={2}
+/>
               <span className="text-[10px] text-slate-500 mt-0.5 block">Previred 2026: ene-mar 1,54% / abr-jun 1,62% / jul 2,00% / desde ago 1,78% (integrado)</span>
             </div>
 
             <div>
               <label className="block text-slate-400 font-semibold mb-1">Tasa Mutual Básica (%):</label>
-              <input
-                type="number"
-                step="0.01"
+              <InputNumeroEvento
                 value={params.tasaMutualPercent || 0}
                 onChange={e => setParams(prev => ({ ...prev, tasaMutualPercent: parseFloat(e.target.value) || 0 }))}
                 className="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-white font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-              />
+  decimales={2}
+/>
               <span className="text-[10px] text-slate-500 mt-0.5 block">Básica + SANNA: 0,93%</span>
             </div>
           </div>
@@ -350,27 +343,27 @@ export const AdminPrevisionalLoader: React.FC = () => {
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <span className="text-[10px] text-slate-400 block">Monto por Carga ($):</span>
-                    <input
-                      type="number"
+                    <InputNumeroEvento
                       value={params.tramosAsignacionFamiliar?.tramoA || 0}
                       onChange={e => setParams(prev => ({
                         ...prev,
                         tramosAsignacionFamiliar: { ...prev.tramosAsignacionFamiliar, tramoA: parseInt(e.target.value, 10) || 0 }
                       }))}
                       className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-white font-mono font-bold text-xs"
-                    />
+  decimales={4}
+/>
                   </div>
                   <div>
                     <span className="text-[10px] text-slate-400 block">Renta Máxima ($):</span>
-                    <input
-                      type="number"
+                    <InputNumeroEvento
                       value={params.tramosAsignacionFamiliar?.limiteA || 0}
                       onChange={e => setParams(prev => ({
                         ...prev,
                         tramosAsignacionFamiliar: { ...prev.tramosAsignacionFamiliar, limiteA: parseInt(e.target.value, 10) || 0 }
                       }))}
                       className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-white font-mono font-bold text-xs"
-                    />
+  decimales={4}
+/>
                   </div>
                 </div>
               </div>
@@ -381,27 +374,27 @@ export const AdminPrevisionalLoader: React.FC = () => {
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <span className="text-[10px] text-slate-400 block">Monto por Carga ($):</span>
-                    <input
-                      type="number"
+                    <InputNumeroEvento
                       value={params.tramosAsignacionFamiliar?.tramoB || 0}
                       onChange={e => setParams(prev => ({
                         ...prev,
                         tramosAsignacionFamiliar: { ...prev.tramosAsignacionFamiliar, tramoB: parseInt(e.target.value, 10) || 0 }
                       }))}
                       className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-white font-mono font-bold text-xs"
-                    />
+  decimales={4}
+/>
                   </div>
                   <div>
                     <span className="text-[10px] text-slate-400 block">Renta Máxima ($):</span>
-                    <input
-                      type="number"
+                    <InputNumeroEvento
                       value={params.tramosAsignacionFamiliar?.limiteB || 0}
                       onChange={e => setParams(prev => ({
                         ...prev,
                         tramosAsignacionFamiliar: { ...prev.tramosAsignacionFamiliar, limiteB: parseInt(e.target.value, 10) || 0 }
                       }))}
                       className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-white font-mono font-bold text-xs"
-                    />
+  decimales={4}
+/>
                   </div>
                 </div>
               </div>
@@ -412,27 +405,27 @@ export const AdminPrevisionalLoader: React.FC = () => {
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <span className="text-[10px] text-slate-400 block">Monto por Carga ($):</span>
-                    <input
-                      type="number"
+                    <InputNumeroEvento
                       value={params.tramosAsignacionFamiliar?.tramoC || 0}
                       onChange={e => setParams(prev => ({
                         ...prev,
                         tramosAsignacionFamiliar: { ...prev.tramosAsignacionFamiliar, tramoC: parseInt(e.target.value, 10) || 0 }
                       }))}
                       className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-white font-mono font-bold text-xs"
-                    />
+  decimales={4}
+/>
                   </div>
                   <div>
                     <span className="text-[10px] text-slate-400 block">Renta Máxima ($):</span>
-                    <input
-                      type="number"
+                    <InputNumeroEvento
                       value={params.tramosAsignacionFamiliar?.limiteC || 0}
                       onChange={e => setParams(prev => ({
                         ...prev,
                         tramosAsignacionFamiliar: { ...prev.tramosAsignacionFamiliar, limiteC: parseInt(e.target.value, 10) || 0 }
                       }))}
                       className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-white font-mono font-bold text-xs"
-                    />
+  decimales={4}
+/>
                   </div>
                 </div>
               </div>

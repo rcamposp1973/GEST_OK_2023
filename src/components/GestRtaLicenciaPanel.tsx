@@ -1,4 +1,5 @@
 import React from 'react';
+import { InputNumeroEvento } from './ui/NumeroCL';
 import { InputNumeroCL } from './ui/NumeroCL';
 import { LicenciaGestRta, ModalidadGestRta, NOMBRE_MODALIDAD, NOMBRE_PERIODICIDAD, licenciaVigente } from '../utils/gestRta/licencia';
 
@@ -35,7 +36,7 @@ export default function GestRtaLicenciaPanel({ activo, licencia, readOnly, onAct
           </label>
           {licencia.modalidad === 'CUPO_EMPRESAS' && (
             <label className="flex flex-col gap-1">Cupo de empresas
-              <input disabled={readOnly} type="number" min={0} className={campo} value={licencia.cupoEmpresas ?? 0} onChange={e => set({ cupoEmpresas: Math.max(0, Number(e.target.value) || 0) })} />
+              <InputNumeroEvento disabled={readOnly} min={0} className={campo} value={licencia.cupoEmpresas ?? 0} onChange={e => set({ cupoEmpresas: Math.max(0, Number(e.target.value) || 0) })} decimales={4} />
             </label>
           )}
           <label className="flex flex-col gap-1">Precio acordado

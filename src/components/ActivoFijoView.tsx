@@ -1,5 +1,6 @@
 import { faltaCuenta } from '../utils/voucherValidation';
 import React, { useState, useMemo, useEffect } from 'react';
+import { InputNumeroEvento } from './ui/NumeroCL';
 import { 
   Building2, Plus, Download, FileSpreadsheet, Calculator, 
   RefreshCw, Sparkles, Trash2, Edit3, ShieldAlert, CheckCircle2, 
@@ -364,13 +365,12 @@ export const ActivoFijoView: React.FC<ActivoFijoViewProps> = ({
 
           <div>
             <label className="block text-[11px] font-bold text-slate-600">IPC Acumulado (%):</label>
-            <input
-              type="number"
-              step="0.1"
+            <InputNumeroEvento
               value={ipcAccumulatedRate}
               onChange={e => setIpcAccumulatedRate(Number(e.target.value))}
               className="bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-900 w-24"
-            />
+  decimales={1}
+/>
           </div>
 
           <div>
@@ -524,13 +524,13 @@ export const ActivoFijoView: React.FC<ActivoFijoViewProps> = ({
                 </div>
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Valor Neto Compra ($):</label>
-                  <input
-                    type="number"
+                  <InputNumeroEvento
                     placeholder="Ej: 15000000"
                     value={editingAsset?.acquisitionValue || ''}
                     onChange={e => setEditingAsset(prev => ({ ...prev, acquisitionValue: Number(e.target.value) }))}
                     className="w-full border rounded-lg p-2 font-mono font-bold"
-                  />
+  decimales={4}
+/>
                 </div>
               </div>
 

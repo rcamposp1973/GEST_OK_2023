@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { InputNumeroEvento } from './ui/NumeroCL';
 import * as XLSX from 'xlsx';
 import { doc, updateDoc } from 'firebase/firestore';
 import { Sparkles, Upload, CheckCircle2, AlertCircle, Download, Save, FileSpreadsheet, Users } from 'lucide-react';
@@ -254,7 +255,7 @@ export default function ImportacionInteligenteView({ studyId, company, accounts 
                   {cuadra ? 'Cuadrado ✓' : `Diferencia: ${fmt(resultado.debe - resultado.haber)}`}
                 </span>
                 <span className="text-slate-500">{resultado.lineas.length} líneas</span>
-                <label className="text-xs text-slate-500">N° comprobante <input type="number" className={input + ' w-20 ml-1'} value={numero} onChange={e => setNumero(+e.target.value || 1)} /></label>
+                <label className="text-xs text-slate-500">N° comprobante <InputNumeroEvento className={input + ' w-20 ml-1'} value={numero} onChange={e => setNumero(+e.target.value || 1)} decimales={4} /></label>
               </div>
               <div className="max-h-72 overflow-auto border border-slate-200 rounded-md">
                 <table className="w-full text-xs">

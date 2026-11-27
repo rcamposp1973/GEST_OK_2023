@@ -1,5 +1,6 @@
 import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useMemo } from 'react';
+import { InputNumeroEvento } from './ui/NumeroCL';
 import {
   ShoppingCart,
   TrendingUp,
@@ -829,24 +830,24 @@ export const OperativaComercialView: React.FC<OperativaComercialViewProps> = ({
 
                   <div className="sm:col-span-2">
                     <label className="block font-semibold text-slate-700 mb-1">Cantidad</label>
-                    <input
-                      type="number"
+                    <InputNumeroEvento
                       min="1"
                       value={tempQty}
                       onChange={e => setTempQty(Number(e.target.value))}
                       className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-800 font-mono text-xs focus:ring-2 focus:ring-indigo-500"
-                    />
+  decimales={4}
+/>
                   </div>
 
                   <div className="sm:col-span-2">
                     <label className="block font-semibold text-slate-700 mb-1">Precio Unit. (Neto)</label>
-                    <input
-                      type="number"
+                    <InputNumeroEvento
                       min="0"
                       value={tempPrice}
                       onChange={e => setTempPrice(Number(e.target.value))}
                       className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-800 font-mono text-xs focus:ring-2 focus:ring-indigo-500"
-                    />
+  decimales={4}
+/>
                   </div>
 
                   <div className="sm:col-span-2">

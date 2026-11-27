@@ -3,6 +3,7 @@ import { formatearRut } from '../utils/rutFormato';
 import { getNextVoucherNumber } from '../utils/voucherCounter';
 import { exigirCuadre } from '../utils/capaContable';
 import React, { useState, useEffect, useMemo } from 'react';
+import { InputNumeroEvento } from './ui/NumeroCL';
 import { db, auth } from '../lib/firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, setDoc } from 'firebase/firestore';
 import { Company, ChartOfAccount, Auxiliary, RCVDocument, Voucher, PaymentBatch, PaymentItem, FiscalPeriodYear, AccountMatch, MatchedLineRef } from '../types';
@@ -843,12 +844,12 @@ export default function NominasPagoView({
                 </div>
                 <div>
                   <label className="font-semibold text-slate-700">Monto a Pagar ($):</label>
-                  <input
-                    type="number"
+                  <InputNumeroEvento
                     value={manualMonto}
                     onChange={(e) => setManualMonto(Number(e.target.value))}
                     className="w-full bg-white border border-slate-300 rounded px-2 py-1 font-mono font-bold"
-                  />
+  decimales={4}
+/>
                 </div>
                 <div>
                   <label className="font-semibold text-slate-700">Banco Destino:</label>
@@ -1030,8 +1031,7 @@ export default function NominasPagoView({
                               {isSelected ? (
                                 <div className="flex items-center justify-end gap-1">
                                   {isNC && <span className="text-amber-700 font-bold">-</span>}
-                                  <input
-                                    type="number"
+                                  <InputNumeroEvento
                                     value={payVal}
                                     onChange={(e) => {
                                       const val = Number(e.target.value);
@@ -1040,7 +1040,8 @@ export default function NominasPagoView({
                                     className={`w-24 bg-white border rounded px-1.5 py-0.5 text-right font-bold ${
                                       isNC ? 'border-amber-400 text-amber-900' : 'border-indigo-300 text-indigo-900'
                                     }`}
-                                  />
+  decimales={4}
+/>
                                 </div>
                               ) : (
                                 <span className="text-slate-400">-</span>

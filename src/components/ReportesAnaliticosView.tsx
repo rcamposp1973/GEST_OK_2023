@@ -1,5 +1,6 @@
 import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { InputNumeroEvento } from './ui/NumeroCL';
 import { db, auth } from '../lib/firebase';
 import { collection, doc, getDoc, setDoc } from 'firebase/firestore';
 import {
@@ -2332,13 +2333,13 @@ export default function ReportesAnaliticosView({
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-slate-600">Fijar Meta Anual Pareja (CLP):</label>
                     <div className="flex items-center gap-1.5">
-                      <input
-                        type="number"
+                      <InputNumeroEvento
                         placeholder="Ej: 120000000"
                         value={budgetAnnualTargetInput}
                         onChange={(e) => setBudgetAnnualTargetInput(e.target.value)}
                         className="w-full text-xs bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 font-mono outline-hidden"
-                      />
+  decimales={4}
+/>
                       <button
                         type="button"
                         onClick={handleDistributeAnnualTarget}

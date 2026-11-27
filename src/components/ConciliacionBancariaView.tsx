@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { InputNumeroEvento } from './ui/NumeroCL';
 import { getNextVoucherNumber, reserveVoucherNumberBatch } from '../utils/voucherCounter';
 import BandejaMovimientosModal, { evaluarMovimientos } from './BandejaMovimientosModal';
 import ConciliacionOpcionesModal, { ConciliacionConfig, CONFIG_CONCILIACION_POR_DEFECTO } from './ConciliacionOpcionesModal';
@@ -2949,8 +2950,7 @@ export default function ConciliacionBancariaView({
             <label className="font-bold text-slate-700">Saldo Final Cartola ($):</label>
             <span className="text-[9px] text-emerald-700 font-bold uppercase">Acumulado</span>
           </div>
-          <input
-            type="number"
+          <InputNumeroEvento
             value={bankFinalBalanceInput}
             onChange={async (e) => {
               const val = Number(e.target.value);
@@ -2958,7 +2958,8 @@ export default function ConciliacionBancariaView({
               await persistReconciliation(selectedPeriod, statementLines, bankInitialBalanceInput, val);
             }}
             className="w-full bg-white border border-slate-300 rounded-md px-2.5 py-1.5 font-mono font-black text-slate-900 text-xs"
-          />
+  decimales={4}
+/>
           <div className="mt-1 text-[10px] text-slate-500 flex justify-between font-mono">
             <span>Ini + Mov:</span>
             <span className="font-bold text-slate-800">

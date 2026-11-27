@@ -2,6 +2,7 @@ import jsPDF from 'jspdf';
 import { escribirFiniquito, DatosDocumentoFiniquito } from '../../utils/finiquitoPdf';
 import type { guardarFiniquito } from '../../utils/finiquitosGuardados';
 import React, { useMemo, useState } from 'react';
+import { InputNumeroEvento } from '../ui/NumeroCL';
 import { Download } from 'lucide-react';
 import type { Employee, ProjectMaster, PayrollSlip } from '../../types';
 import { formatRut } from '../../utils/rutMatcher';
@@ -182,8 +183,10 @@ export default function FiniquitoMasivoObra({ employees, companyName, onVerIndiv
                   <td className="p-2 text-right font-mono">{r.diasIndemnizacionObra}</td>
                   <td className="p-2 text-right font-mono">{pesos(r.montoIndemnizacionObra)}</td>
                   <td className="p-2 text-right">
-                    <input type="number" min={0} value={vacTomadas[id] || 0} onChange={ev => setVacTomadas(v => ({ ...v, [id]: Number(ev.target.value) || 0 }))}
-                      className="w-16 border border-slate-300 rounded px-1 py-0.5 text-right font-mono" />
+                    <InputNumeroEvento min={0} value={vacTomadas[id] || 0} onChange={ev => setVacTomadas(v => ({ ...v, [id]: Number(ev.target.value) || 0 }))}
+                      className="w-16 border border-slate-300 rounded px-1 py-0.5 text-right font-mono"
+  decimales={4}
+/>
                   </td>
                   <td className="p-2 text-right font-mono">{pesos(r.montoVacaciones)}</td>
                   <td className="p-2 text-right font-mono">{r.sueldoLiquidoPendiente ? pesos(r.sueldoLiquidoPendiente) : <span className="text-amber-600" title="No hay liquidación guardada de ese mes">falta</span>}</td>

@@ -1,5 +1,6 @@
 import { formatearRut } from '../../utils/rutFormato';
 import React, { useState, useMemo, useEffect } from 'react';
+import { InputNumeroEvento } from '../ui/NumeroCL';
 import { 
   FileText, Calculator, Download, Printer, X, CheckCircle2, 
   AlertCircle, DollarSign, Calendar, User, ShieldCheck, ArrowRight, Building2
@@ -351,8 +352,10 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
                 ] as [string, number, (n: number) => void, boolean][]).filter(c => c[3]).map(([label, val, set]) => (
                   <div key={label} className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
                     <span className="text-[11px] font-bold text-slate-700 block">{label}</span>
-                    <input type="number" min={0} value={val || ''} onChange={e => set(Number(e.target.value) || 0)}
-                      className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-bold text-slate-900" />
+                    <InputNumeroEvento min={0} value={val || ''} onChange={e => set(Number(e.target.value) || 0)}
+                      className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-bold text-slate-900"
+  decimales={4}
+/>
                   </div>
                 ))}
               </div>

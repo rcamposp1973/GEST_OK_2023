@@ -1,5 +1,6 @@
 import { faltaCuenta } from '../utils/voucherValidation';
 import React, { useState, useMemo, useEffect } from 'react';
+import { InputNumeroEvento } from './ui/NumeroCL';
 import {
   FileText,
   Plus,
@@ -906,12 +907,12 @@ export const RendicionGastosView: React.FC<RendicionGastosViewProps> = ({
 
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Anticipo Entregado ($):</label>
-                  <input
-                    type="number"
+                  <InputNumeroEvento
                     value={editingReport.initialAdvanceAmount || 0}
                     onChange={e => setEditingReport({ ...editingReport, initialAdvanceAmount: Number(e.target.value) })}
                     className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 font-mono font-bold text-slate-900"
-                  />
+  decimales={4}
+/>
                 </div>
 
                 {/* Selección de colaborador */}
@@ -1102,12 +1103,12 @@ export const RendicionGastosView: React.FC<RendicionGastosViewProps> = ({
 
                         <div className="md:col-span-2">
                           <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Monto ($):</label>
-                          <input
-                            type="number"
+                          <InputNumeroEvento
                             value={item.amount}
                             onChange={e => handleUpdateItem(item.id, 'amount', Number(e.target.value))}
                             className="w-full bg-white border border-slate-300 rounded-lg px-2 py-1 text-xs font-mono font-bold text-slate-900 text-right"
-                          />
+  decimales={4}
+/>
                         </div>
                       </div>
                     ))}

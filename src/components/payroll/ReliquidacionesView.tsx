@@ -1,6 +1,7 @@
 import { faltaCuenta } from '../../utils/voucherValidation';
 import { formatearRut } from '../../utils/rutFormato';
 import React, { useState, useMemo } from 'react';
+import { InputNumeroEvento } from '../ui/NumeroCL';
 import { 
   Employee, PayrollSlip, AnnualReliquidation, ReliquidationMonthDetail, ChartOfAccount as Account, Voucher 
 } from '../../types';
@@ -385,14 +386,13 @@ export const ReliquidacionesView: React.FC<ReliquidacionesViewProps> = ({
             </label>
             <div className="relative">
               <span className="absolute left-3 top-2 text-xs font-bold text-slate-400">$</span>
-              <input
-                type="number"
+              <InputNumeroEvento
                 min={1000}
-                step={1000}
                 value={montoTotalBruto}
                 onChange={(e) => setMontoTotalBruto(Number(e.target.value))}
                 className="w-full pl-8 pr-3 py-2 text-xs font-mono font-bold text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500"
-              />
+  decimales={0}
+/>
             </div>
           </div>
 

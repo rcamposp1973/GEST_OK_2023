@@ -28,7 +28,8 @@ import {
 } from '../types';
 import { sanitizeVoucherLines } from '../utils/voucherValidation';
 import { resumenOtrosImpuestos } from '../utils/otrosImpuestos';
-import F29GestOk from './F29GestOk';
+import F29GestOk, { CampoEditable } from './F29GestOk';
+import { tasaPpmSugerida } from '../utils/f29Ppm';
 import { remanenteArrastrado, remanenteEnPesos, reajusteRemanente, RemanenteArrastrado, remanenteCeecArrastrado, aplicarCreditosEspeciales } from '../utils/f29Remanente';
 import { Receipt, Download, Save, Zap, MessageSquare, Copy, X, Share2 } from 'lucide-react';
 
@@ -228,12 +229,14 @@ export default function Formulario29View({
         const prevDec = list.find(d => d.period === prevPeriodStr) || [...list].filter(d => d.period < selectedPeriod).sort((a, b) => b.period.localeCompare(a.period))[0];
         
         let inheritedPpmRate = 0.25;
+        let inheritedPpmManual = false;
         let inheritedRemanenteUTM = company.initialRemanenteUTM || 0;
         let inheritedRegimen: any = '14_D3_PROPYME_GENERAL';
         let inheritedHonorariosRate = getOfficialHonorariosRate(selectedPeriod);
         let inheritedImpuestoUnico = 0;
 
         if (prevDec) {
+          inheritedPpmManual = Boolean(prevDec.settings?.ppmTasaManual);
           if (prevDec.settings?.ppmRate !== undefined) {
             inheritedPpmRate = prevDec.settings.ppmRate;
           } else if (prevDec.ppm?.tasaPPM !== undefined) {
@@ -264,6 +267,10 @@ export default function Formulario29View({
         setTaxSettings(prev => ({
           ...prev,
           ppmRate: inheritedPpmRate,
+          ppmTasaManual: inheritedPpmManual,
+          remanenteFijadoManual: false,
+          ceecRemanenteFijadoManual: false,
+          ceecRemanenteManualPesos: 0,
           regimenTributario: inheritedRegimen,
           honorariosTaxRate: inheritedHonorariosRate,
           previousMonthRemanenteUTM: inheritedRemanenteUTM,
@@ -651,7 +658,7 @@ export default function Formulario29View({
 
     // Base Imponible de Ingresos Brutos = Ventas Afectas Netas + Ventas Boletas + Ventas Exentas + Ventas de Exportación (Art. 84 letra a LIR)
     const baseImponibleVentas = Math.max(0, debitoFiscalData.ventasAfectasNeto + debitoFiscalData.ventasBoletasNeto + debitoFiscalData.ventasExentasTotal + (debitoFiscalData.ventasExportacionTotal || 0));
-    const tasaPPM = taxSettings.ppmRate || 0.25;
+    const tasaPPM = Number.isFinite(Number(taxSettings.ppmRate)) && taxSettings.ppmRate !== null ? Number(taxSettings.ppmRate) : 0.25;
     const montoPPM = Math.round(baseImponibleVentas * (tasaPPM / 100));
 
     return {
@@ -696,7 +703,14 @@ export default function Formulario29View({
     const ceecMes = Math.round(debitoFiscalData.ceecCreditoConstructora || 0);
     const arrCeec = remanenteCeecArrastrado(savedDeclarations as any, selectedPeriod);
     const ceecReaj = reajusteRemanente({ utm: arrCeec.utm, utmOrigen: arrCeec.periodoOrigen ? getOfficialUTM(arrCeec.periodoOrigen) : taxSettings.utmValue, utmActual: taxSettings.utmValue, pesosOrigen: arrCeec.pesosOrigen });
-    const ceecRemanenteAnterior = arrCeec.utm > 0 || arrCeec.pesosOrigen > 0 ? ceecReaj.remanenteMes : 0;
+    // Remanente CEEC (cód. 128): se arrastra del mes anterior reajustado, salvo que el contador lo fije a mano
+    const ceecManual = Boolean(taxSettings.ceecRemanenteFijadoManual);
+    const ceecRemanenteAnterior = ceecManual
+      ? Math.max(0, Math.round(taxSettings.ceecRemanenteManualPesos || 0))
+      : (arrCeec.utm > 0 || arrCeec.pesosOrigen > 0 ? ceecReaj.remanenteMes : 0);
+    const ceecReajusteFinal = ceecManual
+      ? (arrCeec.pesosOrigen > 0 ? Math.max(0, ceecRemanenteAnterior - arrCeec.pesosOrigen) : 0)
+      : (ceecRemanenteAnterior > 0 ? ceecReaj.reajuste : 0);
     const especiales = aplicarCreditosEspeciales({ determinado595, ceecMes, ceecRemanenteAnterior });
     const totalPagarF29 = especiales.pagar91;
 
@@ -715,8 +729,8 @@ export default function Formulario29View({
       determinado595,
       ceecMes,
       ceecRemanenteAnterior,
-      ceecRemanenteAnteriorUTM: arrCeec.utm,
-      ceecReajuste: ceecRemanenteAnterior > 0 ? ceecReaj.reajuste : 0,
+      ceecRemanenteAnteriorUTM: ceecManual ? (taxSettings.utmValue > 0 ? parseFloat((ceecRemanenteAnterior / taxSettings.utmValue).toFixed(6)) : 0) : arrCeec.utm,
+      ceecReajuste: ceecReajusteFinal,
       ceecTotal571: especiales.c571,
       ceecImputado: especiales.ceecImputado,
       totalDeterminado547: especiales.total547,
@@ -751,14 +765,14 @@ export default function Formulario29View({
       '77': r.remanenteParaSiguienteMes || 0, '89': r.ivaPagar || 0, '756': r.ivaPostergado || 0,
       '48': retencionesData.impuestoUnicoTrabajadores || 0,
       '151': retencionesData.retencionHonorarios || 0,
-      '563': ppmData.baseImponibleVentas || 0, '115': ppmData.montoPPM ? ppmData.tasaPPM : 0, '62': ppmData.montoPPM || 0,
+      '563': ppmData.baseImponibleVentas || 0, '115': f29CodeSettings.ppm062 !== false ? ppmData.tasaPPM : 0, '62': ppmData.montoPPM || 0,
       '595': r.determinado595 || 0,
       '126': r.ceecMes || 0, '128': r.ceecRemanenteAnterior || 0, '571': r.ceecTotal571 || 0,
       '547': r.totalDeterminado547 ?? 0, '130': r.remanenteCeec || 0,
       '91': r.totalPagarF29 || 0,
     };
     return v;
-  }, [debitoFiscalData, creditoFiscalData, resumenF29, retencionesData, ppmData]);
+  }, [debitoFiscalData, creditoFiscalData, resumenF29, retencionesData, ppmData, f29CodeSettings.ppm062]);
 
   const extrasF29 = useMemo(() => [
     ...customCodes.filter(c => c.active && (c.amount || 0) > 0).map(c => ({ codigo: c.code, glosa: c.name, monto: c.amount || 0 })),
@@ -1875,7 +1889,12 @@ export default function Formulario29View({
           <label className="block text-slate-400 font-bold uppercase text-[10px] mb-1">Régimen Tributario:</label>
           <select
             value={taxSettings.regimenTributario}
-            onChange={(e) => setTaxSettings({ ...taxSettings, regimenTributario: e.target.value as any })}
+            onChange={(e) => {
+              const regimen = e.target.value as any;
+              const sug = tasaPpmSugerida(regimen);
+              // Al cambiar de régimen se propone su tasa, salvo que el contador haya fijado una tasa propia
+              setTaxSettings({ ...taxSettings, regimenTributario: regimen, ...(!taxSettings.ppmTasaManual && sug.tasa !== null ? { ppmRate: sug.tasa } : {}) });
+            }}
             className="w-full bg-slate-800 border border-slate-700 rounded-md px-3 py-1.5 font-semibold text-white focus:ring-2 focus:ring-indigo-400 focus:outline-none"
           >
             <option value="14_D3_PROPYME_GENERAL">ProPyme General (Art. 14 D3)</option>
@@ -2058,8 +2077,47 @@ export default function Formulario29View({
           periodo={selectedPeriod}
           empresa={company.razonSocial || company.name}
           rut={company.rut}
+          folio={folioSII}
           valores={valoresF29}
           extras={extrasF29}
+          editables={(() => {
+            const sug = tasaPpmSugerida(taxSettings.regimenTributario);
+            const ed: Record<string, CampoEditable> = {
+              '504': {
+                manual: Boolean(taxSettings.remanenteFijadoManual),
+                nota: taxSettings.remanenteFijadoManual
+                  ? 'Remanente de IVA fijado a mano para este mes.'
+                  : infoRemanente?.origen === 'mes_anterior' ? `Arrastrado del F29 ${infoRemanente.periodoOrigen} (${(taxSettings.previousMonthRemanenteUTM || 0).toLocaleString('es-CL', { maximumFractionDigits: 2 })} UTM), reajustado con la UTM de este mes.` : undefined,
+                onCambiar: (valPesos: number) => {
+                  const valUTM = taxSettings.utmValue > 0 ? parseFloat((valPesos / taxSettings.utmValue).toFixed(6)) : 0;
+                  setManualAdjustments(prev => ({ ...prev, remanenteManualPesos: valPesos }));
+                  setTaxSettings(prev => ({ ...prev, previousMonthRemanenteUTM: valUTM, remanenteFijadoManual: true }));
+                },
+                textoRestablecer: 'Volver al arrastre del mes anterior',
+                onRestablecer: () => {
+                  const arr = remanenteArrastrado(savedDeclarations, selectedPeriod, { utm: company.initialRemanenteUTM });
+                  setTaxSettings(prev => ({ ...prev, previousMonthRemanenteUTM: arr.utm, remanenteFijadoManual: false }));
+                  setManualAdjustments(prev => ({ ...prev, remanenteManualPesos: remanenteEnPesos(arr.utm, taxSettings.utmValue) }));
+                  setInfoRemanente(arr);
+                },
+              },
+              '128': {
+                manual: Boolean(taxSettings.ceecRemanenteFijadoManual),
+                nota: taxSettings.ceecRemanenteFijadoManual ? 'Remanente del crédito empresas constructoras fijado a mano para este mes.' : undefined,
+                onCambiar: (valPesos: number) => setTaxSettings(prev => ({ ...prev, ceecRemanenteFijadoManual: true, ceecRemanenteManualPesos: valPesos })),
+                textoRestablecer: 'Volver al arrastre del mes anterior',
+                onRestablecer: () => setTaxSettings(prev => ({ ...prev, ceecRemanenteFijadoManual: false, ceecRemanenteManualPesos: 0 })),
+              },
+            };
+            if (f29CodeSettings.ppm062 !== false) ed['115'] = {
+              manual: Boolean(taxSettings.ppmTasaManual),
+              nota: `${taxSettings.ppmTasaManual ? 'Tasa fijada por el contador. ' : ''}${sug.nota}`,
+              onCambiar: (n: number) => setTaxSettings(prev => ({ ...prev, ppmRate: n, ppmTasaManual: true })),
+              textoRestablecer: sug.tasa !== null ? `Usar la tasa del régimen (${String(sug.tasa).replace('.', ',')}%)` : undefined,
+              onRestablecer: sug.tasa !== null ? () => setTaxSettings(prev => ({ ...prev, ppmRate: sug.tasa as number, ppmTasaManual: false })) : undefined,
+            };
+            return ed;
+          })()}
           avisos={[
             ...(infoRemanente?.advertencia ? [infoRemanente.advertencia] : []),
             ...((resumenF29.remanenteCeec || 0) > 0 && selectedPeriod.endsWith('-12') ? ['El remanente del crédito especial de empresas constructoras (Cód. 130) de diciembre se recupera en la Declaración Anual de Renta (F22).'] : []),
@@ -2554,7 +2612,7 @@ export default function Formulario29View({
                           type="number"
                           step="0.01"
                           value={taxSettings.ppmRate}
-                          onChange={e => setTaxSettings({ ...taxSettings, ppmRate: parseFloat(e.target.value) || 0 })}
+                          onChange={e => setTaxSettings({ ...taxSettings, ppmRate: parseFloat(String(e.target.value).replace(',', '.')) || 0, ppmTasaManual: true })}
                           className="w-20 bg-amber-50 border border-amber-300 rounded px-1.5 py-0.5 text-right font-mono font-bold text-indigo-900 focus:ring-2 focus:ring-indigo-500"
                         />
                         <span>%</span>

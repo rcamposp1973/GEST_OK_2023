@@ -470,7 +470,16 @@ import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } fro
   const c = R.remanenteCeecArrastrado([{ period:'2025-06', resumen:{ remanenteCeecUTM: 49.97, remanenteCeec: 3387690 } }], '2025-07');
   ok('CEEC: remanente del mes anterior', c.utm===49.97 && c.pesosOrigen===3387690);
   const lin = E.F29_ESTRUCTURA.flatMap(x => x.lineas);
-  ok('F29 estructura: líneas y códigos clave', lin.find(l=>l.linea===24)?.codigos[0].cod==='538' && lin.find(l=>l.linea===138)?.codigos.some(x=>x.cod==='126') && lin.find(l=>l.linea===141)?.codigos[0].cod==='547' && lin.find(l=>l.linea===148)?.codigos[0].cod==='91');
-  ok('F29 compacto: sólo líneas con monto y totales', E.lineaConValor(lin.find(l=>l.linea===7)!, { '502': 100 }) && !E.lineaConValor(lin.find(l=>l.linea===8)!, {}) && E.lineaConValor(lin.find(l=>l.linea===24)!, {}));
+  ok('F29 estructura: líneas y códigos clave', lin.find(l=>l.linea===23)?.codigos[0].cod==='538' && lin.find(l=>l.linea===131)?.codigos.some(x=>x.cod==='126') && lin.find(l=>l.linea===134)?.codigos[0].cod==='547' && lin.find(l=>l.linea===141)?.codigos[0].cod==='91' && lin.find(l=>l.linea===36)?.codigos[0].cod==='504' && lin.find(l=>l.linea===69)?.codigos.some(x=>x.cod==='115') && lin.find(l=>l.linea===144)?.codigos[0].cod==='94');
+  ok('F29 compacto: sólo líneas con monto y totales', E.lineaConValor(lin.find(l=>l.linea===7)!, { '502': 100 }) && !E.lineaConValor(lin.find(l=>l.linea===8)!, {}) && E.lineaConValor(lin.find(l=>l.linea===23)!, {}) && E.lineaConValor(lin.find(l=>l.linea===69)!, {}, new Set(['115'])));
+  const nums = lin.map(l=>l.linea).filter((n): n is number => n !== null);
+  ok('F29 estructura: líneas 1 a 144 correlativas, sin repetir', nums.length===144 && nums.every((n,i)=>n===i+1));
+  const cods = lin.flatMap(l=>l.codigos.map(c=>c.cod));
+  ok('F29 estructura: ningún código repetido', new Set(cods).size===cods.length);
+}
+{ const P = await import('../src/utils/f29Ppm');
+  ok('PPM: tasa sugerida por régimen', P.tasaPpmSugerida('14_D3_PROPYME_GENERAL').tasa===0.25 && P.tasaPpmSugerida('14_D8_PROPYME_TRANSPARENTE').tasa===0.2 && P.tasaPpmSugerida('14_A_SEMI_INTEGRADO').tasa===null);
+  ok('PPM: lee tasas con coma o punto', P.leerNumero('0,125')===0.125 && P.leerNumero('0.5')===0.5 && P.leerNumero('1,5')===1.5);
+  ok('Montos: lee miles con punto', P.leerNumero('1.234.567')===1234567 && P.leerNumero('3.387.690')===3387690 && P.leerNumero('$ 12.500')===12500 && P.leerNumero('')===null);
 }
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

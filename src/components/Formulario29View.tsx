@@ -29,6 +29,7 @@ import {
 } from '../types';
 import { sanitizeVoucherLines } from '../utils/voucherValidation';
 import { resumenOtrosImpuestos } from '../utils/otrosImpuestos';
+import { calcularIlaF29 } from '../utils/f29Ila';
 import F29GestOk, { CampoEditable } from './F29GestOk';
 import { tasaPpmSugerida } from '../utils/f29Ppm';
 import { remanenteArrastrado, remanenteEnPesos, reajusteRemanente, RemanenteArrastrado, remanenteCeecArrastrado, aplicarCreditosEspeciales } from '../utils/f29Remanente';
@@ -117,10 +118,6 @@ export default function Formulario29View({
     { id: 'c_542', code: '542', name: 'Retención Harinas (12%)', section: 'Retencion', amount: 0, active: false },
     { id: 'c_543', code: '543', name: 'Retención Carnes (5%)', section: 'Retencion', amount: 0, active: false },
     { id: 'c_545', code: '545', name: 'Impuesto Específico Combustibles', section: 'ImpuestoAdicional', amount: 0, active: false },
-    { id: 'c_586', code: '586', name: 'ILA Vinos y Chichas (20.5%)', section: 'ImpuestoAdicional', amount: 0, active: false },
-    { id: 'c_587', code: '587', name: 'ILA Cervezas (20.5%)', section: 'ImpuestoAdicional', amount: 0, active: false },
-    { id: 'c_588', code: '588', name: 'ILA Licores y Destilados (31.5%)', section: 'ImpuestoAdicional', amount: 0, active: false },
-    { id: 'c_589', code: '589', name: 'ILA Bebidas Analcohólicas (10%/18%)', section: 'ImpuestoAdicional', amount: 0, active: false },
     { id: 'c_763', code: '763', name: 'Retención Fletes y Transporte', section: 'Retencion', amount: 0, active: false }
   ]);
 
@@ -315,6 +312,16 @@ export default function Formulario29View({
     () => resumenOtrosImpuestos(periodDocs as any, { recuperaDiesel }),
     [periodDocs, recuperaDiesel]
   );
+
+  // ILA (impuesto adicional Art. 42) y recuperación de diésel (127) desde los "otros impuestos" del RCV.
+  // El remanente de crédito Art. 42 (508) se arrastra del F29 del mes anterior (cód. 507).
+  const ilaRemanenteAnterior = useMemo(() => {
+    const [yy, mm] = selectedPeriod.split('-').map(Number);
+    const prev = mm === 1 ? null : `${yy}-${String(mm - 1).padStart(2, '0')}`;
+    const d: any = prev ? savedDeclarations.find((x: any) => x.period === prev) : null;
+    return Math.round(Number(d?.resumen?.ila507) || 0);
+  }, [savedDeclarations, selectedPeriod]);
+  const ila = useMemo(() => calcularIlaF29(periodDocs as any, { recuperaDiesel, remanenteAnterior: ilaRemanenteAnterior }), [periodDocs, recuperaDiesel, ilaRemanenteAnterior]);
 
   // 1. CALCULATE DÉBITO FISCAL (VENTAS)
   const debitoFiscalData: F29DebitoFiscal = useMemo(() => {
@@ -536,7 +543,8 @@ export default function Formulario29View({
       ivaUsoComunRecuperable +
       remanenteMesAnteriorPesos -
       debitoNotasCreditoRecibidas +
-      manualAdjustments.creditoAjuste
+      manualAdjustments.creditoAjuste +
+      ila.diesel127 // línea 44: recuperación impuesto específico diésel (cód. 127)
     );
 
     return {
@@ -559,10 +567,11 @@ export default function Formulario29View({
       reajusteCorreccionMonetariaRemanente,
       totalCreditoFiscal,
       /** Crédito fiscal del mes, sin el remanente anterior (es lo que se rebaja de la cuenta IVA Crédito Fiscal) */
-      creditoDelMes: totalCreditoFiscal - remanenteMesAnteriorPesos,
+      creditoDelMes: totalCreditoFiscal - remanenteMesAnteriorPesos - ila.diesel127,
+      diesel127: ila.diesel127,
       docsCount: comprasDocs.length
     };
-  }, [periodDocs, taxSettings, selectedPeriod, manualAdjustments.creditoAjuste, manualAdjustments.remanenteManualPesos, infoRemanente]);
+  }, [periodDocs, taxSettings, selectedPeriod, manualAdjustments.creditoAjuste, manualAdjustments.remanenteManualPesos, infoRemanente, ila.diesel127]);
 
   // 3. CALCULATE RETENCIONES (HONORARIOS & SUELDOS)
   const retencionesData: F29Retenciones = useMemo(() => {
@@ -713,7 +722,8 @@ export default function Formulario29View({
     const ceecReajusteFinal = ceecManual
       ? (arrCeec.pesosOrigen > 0 ? Math.max(0, ceecRemanenteAnterior - arrCeec.pesosOrigen) : 0)
       : (ceecRemanenteAnterior > 0 ? ceecReaj.reajuste : 0);
-    const especiales = aplicarCreditosEspeciales({ determinado595, ceecMes, ceecRemanenteAnterior });
+    // 547 = 595 (anverso) + impuesto adicional Art. 42 determinado (506) − créditos especiales
+    const especiales = aplicarCreditosEspeciales({ determinado595: determinado595 + ila.determinado506, ceecMes, ceecRemanenteAnterior });
     const totalPagarF29 = especiales.pagar91;
 
     return {
@@ -739,8 +749,14 @@ export default function Formulario29View({
       remanenteCeec: especiales.remanente130,
       remanenteCeecUTM: taxSettings.utmValue > 0 ? parseFloat((especiales.remanente130 / taxSettings.utmValue).toFixed(6)) : 0,
       notaCeec: arrCeec.nota,
+      ila506: ila.determinado506,
+      ila507: ila.remanente507,
+      ila508: ila.remanenteAnterior508,
+      ila602: ila.debitos602,
+      ilaCreditosMes: ila.creditosMes,
+      diesel127: ila.diesel127,
     };
-  }, [debitoFiscalData, creditoFiscalData, retencionesData, ppmData, taxSettings, manualAdjustments, ivaPostergadoActivo, ivaPostergadoMonto, customCodes, savedDeclarations, selectedPeriod]);
+  }, [debitoFiscalData, creditoFiscalData, retencionesData, ppmData, taxSettings, manualAdjustments, ivaPostergadoActivo, ivaPostergadoMonto, customCodes, savedDeclarations, selectedPeriod, ila]);
 
   // Valores por código del F29 (para el formulario Gest_OK con la estructura del SII)
   const valoresF29 = useMemo(() => {
@@ -772,9 +788,10 @@ export default function Formulario29View({
       '126': r.ceecMes || 0, '128': r.ceecRemanenteAnterior || 0, '571': r.ceecTotal571 || 0,
       '547': r.totalDeterminado547 ?? 0, '130': r.remanenteCeec || 0,
       '91': r.totalPagarF29 || 0,
+      ...ila.codigos,
     };
     return v;
-  }, [debitoFiscalData, creditoFiscalData, resumenF29, retencionesData, ppmData, f29CodeSettings.ppm062]);
+  }, [debitoFiscalData, creditoFiscalData, resumenF29, retencionesData, ppmData, f29CodeSettings.ppm062, ila]);
 
   const extrasF29 = useMemo(() => [
     ...customCodes.filter(c => c.active && (c.amount || 0) > 0).map(c => ({ codigo: c.code, glosa: c.name, monto: c.amount || 0 })),
@@ -884,12 +901,18 @@ export default function Formulario29View({
     add('retencionHonorariosAccountId', 'Retención honorarios 2ª categoría', retencionesData.retencionHonorarios || 0, 'PASIVO', [['retencion', 'honorario'], ['retencion', '2']]);
     add('impuestoUnicoAccountId', 'Impuesto único trabajadores', retencionesData.impuestoUnicoTrabajadores || 0, 'PASIVO', [['impuesto', 'unico'], ['impto', 'unico']]);
     const aPagar = (ppmData.montoPPM || 0) + (retencionesData.retencionHonorarios || 0) + (retencionesData.impuestoUnicoTrabajadores || 0)
-      + customCodes.filter(c => c.active && (c.amount || 0) > 0).reduce((t, c) => t + (c.amount || 0), 0);
+      + customCodes.filter(c => c.active && (c.amount || 0) > 0).reduce((t, c) => t + (c.amount || 0), 0)
+      + (resumenF29.ila506 || 0);
+    // ILA (Art. 42) y recuperación de diésel (127)
+    add('ilaDebitoAccountId', 'ILA débito (impuesto adicional Art. 42)', resumenF29.ila602 || 0, 'PASIVO', [['ila'], ['impuesto', 'adicional']], ['credito']);
+    add('ilaCreditoAccountId', 'ILA crédito (compras con impuesto adicional)', resumenF29.ilaCreditosMes || 0, 'ACTIVO', [['ila', 'credito'], ['impuesto', 'adicional', 'credito'], ['otros', 'impuestos']]);
+    add('ilaRemanenteAccountId', 'Remanente crédito ILA Art. 42', Math.max(resumenF29.ila507 || 0, resumenF29.ila508 || 0), 'ACTIVO', [['remanente', 'ila'], ['ila', 'credito']]);
+    add('dieselAccountId', 'Impuesto específico diésel por recuperar (cód. 127)', resumenF29.diesel127 || 0, 'ACTIVO', [['diesel'], ['petroleo'], ['impuesto', 'especifico']]);
     add('impuestosPorPagarAccountId', 'Impuestos por pagar (F29)', aPagar, 'PASIVO', [['impuestos', 'pagar'], ['imptos', 'pagar'], ['impuesto', 'pagar']], ['unico', 'diferido']);
     const ceecUso = (resumenF29.ceecImputado || 0) + (resumenF29.ceecReajuste || 0);
     add('ceecAccountId', 'Crédito especial empresas constructoras (CEEC)', ceecUso, 'ACTIVO', [['constructora'], ['ceec'], ['credito', 'emp']]);
     if ((resumenF29.ceecReajuste || 0) > 0) add('correccionMonetariaAccountId', 'Corrección monetaria (reajuste remanentes)', resumenF29.ceecReajuste || 0, null, [['correccion', 'monetaria'], ['reajuste']]);
-    if ((resumenF29.ceecImputado || 0) > ((resumenF29.ppmPagar || 0) + (resumenF29.retencionesPagar || 0) + (resumenF29.otrosImpuestos || 0) + (resumenF29.customCodesTotal || 0))) add('ivaPagarAccountId', 'IVA por pagar', resumenF29.ceecImputado || 0, 'PASIVO', [['iva', 'pagar']]);
+    if ((resumenF29.ceecImputado || 0) > ((resumenF29.ppmPagar || 0) + (resumenF29.retencionesPagar || 0) + (resumenF29.otrosImpuestos || 0) + (resumenF29.customCodesTotal || 0) + (resumenF29.ila506 || 0))) add('ivaPagarAccountId', 'IVA por pagar', resumenF29.ceecImputado || 0, 'PASIVO', [['iva', 'pagar']]);
     return out;
   };
 
@@ -1101,6 +1124,25 @@ export default function Formulario29View({
         });
       });
 
+      // 8b. ILA (impuesto adicional Art. 42): débitos − créditos (con remanente) = impuesto a pagar (506) o remanente (507)
+      const ln = (id: string, acc: any, debit: number, credit: number, ref: string, gloss: string) => {
+        if (Math.round(debit) > 0 || Math.round(credit) > 0) lines.push({ id, accountId: acc.id, accountCode: acc.code, accountName: acc.name, debit: Math.round(debit), credit: Math.round(credit), documentRef: ref, gloss });
+      };
+      if ((resumenF29.ila602 || 0) > 0 || (resumenF29.ilaCreditosMes || 0) > 0 || (resumenF29.ila508 || 0) > 0) {
+        const accIlaDeb = (resumenF29.ila602 || 0) > 0 ? cuenta('ilaDebitoAccountId', 'ILA débito') : null;
+        const accIlaCred = (resumenF29.ilaCreditosMes || 0) > 0 ? cuenta('ilaCreditoAccountId', 'ILA crédito') : null;
+        const accIlaRem = ((resumenF29.ila507 || 0) > 0 || (resumenF29.ila508 || 0) > 0) ? cuenta('ilaRemanenteAccountId', 'Remanente crédito ILA') : null;
+        if (accIlaDeb) ln('line_ila_deb', accIlaDeb, resumenF29.ila602 || 0, 0, 'F29 Cód 602', `ILA débito Art. 42 F29 ${selectedPeriod}`);
+        if (accIlaCred) ln('line_ila_cred', accIlaCred, 0, resumenF29.ilaCreditosMes || 0, 'F29 Cód 603', `ILA crédito Art. 42 F29 ${selectedPeriod}`);
+        if (accIlaRem) {
+          ln('line_ila_rem_ant', accIlaRem, 0, resumenF29.ila508 || 0, 'F29 Cód 508', `Remanente crédito Art. 42 mes anterior F29 ${selectedPeriod}`);
+          ln('line_ila_rem_sig', accIlaRem, resumenF29.ila507 || 0, 0, 'F29 Cód 507', `Remanente crédito Art. 42 período siguiente F29 ${selectedPeriod}`);
+        }
+        ln('line_ila_pagar', accImpuestosPorPagarTotal, 0, resumenF29.ila506 || 0, 'F29 Cód 506', `Impuesto adicional Art. 42 a pagar F29 ${selectedPeriod}`);
+      }
+      // 8c. Recuperación impuesto específico diésel (cód. 127): rebaja el IVA a pagar y sale de la cuenta del diésel por recuperar
+      if ((resumenF29.diesel127 || 0) > 0) ln('line_diesel', cuenta('dieselAccountId', 'Impuesto específico diésel por recuperar'), 0, resumenF29.diesel127 || 0, 'F29 Cód 127', `Recuperación impuesto específico diésel F29 ${selectedPeriod}`);
+
       // 9. Crédito Especial Empresas Constructoras (Art. 21 DL 910): reajuste del remanente y su imputación contra
       //    PPM y retenciones (primero) y luego contra el IVA a pagar. El saldo no imputado (Cód. 130) queda en la cuenta.
       if (accCeec) {
@@ -1111,7 +1153,7 @@ export default function Formulario29View({
         }
         const imputado = Math.round(resumenF29.ceecImputado || 0);
         if (imputado > 0) {
-          const otrosPorPagar = Math.round((resumenF29.ppmPagar || 0) + (resumenF29.retencionesPagar || 0) + (resumenF29.otrosImpuestos || 0) + (resumenF29.customCodesTotal || 0));
+          const otrosPorPagar = Math.round((resumenF29.ppmPagar || 0) + (resumenF29.retencionesPagar || 0) + (resumenF29.otrosImpuestos || 0) + (resumenF29.customCodesTotal || 0) + (resumenF29.ila506 || 0));
           const contraOtros = Math.min(imputado, otrosPorPagar);
           const contraIva = imputado - contraOtros;
           lines.push({ id: 'line_ceec_cred', accountId: accCeec.id, accountCode: accCeec.code, accountName: accCeec.name, debit: 0, credit: imputado, documentRef: `F29 Cód 571`, gloss: `Imputación crédito especial empresas constructoras F29 ${selectedPeriod}` });

@@ -482,4 +482,18 @@ import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } fro
   const d = P.separarSetDte(set)[0];
   ok('XML recibidos: lee proveedor', d.razonEmisor==='COMERCIALIZADORA MEPIACHE LTDA' && d.rutEmisor==='78427580-9' && d.folio==='29026' && d.total===77400);
 }
+{ const I = await import('../src/utils/f29Ila');
+  const docs = [
+    { tipoRegistro: 'Venta', tipoDoc: '33', otrosImpuestos: [{ codigo: '24', valor: 31500 }, { codigo: '27', valor: 1000 }] },
+    { tipoRegistro: 'Venta', tipoDoc: '61', otrosImpuestos: [{ codigo: '24', valor: 500 }] },
+    { tipoRegistro: 'Compra', tipoDoc: '33', otrosImpuestos: [{ codigo: '24', valor: 20000 }, { codigo: '26', valor: 2050, sinDerecho: true }, { codigo: '28', valor: 7000 }] },
+  ];
+  const r = I.calcularIlaF29(docs as any, { recuperaDiesel: true, remanenteAnterior: 3000 });
+  ok('ILA: débitos por código y NC emitidas', r.codigos['577']===31500 && r.codigos['146']===1000 && r.codigos['546']===500 && r.debitos602===32000);
+  ok('ILA: créditos recargado e imputable (sin derecho no imputa)', r.codigos['575']===20000 && r.codigos['576']===20000 && r.codigos['580']===2050 && !r.codigos['149']);
+  ok('ILA: 603 con remanente 508 y determinado 506', r.creditos603===23000 && r.determinado506===9000 && r.remanente507===0);
+  ok('Diésel: 127 sólo si la empresa recupera', r.diesel127===7000 && I.calcularIlaF29(docs as any, {}).diesel127===0);
+  const r2 = I.calcularIlaF29([{ tipoRegistro: 'Compra', tipoDoc: '33', otrosImpuestos: [{ codigo: '25', valor: 4100 }] }] as any);
+  ok('ILA: sin ventas queda remanente 507', r2.remanente507===4100 && r2.determinado506===0 && r2.codigos['33']===4100);
+}
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

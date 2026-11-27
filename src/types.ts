@@ -864,6 +864,10 @@ export interface F29AccountingParams {
   impuestoUnicoAccountId?: string;
   impuestosPorPagarAccountId?: string;
   ceecAccountId?: string; // Crédito especial empresas constructoras por recuperar (activo)
+  ilaDebitoAccountId?: string; // ILA débito (impuesto adicional Art. 42 por pagar)
+  ilaCreditoAccountId?: string; // ILA crédito (impuesto adicional Art. 42 soportado en compras)
+  ilaRemanenteAccountId?: string; // Remanente crédito Art. 42 (cód. 507/508)
+  dieselAccountId?: string; // Impuesto específico diésel por recuperar (cód. 127)
 }
 
 export interface F29TaxSettings {
@@ -978,6 +982,10 @@ export interface F29PPM {
 }
 
 export interface F29ResumenTotal {
+  /** ILA Art. 42: determinado (506), remanente siguiente (507), remanente anterior (508), débitos (602), créditos del mes */
+  ila506?: number; ila507?: number; ila508?: number; ila602?: number; ilaCreditosMes?: number;
+  /** Recuperación impuesto específico diésel (127) */
+  diesel127?: number;
   ivaPagar: number;
   ivaPostergado?: number; // Cód. 756
   ivaPagarNetoPostergacion?: number; // Saldo a pagar tras postergación

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { InputNumeroCL } from './ui/NumeroCL';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import * as XLSX from 'xlsx';
 import { ChevronDown, ChevronRight, Download, Lock, Save, Unlock, AlertTriangle, Plus, Trash2 } from 'lucide-react';
@@ -344,7 +345,7 @@ export const GestRtaView: React.FC<Props> = ({ studyId, company, accounts, vouch
                   <tr key={i} className="border-t border-slate-100">
                     <td className="p-2"><input disabled={bloqueado} value={f.rut} onChange={e => { const p = [...hoja.propietarios]; p[i] = { ...p[i], rut: e.target.value }; set({ propietarios: p }); }} className="w-28 border border-slate-200 rounded px-1.5 py-0.5" /></td>
                     <td className="p-2"><input disabled={bloqueado} value={f.nombre} onChange={e => { const p = [...hoja.propietarios]; p[i] = { ...p[i], nombre: e.target.value }; set({ propietarios: p }); }} className="w-full border border-slate-200 rounded px-1.5 py-0.5" /></td>
-                    <td className="p-2 text-right"><input disabled={bloqueado} type="number" step="0.01" value={f.porcentaje} onChange={e => { const p = [...hoja.propietarios]; p[i] = { ...p[i], porcentaje: Number(e.target.value) || 0 }; set({ propietarios: p }); }} className="w-20 border border-slate-200 rounded px-1.5 py-0.5 text-right" /></td>
+                    <td className="p-2 text-right"><InputNumeroCL disabled={bloqueado} decimales={4} value={f.porcentaje} onChange={n => { const p = [...hoja.propietarios]; p[i] = { ...p[i], porcentaje: n }; set({ propietarios: p }); }} className="w-20 border border-slate-200 rounded px-1.5 py-0.5 text-right" /></td>
                     <td className="p-2 text-right font-mono">{pesos(f.base)}</td>
                     <td className="p-2 text-right font-mono">{pesos(f.ppm)}</td>
                     <td className="p-2">{!bloqueado && <button onClick={() => set({ propietarios: hoja.propietarios.filter((_, j) => j !== i) })} className="text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>}</td>

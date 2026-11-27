@@ -5,6 +5,7 @@ import { exigirCuadre } from '../utils/capaContable';
 import { plazoPagoF29 } from '../utils/plazoPagoF29';
 import { ivaCreditoCoherente, normalizarTipoCompra } from '../utils/rcvIva';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { InputNumeroEvento } from './ui/NumeroCL';
 import html2canvas from 'html2canvas';
 import { db } from '../lib/firebase';
 import { collection, getDocs, doc, setDoc, addDoc, updateDoc } from 'firebase/firestore';
@@ -2344,8 +2345,7 @@ export default function Formulario29View({
                         </td>
                         <td className="py-2 px-3 text-right text-slate-600">
                           <div className="flex items-center justify-end gap-1">
-                            <input
-                              type="number"
+                            <InputNumeroEvento
                               step="0.01"
                               value={taxSettings.previousMonthRemanenteUTM || ''}
                               onChange={e => {
@@ -2364,8 +2364,7 @@ export default function Formulario29View({
                         <td className="py-2 px-3 text-right">
                           <div className="flex items-center justify-end gap-1">
                             <span className="text-slate-400">$</span>
-                            <input
-                              type="number"
+                            <InputNumeroEvento
                               value={creditoFiscalData.remanenteMesAnteriorPesos || ''}
                               onChange={e => {
                                 const valPesos = parseFloat(e.target.value) || 0;
@@ -2455,8 +2454,7 @@ export default function Formulario29View({
                         {ivaPostergadoActivo && (
                           <div className="flex items-center gap-1">
                             <span className="text-slate-500">$</span>
-                            <input
-                              type="number"
+                            <InputNumeroEvento
                               value={ivaPostergadoMonto || resumenF29.ivaPagar}
                               onChange={e => setIvaPostergadoMonto(parseFloat(e.target.value) || 0)}
                               className="w-28 bg-white border border-indigo-300 rounded px-2 py-0.5 text-right font-mono font-bold text-indigo-900"
@@ -2541,8 +2539,7 @@ export default function Formulario29View({
                       <td className="py-2 px-3 text-right font-bold text-slate-900">
                         <div className="flex items-center justify-end gap-1">
                           <span className="text-slate-400">$</span>
-                          <input
-                            type="number"
+                          <InputNumeroEvento
                             value={manualAdjustments.impuestoUnicoManual || ''}
                             onChange={e => setManualAdjustments({ ...manualAdjustments, impuestoUnicoManual: parseFloat(e.target.value) || 0 })}
                             className="w-32 bg-amber-50 border border-amber-300 rounded px-2 py-0.5 text-right font-mono font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500"
@@ -2563,8 +2560,7 @@ export default function Formulario29View({
                       <td className="py-2 px-3 text-right font-bold text-slate-900">
                         <div className="flex items-center justify-end gap-1">
                           <span className="text-slate-400">$</span>
-                          <input
-                            type="number"
+                          <InputNumeroEvento
                             value={manualAdjustments.retencionTercerosManual || ''}
                             onChange={e => setManualAdjustments({ ...manualAdjustments, retencionTercerosManual: parseFloat(e.target.value) || 0 })}
                             className="w-32 bg-amber-50 border border-amber-300 rounded px-2 py-0.5 text-right font-mono font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500"
@@ -2608,9 +2604,8 @@ export default function Formulario29View({
                     <td className="py-2 px-3 text-right text-slate-700">${ppmData.baseImponibleVentas.toLocaleString('es-CL')}</td>
                     <td className="py-2 px-3 text-right font-bold text-indigo-700">
                       <div className="flex items-center justify-end gap-1">
-                        <input
-                          type="number"
-                          step="0.01"
+                        <InputNumeroEvento
+                          decimales={3}
                           value={taxSettings.ppmRate}
                           onChange={e => setTaxSettings({ ...taxSettings, ppmRate: parseFloat(String(e.target.value).replace(',', '.')) || 0, ppmTasaManual: true })}
                           className="w-20 bg-amber-50 border border-amber-300 rounded px-1.5 py-0.5 text-right font-mono font-bold text-indigo-900 focus:ring-2 focus:ring-indigo-500"
@@ -2655,8 +2650,7 @@ export default function Formulario29View({
                       <td className="py-2 px-3 text-right">
                         <div className="flex items-center justify-end gap-1">
                           <span className="text-slate-400">$</span>
-                          <input
-                            type="number"
+                          <InputNumeroEvento
                             value={code.amount || ''}
                             onChange={e => {
                               const val = parseFloat(e.target.value) || 0;
@@ -2683,8 +2677,7 @@ export default function Formulario29View({
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Impuesto Único Sueldos ($):</label>
-                <input
-                  type="number"
+                <InputNumeroEvento
                   value={manualAdjustments.impuestoUnicoManual}
                   onChange={e => setManualAdjustments({ ...manualAdjustments, impuestoUnicoManual: parseFloat(e.target.value) || 0 })}
                   className="w-full bg-white border border-slate-300 rounded-lg p-2 font-mono font-bold text-slate-900"
@@ -2694,8 +2687,7 @@ export default function Formulario29View({
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">IVA Retenido Terceros / C.Sujeto ($):</label>
-                <input
-                  type="number"
+                <InputNumeroEvento
                   value={manualAdjustments.retencionTercerosManual}
                   onChange={e => setManualAdjustments({ ...manualAdjustments, retencionTercerosManual: parseFloat(e.target.value) || 0 })}
                   className="w-full bg-white border border-slate-300 rounded-lg p-2 font-mono font-bold text-slate-900"
@@ -2705,8 +2697,7 @@ export default function Formulario29View({
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Otros Impuestos F29 ($):</label>
-                <input
-                  type="number"
+                <InputNumeroEvento
                   value={manualAdjustments.otrosImpuestosManual}
                   onChange={e => setManualAdjustments({ ...manualAdjustments, otrosImpuestosManual: parseFloat(e.target.value) || 0 })}
                   className="w-full bg-white border border-slate-300 rounded-lg p-2 font-mono font-bold text-slate-900"
@@ -2716,8 +2707,7 @@ export default function Formulario29View({
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">PPM Voluntario / Adicional ($):</label>
-                <input
-                  type="number"
+                <InputNumeroEvento
                   value={manualAdjustments.ppmAdicionalManual}
                   onChange={e => setManualAdjustments({ ...manualAdjustments, ppmAdicionalManual: parseFloat(e.target.value) || 0 })}
                   className="w-full bg-white border border-slate-300 rounded-lg p-2 font-mono font-bold text-slate-900"
@@ -2935,8 +2925,7 @@ export default function Formulario29View({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-slate-700 text-xs mb-1">Remanente Inicial en UTM (Cód. 504):</label>
-                  <input
-                    type="number"
+                  <InputNumeroEvento
                     step="0.01"
                     value={initialRemanenteUTMSetting || ''}
                     onChange={e => {
@@ -2952,8 +2941,7 @@ export default function Formulario29View({
                 </div>
                 <div>
                   <label className="block font-bold text-slate-700 text-xs mb-1">Remanente Inicial en Pesos ($ - Cód. 563):</label>
-                  <input
-                    type="number"
+                  <InputNumeroEvento
                     value={initialRemanentePesosSetting || ''}
                     onChange={e => {
                       const pesos = parseFloat(e.target.value) || 0;

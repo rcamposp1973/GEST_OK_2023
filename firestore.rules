@@ -108,6 +108,8 @@ service cloud.firestore {
     match /landing_testimonials/{id} { allow read: if true; allow write: if isSuper(); }
     match /system_config/marketing_promo { allow read: if true; allow write: if isSuper(); }
     match /system_config/{id} { allow read, write: if isSuper(); }
+    // Consumo de APIs externas (SimpleAPI): sólo lo ve el Super Admin; lo escribe el servidor.
+    match /systemUsage/{id} { allow read: if isSuper(); allow write: if false; }
 
     // Formulario de contacto: cualquiera puede enviar (con límites de tamaño); solo el super usuario lee
     match /leads_contact/{id} {

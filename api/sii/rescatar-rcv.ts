@@ -599,7 +599,14 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       const mesActual = new Date(Date.now() - 3 * 3600 * 1000).toISOString().slice(0, 7); // hora de Chile aprox.
       const ref = adminDb.collection('systemUsage').doc(`simpleApi_${mesActual}`);
       if (consultas > 0) {
-        await ref.set({ mes: mesActual, total: FieldValue.increment(consultas), porEmpresa: { [String(companyId)]: FieldValue.increment(consultas) }, actualizado: new Date().toISOString() }, { merge: true });
+        await ref.set({
+          mes: mesActual, total: FieldValue.increment(consultas),
+          porEmpresa: { [String(companyId)]: FieldValue.increment(consultas) },
+          porEstudio: { [String(studyId)]: FieldValue.increment(consultas) },
+          // Para la vista de consumo del Super Admin: a qué estudio pertenece la empresa y su nombre
+          empresas: { [String(companyId)]: { nombre: companyName || '', rut: cleanCompanyRutWithDash || '', studyId: String(studyId) } },
+          actualizado: new Date().toISOString(),
+        }, { merge: true });
       }
       const usadas = Number(((await ref.get()).data() as any)?.total || 0);
       consumoMes = { usadas, limite: Number(process.env.SIMPLEAPI_LIMITE_MES || 30), mes: mesActual };

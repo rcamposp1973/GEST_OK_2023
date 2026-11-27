@@ -12,6 +12,7 @@ import Login from './components/Login';
 import Register from './components/Register';
 import CreateStudy from './components/CreateStudy';
 import React, { useEffect, useState } from 'react';
+import SimpleApiConsumoPanel from './components/SimpleApiConsumoPanel';
 import InactividadGuard from './components/InactividadGuard';
 import { instalarCierreConEscape } from './utils/escapeCloser';
 import { doc, collection, collectionGroup, onSnapshot, deleteDoc, getDoc, getDocs, query, where, addDoc } from 'firebase/firestore';
@@ -444,12 +445,15 @@ function Dashboard() {
 
             {/* TAB CONTENTS */}
             {superAdminTab === 'monitor' && (
+              <div className="space-y-6">
               <SuperAdminSystemMonitor
                 onSelectStudy={(study) => {
                   setSelectedStudy(study);
                   setSuperAdminTab('studies');
                 }}
               />
+              <SimpleApiConsumoPanel />
+              </div>
             )}
             {superAdminTab === 'indicators_loader' && (
               <SuperAdminIndicatorsCenter studies={studies} />

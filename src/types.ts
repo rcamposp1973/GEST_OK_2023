@@ -870,6 +870,11 @@ export interface F29TaxSettings {
   previousMonthRemanenteUTM: number;
   /** El usuario fijó a mano el remanente de este mes: no se reemplaza por el arrastre del mes anterior. */
   remanenteFijadoManual?: boolean;
+  /** La tasa PPM la fijó el contador (no se reemplaza por la sugerida del régimen). */
+  ppmTasaManual?: boolean;
+  /** Remanente del crédito especial empresas constructoras (cód. 128) fijado a mano, en pesos. */
+  ceecRemanenteFijadoManual?: boolean;
+  ceecRemanenteManualPesos?: number;
   utmValue: number; // Valor UTM del mes tributario
   honorariosTaxRate: number; // Porcentaje de retención, ej: 13.75, 14.5
   impuestoUnicoSegundaCategoria: number; // Retención sueldos/salarios

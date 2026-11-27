@@ -9,7 +9,7 @@ import { db, auth } from '../lib/firebase';
 import type { Company, ChartOfAccount, Voucher } from '../types';
 import { getNaturaleza } from '../utils/ifrsClassification';
 import {
-  AJUSTES_SUGERIDOS, NOMBRE_REGIMEN, TASA_IDPC_SUGERIDA, RegimenRenta, HojaRenta,
+  AJUSTES_SUGERIDOS, NOMBRE_REGIMEN, TASA_IDPC_SUGERIDA, RegimenRenta, HojaRenta, ResultadoRenta, tasaIdpcSugerida,
   calcularRenta, datosContablesDelAnio, hojaInicial, normalizarRegimen, movimientoCuentaDelAnio, sugerirCuentaPpm,
 } from '../utils/rentaAnual';
 
@@ -19,6 +19,12 @@ interface Props {
   accounts: ChartOfAccount[];
   vouchers: Voucher[];
   soloLectura?: boolean;
+  /** Uso dentro de Gest_Rta: año y régimen los fija Gest_Rta y se ocultan sus selectores. */
+  anioControlado?: number;
+  regimenControlado?: RegimenRenta;
+  embebido?: boolean;
+  /** Entrega el resultado (RLI, IDPC, CPT…) a quien lo contiene, para los registros empresariales. */
+  onResultado?: (r: { res: ResultadoRenta; hoja: HojaRenta; anio: number }) => void;
 }
 
 const pesos = (n: number) => (n < 0 ? '-$' : '$') + Math.abs(Math.round(n)).toLocaleString('es-CL');
@@ -35,9 +41,10 @@ const Monto: React.FC<{ value: number; onChange: (n: number) => void; disabled?:
   <InputNumeroCL value={Number.isFinite(value) ? value : 0} onChange={onChange} disabled={disabled} permitirNegativo />
 );
 
-export const RentaAnualView: React.FC<Props> = ({ studyId, company, accounts, vouchers, soloLectura }) => {
+export const RentaAnualView: React.FC<Props> = ({ studyId, company, accounts, vouchers, soloLectura, anioControlado, regimenControlado, embebido, onResultado }) => {
   const anioDefecto = new Date().getMonth() >= 9 ? new Date().getFullYear() : new Date().getFullYear() - 1;
-  const [anio, setAnio] = useState<number>(anioDefecto);
+  const [anio, setAnio] = useState<number>(anioControlado ?? anioDefecto);
+  useEffect(() => { if (anioControlado !== undefined && anioControlado !== anio) setAnio(anioControlado); }, [anioControlado]); // eslint-disable-line react-hooks/exhaustive-deps
   const datos = useMemo(() => datosContablesDelAnio(vouchers as any, accounts, anio), [vouchers, accounts, anio]);
   const [hoja, setHoja] = useState<HojaRenta>(() => hojaInicial(normalizarRegimen(company.regimenTributario), datos));
   const [guardando, setGuardando] = useState(false);
@@ -77,6 +84,10 @@ export const RentaAnualView: React.FC<Props> = ({ studyId, company, accounts, vo
   }), [hoja, ppmDesdeCuenta, datos.capitalSugerido, cmPpm]);
   const cuentasActivo = useMemo(() => accounts.filter(a => getNaturaleza(a as any) === 'ACTIVO' && a.isImputable !== false), [accounts]);
   const res = useMemo(() => calcularRenta(datos, hojaEfectiva), [datos, hojaEfectiva]);
+  useEffect(() => {
+    if (regimenControlado && hoja.regimen !== regimenControlado) setHoja(h => ({ ...h, regimen: regimenControlado, tasaIdpc: tasaIdpcSugerida(regimenControlado, anio) }));
+  }, [regimenControlado, hoja.regimen, anio]);
+  useEffect(() => { onResultado?.({ res, hoja: hojaEfectiva, anio }); }, [res, hojaEfectiva, anio]); // eslint-disable-line react-hooks/exhaustive-deps
   const pyme = hoja.regimen !== '14_A_SEMI_INTEGRADO';
   const transparente = hoja.regimen === '14_D8_PROPYME_TRANSPARENTE';
   const set = (p: Partial<HojaRenta>) => setHoja(h => ({ ...h, ...p }));
@@ -114,13 +125,14 @@ export const RentaAnualView: React.FC<Props> = ({ studyId, company, accounts, vo
   const sugeridosPendientes = AJUSTES_SUGERIDOS[hoja.regimen].filter(s => !hoja.ajustes.some(a => a.concepto === s.concepto));
 
   return (
-    <div className="p-4 md:p-6 space-y-5 max-w-5xl">
+    <div className={embebido ? 'space-y-5' : 'p-4 md:p-6 space-y-5 max-w-5xl'}>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold text-slate-900">Renta anual: RLI y capital propio</h2>
+          {!embebido && <h2 className="text-xl font-semibold text-slate-900">Renta anual: RLI y capital propio</h2>}
           <p className="text-sm text-slate-500">Hoja de trabajo desde la contabilidad. Es referencial: revisa cada ajuste antes de declarar en el F22.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {!embebido && <>
           <label className="text-sm text-slate-600">Año comercial
             <select value={anio} onChange={e => setAnio(Number(e.target.value))} className="ml-2 border border-slate-300 rounded-lg px-2 py-1 text-sm">
               {[anioDefecto + 1, anioDefecto, anioDefecto - 1, anioDefecto - 2].map(a => <option key={a} value={a}>{a} (AT {a + 1})</option>)}
@@ -128,11 +140,12 @@ export const RentaAnualView: React.FC<Props> = ({ studyId, company, accounts, vo
           </label>
           <select
             value={hoja.regimen} disabled={soloLectura}
-            onChange={e => { const r = e.target.value as RegimenRenta; set({ regimen: r, tasaIdpc: TASA_IDPC_SUGERIDA[r] }); }}
+            onChange={e => { const r = e.target.value as RegimenRenta; set({ regimen: r, tasaIdpc: tasaIdpcSugerida(r, anio) }); }}
             className="border border-slate-300 rounded-lg px-2 py-1 text-sm"
           >
             {(Object.keys(NOMBRE_REGIMEN) as RegimenRenta[]).map(r => <option key={r} value={r}>{NOMBRE_REGIMEN[r]}</option>)}
           </select>
+          </>}
           <button onClick={exportar} className="inline-flex items-center gap-1.5 border border-slate-300 rounded-lg px-3 py-1.5 text-sm hover:bg-slate-50">
             <Download className="w-4 h-4" /> Exportar
           </button>

@@ -516,4 +516,14 @@ import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } fro
   const E = P.factoresActualizacion(2026, p => ({ '2026-10': 0.5, '2026-11': 0.2 } as any)[p] ?? 0);
   ok('CM PPM: estimación con IPC', !E.oficial && E.factores[9] === 1.007 && E.factores[10] === 1.002 && E.factores[11] === 1);
 }
+{ const R = await import('../src/utils/gestRta/registros');
+  ok('Registros: factor crédito por tasa', R.factorCreditoIdpc(27) === 0.369863 && R.factorCreditoIdpc(12.5) === 0.142857);
+  const saldos = { rai: 0, ddan: 0, rex: 1000000, sacConDevolucion: 500000, sacSinDevolucion: 0, capitalAportado: 10000000 };
+  const mov = { reajusteInicialPct: 0, aumentosCapital: 0, disminucionesCapital: 0, rexDelAnio: 0, ddanDelAnio: 0, retiros: 3000000 };
+  const r = R.calcularRegistros('14_D3', saldos, mov, { cptFinal: 20000000, idpcDelAnio: 800000, tasaIdpc: 12.5 });
+  ok('Registros: RAI = CPT + retiros − capital − REX', r.raiDeterminado === 12000000 && r.imputacion.rai === 3000000 && r.finales.rai === 9000000);
+  ok('Registros: SAC asignado y IDPC del año al SAC', r.sacAsignado === Math.round(3000000 * 0.142857) && r.finales.sacConDevolucion === 500000 - r.sacAsignado + 800000);
+  const r2 = R.calcularRegistros('14_A', saldos, { ...mov, retiros: 15000000 }, { cptFinal: 5000000, idpcDelAnio: 0, tasaIdpc: 27 });
+  ok('Registros: orden RAI → REX → capital y exceso', r2.raiDeterminado === 9000000 && r2.imputacion.rai === 9000000 && r2.imputacion.rex === 1000000 && r2.imputacion.capital === 5000000 && r2.imputacion.exceso === 0);
+}
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

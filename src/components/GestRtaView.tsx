@@ -1,4 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { RentaAnualView } from './RentaAnualView';
+import GestRtaRegistros from './GestRtaRegistros';
+import { calcularRegistros, MovimientosRegistros, SaldosRegistros, REAJUSTE_CPT_INICIAL_PCT } from '../utils/gestRta/registros';
+import { RegimenRenta, ResultadoRenta, HojaRenta } from '../utils/rentaAnual';
 import { DetalleCmPpm } from './DetalleCmPpm';
 import { getOfficialIPC } from '../utils/chileanEconomicIndicators';
 import { factoresActualizacion, calcularCmPpm } from '../utils/ppmActualizado';
@@ -28,8 +32,8 @@ interface Props {
 type Regimen = '14_D8' | '14_D3' | '14_A';
 const REGIMENES: { id: Regimen; nombre: string; disponible: boolean }[] = [
   { id: '14_D8', nombre: 'Pro Pyme Transparente (14 D N° 8)', disponible: true },
-  { id: '14_D3', nombre: 'Pro Pyme General (14 D N° 3) — próximamente', disponible: false },
-  { id: '14_A', nombre: 'Régimen General (14 A) — próximamente', disponible: false },
+  { id: '14_D3', nombre: 'Pro Pyme General (14 D N° 3)', disponible: true },
+  { id: '14_A', nombre: 'Régimen General (14 A)', disponible: true },
 ];
 
 interface HojaGestRta {
@@ -47,11 +51,18 @@ interface HojaGestRta {
   /** El CPT inicial lo fijó el contador; si no, sigue en línea al CPT final del año anterior (o a los saldos de apertura). */
   cptInicialManual?: boolean;
   propietarios: Propietario[];
+  /** 14 D N° 3 y 14 A: movimientos de los registros RAI, DDAN, REX y SAC */
+  registros?: MovimientosRegistros;
   estado: 'BORRADOR' | 'CERRADO';
   historial: { fecha: string; usuario: string; accion: string }[];
 }
 
-interface SaldosApertura { anioInicio: number; cptInicial: number; perdidaArrastre: number; notas?: string }
+interface SaldosApertura {
+  anioInicio: number; cptInicial: number; perdidaArrastre: number; notas?: string;
+  /** Registros empresariales al inicio (14 D N° 3 y 14 A) */
+  rai?: number; ddan?: number; rex?: number; sacConDevolucion?: number; sacSinDevolucion?: number; capitalAportado?: number;
+}
+const MOV_VACIO = (anio: number): MovimientosRegistros => ({ reajusteInicialPct: REAJUSTE_CPT_INICIAL_PCT[anio] ?? 0, aumentosCapital: 0, disminucionesCapital: 0, rexDelAnio: 0, ddanDelAnio: 0, retiros: 0 });
 
 const pesos = (n: number) => (n < 0 ? '-$' : '$') + Math.abs(Math.round(n || 0)).toLocaleString('es-CL');
 
@@ -89,7 +100,9 @@ export const GestRtaView: React.FC<Props> = ({ studyId, company, accounts, vouch
   const [hoja, setHoja] = useState<HojaGestRta>(hojaVacia);
   const [anterior, setAnterior] = useState<{ cptFinal: number; base: number } | null>(null);
   const [saldos, setSaldos] = useState<SaldosApertura | null>(null);
-  const [tab, setTab] = useState<'base' | 'cpt' | 'propietarios' | 'apertura'>('base');
+  const [tab, setTab] = useState<'base' | 'cpt' | 'propietarios' | 'apertura' | 'renta' | 'registros'>('base');
+  const [rentaRes, setRentaRes] = useState<{ res: ResultadoRenta; hoja: HojaRenta; anio: number } | null>(null);
+  const [anteriorRegistros, setAnteriorRegistros] = useState<SaldosRegistros | null>(null);
   const [abiertas, setAbiertas] = useState<Record<string, boolean>>({});
   const [aviso, setAviso] = useState('');
   const [guardando, setGuardando] = useState(false);
@@ -105,6 +118,7 @@ export const GestRtaView: React.FC<Props> = ({ studyId, company, accounts, vouch
     const u1 = onSnapshot(refAnterior, p => {
       const prev = p.exists() ? (p.data() as any) : null;
       setAnterior(prev ? { cptFinal: Number(prev.resumen?.cptFinal) || 0, base: Number(prev.resumen?.baseImponible) || 0 } : null);
+      setAnteriorRegistros(prev?.resumen?.registrosFinales || null);
     }, () => {});
     const u2 = onSnapshot(refSaldos, s => setSaldos(s.exists() ? (s.data() as SaldosApertura) : null), () => {});
     return () => { u1(); u2(); };
@@ -157,6 +171,18 @@ export const GestRtaView: React.FC<Props> = ({ studyId, company, accounts, vouch
   const ppmActualizado = ppm + ppmCm;
   const asignacion = asignarPropietarios(hoja.propietarios, res.baseImponible, ppmActualizado);
 
+  // 14 D N° 3 y 14 A: RLI desde la hoja de renta (contabilidad) y registros empresariales
+  const general = hoja.regimen !== '14_D8';
+  const regimenRenta: RegimenRenta = hoja.regimen === '14_A' ? '14_A_SEMI_INTEGRADO' : '14_D3_PROPYME_GENERAL';
+  useEffect(() => { setTab(t => (general ? (['base', 'cpt', 'propietarios'].includes(t) ? 'renta' : t) : (['renta', 'registros'].includes(t) ? 'base' : t))); }, [general]);
+  const saldosIniciales: SaldosRegistros = anteriorRegistros || (saldos && saldos.anioInicio === anio
+    ? { rai: saldos.rai || 0, ddan: saldos.ddan || 0, rex: saldos.rex || 0, sacConDevolucion: saldos.sacConDevolucion || 0, sacSinDevolucion: saldos.sacSinDevolucion || 0, capitalAportado: saldos.capitalAportado || 0 }
+    : { rai: 0, ddan: 0, rex: 0, sacConDevolucion: 0, sacSinDevolucion: 0, capitalAportado: 0 });
+  const origenIniciales = anteriorRegistros ? `saldos finales de Gest_Rta AT ${anio}` : (saldos && saldos.anioInicio === anio ? 'saldos de apertura' : 'sin saldos iniciales (ingrésalos en "Saldos de apertura")');
+  const movRegistros = hoja.registros || MOV_VACIO(anio);
+  const registrosRes = useMemo(() => (general && rentaRes ? calcularRegistros(hoja.regimen === '14_A' ? '14_A' : '14_D3', saldosIniciales, movRegistros, { cptFinal: rentaRes.res.cpt, idpcDelAnio: rentaRes.res.idpc, tasaIdpc: rentaRes.hoja.tasaIdpc }) : null),
+    [general, rentaRes, hoja.regimen, JSON.stringify(saldosIniciales), JSON.stringify(movRegistros)]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const registrar = (accion: string, h: HojaGestRta): HojaGestRta => ({ ...h, historial: [...(h.historial || []), { fecha: new Date().toISOString(), usuario: auth.currentUser?.email || '', accion }].slice(-30) });
 
   const guardar = async (h: HojaGestRta, accion: string) => {
@@ -165,7 +191,9 @@ export const GestRtaView: React.FC<Props> = ({ studyId, company, accounts, vouch
       const conHistorial = registrar(accion, h);
       await setDoc(refAnio, {
         hoja: { ...conHistorial, cpt: (h.cptInicialManual || cptInicialAuto === null) ? h.cpt : { ...h.cpt, cptInicial: cptInicialAuto } }, anioComercial: anio, regimen: h.regimen,
-        resumen: { baseImponible: res.baseImponible, totalIngresos: res.totalIngresos, totalEgresos: res.totalEgresos, cptFinal: cpt.final, ppm: ppmActualizado, ppmHistorico: ppm, ppmCm },
+        resumen: general && rentaRes
+          ? { baseImponible: rentaRes.res.rli - rentaRes.res.perdidaTributaria, rli: rentaRes.res.rli, idpc: rentaRes.res.idpc, cptFinal: rentaRes.res.cpt, registrosFinales: registrosRes?.finales || null, registrosMov: movRegistros }
+          : { baseImponible: res.baseImponible, totalIngresos: res.totalIngresos, totalEgresos: res.totalEgresos, cptFinal: cpt.final, ppm: ppmActualizado, ppmHistorico: ppm, ppmCm },
         actualizadoPor: auth.currentUser?.email || '', actualizadoEn: new Date().toISOString(),
       });
       setHoja(conHistorial);
@@ -189,7 +217,7 @@ export const GestRtaView: React.FC<Props> = ({ studyId, company, accounts, vouch
 
   const exportar = () => {
     const wb = XLSX.utils.book_new();
-    const cab = [['Empresa', company.name], ['RUT', company.rut], ['Año comercial', anio], ['Año tributario', anio + 1], ['Régimen', 'Pro Pyme Transparente (14 D N° 8)'], ['Estado', hoja.estado], []];
+    const cab = [['Empresa', company.name], ['RUT', company.rut], ['Año comercial', anio], ['Año tributario', anio + 1], ['Régimen', REGIMENES.find(r => r.id === hoja.regimen)?.nombre || ''], ['Estado', hoja.estado], []];
     const r22 = [...cab, ['Código', 'Glosa', 'Propuesto', 'Ajuste', 'Final', 'Fuente', 'Nota'],
       ...res.lineas.map(l => [l.codigo, l.glosa, l.propuesto, l.ajuste, l.final, l.fuente, hoja.notas[l.codigo] || ''])];
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(r22), 'Recuadro 22');
@@ -203,6 +231,14 @@ export const GestRtaView: React.FC<Props> = ({ studyId, company, accounts, vouch
     const p = [...cab, ['RUT', 'Nombre', '% participación', 'Base imponible asignada', 'PPM asignado'],
       ...asignacion.filas.map(f => [f.rut, f.nombre, f.porcentaje, f.base, f.ppm]), [], ['PPM del año (histórico)', ppm], ['Corrección monetaria PPM', ppmCm], ['PPM actualizados', ppmActualizado]];
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(p), 'Propietarios DJ 1947');
+    if (general && registrosRes) {
+      const rg = [['Empresa', company.name], ['RUT', company.rut], ['Año comercial', anio], ['Régimen', hoja.regimen === '14_A' ? 'Régimen General (14 A)' : 'Pro Pyme General (14 D N° 3)'], [],
+        ['RLI', rentaRes?.res.rli || 0], ['Pérdida tributaria', rentaRes?.res.perdidaTributaria || 0], ['IDPC', rentaRes?.res.idpc || 0], ['CPT final', rentaRes?.res.cpt || 0], [],
+        ['Registro', 'Saldo inicial reajustado', 'Saldo final 31-12'],
+        ...(['rai', 'ddan', 'rex', 'sacSinDevolucion', 'sacConDevolucion', 'capitalAportado'] as const).map(k => [k.toUpperCase(), registrosRes.iniciales[k], registrosRes.finales[k]]),
+        [], ['RAI determinado', registrosRes.raiDeterminado], ['Retiros imputados a RAI', registrosRes.imputacion.rai], ['a DDAN', registrosRes.imputacion.ddan], ['a REX', registrosRes.imputacion.rex], ['a capital', registrosRes.imputacion.capital], ['Retiro en exceso', registrosRes.imputacion.exceso], ['Crédito SAC asignado', registrosRes.sacAsignado]];
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rg), 'Registros RAI REX SAC');
+    }
     XLSX.writeFile(wb, `Gest_Rta_AT${anio + 1}_${(company.rut || '').replace(/[^0-9kK]/g, '')}.xlsx`);
   };
 
@@ -246,7 +282,9 @@ export const GestRtaView: React.FC<Props> = ({ studyId, company, accounts, vouch
       {cerrado && <div className="text-sm bg-emerald-50 text-emerald-800 rounded-lg px-3 py-2 flex items-center gap-2"><Lock className="w-4 h-4" /> Año cerrado. Para modificar, reábrelo (queda en el historial).</div>}
 
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-        {[['Total ingresos [1610]', res.totalIngresos], ['Total egresos [1629]', res.totalEgresos], [res.baseImponible >= 0 ? 'Base imponible [1630]' : 'Pérdida tributaria [1630]', res.baseImponible], ['CPT simplificado final', cpt.final]].map(([t, v]) => (
+        {(general
+          ? [[rentaRes && rentaRes.res.perdidaTributaria > 0 ? 'Pérdida tributaria' : `RLI [${hoja.regimen === '14_A' ? '1143' : '1450'}]`, rentaRes ? rentaRes.res.rli - rentaRes.res.perdidaTributaria : 0], ['Impuesto Primera Categoría', rentaRes?.res.idpc || 0], ['CPT final', rentaRes?.res.cpt || 0], ['RAI al 31-12', registrosRes?.finales.rai || 0]]
+          : [['Total ingresos [1610]', res.totalIngresos], ['Total egresos [1629]', res.totalEgresos], [res.baseImponible >= 0 ? 'Base imponible [1630]' : 'Pérdida tributaria [1630]', res.baseImponible], ['CPT simplificado final', cpt.final]]).map(([t, v]) => (
           <div key={t as string} className="border border-slate-200 rounded-xl p-3 bg-white">
             <div className="text-xs text-slate-500">{t}</div>
             <div className={`font-mono text-lg font-semibold ${Number(v) < 0 ? 'text-rose-700' : 'text-slate-900'}`}>{pesos(Number(v))}</div>
@@ -254,16 +292,21 @@ export const GestRtaView: React.FC<Props> = ({ studyId, company, accounts, vouch
         ))}
       </div>
 
-      {res.avisos.length > 0 && (
+      {!general && res.avisos.length > 0 && (
         <div className="border border-amber-200 bg-amber-50 rounded-xl p-3 space-y-1">
           {res.avisos.map((a, i) => <div key={i} className="text-xs text-amber-900 flex gap-2"><AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />{a}</div>)}
         </div>
       )}
 
       <div className="flex flex-wrap gap-1 border-b border-slate-200 pb-2">
-        <TabBtn id="base">Base imponible (Recuadro 22)</TabBtn>
-        <TabBtn id="cpt">Capital propio</TabBtn>
-        <TabBtn id="propietarios">Propietarios (DJ 1947)</TabBtn>
+        {general ? <>
+          <TabBtn id="renta">RLI e impuesto (Recuadro {hoja.regimen === '14_A' ? '12' : '17'})</TabBtn>
+          <TabBtn id="registros">Registros RAI · {hoja.regimen === '14_A' ? 'DDAN · ' : ''}REX · SAC</TabBtn>
+        </> : <>
+          <TabBtn id="base">Base imponible (Recuadro 22)</TabBtn>
+          <TabBtn id="cpt">Capital propio</TabBtn>
+          <TabBtn id="propietarios">Propietarios (DJ 1947)</TabBtn>
+        </>}
         <TabBtn id="apertura">Saldos de apertura</TabBtn>
       </div>
 
@@ -381,8 +424,19 @@ export const GestRtaView: React.FC<Props> = ({ studyId, company, accounts, vouch
         </div>
       )}
 
+      {general && (
+        <div className={tab === 'renta' ? '' : 'hidden'}>
+          <RentaAnualView studyId={studyId} company={company} accounts={accounts} vouchers={vouchers} soloLectura={bloqueado}
+            anioControlado={anio} regimenControlado={regimenRenta} embebido onResultado={setRentaRes} />
+        </div>
+      )}
+      {general && tab === 'registros' && (registrosRes && rentaRes
+        ? <GestRtaRegistros regimen={hoja.regimen === '14_A' ? '14_A' : '14_D3'} mov={movRegistros} onMov={m => set({ registros: m })} r={registrosRes}
+            origenIniciales={origenIniciales} cptFinal={rentaRes.res.cpt} idpc={rentaRes.res.idpc} tasaIdpc={rentaRes.hoja.tasaIdpc} bloqueado={bloqueado} />
+        : <p className="text-sm text-slate-500">Calculando la RLI…</p>)}
+
       {tab === 'apertura' && (
-        <SaldosAperturaForm saldos={saldos} anio={anio} disabled={soloLectura} onGuardar={guardarSaldos} />
+        <SaldosAperturaForm saldos={saldos} anio={anio} disabled={soloLectura} onGuardar={guardarSaldos} general={general} regimen={hoja.regimen} />
       )}
 
       {hoja.historial.length > 0 && (
@@ -395,7 +449,7 @@ export const GestRtaView: React.FC<Props> = ({ studyId, company, accounts, vouch
   );
 };
 
-const SaldosAperturaForm: React.FC<{ saldos: SaldosApertura | null; anio: number; disabled?: boolean; onGuardar: (s: SaldosApertura) => void }> = ({ saldos, anio, disabled, onGuardar }) => {
+const SaldosAperturaForm: React.FC<{ saldos: SaldosApertura | null; anio: number; disabled?: boolean; onGuardar: (s: SaldosApertura) => void; general?: boolean; regimen?: Regimen }> = ({ saldos, anio, disabled, onGuardar, general, regimen }) => {
   const [s, setS] = useState<SaldosApertura>(saldos || { anioInicio: anio, cptInicial: 0, perdidaArrastre: 0, notas: '' });
   useEffect(() => { if (saldos) setS(saldos); }, [saldos]);
   return (
@@ -407,9 +461,18 @@ const SaldosAperturaForm: React.FC<{ saldos: SaldosApertura | null; anio: number
         <MontoConSigno value={s.cptInicial} disabled={disabled} onChange={n => setS({ ...s, cptInicial: n })} /></label>
       <label className="flex items-center justify-between gap-3"><span>Pérdida tributaria de arrastre</span>
         <MontoConSigno value={s.perdidaArrastre} disabled={disabled} onChange={n => setS({ ...s, perdidaArrastre: Math.abs(n) })} /></label>
+      {general && (
+        <div className="border-t border-slate-200 pt-2 space-y-2">
+          <p className="text-xs font-semibold text-slate-700">Registros empresariales al 31-12 del año anterior (F22 / DJ 1948)</p>
+          {([['RAI', 'rai'], ...(regimen === '14_A' ? [['DDAN', 'ddan']] : []), ['REX', 'rex'], ['SAC con derecho a devolución', 'sacConDevolucion'], ['SAC sin derecho a devolución', 'sacSinDevolucion'], ['Capital aportado (reajustado al 31-12)', 'capitalAportado']] as [string, keyof SaldosApertura][]).map(([t, k]) => (
+            <label key={k} className="flex items-center justify-between gap-3"><span>{t}</span>
+              <MontoConSigno value={Number(s[k]) || 0} disabled={disabled} onChange={n => setS({ ...s, [k]: Math.abs(n) })} /></label>
+          ))}
+        </div>
+      )}
       <textarea disabled={disabled} value={s.notas || ''} onChange={e => setS({ ...s, notas: e.target.value })} placeholder="Notas / respaldo" className="w-full border border-slate-300 rounded-md px-2 py-1 text-xs" rows={2} />
       {!disabled && <button onClick={() => onGuardar(s)} className="inline-flex items-center gap-1.5 bg-slate-900 text-white rounded-lg px-3 py-1.5 text-sm"><Save className="w-4 h-4" /> Guardar saldos</button>}
-      <p className="text-[11px] text-slate-400">Para Pro Pyme General y Régimen General se agregarán aquí los registros RAI, REX, DDAN y SAC.</p>
+      <p className="text-[11px] text-slate-400">Desde el año siguiente, el CPT, la pérdida y los registros se arrastran solos desde Gest_Rta.</p>
     </div>
   );
 };

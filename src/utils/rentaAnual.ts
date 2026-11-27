@@ -18,6 +18,12 @@ export const TASA_IDPC_SUGERIDA: Record<RegimenRenta, number> = {
   '14_D8_PROPYME_TRANSPARENTE': 0, // la base imponible se atribuye a los dueños
 };
 
+/** Tasa IDPC sugerida según régimen y año comercial. Pro Pyme General: 12,5% en 2025-2027, 15% en 2028 y 25% desde 2029 (Ley 21.755). */
+export function tasaIdpcSugerida(r: RegimenRenta, anio: number): number {
+  if (r === '14_D3_PROPYME_GENERAL') return anio >= 2025 && anio <= 2027 ? 12.5 : anio === 2028 ? 15 : anio >= 2029 ? 25 : 10;
+  return TASA_IDPC_SUGERIDA[r];
+}
+
 export interface AjusteRenta { id: string; concepto: string; tipo: 'AGREGADO' | 'DEDUCCION'; monto: number; }
 
 export const AJUSTES_SUGERIDOS: Record<RegimenRenta, { concepto: string; tipo: 'AGREGADO' | 'DEDUCCION' }[]> = {
@@ -178,7 +184,7 @@ export function calcularRenta(datos: DatosContablesAnio, hoja: HojaRenta): Resul
 
 export function hojaInicial(regimen: RegimenRenta, datos: DatosContablesAnio): HojaRenta {
   return {
-    regimen, tasaIdpc: TASA_IDPC_SUGERIDA[regimen], ajustes: [], ppmPagados: 0, otrosCreditos: 0, ajustesCpt: [],
+    regimen, tasaIdpc: tasaIdpcSugerida(regimen, new Date().getFullYear() - 1), ajustes: [], ppmPagados: 0, otrosCreditos: 0, ajustesCpt: [],
     capitalAportado: datos.capitalSugerido, aumentosCapital: 0, disminucionesCapital: 0,
     utilidadesTributariasAnteriores: 0, retirosDelAnio: 0,
   };

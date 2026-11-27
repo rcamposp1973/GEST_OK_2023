@@ -1,4 +1,5 @@
 import React from 'react';
+import { InputNumeroCL } from './ui/NumeroCL';
 import { LicenciaGestRta, ModalidadGestRta, NOMBRE_MODALIDAD, NOMBRE_PERIODICIDAD, licenciaVigente } from '../utils/gestRta/licencia';
 
 interface Props {
@@ -39,7 +40,7 @@ export default function GestRtaLicenciaPanel({ activo, licencia, readOnly, onAct
           )}
           <label className="flex flex-col gap-1">Precio acordado
             <div className="flex gap-1">
-              <input disabled={readOnly} type="number" min={0} step="0.01" className={campo + ' flex-1'} value={licencia.precioAcordado ?? ''} onChange={e => set({ precioAcordado: e.target.value === '' ? undefined : Number(e.target.value) })} />
+              <span className="flex-1"><InputNumeroCL disabled={readOnly} decimales={licencia.moneda === 'CLP' ? 0 : 2} className={campo + ' w-full text-right'} value={licencia.precioAcordado ?? null} onChange={n => set({ precioAcordado: n })} /></span>
               <select disabled={readOnly} className={campo} value={licencia.moneda || 'UF'} onChange={e => set({ moneda: e.target.value as any })}><option value="UF">UF</option><option value="CLP">CLP</option></select>
             </div>
           </label>

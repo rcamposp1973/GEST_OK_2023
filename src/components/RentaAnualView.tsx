@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { InputNumeroCL } from './ui/NumeroCL';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { Plus, Trash2, Save, Download, AlertTriangle } from 'lucide-react';
 import { db, auth } from '../lib/firebase';
@@ -28,12 +29,7 @@ const Fila: React.FC<{ label: string; value: number; strong?: boolean; hint?: st
 );
 
 const Monto: React.FC<{ value: number; onChange: (n: number) => void; disabled?: boolean }> = ({ value, onChange, disabled }) => (
-  <input
-    type="number" inputMode="numeric" disabled={disabled}
-    value={Number.isFinite(value) ? value : 0}
-    onChange={e => onChange(Number(e.target.value) || 0)}
-    className="w-40 border border-slate-300 rounded-lg px-2 py-1 text-right font-mono text-sm disabled:bg-slate-50"
-  />
+  <InputNumeroCL value={Number.isFinite(value) ? value : 0} onChange={onChange} disabled={disabled} permitirNegativo />
 );
 
 export const RentaAnualView: React.FC<Props> = ({ studyId, company, accounts, vouchers, soloLectura }) => {
@@ -218,8 +214,8 @@ export const RentaAnualView: React.FC<Props> = ({ studyId, company, accounts, vo
           <>
             <div className="flex items-center justify-between py-1.5">
               <span className="text-sm text-slate-600">Tasa Primera Categoría (%)</span>
-              <input type="number" step="0.5" value={hoja.tasaIdpc} disabled={soloLectura}
-                onChange={e => set({ tasaIdpc: Number(e.target.value) || 0 })}
+              <InputNumeroCL value={hoja.tasaIdpc} disabled={soloLectura} decimales={2} sufijo="%"
+                onChange={n => set({ tasaIdpc: n })}
                 className="w-24 border border-slate-300 rounded-lg px-2 py-1 text-right font-mono text-sm" />
             </div>
             <Fila label="Impuesto de Primera Categoría" value={res.idpc} />

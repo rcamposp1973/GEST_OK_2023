@@ -9,6 +9,12 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.38.1 — 2026-11-27
+- Renta anual y Gest_Rta se actualizan en línea con la contabilidad, igual que el Balance de 8 columnas:
+  - Renta anual: el capital aportado sigue a las cuentas de capital (salvo que el contador lo fije a mano; botón "Seguir a la contabilidad").
+  - Gest_Rta: el CPT inicial sigue al CPT final del año anterior o a los saldos de apertura (salvo ajuste manual); el año anterior y los saldos de apertura se escuchan en tiempo real.
+  - Liquidaciones de sueldo, trabajadores y parámetros RCV ahora se actualizan en tiempo real en toda la empresa.
+
 ## 1.38.0 — 2026-11-27
 - **Gest_Rta (módulo adicional de Renta anual), fase 1: Pro Pyme Transparente (14 D N° 8).**
   - Propuesta del Recuadro N° 22 del F22 (códigos 1600 a 1630): ingresos percibidos y egresos pagados desde el RCV, cuentas corrientes de clientes/proveedores/honorarios al 31-12, liquidaciones de sueldo y pérdida de arrastre. Cada línea muestra su fuente y el detalle por documento; el contador ajusta cualquier línea con su motivo.

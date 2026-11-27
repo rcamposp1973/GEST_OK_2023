@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { InputNumeroEvento } from './ui/NumeroCL';
 import { collection, doc, getDoc, getDocs, runTransaction, setDoc, updateDoc } from 'firebase/firestore';
 import { Plus, Printer, X, CheckCircle2, XCircle, PackageCheck, FileText, Settings, Trash2, Send, Link2, Undo2 } from 'lucide-react';
 import { db } from '../lib/firebase';
@@ -565,8 +566,8 @@ function OrdenModal(p: ModalProps) {
                       )}
                       {!editable && !l.contabilizaEnRecepcion && <div className="text-[11px] text-slate-400 mt-0.5">Se contabiliza con la factura</div>}
                     </td>
-                    <td className="px-2 py-1.5"><input disabled={!editable} type="number" min={0} step="any" className={inputCls + ' text-right'} value={l.quantity} onChange={e => setLinea(l.id, { quantity: Number(e.target.value) || 0 })} /></td>
-                    <td className="px-2 py-1.5"><input disabled={!editable} type="number" min={0} step="any" className={inputCls + ' text-right'} value={l.unitPriceNeto} onChange={e => setLinea(l.id, { unitPriceNeto: Number(e.target.value) || 0 })} /></td>
+                    <td className="px-2 py-1.5"><InputNumeroEvento disabled={!editable} min={0} className={inputCls + ' text-right'} value={l.quantity} onChange={e => setLinea(l.id, { quantity: Number(e.target.value) || 0 })} decimales={4} /></td>
+                    <td className="px-2 py-1.5"><InputNumeroEvento disabled={!editable} min={0} className={inputCls + ' text-right'} value={l.unitPriceNeto} onChange={e => setLinea(l.id, { unitPriceNeto: Number(e.target.value) || 0 })} decimales={4} /></td>
                     <td className="px-2 py-1.5 text-right pt-3">{clp(importeLinea(l))}{l.exento && <div className="text-[10px] text-slate-400">exento</div>}</td>
                     {!editable && <td className="px-2 py-1.5 text-right pt-3">{l.receivedQty || 0} / {l.quantity}</td>}
                     {editable && <td className="px-2 py-1.5"><button className="p-1.5 text-slate-400 hover:text-rose-600" onClick={() => setOc(prev => ({ ...prev, lines: prev.lines.filter(x => x.id !== l.id) }))}><Trash2 size={15} /></button></td>}
@@ -687,7 +688,7 @@ function OrdenModal(p: ModalProps) {
                   </div>
                   <div>
                     <label className="text-xs font-semibold text-slate-600">Neto contra Fact. por Recibir</label>
-                    <input type="number" min={0} className={inputCls + ' text-right'} value={facFxr} onChange={e => setFacFxr(e.target.value === '' ? '' : Number(e.target.value))} />
+                    <InputNumeroEvento min={0} className={inputCls + ' text-right'} value={facFxr} onChange={e => setFacFxr(e.target.value === '' ? '' : Number(e.target.value))} decimales={4} />
                   </div>
                   <button className={btnPri} disabled={trabajando || !facSel} onClick={asociarFactura}>Asociar</button>
                 </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { InputNumeroEvento } from './ui/NumeroCL';
 import { db } from '../lib/firebase';
 import { collection, getDocs, doc, setDoc, writeBatch } from 'firebase/firestore';
 import { ExchangeRate } from '../types';
@@ -666,12 +667,12 @@ export default function IndicadoresEconomicosView({ studyId, selectedYear }: Ind
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
             <div>
               <label className="block font-bold text-slate-700 mb-1">Monto Original a Reajustar ($ CLP) *</label>
-              <input
-                type="number"
+              <InputNumeroEvento
                 value={calcAmount}
                 onChange={(e) => setCalcAmount(Number(e.target.value))}
                 className="w-full p-2.5 border border-slate-300 rounded-xl font-mono text-sm font-bold bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
-              />
+  decimales={4}
+/>
             </div>
 
             <div>

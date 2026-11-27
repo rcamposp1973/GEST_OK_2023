@@ -1,4 +1,5 @@
 import React from 'react';
+import { InputNumeroEvento } from '../ui/NumeroCL';
 import { Plus, Trash2 } from 'lucide-react';
 import { subirRespaldo, abrirRespaldo, tamanoLegible, MAX_RESPALDO_BYTES } from '../../utils/respaldosPrevisionales';
 import { auth } from '../../lib/firebase';
@@ -93,14 +94,14 @@ export const CondicionesVigenciaEditor: React.FC<Props> = ({ value, onChange, em
                   <option value="">(sin cambio)</option>{PLANES.map(p => <option key={p.v} value={p.v}>{p.t}</option>)}
                 </select></label>
               <label className="text-[10px] font-semibold text-slate-600">Valor plan (UF, $ o %)
-                <input type="number" step="any" value={c.healthPlanValue ?? ''} onChange={e => set(c.id, { healthPlanValue: num(e.target.value) })} className={inp} /></label>
+                <InputNumeroEvento value={c.healthPlanValue ?? ''} onChange={e => set(c.id, { healthPlanValue: num(e.target.value) })} className={inp} decimales={4} /></label>
               <label className="text-[10px] font-semibold text-slate-600">Tipo de contrato
                 <select value={c.contractType || ''} onChange={e => set(c.id, { contractType: (e.target.value || undefined) as ContractType | undefined })} className={inp}>
                   <option value="">(sin cambio)</option>{CONTRATOS.map(p => <option key={p.v} value={p.v}>{p.t}</option>)}
                 </select></label>
               {MONTOS.map(m => (
                 <label key={String(m.k)} className="text-[10px] font-semibold text-slate-600">{m.t} ($)
-                  <input type="number" value={(c[m.k] as number | undefined) ?? ''} onChange={e => set(c.id, { [m.k]: num(e.target.value) } as Partial<EmployeeCondicion>)} className={inp} /></label>
+                  <InputNumeroEvento value={(c[m.k] as number | undefined) ?? ''} onChange={e => set(c.id, { [m.k]: num(e.target.value) } as Partial<EmployeeCondicion>)} className={inp} decimales={4} /></label>
               ))}
             </div>
           </div>

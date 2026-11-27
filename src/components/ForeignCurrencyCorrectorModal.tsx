@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { InputNumeroEvento } from './ui/NumeroCL';
 import { db } from '../lib/firebase';
 import { doc, collection, writeBatch } from 'firebase/firestore';
 import { 
@@ -537,22 +538,21 @@ export default function ForeignCurrencyCorrectorModal({
                           <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
                             {item.detectedCurrency}
                           </span>
-                          <input
-                            type="number"
+                          <InputNumeroEvento
                             value={item.originalForeignAmount}
                             onChange={e => handleForeignAmountChange(item.id, parseFloat(e.target.value) || 0)}
                             className="w-20 px-1.5 py-1 border border-slate-200 rounded text-center font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                          />
+  decimales={4}
+/>
                         </div>
                       </td>
                       <td className="py-2.5 px-3 text-center">
-                        <input
-                          type="number"
-                          step="0.01"
+                        <InputNumeroEvento
                           value={item.exchangeRate}
                           onChange={e => handleRateChange(item.id, parseFloat(e.target.value) || 0)}
                           className="w-20 px-1.5 py-1 border border-slate-200 rounded text-center font-mono font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                        />
+  decimales={2}
+/>
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono font-bold text-emerald-700 bg-emerald-50/50">
                         {formatCLP(item.convertedCLPAmount)}

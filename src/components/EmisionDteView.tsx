@@ -1,5 +1,6 @@
 import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useEffect } from 'react';
+import { InputNumeroEvento } from './ui/NumeroCL';
 import { db } from '../lib/firebase';
 import { collection, getDocs, addDoc, updateDoc, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { Company, Auxiliary, ChartOfAccount, DTEDocument, DTEConfig, DTEDocumentItem, Voucher, VoucherLine, RCVDocument } from '../types';
@@ -1211,14 +1212,13 @@ export default function EmisionDteView({
 
                         <div>
                           <label className="block font-semibold text-indigo-200 mb-1">Tipo de Cambio Oficial (CLP)</label>
-                          <input
-                            type="number"
-                            step="0.01"
+                          <InputNumeroEvento
                             value={exportTipoCambio}
                             onChange={(e) => setExportTipoCambio(parseFloat(e.target.value) || 1)}
                             className="w-full bg-slate-800 border border-indigo-600 rounded-lg p-2.5 font-mono font-bold text-emerald-400 focus:ring-2 focus:ring-indigo-400 focus:outline-none"
                             placeholder="983.84"
-                          />
+  decimales={2}
+/>
                           <span className="text-[10px] text-indigo-300 block mt-0.5">
                             T/C Banco Central para {fechaEmisionDte}
                           </span>
@@ -1307,20 +1307,20 @@ export default function EmisionDteView({
                         <div>
                           <label className="block font-semibold text-indigo-200 mb-1">Bultos / Peso Neto</label>
                           <div className="grid grid-cols-2 gap-2">
-                            <input
-                              type="number"
+                            <InputNumeroEvento
                               value={exportBultos}
                               onChange={(e) => setExportBultos(parseInt(e.target.value) || 0)}
                               placeholder="Bultos"
                               className="w-full bg-slate-800 border border-indigo-600 rounded-lg p-2.5 font-medium text-white focus:ring-2 focus:ring-indigo-400 focus:outline-none"
-                            />
-                            <input
-                              type="number"
+  decimales={4}
+/>
+                            <InputNumeroEvento
                               value={exportPesoNeto}
                               onChange={(e) => setExportPesoNeto(parseFloat(e.target.value) || 0)}
                               placeholder="Kg Neto"
                               className="w-full bg-slate-800 border border-indigo-600 rounded-lg p-2.5 font-medium text-white focus:ring-2 focus:ring-indigo-400 focus:outline-none"
-                            />
+  decimales={4}
+/>
                           </div>
                         </div>
                       </div>
@@ -1560,22 +1560,22 @@ export default function EmisionDteView({
                                 />
                               </td>
                               <td className="p-2">
-                                <input
-                                  type="number"
+                                <InputNumeroEvento
                                   min="1"
                                   value={item.cantidad}
                                   onChange={(e) => handleUpdateItem(item.id, 'cantidad', parseFloat(e.target.value) || 0)}
                                   className="w-full border border-slate-300 rounded p-1.5 focus:outline-none text-xs font-mono"
-                                />
+  decimales={4}
+/>
                               </td>
                               <td className="p-2">
-                                <input
-                                  type="number"
+                                <InputNumeroEvento
                                   min="0"
                                   value={item.precioUnitario}
                                   onChange={(e) => handleUpdateItem(item.id, 'precioUnitario', parseFloat(e.target.value) || 0)}
                                   className="w-full border border-slate-300 rounded p-1.5 focus:outline-none text-xs font-mono"
-                                />
+  decimales={4}
+/>
                               </td>
                               <td className="p-2 text-center">
                                 <input

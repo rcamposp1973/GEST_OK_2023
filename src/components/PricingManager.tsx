@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { InputNumeroEvento } from './ui/NumeroCL';
 import { db } from '../lib/firebase';
 import { 
   collection, 
@@ -696,9 +697,7 @@ export default function PricingManager() {
               <label className="block text-xs font-bold text-[#0D253D] mb-1.5">
                 Precio en UF (Ej. 0.5, 0.7, 1.2, 1.6, 3.2, 5.3)
               </label>
-              <input
-                type="number"
-                step="0.1"
+              <InputNumeroEvento
                 min="0"
                 placeholder="Ej. 1.6"
                 value={priceUF}
@@ -710,7 +709,8 @@ export default function PricingManager() {
                   }
                 }}
                 className="w-full bg-[#F8FAFC] border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-[#0D253D] focus:outline-none focus:border-[#533AFD] focus:bg-white font-mono font-bold"
-              />
+  decimales={1}
+/>
             </div>
 
             <div>
@@ -731,14 +731,13 @@ export default function PricingManager() {
               <label className="block text-xs font-bold text-[#0D253D] mb-1.5">
                 Precio Ref. Mensual CLP
               </label>
-              <input
-                type="number"
+              <InputNumeroEvento
                 min={0}
-                step={100}
                 value={priceCLP}
                 onChange={(e) => setPriceCLP(Number(e.target.value))}
                 className="w-full bg-[#F8FAFC] border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-[#0D253D] focus:outline-none focus:border-[#533AFD] focus:bg-white font-mono"
-              />
+  decimales={0}
+/>
             </div>
 
             <div>

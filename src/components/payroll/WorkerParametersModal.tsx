@@ -1,5 +1,6 @@
 import { formatearRut } from '../../utils/rutFormato';
 import React, { useState } from 'react';
+import { InputNumeroEvento } from '../ui/NumeroCL';
 import { 
   Employee, PensionSystem, HealthSystem, HealthPlanType, ContractType 
 } from '../../types';
@@ -319,13 +320,12 @@ export const WorkerParametersModal: React.FC<WorkerParametersModalProps> = ({
                     Tasa Total AFP (% Incluye 10% + Comisión)
                   </label>
                   <div className="relative">
-                    <input
-                      type="number"
-                      step={0.01}
+                    <InputNumeroEvento
                       value={formData.pensionCommissionPercent || 11.27}
                       onChange={(e) => setFormData({ ...formData, pensionCommissionPercent: Number(e.target.value) })}
                       className="w-full px-3 py-2 text-xs font-mono font-bold text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500"
-                    />
+  decimales={2}
+/>
                     <span className="absolute right-3 top-2 text-xs font-bold text-slate-400">%</span>
                   </div>
                 </div>
@@ -365,14 +365,13 @@ export const WorkerParametersModal: React.FC<WorkerParametersModalProps> = ({
                         <option value="ISAPRE_PESOS">Plan en Pesos ($)</option>
                         <option value="ISAPRE_7_LEGAL">Sólo 7% Legal</option>
                       </select>
-                      <input
-                        type="number"
-                        step={formData.healthPlanType === 'ISAPRE_UF' ? 0.001 : 100}
+                      <InputNumeroEvento
                         placeholder={formData.healthPlanType === 'ISAPRE_UF' ? 'Ej: 3.450 UF' : '$ en Pesos'}
                         value={formData.healthPlanValue || 0}
                         onChange={(e) => setFormData({ ...formData, healthPlanValue: Number(e.target.value) })}
                         className="w-1/2 px-3 py-2 text-xs font-mono font-bold text-slate-900 border border-slate-300 rounded-xl"
-                      />
+  decimales={4}
+/>
                     </div>
                   </div>
                 ) : (
@@ -438,56 +437,52 @@ export const WorkerParametersModal: React.FC<WorkerParametersModalProps> = ({
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     Asignación de Colación ($ CLP No Imponible)
                   </label>
-                  <input
-                    type="number"
+                  <InputNumeroEvento
                     min={0}
-                    step={1000}
                     value={formData.colacionPactada || 0}
                     onChange={(e) => setFormData({ ...formData, colacionPactada: Number(e.target.value) })}
                     className="w-full px-3 py-2 text-xs font-mono font-bold text-slate-900 border border-slate-300 rounded-xl"
-                  />
+  decimales={0}
+/>
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     Asignación de Movilización ($ CLP No Imponible)
                   </label>
-                  <input
-                    type="number"
+                  <InputNumeroEvento
                     min={0}
-                    step={1000}
                     value={formData.movilizacionPactada || 0}
                     onChange={(e) => setFormData({ ...formData, movilizacionPactada: Number(e.target.value) })}
                     className="w-full px-3 py-2 text-xs font-mono font-bold text-slate-900 border border-slate-300 rounded-xl"
-                  />
+  decimales={0}
+/>
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     Viáticos Base Pactados ($ CLP No Imponible)
                   </label>
-                  <input
-                    type="number"
+                  <InputNumeroEvento
                     min={0}
-                    step={1000}
                     value={formData.viaticosPactados || 0}
                     onChange={(e) => setFormData({ ...formData, viaticosPactados: Number(e.target.value) })}
                     className="w-full px-3 py-2 text-xs font-mono font-bold text-slate-900 border border-slate-300 rounded-xl"
-                  />
+  decimales={0}
+/>
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     Bono Base Imponible Pactado ($ CLP)
                   </label>
-                  <input
-                    type="number"
+                  <InputNumeroEvento
                     min={0}
-                    step={1000}
                     value={formData.bonosPactados || 0}
                     onChange={(e) => setFormData({ ...formData, bonosPactados: Number(e.target.value) })}
                     className="w-full px-3 py-2 text-xs font-mono font-bold text-slate-900 border border-slate-300 rounded-xl"
-                  />
+  decimales={0}
+/>
                 </div>
               </div>
 
@@ -555,10 +550,8 @@ export const WorkerParametersModal: React.FC<WorkerParametersModalProps> = ({
                           ? 'Cantidad de UTM Decretadas'
                           : 'Monto a Retener ($ CLP)'}
                       </label>
-                      <input
-                        type="number"
+                      <InputNumeroEvento
                         min={0}
-                        step={formData.descuentoJudicialTipo === 'UTM' ? 0.01 : formData.descuentoJudicialTipo === 'PORCENTAJE_LIQUIDO' ? 0.1 : 1000}
                         placeholder={formData.descuentoJudicialTipo === 'PORCENTAJE_LIQUIDO' ? 'Ej: 30' : formData.descuentoJudicialTipo === 'UTM' ? 'Ej: 2.5' : 'Ej: 150000'}
                         value={formData.descuentoJudicialValor !== undefined ? formData.descuentoJudicialValor : (formData.descuentoJudicialPensionAlimentos || 0)}
                         onChange={(e) => {
@@ -570,7 +563,8 @@ export const WorkerParametersModal: React.FC<WorkerParametersModalProps> = ({
                           });
                         }}
                         className="w-full px-2.5 py-1.5 text-xs font-mono font-bold text-rose-950 bg-white border border-rose-300 rounded-lg focus:ring-2 focus:ring-rose-500"
-                      />
+  decimales={4}
+/>
                     </div>
                   </div>
 
@@ -583,14 +577,13 @@ export const WorkerParametersModal: React.FC<WorkerParametersModalProps> = ({
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     Seguro Complementario ($ CLP)
                   </label>
-                  <input
-                    type="number"
+                  <InputNumeroEvento
                     min={0}
-                    step={100}
                     value={formData.descuentoSeguroComplementario || 0}
                     onChange={(e) => setFormData({ ...formData, descuentoSeguroComplementario: Number(e.target.value) })}
                     className="w-full px-3 py-2 text-xs font-mono font-bold text-slate-900 border border-slate-300 rounded-xl"
-                  />
+  decimales={0}
+/>
                 </div>
 
                 <div>

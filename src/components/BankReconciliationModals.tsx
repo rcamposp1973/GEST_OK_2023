@@ -1,5 +1,6 @@
 import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { InputNumeroEvento } from './ui/NumeroCL';
 import type { MovementProposal } from '../utils/bankMovementClassifier';
 import { nameMatchesGloss, findDocSubset } from '../utils/bankMovementClassifier';
 import { computeOpenItems, type OpenAccountItem } from '../utils/openAccountItems';
@@ -106,12 +107,12 @@ function ImportCSVModalContent({
             </span>
           </div>
           <div className="w-full sm:w-48">
-            <input
-              type="number"
+            <InputNumeroEvento
               value={importInitialBalance}
               onChange={(e) => setImportInitialBalance(Number(e.target.value))}
               className="w-full bg-white border border-indigo-300 rounded px-3 py-1.5 font-mono font-bold text-indigo-950 text-xs"
-            />
+  decimales={4}
+/>
           </div>
         </div>
 
@@ -1934,8 +1935,7 @@ function QuickVoucherModalContent({
                               </td>
                               <td className="py-2.5 px-3 text-right">
                                 <div className="space-y-1">
-                                  <input
-                                    type="number"
+                                  <InputNumeroEvento
                                     min="0"
                                     value={line.amount || ''}
                                     onChange={(e) => handleUpdateMultiLine(line.id, 'amount', Math.max(0, Number(e.target.value) || 0))}
@@ -1943,7 +1943,8 @@ function QuickVoucherModalContent({
                                     className={`w-full p-1.5 rounded-lg border text-right font-mono font-bold text-xs ${
                                       (Number(line.amount) || 0) <= 0 ? 'border-rose-400 bg-rose-50/40 text-rose-900' : 'border-slate-300 bg-white text-slate-900'
                                     }`}
-                                  />
+  decimales={4}
+/>
                                   <button
                                     type="button"
                                     onClick={() => handleFillRemaining(idx)}

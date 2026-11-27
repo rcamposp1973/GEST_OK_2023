@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { InputNumeroEvento } from './ui/NumeroCL';
 import { 
   Package, 
   Plus, 
@@ -520,23 +521,23 @@ export const ProductsServicesView: React.FC<ProductsServicesViewProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block font-semibold text-slate-700 mb-1">Precio Venta (Neto)</label>
-                    <input
-                      type="number"
+                    <InputNumeroEvento
                       min="0"
                       value={formData.salesPrice}
                       onChange={e => setFormData({ ...formData, salesPrice: Number(e.target.value) })}
                       className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-800 font-mono font-bold focus:ring-2 focus:ring-indigo-500"
-                    />
+  decimales={4}
+/>
                   </div>
                   <div>
                     <label className="block font-semibold text-slate-700 mb-1">Costo Compra / PMP (Neto)</label>
-                    <input
-                      type="number"
+                    <InputNumeroEvento
                       min="0"
                       value={formData.purchaseCost}
                       onChange={e => setFormData({ ...formData, purchaseCost: Number(e.target.value) })}
                       className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-800 font-mono focus:ring-2 focus:ring-indigo-500"
-                    />
+  decimales={4}
+/>
                   </div>
                 </div>
               </div>
@@ -682,21 +683,21 @@ export const ProductsServicesView: React.FC<ProductsServicesViewProps> = ({
                     </div>
                     <div>
                       <label className="block font-semibold text-slate-700 mb-1">Stock Actual Físico</label>
-                      <input
-                        type="number"
+                      <InputNumeroEvento
                         value={formData.currentStock}
                         onChange={e => setFormData({ ...formData, currentStock: Number(e.target.value) })}
                         className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-800 font-mono font-bold focus:ring-2 focus:ring-blue-500"
-                      />
+  decimales={4}
+/>
                     </div>
                     <div>
                       <label className="block font-semibold text-slate-700 mb-1">Stock Mínimo (Alerta Reorden)</label>
-                      <input
-                        type="number"
+                      <InputNumeroEvento
                         value={formData.minStock}
                         onChange={e => setFormData({ ...formData, minStock: Number(e.target.value) })}
                         className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-800 font-mono focus:ring-2 focus:ring-blue-500"
-                      />
+  decimales={4}
+/>
                     </div>
                   </div>
 

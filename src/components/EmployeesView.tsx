@@ -7,6 +7,7 @@ import { CondicionesVigenciaEditor } from './payroll/CondicionesVigenciaEditor';
 import { subirRespaldo, tamanoLegible, MAX_RESPALDO_BYTES } from '../utils/respaldosPrevisionales';
 import { auth } from '../lib/firebase';
 import React, { useState, useMemo, useEffect } from 'react';
+import { InputNumeroEvento } from './ui/NumeroCL';
 import { 
   Users, UserPlus, Search, Edit2, Trash2, CheckCircle2, XCircle, 
   Building2, DollarSign, Shield, HeartPulse, FileText, 
@@ -1273,13 +1274,13 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">Monto del Anticipo (CLP)</label>
-              <input
-                type="number"
+              <InputNumeroEvento
                 min={1000}
                 value={newAdv.amount}
                 onChange={(e) => setNewAdv({ ...newAdv, amount: parseFloat(e.target.value) || 0 })}
                 className="w-full text-xs bg-white border border-slate-300 rounded-lg p-2 font-mono"
-              />
+  decimales={4}
+/>
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">Fecha Desembolso</label>
@@ -1732,14 +1733,14 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Bonos Imponibles Pactados ($)</label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-mono">$</span>
-                      <input
-                        type="number"
+                      <InputNumeroEvento
                         min={0}
                         value={formData.bonosPactados || 0}
                         onChange={(e) => setFormData({ ...formData, bonosPactados: Number(e.target.value) })}
                         className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-lg text-sm font-mono text-emerald-700 font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                         placeholder="0"
-                      />
+  decimales={4}
+/>
                     </div>
                   </div>
 
@@ -1747,14 +1748,14 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Otros Imponibles Pactados ($)</label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-mono">$</span>
-                      <input
-                        type="number"
+                      <InputNumeroEvento
                         min={0}
                         value={formData.otrosImponiblesPactados || 0}
                         onChange={(e) => setFormData({ ...formData, otrosImponiblesPactados: Number(e.target.value) })}
                         className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                         placeholder="0"
-                      />
+  decimales={4}
+/>
                     </div>
                   </div>
 
@@ -1762,13 +1763,13 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Asignación Colación (No Imponible)</label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-mono">$</span>
-                      <input
-                        type="number"
+                      <InputNumeroEvento
                         min={0}
                         value={formData.colacionPactada || 0}
                         onChange={(e) => setFormData({ ...formData, colacionPactada: Number(e.target.value) })}
                         className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                      />
+  decimales={4}
+/>
                     </div>
                   </div>
 
@@ -1776,13 +1777,13 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Asignación Movilización (No Imponible)</label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-mono">$</span>
-                      <input
-                        type="number"
+                      <InputNumeroEvento
                         min={0}
                         value={formData.movilizacionPactada || 0}
                         onChange={(e) => setFormData({ ...formData, movilizacionPactada: Number(e.target.value) })}
                         className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                      />
+  decimales={4}
+/>
                     </div>
                   </div>
 
@@ -1790,14 +1791,14 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Viáticos / Otros No Imponibles ($)</label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-mono">$</span>
-                      <input
-                        type="number"
+                      <InputNumeroEvento
                         min={0}
                         value={formData.viaticosPactados || 0}
                         onChange={(e) => setFormData({ ...formData, viaticosPactados: Number(e.target.value) })}
                         className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                         placeholder="0"
-                      />
+  decimales={4}
+/>
                     </div>
                   </div>
 
@@ -1845,14 +1846,14 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Seguro Complementario ($)</label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-mono">$</span>
-                      <input
-                        type="number"
+                      <InputNumeroEvento
                         min={0}
                         value={formData.descuentoSeguroComplementario || 0}
                         onChange={(e) => setFormData({ ...formData, descuentoSeguroComplementario: Number(e.target.value) })}
                         className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                         placeholder="0"
-                      />
+  decimales={4}
+/>
                     </div>
                   </div>
 
@@ -1860,14 +1861,14 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Cuota Bienestar / Ahorro ($)</label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-mono">$</span>
-                      <input
-                        type="number"
+                      <InputNumeroEvento
                         min={0}
                         value={formData.descuentoAhorroBienestar || 0}
                         onChange={(e) => setFormData({ ...formData, descuentoAhorroBienestar: Number(e.target.value) })}
                         className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                         placeholder="0"
-                      />
+  decimales={4}
+/>
                     </div>
                   </div>
 
@@ -1875,14 +1876,14 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Otros Descuentos ($)</label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-mono">$</span>
-                      <input
-                        type="number"
+                      <InputNumeroEvento
                         min={0}
                         value={formData.otrosDescuentosPactados || 0}
                         onChange={(e) => setFormData({ ...formData, otrosDescuentosPactados: Number(e.target.value) })}
                         className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                         placeholder="0"
-                      />
+  decimales={4}
+/>
                     </div>
                   </div>
                 </div>
@@ -1917,13 +1918,12 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
 
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Tasa Total Cotización AFP (%)</label>
-                    <input
-                      type="number"
-                      step={0.01}
+                    <InputNumeroEvento
                       value={formData.pensionCommissionPercent || DEFAULT_AFP_COMMISSIONS[formData.pensionSystem]}
                       onChange={(e) => setFormData({ ...formData, pensionCommissionPercent: Number(e.target.value) })}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                    />
+  decimales={2}
+/>
                   </div>
 
                   <div>
@@ -1963,13 +1963,12 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
                         <label className="block text-xs font-semibold text-slate-700 mb-1">
                           Valor Plan {formData.healthPlanType === 'ISAPRE_UF' ? '(UF)' : '($)'}
                         </label>
-                        <input
-                          type="number"
-                          step={formData.healthPlanType === 'ISAPRE_UF' ? 0.01 : 100}
+                        <InputNumeroEvento
                           value={formData.healthPlanValue}
                           onChange={(e) => setFormData({ ...formData, healthPlanValue: Number(e.target.value) })}
                           className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                        />
+  decimales={4}
+/>
                       </div>
                     </>
                   )}
@@ -2001,13 +2000,13 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
                   {formData.apvType !== 'NINGUNO' && (
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Monto Mensual APV ($)</label>
-                      <input
-                        type="number"
+                      <InputNumeroEvento
                         min={0}
                         value={formData.apvAmount || 0}
                         onChange={(e) => setFormData({ ...formData, apvAmount: Number(e.target.value) })}
                         className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                      />
+  decimales={4}
+/>
                     </div>
                   )}
                 </div>

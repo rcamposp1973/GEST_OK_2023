@@ -1,4 +1,5 @@
 import React from 'react';
+import { InputNumeroEvento } from './ui/NumeroCL';
 import { 
   StudyModulePermissions, 
   StudySubscriptionStatus 
@@ -201,14 +202,14 @@ export default function ModuleAccessMatrix({
             <Building2 className="w-3.5 h-3.5 text-slate-600" />
             <span>Límite de Empresas</span>
           </label>
-          <input
-            type="number"
+          <InputNumeroEvento
             min="1"
             value={maxCompanies}
             disabled={readOnly}
             onChange={(e) => onMaxCompaniesChange && onMaxCompaniesChange(Math.max(1, parseInt(e.target.value) || 1))}
             className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold font-mono text-slate-900 focus:ring-2 focus:ring-indigo-500/20"
-          />
+  decimales={4}
+/>
           <p className="text-[10px] text-slate-500 mt-1">Cantidad máxima de empresas/RUTs que puede administrar.</p>
         </div>
 
@@ -217,14 +218,14 @@ export default function ModuleAccessMatrix({
             <Users className="w-3.5 h-3.5 text-slate-600" />
             <span>Límite de Usuarios</span>
           </label>
-          <input
-            type="number"
+          <InputNumeroEvento
             min="1"
             value={maxUsers}
             disabled={readOnly}
             onChange={(e) => onMaxUsersChange && onMaxUsersChange(Math.max(1, parseInt(e.target.value) || 1))}
             className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold font-mono text-slate-900 focus:ring-2 focus:ring-indigo-500/20"
-          />
+  decimales={4}
+/>
           <p className="text-[10px] text-slate-500 mt-1">Cantidad de usuarios (Admin + Analistas/Observadores).</p>
         </div>
       </div>

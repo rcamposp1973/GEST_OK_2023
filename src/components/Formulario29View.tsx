@@ -1957,7 +1957,7 @@ export default function Formulario29View({
             value={taxSettings.regimenTributario}
             onChange={(e) => {
               const regimen = e.target.value as any;
-              const sug = tasaPpmSugerida(regimen);
+              const sug = tasaPpmSugerida(regimen, Number(selectedPeriod.slice(0, 4)));
               // Al cambiar de régimen se propone su tasa, salvo que el contador haya fijado una tasa propia
               setTaxSettings({ ...taxSettings, regimenTributario: regimen, ...(!taxSettings.ppmTasaManual && sug.tasa !== null ? { ppmRate: sug.tasa } : {}) });
             }}
@@ -2147,7 +2147,7 @@ export default function Formulario29View({
           valores={valoresF29}
           extras={extrasF29}
           editables={(() => {
-            const sug = tasaPpmSugerida(taxSettings.regimenTributario);
+            const sug = tasaPpmSugerida(taxSettings.regimenTributario, Number(selectedPeriod.slice(0, 4)));
             const ed: Record<string, CampoEditable> = {
               '504': {
                 manual: Boolean(taxSettings.remanenteFijadoManual),

@@ -438,7 +438,7 @@ import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } fro
   ok('F29 estructura: ningún código repetido', new Set(cods).size===cods.length);
 }
 { const P = await import('../src/utils/f29Ppm');
-  ok('PPM: tasa sugerida por régimen', P.tasaPpmSugerida('14_D3_PROPYME_GENERAL').tasa===0.25 && P.tasaPpmSugerida('14_D8_PROPYME_TRANSPARENTE').tasa===0.2 && P.tasaPpmSugerida('14_A_SEMI_INTEGRADO').tasa===null);
+  ok('PPM: tasa sugerida por régimen', P.tasaPpmSugerida('14_D3_PROPYME_GENERAL', 2028).tasa===0.25 && P.tasaPpmSugerida('14_D3_PROPYME_GENERAL', 2026).tasa===0.125 && P.tasaPpmSugerida('14_D8_PROPYME_TRANSPARENTE').tasa===0.2 && P.tasaPpmSugerida('14_A_SEMI_INTEGRADO').tasa===null);
   ok('PPM: lee tasas con coma o punto', P.leerNumero('0,125')===0.125 && P.leerNumero('0.5')===0.5 && P.leerNumero('1,5')===1.5);
   ok('Montos: lee miles con punto', P.leerNumero('1.234.567')===1234567 && P.leerNumero('3.387.690')===3387690 && P.leerNumero('$ 12.500')===12500 && P.leerNumero('')===null);
 }
@@ -499,5 +499,21 @@ import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } fro
 { const Lc = await import('../src/utils/gestRta/licencia');
   ok('Licencia: meses gratis corre la fecha de cobro', Lc.cobroDesde({ modalidad: 'ESTUDIO', condicion: 'MESES_GRATIS', mesesGratis: 3, vigenciaDesde: '2026-12-01', precioAcordado: 2 } as any) === '2027-03-01');
   ok('Licencia: sin costo no cobra', Lc.cobroDesde({ modalidad: 'ESTUDIO', condicion: 'SIN_COSTO' } as any) === null && Lc.resumenCondicion({ modalidad: 'ESTUDIO', condicion: 'SIN_COSTO' } as any) === 'Sin costo');
+}
+{ const P = await import('../src/utils/ppmActualizado');
+  const F = P.factoresActualizacion(2025);
+  ok('CM PPM: factores oficiales 2025', F.oficial && F.factores[1] === 1.026 && F.factores[11] === 1);
+  const cuentas = [{ id: 'ppm', code: '1106004', name: 'PPM' }];
+  const vs = [
+    { date: '2025-01-28', status: 'Valido', lines: [{ accountId: 'ppm', debit: 100000, credit: 0 }] },
+    { date: '2025-12-28', status: 'Valido', lines: [{ accountId: 'ppm', debit: 50000, credit: 0 }] },
+    { date: '2025-04-30', status: 'Valido', gloss: 'Imputación F22', lines: [{ accountId: 'ppm', debit: 0, credit: 30000 }] },
+  ];
+  const r = P.calcularCmPpm(vs as any, cuentas, 'ppm', 2025, F.factores);
+  ok('CM PPM: enero pagado en febrero usa 1,026; diciembre no se actualiza', r.detalle[0].factor === 1.026 && r.detalle[11].factor === 1 && r.cmCalculada === 2600 && r.historico === 150000);
+  const r2 = P.calcularCmPpm([...vs, { date: '2025-12-31', status: 'Valido', gloss: 'Corrección monetaria PPM', lines: [{ accountId: 'ppm', debit: 2000, credit: 0 }] }] as any, cuentas, 'ppm', 2025, F.factores);
+  ok('CM PPM: descuenta la CM ya contabilizada', r2.cmYaContabilizada === 2000 && r2.cmSugerida === 600);
+  const E = P.factoresActualizacion(2026, p => ({ '2026-10': 0.5, '2026-11': 0.2 } as any)[p] ?? 0);
+  ok('CM PPM: estimación con IPC', !E.oficial && E.factores[9] === 1.007 && E.factores[10] === 1.002 && E.factores[11] === 1);
 }
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

@@ -55,8 +55,8 @@ export const AJUSTES_SUGERIDOS: Record<RegimenRenta, { concepto: string; tipo: '
 };
 
 interface LineaMin { accountId?: string; accountCode?: string; debit?: number | string; credit?: number | string }
-interface VoucherMin { date?: string; period?: string; status?: string; origin?: string; lines?: LineaMin[]; totalDebit?: number; totalCredit?: number }
-interface CuentaMin { id: string; code: string; name: string; type?: string }
+export interface VoucherMin { date?: string; period?: string; status?: string; origin?: string; lines?: LineaMin[]; totalDebit?: number; totalCredit?: number }
+export interface CuentaMin { id: string; code: string; name: string; type?: string }
 
 export interface DatosContablesAnio {
   ingresos: number;          // saldo acreedor de cuentas de ingreso del año
@@ -125,6 +125,8 @@ export interface HojaRenta {
   ppmPagados: number;
   /** Corrección monetaria (reajuste) de los PPM al 31-12, si no está contabilizada en la cuenta de PPM. */
   ppmCm?: number;
+  /** true: la CM de PPM la escribió el contador; si no, se calcula con los factores del SII desde la cuenta de PPM. */
+  ppmCmManual?: boolean;
   cuentaPpmId?: string; // si está, los PPM se leen del saldo de esta cuenta en el año
   otrosCreditos: number;
   // CPT régimen general

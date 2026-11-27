@@ -1,4 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { DetalleCmPpm } from './DetalleCmPpm';
+import { getOfficialIPC } from '../utils/chileanEconomicIndicators';
+import { factoresActualizacion, calcularCmPpm } from '../utils/ppmActualizado';
 import { InputNumeroCL } from './ui/NumeroCL';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { Plus, Trash2, Save, Download, AlertTriangle } from 'lucide-react';
@@ -62,11 +65,16 @@ export const RentaAnualView: React.FC<Props> = ({ studyId, company, accounts, vo
     () => (hoja.cuentaPpmId ? movimientoCuentaDelAnio(vouchers as any, accounts, hoja.cuentaPpmId, anio) : null),
     [hoja.cuentaPpmId, vouchers, accounts, anio]
   );
+  // CM de PPM: factores de actualización del SII (o estimados con IPC) aplicados a cada PPM según el mes de pago
+  const factoresPpm = useMemo(() => factoresActualizacion(anio, p => { const r = getOfficialIPC(p); return r.monthly || r.accumulated ? r.monthly : undefined; }), [anio]);
+  const cmPpm = useMemo(() => (hoja.cuentaPpmId ? calcularCmPpm(vouchers as any, accounts as any, hoja.cuentaPpmId, anio, factoresPpm.factores) : null), [hoja.cuentaPpmId, vouchers, accounts, anio, factoresPpm]);
+  const [verDetalleCm, setVerDetalleCm] = useState(false);
   const hojaEfectiva = useMemo(() => ({
     ...hoja,
+    ...(cmPpm && !hoja.ppmCmManual ? { ppmCm: cmPpm.cmSugerida } : {}),
     ...(ppmDesdeCuenta === null ? {} : { ppmPagados: ppmDesdeCuenta }),
     ...(hoja.capitalManual ? {} : { capitalAportado: datos.capitalSugerido }),
-  }), [hoja, ppmDesdeCuenta, datos.capitalSugerido]);
+  }), [hoja, ppmDesdeCuenta, datos.capitalSugerido, cmPpm]);
   const cuentasActivo = useMemo(() => accounts.filter(a => getNaturaleza(a as any) === 'ACTIVO' && a.isImputable !== false), [accounts]);
   const res = useMemo(() => calcularRenta(datos, hojaEfectiva), [datos, hojaEfectiva]);
   const pyme = hoja.regimen !== '14_A_SEMI_INTEGRADO';
@@ -93,7 +101,7 @@ export const RentaAnualView: React.FC<Props> = ({ studyId, company, accounts, vo
       ['Ingresos del ejercicio', datos.ingresos], ['Costos y gastos del ejercicio', datos.gastos], ['Resultado contable', datos.utilidadContable], [],
       ...hoja.ajustes.map(a => [`${a.tipo === 'AGREGADO' ? 'Agregado' : 'Deducción'}: ${a.concepto}`, a.tipo === 'AGREGADO' ? a.monto : -a.monto]),
       [], [transparente ? 'Base imponible' : 'Renta líquida imponible', res.rli], ['Pérdida tributaria', res.perdidaTributaria],
-      ['Tasa IDPC %', transparente ? 0 : hoja.tasaIdpc], ['Impuesto de Primera Categoría', res.idpc], ['PPM pagados', hojaEfectiva.ppmPagados], ['Corrección monetaria PPM', Number(hoja.ppmCm) || 0], ['PPM actualizados', (Number(hojaEfectiva.ppmPagados) || 0) + (Number(hoja.ppmCm) || 0)],
+      ['Tasa IDPC %', transparente ? 0 : hoja.tasaIdpc], ['Impuesto de Primera Categoría', res.idpc], ['PPM pagados', hojaEfectiva.ppmPagados], ['Corrección monetaria PPM', Number(hojaEfectiva.ppmCm) || 0], ['PPM actualizados', (Number(hojaEfectiva.ppmPagados) || 0) + (Number(hojaEfectiva.ppmCm) || 0)],
       ['Otros créditos', hoja.otrosCreditos], ['Saldo (a pagar + / a devolver -)', res.saldoImpuesto], [], ['Capital propio tributario', res.cpt],
     ];
     const csv = filas.map(f => f.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(';')).join('\n');
@@ -238,9 +246,16 @@ export const RentaAnualView: React.FC<Props> = ({ studyId, company, accounts, vo
             </div>
             <div className="flex flex-wrap items-center justify-between gap-2 py-1.5">
               <span className="text-sm text-slate-600" title="Reajuste de los PPM con los factores de actualización del SII. Si ya contabilizaste la CM en la cuenta de PPM, déjalo en 0 para no contarla dos veces.">Corrección monetaria de PPM (reajuste al 31-12)</span>
-              <Monto value={hoja.ppmCm || 0} disabled={soloLectura} onChange={n => set({ ppmCm: n })} />
+              <span className="flex items-center gap-2">
+                {cmPpm && (hoja.ppmCmManual
+                  ? !soloLectura && <button onClick={() => set({ ppmCmManual: false })} className="text-xs text-indigo-600 underline">Calcular con factores del SII</button>
+                  : <span className="text-[11px] text-emerald-700">Calculada con factores {factoresPpm.oficial ? 'oficiales del SII' : 'estimados con IPC'}</span>)}
+                {cmPpm && <button onClick={() => setVerDetalleCm(v => !v)} className="text-xs text-slate-500 underline">{verDetalleCm ? 'Ocultar detalle' : 'Ver detalle'}</button>}
+                <Monto value={hojaEfectiva.ppmCm || 0} disabled={soloLectura} onChange={n => set({ ppmCm: n, ppmCmManual: true })} />
+              </span>
             </div>
-            {Number(hoja.ppmCm) > 0 && <Fila label="PPM actualizados" value={(Number(hojaEfectiva.ppmPagados) || 0) + (Number(hoja.ppmCm) || 0)} />}
+            {cmPpm && verDetalleCm && <DetalleCmPpm r={cmPpm} oficial={factoresPpm.oficial} faltan={factoresPpm.faltanIpc} />}
+            {Number(hojaEfectiva.ppmCm) > 0 && <Fila label="PPM actualizados" value={(Number(hojaEfectiva.ppmPagados) || 0) + (Number(hojaEfectiva.ppmCm) || 0)} />}
             {ppmDesdeCuenta !== null && (
               <p className="text-xs text-slate-500 -mt-1">Movimientos de la cuenta entre el 1-1 y el 31-12-{anio}, sin apertura. Si un PPM se pagó fuera de plazo y se contabilizó en otro año, ajústalo en "Otros créditos".</p>
             )}

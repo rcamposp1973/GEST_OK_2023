@@ -1,4 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { DetalleCmPpm } from './DetalleCmPpm';
+import { getOfficialIPC } from '../utils/chileanEconomicIndicators';
+import { factoresActualizacion, calcularCmPpm } from '../utils/ppmActualizado';
 import { InputNumeroCL } from './ui/NumeroCL';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import * as XLSX from 'xlsx';
@@ -38,6 +41,8 @@ interface HojaGestRta {
   ppmManual: number;
   /** Corrección monetaria (reajuste) de los PPM al 31-12, si no está contabilizada en la cuenta de PPM. */
   ppmCm?: number;
+  /** true: la CM de PPM la escribió el contador; si no, se calcula con los factores del SII desde la cuenta de PPM. */
+  ppmCmManual?: boolean;
   cpt: CptSimplificado;
   /** El CPT inicial lo fijó el contador; si no, sigue en línea al CPT final del año anterior (o a los saldos de apertura). */
   cptInicialManual?: boolean;
@@ -145,7 +150,10 @@ export const GestRtaView: React.FC<Props> = ({ studyId, company, accounts, vouch
   const cptInicialAuto = anterior ? anterior.cptFinal : (saldos && saldos.anioInicio === anio ? saldos.cptInicial : null);
   const cptHoja: CptSimplificado = (hoja.cptInicialManual || cptInicialAuto === null) ? hoja.cpt : { ...hoja.cpt, cptInicial: cptInicialAuto };
   const cpt = calcularCptSimplificado(cptHoja, res.baseImponible);
-  const ppmCm = Math.round(Number(hoja.ppmCm) || 0);
+  const factoresPpm = useMemo(() => factoresActualizacion(anio, p => { const r = getOfficialIPC(p); return r.monthly || r.accumulated ? r.monthly : undefined; }), [anio]);
+  const cmPpm = useMemo(() => (hoja.cuentaPpmId ? calcularCmPpm(vouchers as any, accounts as any, hoja.cuentaPpmId, anio, factoresPpm.factores) : null), [hoja.cuentaPpmId, vouchers, accounts, anio, factoresPpm]);
+  const [verDetalleCm, setVerDetalleCm] = useState(false);
+  const ppmCm = Math.round(cmPpm && !hoja.ppmCmManual ? cmPpm.cmSugerida : (Number(hoja.ppmCm) || 0));
   const ppmActualizado = ppm + ppmCm;
   const asignacion = asignarPropietarios(hoja.propietarios, res.baseImponible, ppmActualizado);
 
@@ -341,10 +349,15 @@ export const GestRtaView: React.FC<Props> = ({ studyId, company, accounts, vouch
             </select>
             {hoja.cuentaPpmId ? <span className="font-mono">{pesos(ppm)}</span> : <MontoConSigno value={hoja.ppmManual} disabled={bloqueado} onChange={n => set({ ppmManual: n })} />}
             <span className="text-slate-600 ml-2" title="Reajuste de los PPM con los factores de actualización del SII. Si ya contabilizaste la CM en la cuenta de PPM, déjalo en 0 para no contarla dos veces.">+ Corrección monetaria PPM:</span>
-            <MontoConSigno value={hoja.ppmCm || 0} disabled={bloqueado} onChange={n => set({ ppmCm: n })} />
+            <MontoConSigno value={ppmCm} disabled={bloqueado} onChange={n => set({ ppmCm: n, ppmCmManual: true })} />
+            {cmPpm && (hoja.ppmCmManual
+              ? !bloqueado && <button onClick={() => set({ ppmCmManual: false })} className="text-xs text-indigo-600 underline">Calcular con factores del SII</button>
+              : <span className="text-[11px] text-emerald-700">factores {factoresPpm.oficial ? 'oficiales SII' : 'estimados con IPC'}</span>)}
+            {cmPpm && <button onClick={() => setVerDetalleCm(v => !v)} className="text-xs text-slate-500 underline">{verDetalleCm ? 'Ocultar detalle' : 'Ver detalle'}</button>}
             <span className="text-slate-600 ml-2">= PPM actualizados:</span>
             <span className="font-mono font-semibold">{pesos(ppmActualizado)}</span>
           </div>
+          {cmPpm && verDetalleCm && <DetalleCmPpm r={cmPpm} oficial={factoresPpm.oficial} faltan={factoresPpm.faltanIpc} />}
           <div className="overflow-x-auto border border-slate-200 rounded-xl bg-white">
             <table className="w-full text-xs">
               <thead className="bg-slate-50 text-slate-600"><tr><th className="p-2 text-left">RUT</th><th className="p-2 text-left">Nombre</th><th className="p-2 text-right">% participación</th><th className="p-2 text-right">Base asignada</th><th className="p-2 text-right">PPM asignado</th><th></th></tr></thead>

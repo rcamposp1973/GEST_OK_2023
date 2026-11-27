@@ -9,6 +9,9 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.38.4 — 2026-11-27
+- Firmas del contador sin la mención al Colegio de Contadores (en Chile no es obligatorio colegiarse): Balance 8 columnas, Balance IFRS y Estado de Resultados, en impresión y PDF.
+
 ## 1.38.3 — 2026-11-27
 - Renta anual y Gest_Rta: casillero de corrección monetaria (reajuste) de los PPM; PPM actualizados como crédito y en la asignación a propietarios.
 - Balance 8 columnas: firmas centradas en la impresión y en el PDF; si no caben en la última hoja, van en una página nueva.

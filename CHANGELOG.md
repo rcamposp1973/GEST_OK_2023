@@ -9,6 +9,10 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.38.3 — 2026-11-27
+- Renta anual y Gest_Rta: casillero de corrección monetaria (reajuste) de los PPM; PPM actualizados como crédito y en la asignación a propietarios.
+- Balance 8 columnas: firmas centradas en la impresión y en el PDF; si no caben en la última hoja, van en una página nueva.
+
 ## 1.38.2 — 2026-11-27
 - Formato chileno en los casilleros numéricos de Renta anual, Gest_Rta, licencia Gest_Rta y F29: miles con punto y decimales con coma (77.000.000 · 12,5%). Se puede escribir o pegar con o sin puntos.
 

@@ -123,6 +123,8 @@ export interface HojaRenta {
   tasaIdpc: number;
   ajustes: AjusteRenta[];
   ppmPagados: number;
+  /** Corrección monetaria (reajuste) de los PPM al 31-12, si no está contabilizada en la cuenta de PPM. */
+  ppmCm?: number;
   cuentaPpmId?: string; // si está, los PPM se leen del saldo de esta cuenta en el año
   otrosCreditos: number;
   // CPT régimen general
@@ -156,7 +158,7 @@ export function calcularRenta(datos: DatosContablesAnio, hoja: HojaRenta): Resul
   const perdidaTributaria = Math.max(-base, 0);
   const transparente = hoja.regimen === '14_D8_PROPYME_TRANSPARENTE';
   const idpc = transparente ? 0 : Math.round(rli * (Number(hoja.tasaIdpc) || 0) / 100);
-  const saldoImpuesto = idpc - (Number(hoja.ppmPagados) || 0) - (Number(hoja.otrosCreditos) || 0);
+  const saldoImpuesto = idpc - (Number(hoja.ppmPagados) || 0) - (Number(hoja.ppmCm) || 0) - (Number(hoja.otrosCreditos) || 0);
 
   let cpt: number;
   if (hoja.regimen === '14_A_SEMI_INTEGRADO') {

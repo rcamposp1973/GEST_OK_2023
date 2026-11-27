@@ -97,7 +97,7 @@ export const RentaAnualView: React.FC<Props> = ({ studyId, company, accounts, vo
       ['Ingresos del ejercicio', datos.ingresos], ['Costos y gastos del ejercicio', datos.gastos], ['Resultado contable', datos.utilidadContable], [],
       ...hoja.ajustes.map(a => [`${a.tipo === 'AGREGADO' ? 'Agregado' : 'Deducción'}: ${a.concepto}`, a.tipo === 'AGREGADO' ? a.monto : -a.monto]),
       [], [transparente ? 'Base imponible' : 'Renta líquida imponible', res.rli], ['Pérdida tributaria', res.perdidaTributaria],
-      ['Tasa IDPC %', transparente ? 0 : hoja.tasaIdpc], ['Impuesto de Primera Categoría', res.idpc], ['PPM pagados', hojaEfectiva.ppmPagados],
+      ['Tasa IDPC %', transparente ? 0 : hoja.tasaIdpc], ['Impuesto de Primera Categoría', res.idpc], ['PPM pagados', hojaEfectiva.ppmPagados], ['Corrección monetaria PPM', Number(hoja.ppmCm) || 0], ['PPM actualizados', (Number(hojaEfectiva.ppmPagados) || 0) + (Number(hoja.ppmCm) || 0)],
       ['Otros créditos', hoja.otrosCreditos], ['Saldo (a pagar + / a devolver -)', res.saldoImpuesto], [], ['Capital propio tributario', res.cpt],
     ];
     const csv = filas.map(f => f.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(';')).join('\n');
@@ -240,6 +240,11 @@ export const RentaAnualView: React.FC<Props> = ({ studyId, company, accounts, vo
                 ? <Monto value={hoja.ppmPagados} disabled={soloLectura} onChange={n => set({ ppmPagados: n })} />
                 : <span className="font-mono text-sm text-slate-800">{pesos(ppmDesdeCuenta)}</span>}
             </div>
+            <div className="flex flex-wrap items-center justify-between gap-2 py-1.5">
+              <span className="text-sm text-slate-600" title="Reajuste de los PPM con los factores de actualización del SII. Si ya contabilizaste la CM en la cuenta de PPM, déjalo en 0 para no contarla dos veces.">Corrección monetaria de PPM (reajuste al 31-12)</span>
+              <Monto value={hoja.ppmCm || 0} disabled={soloLectura} onChange={n => set({ ppmCm: n })} />
+            </div>
+            {Number(hoja.ppmCm) > 0 && <Fila label="PPM actualizados" value={(Number(hojaEfectiva.ppmPagados) || 0) + (Number(hoja.ppmCm) || 0)} />}
             {ppmDesdeCuenta !== null && (
               <p className="text-xs text-slate-500 -mt-1">Movimientos de la cuenta entre el 1-1 y el 31-12-{anio}, sin apertura. Si un PPM se pagó fuera de plazo y se contabilizó en otro año, ajústalo en "Otros créditos".</p>
             )}

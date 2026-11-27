@@ -7,8 +7,8 @@ import { ivaCreditoCoherente, normalizarTipoCompra } from '../utils/rcvIva';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { InputNumeroEvento } from './ui/NumeroCL';
 import html2canvas from 'html2canvas';
-import { db } from '../lib/firebase';
-import { collection, getDocs, doc, setDoc, addDoc, updateDoc } from 'firebase/firestore';
+import { db, auth } from '../lib/firebase';
+import { collection, getDocs, doc, setDoc, addDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { getOfficialUTM, getOfficialHonorariosRate } from '../utils/chileanEconomicIndicators';
 import { getLatestOpenPeriod, getAllOpenPeriods } from '../utils/periodUtils';
 import {
@@ -79,6 +79,7 @@ export default function Formulario29View({
 
   const summaryCardRef = useRef<HTMLDivElement>(null);
 
+  const anterioresF29Ref = useRef<Voucher[]>([]);
   // Default Tax Settings
   const [taxSettings, setTaxSettings] = useState<F29TaxSettings>({
     regimenTributario: '14_D3_PROPYME_GENERAL',
@@ -910,9 +911,17 @@ export default function Formulario29View({
       setMapeoPendiente(pendientes);
       return;
     }
-    if (!yaConfirmado && !confirm(`¿Desea generar automáticamente el Asiento Contable de Centralización y Liquidación de Impuestos F29 para el período ${selectedPeriod}?`)) {
+    // Comprobantes F29 válidos que ya existen para este período: se anulan al registrar el nuevo (nunca quedan dos F29 vigentes)
+    const declActual = savedDeclarations.find(d => d.period === selectedPeriod) as any;
+    const anteriores = vouchers.filter(v => v.status !== 'Anulado' && v.period === selectedPeriod &&
+      (v.id === declActual?.voucherId || String(v.gloss || '').startsWith('Centralización y Liquidación Mensual Formulario 29')));
+    const msgAnteriores = anteriores.length
+      ? `\n\n⚠️ Ya existe${anteriores.length > 1 ? 'n' : ''} el${anteriores.length > 1 ? 'los' : ''} comprobante${anteriores.length > 1 ? 's' : ''} F29 N° ${anteriores.map(v => v.voucherNumber).join(', ')} de este período.\nSi confirmas, se ANULARÁ${anteriores.length > 1 ? 'N' : ''} y se registrará el nuevo con el cálculo actual.`
+      : '';
+    if ((!yaConfirmado || anteriores.length > 0) && !confirm(`¿Generar el asiento de centralización y liquidación del F29 del período ${selectedPeriod}?${msgAnteriores}`)) {
       return;
     }
+    anterioresF29Ref.current = anteriores;
 
     setIsSubmitting(true);
     try {
@@ -1178,8 +1187,22 @@ export default function Formulario29View({
       };
 
       exigirCuadre(voucherData.lines as any);
-      const vRef = await addDoc(collection(companyRef, 'vouchers'), voucherData);
+      // Nuevo comprobante y anulación de los anteriores en una sola operación (o se hace todo, o nada)
+      const vRef = doc(collection(companyRef, 'vouchers'));
       const voucherId = vRef.id;
+      const lote = writeBatch(db);
+      lote.set(vRef, voucherData);
+      const ahora = new Date().toISOString();
+      const anulados = anterioresF29Ref.current || [];
+      for (const v of anulados) {
+        lote.update(doc(companyRef, 'vouchers', v.id), {
+          status: 'Anulado', anuladoAt: ahora,
+          anuladoReason: `Reemplazado por el comprobante N° ${nextVoucherNumber} (F29 ${selectedPeriod} re-contabilizado)`,
+          lastModifiedBy: auth.currentUser?.email || auth.currentUser?.uid || 'sistema', lastModifiedAt: ahora,
+        });
+      }
+      await lote.commit();
+      anterioresF29Ref.current = [];
 
       // Update F29 with generated voucher info
       const declarationId = `${company.rut.replace(/[^a-zA-Z0-9]/g, '')}_${selectedPeriod}`;
@@ -1189,7 +1212,7 @@ export default function Formulario29View({
         updatedAt: new Date().toISOString()
       });
 
-      alert(`Asiento Contable N° ${nextVoucherNumber} de Liquidación de Impuestos F29 generado y centralizado exitosamente con Corrección Monetaria e IVA Postergado.`);
+      alert(`Asiento N° ${nextVoucherNumber} del F29 ${selectedPeriod} registrado.${anulados.length ? `\nSe anuló el comprobante anterior N° ${anulados.map(v => v.voucherNumber).join(', ')}.` : ''}`);
       if (onVouchersUpdated) onVouchersUpdated();
       fetchDeclarations();
     } catch (err: any) {

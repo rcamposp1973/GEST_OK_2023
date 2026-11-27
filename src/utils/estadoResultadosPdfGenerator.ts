@@ -235,7 +235,6 @@ export function generateEstadoResultadosPDF(options: EstadoResultadosPDFOptions)
     doc.setFontSize(7);
     doc.setTextColor(100, 116, 139);
     doc.text(`RUT: ${company.legalRepRut || company.rut}`, 55, signY + 7.5, { align: 'center' });
-    doc.text('Reg. Colegio de Contadores de Chile', 155, signY + 7.5, { align: 'center' });
   }
 
   const fileName = `Estado_de_Resultados_${company.rut}_${selectedYear}_hasta_${cutoffMonthName}.pdf`;

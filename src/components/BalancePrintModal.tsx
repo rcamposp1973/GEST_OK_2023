@@ -315,7 +315,6 @@ export const BalancePrintModal: React.FC<BalancePrintModalProps> = ({
               <div className="sig space-y-1 text-center">
                 <div className="sig-line w-48 border-t border-slate-800 mx-auto"></div>
                 <div className="font-bold text-slate-900 uppercase">FIRMA CONTADOR GENERAL</div>
-                <div>REGISTRO COLEGIO DE CONTADORES DE CHILE</div>
               </div>
             </div>
           </div>

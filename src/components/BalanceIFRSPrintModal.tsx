@@ -359,7 +359,6 @@ export const BalanceIFRSPrintModal: React.FC<BalanceIFRSPrintModalProps> = ({
               <div>
                 <div className="border-b border-slate-400 w-3/4 mx-auto mb-2"></div>
                 <p className="font-bold text-slate-800">CONTADOR GENERAL</p>
-                <p className="text-[11px] text-slate-500">Colegio de Contadores de Chile</p>
               </div>
             </div>
 

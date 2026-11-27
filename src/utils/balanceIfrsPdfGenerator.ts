@@ -273,7 +273,6 @@ export function generateBalanceIFRSPDF(options: GenerateBalanceIFRSPDFOptions): 
   doc.text('CONTADOR GENERAL', pageWidth - 55, signatureY + 4, { align: 'center' });
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 116, 139);
-  doc.text('Colegio de Contadores de Chile', pageWidth - 55, signatureY + 8, { align: 'center' });
 
   // Numeración de páginas
   const totalPages = doc.getNumberOfPages();

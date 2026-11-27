@@ -267,7 +267,6 @@ export function generateBalance8ColumnasPDF(options: GenerateBalancePDFOptions):
 
     doc.line(c2 - medio, sigY - 5, c2 + medio, sigY - 5);
     doc.text('FIRMA CONTADOR GENERAL', c2, sigY, { align: 'center' });
-    doc.text('REGISTRO COLEGIO DE CONTADORES DE CHILE', c2, sigY + 4, { align: 'center' });
   }
 
   const cleanRut = (company.rut || 'EMPRESA').replace(/[^0-9kK]/g, '');

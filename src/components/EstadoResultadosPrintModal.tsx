@@ -153,7 +153,6 @@ export const EstadoResultadosPrintModal: React.FC<EstadoResultadosPrintModalProp
         </div>
         <div style="text-align: center; width: 40%; border-top: 1px solid #cbd5e1; padding-top: 6px;">
           <p style="font-weight: bold; margin: 0;">CONTADOR GENERAL / AUDITOR</p>
-          <p style="font-size: 8px; color: #64748b; margin: 2px 0 0 0;">Reg. Colegio de Contadores de Chile</p>
         </div>
       </div>
     `;

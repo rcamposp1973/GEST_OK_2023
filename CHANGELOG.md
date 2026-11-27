@@ -9,6 +9,11 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.37.6 — 2026-11-26
+- F29 Gest_OK: misma estructura del F29 del SII (líneas 1 a 144, con sus códigos y signos), con diseño propio en tonos naranjos, pasteles y turquesa. Encabezado con período, RUT, razón social y folio.
+- Tasa PPM modificable directamente en el formulario (acepta coma decimal, permite 0). Al cambiar de régimen se propone su tasa, salvo que el contador haya fijado otra.
+- Remanentes del mes anterior modificables en el formulario: crédito fiscal IVA (504) y crédito empresas constructoras (128), con opción de volver al arrastre automático.
+
 ## 1.37.5 — 2026-11-26
 - **Crédito Especial Empresas Constructoras (CEEC) corregido.** Ya no rebaja el débito IVA: va en Créditos especiales (Cód. 126 del mes + 128 remanente anterior reajustado = 571) y se imputa contra PPM, retenciones e IVA (Cód. 547). Lo que sobra queda como remanente CEEC (Cód. 130), separado del remanente de IVA; el de diciembre se recupera en la Renta y no pasa a enero.
 - Asiento del F29: reajuste del remanente CEEC y su imputación (primero contra PPM/retenciones, luego contra IVA por pagar); pide la cuenta "Crédito especial empresas constructoras" la primera vez.

@@ -59,17 +59,18 @@ export const RentaAnualView: React.FC<Props> = ({ studyId, company, accounts, vo
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ref]);
 
-  // Si la hoja aún no se ha guardado, el capital sugerido sigue a la contabilidad (los comprobantes pueden cargar después).
-  useEffect(() => {
-    if (!guardadaEnBD) setHoja(h => ({ ...h, capitalAportado: datos.capitalSugerido }));
-  }, [datos.capitalSugerido, guardadaEnBD]);
+  // La contabilidad manda: el capital aportado sigue en línea a las cuentas de capital, salvo que el contador lo fije a mano.
 
   // PPM: si hay una cuenta elegida, el monto sale de la contabilidad del año
   const ppmDesdeCuenta = useMemo(
     () => (hoja.cuentaPpmId ? movimientoCuentaDelAnio(vouchers as any, accounts, hoja.cuentaPpmId, anio) : null),
     [hoja.cuentaPpmId, vouchers, accounts, anio]
   );
-  const hojaEfectiva = useMemo(() => (ppmDesdeCuenta === null ? hoja : { ...hoja, ppmPagados: ppmDesdeCuenta }), [hoja, ppmDesdeCuenta]);
+  const hojaEfectiva = useMemo(() => ({
+    ...hoja,
+    ...(ppmDesdeCuenta === null ? {} : { ppmPagados: ppmDesdeCuenta }),
+    ...(hoja.capitalManual ? {} : { capitalAportado: datos.capitalSugerido }),
+  }), [hoja, ppmDesdeCuenta, datos.capitalSugerido]);
   const cuentasActivo = useMemo(() => accounts.filter(a => getNaturaleza(a as any) === 'ACTIVO' && a.isImputable !== false), [accounts]);
   const res = useMemo(() => calcularRenta(datos, hojaEfectiva), [datos, hojaEfectiva]);
   const pyme = hoja.regimen !== '14_A_SEMI_INTEGRADO';
@@ -79,7 +80,7 @@ export const RentaAnualView: React.FC<Props> = ({ studyId, company, accounts, vo
   const guardar = async () => {
     setGuardando(true);
     try {
-      await setDoc(ref, { hoja, anioComercial: anio, actualizadoPor: auth.currentUser?.email || '', actualizadoEn: new Date().toISOString() });
+      await setDoc(ref, { hoja: hojaEfectiva, anioComercial: anio, actualizadoPor: auth.currentUser?.email || '', actualizadoEn: new Date().toISOString() });
       setGuardadaEnBD(true);
       setAviso('Hoja guardada.');
     } catch (e: any) {
@@ -265,7 +266,12 @@ export const RentaAnualView: React.FC<Props> = ({ studyId, company, accounts, vo
             ] as const).map(([label, campo, hint]) => (
               <div key={campo} className="flex items-center justify-between py-1.5">
                 <span className="text-sm text-slate-600" title={hint}>{label}</span>
-                <Monto value={(hoja as any)[campo]} disabled={soloLectura} onChange={n => set({ [campo]: n } as any)} />
+                <span className="flex items-center gap-2">
+                  {campo === 'capitalAportado' && (hoja.capitalManual
+                    ? !soloLectura && <button onClick={() => set({ capitalManual: false })} className="text-xs text-indigo-600 underline">Seguir a la contabilidad</button>
+                    : <span className="text-[11px] text-emerald-700">En línea con la contabilidad</span>)}
+                  <Monto value={(hojaEfectiva as any)[campo]} disabled={soloLectura} onChange={n => set({ [campo]: n, ...(campo === 'capitalAportado' ? { capitalManual: true } : {}) } as any)} />
+                </span>
               </div>
             ))}
             <Fila label="Resultado tributario del año" value={res.rli - res.perdidaTributaria} />

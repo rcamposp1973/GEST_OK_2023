@@ -129,6 +129,8 @@ export interface HojaRenta {
   ajustesCpt: { id: string; concepto: string; monto: number }[];
   // CPT simplificado Pro Pyme
   capitalAportado: number;
+  /** Si es true, el capital aportado lo fijó el contador; si no, sigue en línea a las cuentas de capital. */
+  capitalManual?: boolean;
   aumentosCapital: number;
   disminucionesCapital: number;
   utilidadesTributariasAnteriores: number;

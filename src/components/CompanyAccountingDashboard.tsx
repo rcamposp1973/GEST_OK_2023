@@ -1597,12 +1597,27 @@ export default function CompanyAccountingDashboard({
       setFiscalYears(fySnap.docs.map(d => ({ ...d.data(), id: d.id } as FiscalPeriodYear)));
     }, (err) => console.warn("Realtime listener error fiscal:", err));
 
+    // Liquidaciones, trabajadores y parámetros RCV también en línea (los usan Renta anual / Gest_Rta y otros informes)
+    const unsubSlips = onSnapshot(collection(companyRef, 'payrollSlips'), (snap) => {
+      const cleanRut = (company.rut || '').replace(/[^0-9kK]/g, '');
+      setPayrollSlips(cleanRut === '777109294' ? [] : snap.docs.map(d => ({ ...d.data(), id: d.id } as PayrollSlip)));
+    }, (err) => console.warn("Realtime listener error payrollSlips:", err));
+    const unsubEmp = onSnapshot(collection(companyRef, 'employees'), (snap) => {
+      setEmployees(snap.docs.map(d => ({ ...d.data(), id: d.id } as Employee)));
+    }, (err) => console.warn("Realtime listener error employees:", err));
+    const unsubParams = onSnapshot(doc(companyRef, 'config', 'rcvParams'), (snap) => {
+      if (snap.exists()) setRcvParams(snap.data() as RCVAccountingParams);
+    }, (err) => console.warn("Realtime listener error rcvParams:", err));
+
     return () => {
       unsubAccounts();
       unsubAux();
       unsubVouchers();
       unsubRcv();
       unsubFiscal();
+      unsubSlips();
+      unsubEmp();
+      unsubParams();
     };
   }, [studyId, company.id]);
 

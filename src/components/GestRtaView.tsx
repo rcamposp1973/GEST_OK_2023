@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import * as XLSX from 'xlsx';
 import { ChevronDown, ChevronRight, Download, Lock, Save, Unlock, AlertTriangle, Plus, Trash2 } from 'lucide-react';
 import { db, auth } from '../lib/firebase';
@@ -36,6 +36,8 @@ interface HojaGestRta {
   cuentaPpmId?: string;
   ppmManual: number;
   cpt: CptSimplificado;
+  /** El CPT inicial lo fijó el contador; si no, sigue en línea al CPT final del año anterior (o a los saldos de apertura). */
+  cptInicialManual?: boolean;
   propietarios: Propietario[];
   estado: 'BORRADOR' | 'CERRADO';
   historial: { fecha: string; usuario: string; accion: string }[];
@@ -90,14 +92,22 @@ export const GestRtaView: React.FC<Props> = ({ studyId, company, accounts, vouch
   const refAnterior = useMemo(() => doc(db, ...base, `AT${anio}`), [studyId, company.id, anio]); // eslint-disable-line react-hooks/exhaustive-deps
   const refSaldos = useMemo(() => doc(db, ...base, 'saldosApertura'), [studyId, company.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // El año anterior y los saldos de apertura se escuchan en línea: si se modifican (en otra pestaña o por otro usuario), la propuesta se recalcula.
+  useEffect(() => {
+    const u1 = onSnapshot(refAnterior, p => {
+      const prev = p.exists() ? (p.data() as any) : null;
+      setAnterior(prev ? { cptFinal: Number(prev.resumen?.cptFinal) || 0, base: Number(prev.resumen?.baseImponible) || 0 } : null);
+    }, () => {});
+    const u2 = onSnapshot(refSaldos, s => setSaldos(s.exists() ? (s.data() as SaldosApertura) : null), () => {});
+    return () => { u1(); u2(); };
+  }, [refAnterior, refSaldos]);
+
   useEffect(() => {
     let vivo = true;
     Promise.all([getDoc(refAnio), getDoc(refAnterior), getDoc(refSaldos)]).then(([a, p, s]) => {
       if (!vivo) return;
       const sal = s.exists() ? (s.data() as SaldosApertura) : null;
-      setSaldos(sal);
       const prev = p.exists() ? (p.data() as any) : null;
-      setAnterior(prev ? { cptFinal: Number(prev.resumen?.cptFinal) || 0, base: Number(prev.resumen?.baseImponible) || 0 } : null);
       if (a.exists()) setHoja({ ...hojaVacia(), ...(a.data() as any).hoja });
       else {
         const h = hojaVacia();
@@ -128,7 +138,10 @@ export const GestRtaView: React.FC<Props> = ({ studyId, company, accounts, vouch
   }), [anio, rcvDocuments, pendCierre, pendAnterior, payrollSlips, perdidaAnterior, hoja.ajustes, hoja.incluirSupermercado, rcvParams?.recuperaDiesel]);
 
   const ppm = useMemo(() => (hoja.cuentaPpmId ? movimientoCuentaDelAnio(vouchers as any, accounts, hoja.cuentaPpmId, anio) : hoja.ppmManual), [hoja.cuentaPpmId, hoja.ppmManual, vouchers, accounts, anio]);
-  const cpt = calcularCptSimplificado(hoja.cpt, res.baseImponible);
+  // CPT inicial en línea: CPT final del año anterior en Gest_Rta, o saldos de apertura, salvo que el contador lo haya fijado
+  const cptInicialAuto = anterior ? anterior.cptFinal : (saldos && saldos.anioInicio === anio ? saldos.cptInicial : null);
+  const cptHoja: CptSimplificado = (hoja.cptInicialManual || cptInicialAuto === null) ? hoja.cpt : { ...hoja.cpt, cptInicial: cptInicialAuto };
+  const cpt = calcularCptSimplificado(cptHoja, res.baseImponible);
   const asignacion = asignarPropietarios(hoja.propietarios, res.baseImponible, ppm);
 
   const registrar = (accion: string, h: HojaGestRta): HojaGestRta => ({ ...h, historial: [...(h.historial || []), { fecha: new Date().toISOString(), usuario: auth.currentUser?.email || '', accion }].slice(-30) });
@@ -138,7 +151,7 @@ export const GestRtaView: React.FC<Props> = ({ studyId, company, accounts, vouch
     try {
       const conHistorial = registrar(accion, h);
       await setDoc(refAnio, {
-        hoja: conHistorial, anioComercial: anio, regimen: h.regimen,
+        hoja: { ...conHistorial, cpt: (h.cptInicialManual || cptInicialAuto === null) ? h.cpt : { ...h.cpt, cptInicial: cptInicialAuto } }, anioComercial: anio, regimen: h.regimen,
         resumen: { baseImponible: res.baseImponible, totalIngresos: res.totalIngresos, totalEgresos: res.totalEgresos, cptFinal: cpt.final, ppm },
         actualizadoPor: auth.currentUser?.email || '', actualizadoEn: new Date().toISOString(),
       });
@@ -170,7 +183,7 @@ export const GestRtaView: React.FC<Props> = ({ studyId, company, accounts, vouch
     const det = [['Código', 'Documento', 'Fecha', 'Base', 'Pendiente 31-12', 'Considerado', 'Nota'],
       ...res.lineas.flatMap(l => (l.detalle || []).map(d => [l.codigo, d.referencia, d.fecha, d.base, d.pendiente, d.computado, d.nota || '']))];
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(det), 'Detalle documentos');
-    const c = [...cab, ['CPT inicial', hoja.cpt.cptInicial], ['Base imponible del ejercicio', res.baseImponible], ['Aumentos de capital', hoja.cpt.aumentosCapital],
+    const c = [...cab, ['CPT inicial', cptHoja.cptInicial], ['Base imponible del ejercicio', res.baseImponible], ['Aumentos de capital', hoja.cpt.aumentosCapital],
       ['Disminuciones de capital', -hoja.cpt.disminucionesCapital], ['Retiros del ejercicio', -hoja.cpt.retiros], ['Otras partidas a agregar', hoja.cpt.otrasAgregar],
       ['Otras partidas a deducir', -hoja.cpt.otrasDeducir], ['CPT simplificado final', cpt.final]];
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(c), 'CPT simplificado');
@@ -299,8 +312,12 @@ export const GestRtaView: React.FC<Props> = ({ studyId, company, accounts, vouch
         <div className="border border-slate-200 rounded-xl bg-white p-4 max-w-xl space-y-2 text-sm">
           {([['cptInicial', 'CPT inicial (año anterior, F22 cód. 1545/1581)'], ['aumentosCapital', 'Aumentos de capital del ejercicio'], ['disminucionesCapital', 'Disminuciones de capital del ejercicio'], ['retiros', 'Retiros del ejercicio'], ['otrasAgregar', 'Otras partidas a agregar'], ['otrasDeducir', 'Otras partidas a deducir']] as [keyof CptSimplificado, string][]).map(([k, t]) => (
             <div key={k} className="flex items-center justify-between gap-3">
-              <span className="text-slate-600">{t}</span>
-              <MontoConSigno value={hoja.cpt[k]} disabled={bloqueado} onChange={n => set({ cpt: { ...hoja.cpt, [k]: n } })} />
+              <span className="text-slate-600">{t}
+                {k === 'cptInicial' && cptInicialAuto !== null && (hoja.cptInicialManual
+                  ? !bloqueado && <button onClick={() => set({ cptInicialManual: false })} className="ml-2 text-xs text-indigo-600 underline">Tomar el del año anterior</button>
+                  : <span className="ml-2 text-[11px] text-emerald-700">en línea</span>)}
+              </span>
+              <MontoConSigno value={cptHoja[k]} disabled={bloqueado} onChange={n => set({ cpt: { ...cptHoja, [k]: n }, ...(k === 'cptInicial' ? { cptInicialManual: true } : {}) })} />
             </div>
           ))}
           <div className="flex justify-between border-t border-slate-200 pt-2"><span className="text-slate-600">Base imponible / pérdida del ejercicio</span><span className="font-mono">{pesos(res.baseImponible)}</span></div>

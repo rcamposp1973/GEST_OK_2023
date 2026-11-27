@@ -9,6 +9,9 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.38.2 — 2026-11-27
+- Formato chileno en los casilleros numéricos de Renta anual, Gest_Rta, licencia Gest_Rta y F29: miles con punto y decimales con coma (77.000.000 · 12,5%). Se puede escribir o pegar con o sin puntos.
+
 ## 1.38.1 — 2026-11-27
 - Renta anual y Gest_Rta se actualizan en línea con la contabilidad, igual que el Balance de 8 columnas:
   - Renta anual: el capital aportado sigue a las cuentas de capital (salvo que el contador lo fije a mano; botón "Seguir a la contabilidad").

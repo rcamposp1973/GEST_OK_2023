@@ -482,4 +482,10 @@ import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } fro
   const d = P.separarSetDte(set)[0];
   ok('XML recibidos: lee proveedor', d.razonEmisor==='COMERCIALIZADORA MEPIACHE LTDA' && d.rutEmisor==='78427580-9' && d.folio==='29026' && d.total===77400);
 }
+{ const PC = await import('../src/utils/payrollCalculator');
+  const emp: any = { baseSalary: 900000, salaryHistory: [
+    { startDate: '2025-01-01', endDate: '2025-10-31', baseSalary: 800000 },
+    { startDate: '2025-11-01', endDate: null, baseSalary: 900000 } ] };
+  ok('Sueldos: el sueldo vigente depende del mes (subir en noviembre no cambia meses anteriores)', PC.sueldoVigenteDelPeriodo(emp, '2025-06') === 800000 && PC.sueldoVigenteDelPeriodo(emp, '2025-11') === 900000 && PC.sueldoVigenteDelPeriodo({ baseSalary: 500000 } as any, '2025-03') === 500000);
+}
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

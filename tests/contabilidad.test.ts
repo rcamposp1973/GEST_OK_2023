@@ -537,4 +537,10 @@ import { validarFiltro, armarPropuesta, armarComprobantesDeReclasificacion } fro
   const l = P.leerArchivoPrevired105(g.texto);
   ok('Previred 105: lectura del archivo y totales por institución', l.filas.length === 1 && l.filas[0].periodo === '2025-09' && l.filas[0].fonasa === 70000 && P.totalesPorInstitucion(l.filas).find(t => t.institucion === 'AFP Habitat')?.monto === 113700);
 }
+{ const PC = await import('../src/utils/payrollCalculator');
+  const emp: any = { baseSalary: 900000, salaryHistory: [
+    { startDate: '2025-01-01', endDate: '2025-10-31', baseSalary: 800000 },
+    { startDate: '2025-11-01', endDate: null, baseSalary: 900000 } ] };
+  ok('Sueldos: el sueldo vigente depende del mes (subir en noviembre no cambia meses anteriores)', PC.sueldoVigenteDelPeriodo(emp, '2025-06') === 800000 && PC.sueldoVigenteDelPeriodo(emp, '2025-11') === 900000 && PC.sueldoVigenteDelPeriodo({ baseSalary: 500000 } as any, '2025-03') === 500000);
+}
 console.log(fallos?`\n${fallos} FALLAS`:'\nTodas las pruebas OK'); process.exit(fallos?1:0);

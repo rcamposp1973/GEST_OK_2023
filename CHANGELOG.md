@@ -9,6 +9,14 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.39.1 — 2026-11-28
+- Remuneraciones: cada mes es independiente.
+  - Las novedades del mes (sueldo del mes, días, horas extras, bonos, descuentos) se graban en la base del estudio y se ven en línea; si no se pueden grabar, se avisa (antes podían quedar sólo en el navegador). Se migran las novedades guardadas con la versión anterior.
+  - Estados del mes: Vista previa → Procesado (liquidaciones grabadas, se puede corregir y reprocesar) → Cerrado (liquidaciones fijas). Botones "Procesar mes", "Cerrar mes" y "Reabrir".
+  - Al procesar o cerrar, el sueldo base usado queda fijo en ese mes: subir un sueldo después no cambia los meses anteriores.
+  - Un mes procesado ya no se recalcula solo con los datos actuales de la ficha; un mes cerrado no se puede modificar ni limpiar sin reabrirlo.
+  - Nuevo "Aplicar desde este mes": registra el nuevo sueldo en la ficha con vigencia desde el mes elegido.
+
 ## 1.39.0 — 2026-11-27
 - **Compras: XML de los documentos recibidos desde el facturador gratuito del SII.** Botón "Documentos recibidos (XML)" en el RCV: descarga los XML del mes (respaldo de documentos recibidos del portal MIPYME), los guarda y muestra la versión impresa en pantalla, PDF y XML. Sólo están los documentos que llegaron a la casilla del SII.
 - En los recibidos no se imprime resolución ni unidad del SII del proveedor (el respaldo no las trae; no se inventan).

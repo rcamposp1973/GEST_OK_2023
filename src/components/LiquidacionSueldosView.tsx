@@ -3,7 +3,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { generarArchivoPrevired105, NOMBRE_MUTUAL, NOMBRE_CCAF } from '../utils/previred105';
 import PreviredLibroView from './payroll/PreviredLibroView';
 import { db } from '../lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { auth } from '../lib/firebase';
 import { 
   FileSpreadsheet, Calculator, Download, CheckCircle2, AlertCircle, 
   Printer, ArrowRight, DollarSign, Shield, HeartPulse, Building2, 
@@ -21,7 +22,7 @@ import { crearPdfLiquidacion, nombreArchivoLiquidacion } from '../utils/liquidac
 import { 
   DEFAULT_PAYROLL_PARAMS_2026, DEFAULT_AFP_COMMISSIONS, PREVIRED_AFP_CODES,
   DEFAULT_PAYROLL_CONCEPTS, getPrevisionalParametersForPeriod, getLegalWeeklyHours,
-  calculatePayrollSlip, generatePreviredTxt, generateLrdCsv, MonthPayrollInput 
+  calculatePayrollSlip, sueldoVigenteDelPeriodo, generatePreviredTxt, generateLrdCsv, MonthPayrollInput 
 } from '../utils/payrollCalculator';
 import { OFFICIAL_UF_MONTHLY_START, OFFICIAL_MONTHLY_UTM, syncOnlineChileanIndicators } from '../utils/chileanEconomicIndicators';
 import { getNextPeriodStr, getPrevPeriodStr, getPeriodFormattedName } from '../utils/periodUtils';
@@ -51,7 +52,7 @@ interface LiquidacionSueldosViewProps {
   onCentralizePayrollVoucher: (voucher: Omit<Voucher, 'id' | 'createdAt'>, anularIds?: string[]) => Promise<string>;
   /** Guarda las cuentas de remuneraciones elegidas por el usuario (en Parámetros contables de la empresa). */
   onSaveMasterParams?: (patch: Record<string, string>) => Promise<void>;
-  /** Para el libro desde archivos Previred */
+  /** Estudio de la empresa: novedades del mes, estado del período y libro Previred se guardan dentro del estudio. */
   studyId?: string;
   onNavigateToLibroDiario?: (voucherId: string) => void;
   onOpenVoucher?: (voucherRef: Voucher | string | number) => void;
@@ -149,6 +150,8 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
 
   // Sincronización en línea de indicadores económicos (UF / UTM)
   const [isSyncingIndicators, setIsSyncingIndicators] = useState<boolean>(false);
+  // Novedades mensuales (días, horas extras, bonos, sueldo del mes, anticipos)
+  const [monthInputs, setMonthInputs] = useState<Record<string, MonthPayrollInput>>({});
   const [syncNotice, setSyncNotice] = useState<string>('');
   const [liveUfOverride, setLiveUfOverride] = useState<number | null>(null);
   const [liveUtmOverride, setLiveUtmOverride] = useState<number | null>(null);
@@ -205,28 +208,45 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
     return () => { isMounted = false; };
   }, [companyId, periodStr]);
 
-  // Carga de novedades y sueldos específicos del mes en proceso (Sueldo empresarial, horas, etc.)
+  // Novedades del mes (sueldo del mes, días, horas extras, bonos, etc.): se guardan en la base de datos del estudio
+  // y se escuchan en línea. Si existen datos de la versión anterior (ruta antigua o este navegador), se migran.
+  const refNovedades = useMemo(() => (studyId ? doc(db, 'studies', studyId, 'companies', companyId, 'monthlyPayrollInputs', periodStr) : null), [studyId, companyId, periodStr]);
+  const refEstadoPeriodo = useMemo(() => (studyId ? doc(db, 'studies', studyId, 'companies', companyId, 'payrollPeriods', periodStr) : null), [studyId, companyId, periodStr]);
+  const [estadoPeriodoDoc, setEstadoPeriodoDoc] = useState<{ estado?: 'ABIERTO' | 'PROCESADO' | 'CERRADO'; procesadoEn?: string; procesadoPor?: string; cerradoEn?: string; cerradoPor?: string } | null>(null);
   useEffect(() => {
-    let isMounted = true;
-    const fetchMonthInputs = async () => {
-      try {
-        const cached = localStorage.getItem(`gestok_month_inputs_${companyId}_${periodStr}`);
-        if (cached && isMounted) {
-          try { setMonthInputs(JSON.parse(cached)); } catch {}
-        }
-        const snap = await getDoc(doc(db, 'companies', companyId, 'monthlyPayrollInputs', periodStr));
-        if (snap.exists() && isMounted) {
-          const data = snap.data() as Record<string, MonthPayrollInput>;
-          setMonthInputs(data);
-          try { localStorage.setItem(`gestok_month_inputs_${companyId}_${periodStr}`, JSON.stringify(data)); } catch {}
-        }
-      } catch (err) {
-        console.warn('Could not fetch monthly payroll inputs:', err);
-      }
-    };
-    fetchMonthInputs();
-    return () => { isMounted = false; };
-  }, [companyId, periodStr]);
+    setMonthInputs({});
+    if (!refNovedades) return;
+    let migrado = false;
+    const unsub = onSnapshot(refNovedades, async snap => {
+      if (snap.exists()) { setMonthInputs((snap.data() as any) || {}); return; }
+      if (migrado) { setMonthInputs({}); return; }
+      migrado = true;
+      // Migración: ruta antigua fuera del estudio, o lo guardado sólo en este navegador
+      let antiguo: Record<string, MonthPayrollInput> | null = null;
+      try { const o = await getDoc(doc(db, 'companies', companyId, 'monthlyPayrollInputs', periodStr)); if (o.exists()) antiguo = o.data() as any; } catch { /* sin permiso a la ruta antigua */ }
+      if (!antiguo) { try { const c = localStorage.getItem(`gestok_month_inputs_${companyId}_${periodStr}`); if (c) antiguo = JSON.parse(c); } catch { /* nada */ } }
+      if (antiguo && Object.keys(antiguo).length) { try { await setDoc(refNovedades, antiguo); } catch { setMonthInputs(antiguo); } }
+      else setMonthInputs({});
+    }, err => { console.warn('Novedades del mes:', err); });
+    return () => unsub();
+  }, [refNovedades, companyId, periodStr]);
+  useEffect(() => {
+    setEstadoPeriodoDoc(null);
+    if (!refEstadoPeriodo) return;
+    return onSnapshot(refEstadoPeriodo, snap => setEstadoPeriodoDoc(snap.exists() ? (snap.data() as any) : null), () => {});
+  }, [refEstadoPeriodo]);
+
+  /** Graba las novedades del mes. Si falla, se avisa (nunca se pierde en silencio). */
+  const grabarNovedades = async (updated: Record<string, MonthPayrollInput>) => {
+    try { localStorage.setItem(`gestok_month_inputs_${companyId}_${periodStr}`, JSON.stringify(updated)); } catch { /* sin almacenamiento */ }
+    if (!refNovedades) return;
+    try {
+      // Firestore no acepta undefined
+      await setDoc(refNovedades, JSON.parse(JSON.stringify(updated)));
+    } catch (e: any) {
+      alert(`No se pudo grabar el cambio del período ${periodStr}: ${e?.code === 'permission-denied' ? 'tu usuario no tiene permiso de escritura en esta empresa.' : (e?.message || e)}`);
+    }
+  };
 
   // Parámetros previsionales del período seleccionado (actualizados automáticamente con datos oficiales de Previred / SII o del Super Administrador)
   const periodParams: PayrollParameters = useMemo(() => {
@@ -277,6 +297,10 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
   const isPeriodProcessed = useMemo(() => {
     return savedSlips.some(s => s.period === periodStr);
   }, [savedSlips, periodStr]);
+  // Estado del mes: ABIERTO (se calcula en vivo), PROCESADO (liquidaciones grabadas, aún se puede corregir y reprocesar)
+  // y CERRADO (las liquidaciones quedan fijas: nada de lo que cambie después en fichas, sueldos o parámetros las modifica).
+  const estadoPeriodo: 'ABIERTO' | 'PROCESADO' | 'CERRADO' = estadoPeriodoDoc?.estado === 'CERRADO' ? 'CERRADO' : (estadoPeriodoDoc?.estado === 'PROCESADO' || isPeriodProcessed ? 'PROCESADO' : 'ABIERTO');
+  const periodoCerrado = estadoPeriodo === 'CERRADO';
 
   const handleSyncOnlineIndicators = async () => {
     setIsSyncingIndicators(true);
@@ -296,8 +320,6 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
     }
   };
 
-  // Novedades mensuales en memoria (días, horas extras, bonos, anticipos)
-  const [monthInputs, setMonthInputs] = useState<Record<string, MonthPayrollInput>>({});
 
   // Slips del mes calculados o cargados (Guardia: No calcula liquidaciones si el período es futuro bloqueado)
   const slipsForPeriod: PayrollSlip[] = useMemo(() => {
@@ -306,6 +328,8 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
     }
 
     const existingForPeriod = savedSlips.filter(s => s.period === periodStr);
+    // Mes cerrado: se muestran exactamente las liquidaciones grabadas al cerrar
+    if (periodoCerrado) return existingForPeriod;
     const periodStart = `${periodStr}-01`;
     const periodEnd = `${periodStr}-31`;
 
@@ -326,14 +350,14 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
       const existing = existingForPeriod.find(s => s.employeeId === emp.id);
       const input = monthInputs[emp.id] || {};
       
-      // Si existe guardado y no hay novedades ni cambios en memoria ni conceptos dinámicos introducidos
-      if (existing && Object.keys(input).length === 0 && (!existing.conceptValues || Object.keys(existing.conceptValues).length === 0)) {
+      // Liquidación ya procesada y sin novedades nuevas para el trabajador: se muestra la grabada (no se recalcula con datos actuales)
+      if (existing && Object.keys(input).length === 0) {
         return existing;
       }
 
       return calculatePayrollSlip(emp, periodParams, input, companyConcepts);
     });
-  }, [employees, savedSlips, periodStr, periodParams, monthInputs, companyConcepts, isFuturePeriodBlocked]);
+  }, [employees, savedSlips, periodStr, periodParams, monthInputs, companyConcepts, isFuturePeriodBlocked, periodoCerrado]);
 
   // Resumen / Totales de la nómina del mes
   const totals = useMemo(() => {
@@ -399,6 +423,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
 
   // Manejador de cambio de novedades y renta de un colaborador para este período específico
   const handleInputChange = (employeeId: string, field: keyof MonthPayrollInput, value: number) => {
+    if (periodoCerrado) { alert(`El mes ${periodStr} está cerrado. Para modificarlo, primero reábrelo.`); return; }
     setMonthInputs(prev => {
       const updated = {
         ...prev,
@@ -407,10 +432,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
           [field]: value
         }
       };
-      try {
-        localStorage.setItem(`gestok_month_inputs_${companyId}_${periodStr}`, JSON.stringify(updated));
-        setDoc(doc(db, 'companies', companyId, 'monthlyPayrollInputs', periodStr), updated, { merge: true }).catch(() => {});
-      } catch {}
+      grabarNovedades(updated);
       return updated;
     });
   };
@@ -425,10 +447,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
           ...data
         };
       }
-      try {
-        localStorage.setItem(`gestok_month_inputs_${companyId}_${periodStr}`, JSON.stringify(updated));
-        setDoc(doc(db, 'companies', companyId, 'monthlyPayrollInputs', periodStr), updated, { merge: true }).catch(() => {});
-      } catch {}
+      grabarNovedades(updated);
       return updated;
     });
   };
@@ -440,10 +459,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
         ...prev,
         [employeeId]: updatedInput
       };
-      try {
-        localStorage.setItem(`gestok_month_inputs_${companyId}_${periodStr}`, JSON.stringify(updated));
-        setDoc(doc(db, 'companies', companyId, 'monthlyPayrollInputs', periodStr), updated, { merge: true }).catch(() => {});
-      } catch {}
+      grabarNovedades(updated);
       return updated;
     });
   };
@@ -549,20 +565,79 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
     }
   };
 
-  // Guardar cálculo de liquidaciones en lote
+  /**
+   * Procesar el mes: graba las liquidaciones calculadas y deja fijo, en las novedades del mes, el sueldo base usado.
+   * Así, un cambio de sueldo posterior (en la ficha o desde otro mes) no altera este mes.
+   */
   const handleSaveAllSlips = async () => {
+    if (periodoCerrado) { alert(`El mes ${periodStr} está cerrado. Para reprocesarlo, primero reábrelo.`); return; }
+    if (!slipsForPeriod.length) { alert('No hay liquidaciones para procesar en este mes.'); return; }
     try {
-      await onSavePayrollSlips(slipsForPeriod);
-      alert(`Se han guardado exitosamente las ${slipsForPeriod.length} liquidaciones de sueldo para el período ${periodStr}.`);
-    } catch (err) {
-      console.error('Error al guardar liquidaciones:', err);
-      alert('Error al guardar liquidaciones.');
+      const fijadas: Record<string, MonthPayrollInput> = { ...monthInputs };
+      for (const sl of slipsForPeriod) {
+        const inp = fijadas[sl.employeeId] || {};
+        if (inp.sueldoBaseOverride === undefined || inp.sueldoBaseOverride === null) fijadas[sl.employeeId] = { ...inp, sueldoBaseOverride: sl.sueldoBasePactado };
+      }
+      await onSavePayrollSlips(slipsForPeriod.map(sl => ({ ...sl, estado: sl.estado === 'CENTRALIZADA' ? sl.estado : 'APROBADA' })));
+      await grabarNovedades(fijadas);
+      setMonthInputs(fijadas);
+      if (refEstadoPeriodo) await setDoc(refEstadoPeriodo, { estado: 'PROCESADO', procesadoEn: new Date().toISOString(), procesadoPor: auth.currentUser?.email || '' }, { merge: true });
+      alert(`Mes ${periodStr} procesado: ${slipsForPeriod.length} liquidaciones grabadas.\n\nCuando esté revisado, ciérralo con "Cerrar mes" para que no cambie más.`);
+    } catch (err: any) {
+      console.error('Error al procesar liquidaciones:', err);
+      alert('No se pudieron grabar las liquidaciones: ' + (err?.message || err));
     }
+  };
+
+  /** Cerrar el mes: reprocesa lo pendiente y deja las liquidaciones fijas. */
+  const handleCerrarMes = async () => {
+    if (!refEstadoPeriodo) return;
+    if (!confirm(`¿Cerrar el mes ${periodStr}?\n\nSe grabarán las liquidaciones tal como están y quedarán fijas: los cambios de sueldo, bonos o parámetros que hagas después no modificarán este mes. Podrás reabrirlo si es necesario.`)) return;
+    try {
+      const fijadas: Record<string, MonthPayrollInput> = { ...monthInputs };
+      for (const sl of slipsForPeriod) {
+        const inp = fijadas[sl.employeeId] || {};
+        if (inp.sueldoBaseOverride === undefined || inp.sueldoBaseOverride === null) fijadas[sl.employeeId] = { ...inp, sueldoBaseOverride: sl.sueldoBasePactado };
+      }
+      await onSavePayrollSlips(slipsForPeriod.map(sl => ({ ...sl, estado: sl.estado === 'CENTRALIZADA' ? sl.estado : 'APROBADA' })));
+      await grabarNovedades(fijadas);
+      await setDoc(refEstadoPeriodo, { estado: 'CERRADO', cerradoEn: new Date().toISOString(), cerradoPor: auth.currentUser?.email || '', procesadoEn: estadoPeriodoDoc?.procesadoEn || new Date().toISOString() }, { merge: true });
+      alert(`Mes ${periodStr} cerrado.`);
+    } catch (err: any) {
+      alert('No se pudo cerrar el mes: ' + (err?.message || err));
+    }
+  };
+
+  const handleReabrirMes = async () => {
+    if (!refEstadoPeriodo) return;
+    if (!confirm(`¿Reabrir el mes ${periodStr}?\n\nPodrás modificar novedades y reprocesar. Si el mes ya está centralizado en la contabilidad, deberás volver a centralizarlo después de corregir.`)) return;
+    try {
+      await setDoc(refEstadoPeriodo, { estado: 'PROCESADO', reabiertoEn: new Date().toISOString(), reabiertoPor: auth.currentUser?.email || '' }, { merge: true });
+    } catch (err: any) {
+      alert('No se pudo reabrir el mes: ' + (err?.message || err));
+    }
+  };
+
+  /** Nuevo sueldo con vigencia desde el mes seleccionado (historial de la ficha). Los meses anteriores conservan su sueldo. */
+  const aplicarSueldoDesdeEsteMes = async (emp: Employee, nuevo: number) => {
+    if (!onSaveEmployee || !(nuevo > 0)) return;
+    if (!confirm(`¿Registrar $${nuevo.toLocaleString('es-CL')} como sueldo de ${emp.name} desde ${periodStr} en adelante?\n\nLos meses anteriores mantienen su sueldo.`)) return;
+    const ahora = new Date().toISOString();
+    const [y, m] = periodStr.split('-').map(Number);
+    const finAnterior = new Date(Date.UTC(y, m - 1, 0)).toISOString().slice(0, 10);
+    const historial = [...(emp.salaryHistory || [])].map(h => (h.startDate.slice(0, 7) < periodStr && (!h.endDate || h.endDate.slice(0, 7) >= periodStr)) ? { ...h, endDate: finAnterior, isCurrent: false } : h)
+      .filter(h => h.startDate.slice(0, 7) !== periodStr);
+    // Si no había historial, el sueldo anterior de la ficha queda registrado hasta el mes previo
+    if (!(emp.salaryHistory || []).length && emp.baseSalary > 0) historial.push({ id: `sal_${Date.now()}_ant`, employeeId: emp.id, baseSalary: emp.baseSalary, startDate: (emp.hireDate || '2000-01-01').slice(0, 10), endDate: finAnterior, isCurrent: false, reason: 'Sueldo anterior', createdAt: ahora });
+    historial.push({ id: `sal_${Date.now()}`, employeeId: emp.id, baseSalary: nuevo, startDate: `${periodStr}-01`, endDate: null, isCurrent: true, reason: 'Ajuste salarial', createdAt: ahora });
+    await onSaveEmployee({ ...emp, baseSalary: nuevo, salaryHistory: historial, updatedAt: ahora });
+    alert(`Sueldo actualizado desde ${periodStr}. Los meses cerrados o procesados anteriores no cambian.`);
   };
 
   // Resetear o limpiar las liquidaciones del período seleccionado
   const handleResetCurrentPeriod = async () => {
     if (!onResetPayrollSlips) return;
+    if (periodoCerrado) { alert(`El mes ${periodStr} está cerrado. Para limpiarlo, primero reábrelo.`); return; }
     const confirmMsg = `¿Está seguro de eliminar todas las liquidaciones guardadas para el período ${periodStr}?\n\nEsta acción eliminará los datos guardados de este mes para volver a simular o procesar desde cero.`;
     if (confirm(confirmMsg)) {
       try {
@@ -1159,7 +1234,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
             <button
               type="button"
               onClick={handleSaveAllSlips}
-              disabled={isFuturePeriodBlocked}
+              disabled={isFuturePeriodBlocked || periodoCerrado}
               className={`px-3.5 py-1.5 text-xs font-bold text-white rounded-xl transition-all flex items-center gap-1.5 shadow-2xs shrink-0 cursor-pointer ${
                 isFuturePeriodBlocked
                   ? 'bg-slate-400 cursor-not-allowed opacity-60'
@@ -1170,11 +1245,27 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
               title={isFuturePeriodBlocked ? 'Período bloqueado' : 'Calcular y procesar liquidaciones'}
             >
               {isFuturePeriodBlocked ? <Lock className="w-3.5 h-3.5 text-slate-200" /> : <Sparkles className="w-3.5 h-3.5 text-amber-300" />}
-              <span>{isFuturePeriodBlocked ? 'Bloqueado' : isPeriodProcessed ? 'Reprocesar' : 'Procesar'}</span>
+              <span>{isFuturePeriodBlocked ? 'Bloqueado' : periodoCerrado ? 'Cerrado' : isPeriodProcessed ? 'Reprocesar mes' : 'Procesar mes'}</span>
             </button>
 
+            {/* Cerrar / reabrir mes */}
+            {studyId && !periodoCerrado && (
+              <button type="button" onClick={handleCerrarMes} disabled={!slipsForPeriod.length}
+                className="px-3 py-1.5 text-xs font-bold text-white bg-indigo-700 hover:bg-indigo-800 rounded-xl flex items-center gap-1.5 shadow-2xs cursor-pointer disabled:opacity-50"
+                title="Grabar y dejar fijas las liquidaciones de este mes">
+                <Lock className="w-3.5 h-3.5" /><span>Cerrar mes</span>
+              </button>
+            )}
+            {studyId && periodoCerrado && (
+              <button type="button" onClick={handleReabrirMes}
+                className="px-3 py-1.5 text-xs font-bold text-indigo-800 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 rounded-xl flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                title={`Cerrado ${estadoPeriodoDoc?.cerradoEn ? new Date(estadoPeriodoDoc.cerradoEn).toLocaleString('es-CL') : ''} ${estadoPeriodoDoc?.cerradoPor || ''}`}>
+                <Lock className="w-3.5 h-3.5" /><span>Mes cerrado · Reabrir</span>
+              </button>
+            )}
+
             {/* Botón Reset / Limpiar Período */}
-            {onResetPayrollSlips && isPeriodProcessed && (
+            {onResetPayrollSlips && isPeriodProcessed && !periodoCerrado && (
               <button
                 type="button"
                 onClick={handleResetCurrentPeriod}
@@ -1416,12 +1507,15 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
           </div>
 
           {/* Tabla de Nómina y Novedades */}
+          <fieldset disabled={periodoCerrado} className="contents">
           <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
             <div className="p-4 border-b border-slate-200 bg-slate-50/70 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
               <div>
                 <h3 className="text-sm font-bold text-slate-900">
                   Planilla de remuneraciones
-                  {!isPeriodProcessed && <span className="ml-2 align-middle text-[11px] font-semibold text-amber-800 bg-amber-100 border border-amber-200 rounded px-1.5 py-0.5">Vista previa, sin procesar</span>}
+                  {estadoPeriodo === 'ABIERTO' && <span className="ml-2 align-middle text-[11px] font-semibold text-amber-800 bg-amber-100 border border-amber-200 rounded px-1.5 py-0.5">Vista previa, sin procesar</span>}
+                  {estadoPeriodo === 'PROCESADO' && <span className="ml-2 align-middle text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5">Procesado · se puede corregir y reprocesar</span>}
+                  {estadoPeriodo === 'CERRADO' && <span className="ml-2 align-middle text-[11px] font-semibold text-indigo-800 bg-indigo-50 border border-indigo-200 rounded px-1.5 py-0.5">Mes cerrado · liquidaciones fijas</span>}
                 </h3>
               </div>
 
@@ -1555,10 +1649,18 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
                                   {emp?.workHoursPerWeek} hrs
                                 </span>
                               )}
-                              {monthInputs[slip.employeeId]?.sueldoBaseOverride !== undefined && (
-                                <span className="text-[9px] bg-purple-100 text-purple-900 font-bold px-1 rounded border border-purple-300" title="Renta modificada exclusivamente para este período">
-                                  Mes {periodStr}
-                                </span>
+                              {emp && monthInputs[slip.employeeId]?.sueldoBaseOverride !== undefined && monthInputs[slip.employeeId].sueldoBaseOverride !== sueldoVigenteDelPeriodo(emp, periodStr) && (
+                                <>
+                                  <span className="text-[9px] bg-purple-100 text-purple-900 font-bold px-1 rounded border border-purple-300" title="Sueldo distinto al de la ficha sólo en este mes">
+                                    Sólo {periodStr}
+                                  </span>
+                                  {!periodoCerrado && onSaveEmployee && (
+                                    <button type="button" onClick={() => aplicarSueldoDesdeEsteMes(emp, Number(monthInputs[slip.employeeId].sueldoBaseOverride) || 0)}
+                                      className="text-[9px] text-indigo-700 underline" title="Registrar este sueldo en la ficha con vigencia desde este mes; los meses anteriores no cambian">
+                                      Aplicar desde este mes
+                                    </button>
+                                  )}
+                                </>
                               )}
                               {hasVigencias && (
                                 <span className="inline-flex items-center gap-0.5 text-[9px] text-amber-700 font-sans font-semibold bg-amber-50 px-1 rounded border border-amber-200" title="Sueldo regido por vigencia histórica">
@@ -1879,6 +1981,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
               </div>
             )}
           </div>
+          </fieldset>
         </div>
       )}
 

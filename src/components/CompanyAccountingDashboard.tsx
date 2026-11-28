@@ -9750,6 +9750,7 @@ export default function CompanyAccountingDashboard({
       {/* TAB: LIQUIDACIONES Y PREVIRED */}
       {pestanaViva('liquidaciones') && <PestanaViva visible={activeTab === 'liquidaciones'}>{(
         <LiquidacionSueldosView
+          studyId={studyId}
           companyId={company.id}
           companyName={company.name}
           companyRut={company.rut}
@@ -9764,7 +9765,6 @@ export default function CompanyAccountingDashboard({
           onResetPayrollSlips={handleResetPayrollSlips}
           onCentralizePayrollVoucher={handleCentralizePayrollVoucher}
           onSaveMasterParams={async (patch) => { await setDoc(doc(companyRef, 'config', 'rcvParams'), patch, { merge: true }); }}
-          studyId={studyId}
           onNavigateToLibroDiario={(vId) => setActiveTab('libroDiario')}
           onOpenVoucher={handleOpenVoucherModal}
           savedSlips={payrollSlips}

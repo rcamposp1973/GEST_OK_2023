@@ -402,6 +402,13 @@ export function tasasCesantia(employee: Employee, period: string): { trabajador:
   return { trabajador: 0, empleador: 3.0 };
 }
 
+/** Sueldo base vigente para un período según la ficha (historial de sueldos con vigencia; si no hay, el sueldo de la ficha). */
+export function sueldoVigenteDelPeriodo(employee: Employee, period: string): number {
+  const h = [...(employee.salaryHistory || [])].sort((a, b) => b.startDate.localeCompare(a.startDate))
+    .find(e => e.startDate.slice(0, 7) <= period && (!e.endDate || e.endDate.slice(0, 7) >= period));
+  return h && h.baseSalary > 0 ? h.baseSalary : (employee.baseSalary || 0);
+}
+
 export function calculatePayrollSlip(
   employeeBase: Employee,
   params: PayrollParameters,

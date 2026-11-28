@@ -1176,13 +1176,13 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">Días Hábiles / Corridos</label>
-              <input
-                type="number"
+              <InputNumeroEvento
                 min={1}
                 value={newAtt.days}
                 onChange={(e) => setNewAtt({ ...newAtt, days: parseInt(e.target.value) || 1 })}
                 className="w-full text-xs bg-white border border-slate-300 rounded-lg p-2 font-mono"
-              />
+  decimales={4}
+/>
             </div>
             <div className="flex items-end">
               <button
@@ -1674,14 +1674,14 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
 
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Jornada Semanal (Horas)</label>
-                    <input
-                      type="number"
+                    <InputNumeroEvento
                       min={1}
                       max={45}
                       value={formData.workHoursPerWeek}
                       onChange={(e) => setFormData({ ...formData, workHoursPerWeek: Number(e.target.value) })}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                    />
+  decimales={4}
+/>
                   </div>
 
                   <div className="md:col-span-3 bg-amber-50/70 border border-amber-200/90 rounded-xl p-3 flex items-start gap-3">
@@ -1718,14 +1718,14 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Sueldo Base Mensual (CLP) *</label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-mono">$</span>
-                      <input
-                        type="number"
+                      <InputNumeroEvento
                         required
                         min={0}
                         value={formData.baseSalary}
                         onChange={(e) => setFormData({ ...formData, baseSalary: Number(e.target.value) })}
                         className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-lg text-sm font-mono font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                      />
+  decimales={4}
+/>
                     </div>
                   </div>
 
@@ -1831,14 +1831,14 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Cuota Préstamo Empresa ($)</label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-mono">$</span>
-                      <input
-                        type="number"
+                      <InputNumeroEvento
                         min={0}
                         value={formData.descuentoPrestamoCuota || 0}
                         onChange={(e) => setFormData({ ...formData, descuentoPrestamoCuota: Number(e.target.value) })}
                         className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-lg text-sm font-mono text-rose-700 font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                         placeholder="0"
-                      />
+  decimales={4}
+/>
                     </div>
                   </div>
 
@@ -1975,13 +1975,13 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
 
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Cargas Familiares</label>
-                    <input
-                      type="number"
+                    <InputNumeroEvento
                       min={0}
                       value={formData.cargasFamiliares}
                       onChange={(e) => setFormData({ ...formData, cargasFamiliares: Number(e.target.value) })}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                    />
+  decimales={4}
+/>
                   </div>
 
                   <div>

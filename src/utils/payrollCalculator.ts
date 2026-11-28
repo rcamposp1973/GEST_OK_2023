@@ -5,7 +5,7 @@ import {
   Employee, PayrollParameters, PayrollSlip, PensionSystem, HealthSystem, 
   HealthPlanType, ContractType, PayrollConcept, AnnualReliquidation, ReliquidationMonthDetail 
 } from '../types';
-import { OFFICIAL_UF_MONTHLY_START, OFFICIAL_UF_MONTH_END_PREVIRED, OFFICIAL_MONTHLY_UTM, OFFICIAL_MONTHLY_IMM, getOfficialIMM } from './chileanEconomicIndicators';
+import { OFFICIAL_UF_MONTHLY_START, OFFICIAL_UF_MONTH_END_PREVIRED, OFFICIAL_MONTHLY_UTM, OFFICIAL_MONTHLY_IMM, getOfficialIMM, getOfficialUF } from './chileanEconomicIndicators';
 
 export const DEFAULT_AFP_COMMISSIONS: Record<PensionSystem, number> = {
   CAPITAL: 11.44, // 10% Fondo + 1.44% Comisión
@@ -107,10 +107,15 @@ export function getPrevisionalParametersForPeriod(periodStr: string): PayrollPar
     const previos = Object.keys(tabla).filter(k => k < periodStr && tabla[k] > 0).sort();
     return previos.length ? tabla[previos[previos.length - 1]] : 0;
   };
-  // Desde 2026 se usa la UF del último día del mes publicada por Previred (base de los topes imponibles).
-  const uf = periodStr >= '2025-12'
-    ? ultimoConocido(OFFICIAL_UF_MONTH_END_PREVIRED as Record<string, number>)
-    : ultimoConocido(OFFICIAL_UF_MONTHLY_START as Record<string, number>);
+  // Remuneraciones: UF del ÚLTIMO DÍA del mes (la que publica Previred para los topes imponibles).
+  // Primero el valor oficial sincronizado del Banco Central/SII para esa fecha exacta; si aún no está publicado,
+  // la tabla de Previred; y sólo si tampoco existe, el último valor conocido (nunca uno inventado).
+  const finMes = new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10);
+  const ufOficialFinMes = getOfficialUF(finMes);
+  const uf = ufOficialFinMes > 0
+    ? ufOficialFinMes
+    : ((OFFICIAL_UF_MONTH_END_PREVIRED as Record<string, number>)[periodStr]
+      || (periodStr >= '2025-12' ? ultimoConocido(OFFICIAL_UF_MONTH_END_PREVIRED as Record<string, number>) : ultimoConocido(OFFICIAL_UF_MONTHLY_START as Record<string, number>)));
   const utm = ultimoConocido(OFFICIAL_MONTHLY_UTM as Record<string, number>);
 
   // Ingreso Mínimo Mensual (IMM) según fecha y ley de reajuste vigente (Leyes N° 21.456, 21.578, etc.)

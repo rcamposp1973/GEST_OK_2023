@@ -699,74 +699,68 @@ export const SuperAdminIndicatorsCenter: React.FC<SuperAdminIndicatorsCenterProp
 
                 <div>
                   <label className="block text-slate-400 font-bold mb-1">UF ($):</label>
-                  <input
-                    type="number"
-                    step="0.01"
+                  <InputNumeroEvento
                     value={rateUf}
                     onChange={e => setRateUf(parseFloat(e.target.value) || 0)}
                     required
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-emerald-400 font-mono font-bold"
-                  />
+  decimales={2}
+/>
                 </div>
 
                 <div>
                   <label className="block text-slate-400 font-bold mb-1">Dólar USD ($):</label>
-                  <input
-                    type="number"
-                    step="0.01"
+                  <InputNumeroEvento
                     value={rateDolar}
                     onChange={e => setRateDolar(parseFloat(e.target.value) || 0)}
                     required
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-sky-400 font-mono font-bold"
-                  />
+  decimales={2}
+/>
                 </div>
 
                 <div>
                   <label className="block text-slate-400 font-bold mb-1">Euro EUR ($):</label>
-                  <input
-                    type="number"
-                    step="0.01"
+                  <InputNumeroEvento
                     value={rateEuro}
                     onChange={e => setRateEuro(parseFloat(e.target.value) || 0)}
                     required
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-indigo-400 font-mono font-bold"
-                  />
+  decimales={2}
+/>
                 </div>
 
                 <div>
                   <label className="block text-slate-400 font-bold mb-1">UTM ($):</label>
-                  <input
-                    type="number"
-                    step="1"
+                  <InputNumeroEvento
                     value={rateUtm}
                     onChange={e => setRateUtm(parseFloat(e.target.value) || 0)}
                     required
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-amber-400 font-mono font-bold"
-                  />
+  decimales={0}
+/>
                 </div>
 
                 <div>
                   <label className="block text-slate-400 font-bold mb-1">Yen JPY ($):</label>
-                  <input
-                    type="number"
-                    step="0.01"
+                  <InputNumeroEvento
                     value={rateYen}
                     onChange={e => setRateYen(parseFloat(e.target.value) || 0)}
                     required
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-purple-400 font-mono font-bold"
-                  />
+  decimales={2}
+/>
                 </div>
 
                 <div>
                   <label className="block text-slate-400 font-bold mb-1">IPC Mensual (%):</label>
-                  <input
-                    type="number"
-                    step="0.01"
+                  <InputNumeroEvento
                     value={rateIpc}
                     onChange={e => setRateIpc(parseFloat(e.target.value) || 0)}
                     required
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-rose-400 font-mono font-bold"
-                  />
+  decimales={2}
+/>
                 </div>
               </div>
 

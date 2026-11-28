@@ -1,5 +1,6 @@
 import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useEffect, useMemo } from 'react';
+import { InputNumeroEvento } from './ui/NumeroCL';
 import { db } from '../lib/firebase';
 import { collection, getDocs, addDoc, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { Company, Voucher, ChartOfAccount, FiscalPeriodYear, RCVDocument, ManualCashProjection } from '../types';
@@ -759,14 +760,14 @@ export default function FlujoDeCajaView({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Monto ($) *</label>
-                  <input
-                    type="number"
+                  <InputNumeroEvento
                     min="1"
                     value={formAmount}
                     onChange={e => setFormAmount(Number(e.target.value))}
                     required
                     className="w-full border border-slate-300 rounded-lg p-2 font-mono font-bold"
-                  />
+  decimales={4}
+/>
                 </div>
 
                 <div>

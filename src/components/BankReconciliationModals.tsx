@@ -2252,8 +2252,7 @@ function QuickVoucherModalContent({
                             </td>
                             <td className="p-2 text-right">
                               {isSelected ? (
-                                <input
-                                  type="number"
+                                <InputNumeroEvento
                                   min="0"
                                   max={Math.abs(item.openBalance)}
                                   value={currentAmt || ''}
@@ -2262,7 +2261,8 @@ function QuickVoucherModalContent({
                                     setSelectedDocIds(prev => ({ ...prev, [item.id]: val }));
                                   }}
                                   className="w-28 text-right bg-white border border-indigo-400 rounded p-1 font-bold text-indigo-950 focus:ring-1 focus:ring-indigo-500"
-                                />
+  decimales={4}
+/>
                               ) : (
                                 <span className="text-slate-400 font-sans italic">-</span>
                               )}

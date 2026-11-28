@@ -101,7 +101,8 @@ export const OFFICIAL_UF_MONTHLY_START: { [period: string]: number } = {
   // 2026 (Oficial Banco Central / SII)
   '2026-01': 39750.12, '2026-02': 39810.45, '2026-03': 39920.80, '2026-04': 40050.15,
   '2026-05': 40210.30, '2026-06': 40415.60, '2026-07': 40610.69, '2026-08': 40750.20,
-  '2026-09': 40920.40, '2026-10': 41065.38, '2026-11': 41180.00, '2026-12': 41250.00,
+  '2026-09': 40920.40, '2026-10': 41065.38,
+  // Noviembre y diciembre 2026 se toman de los valores oficiales sincronizados (no se estiman)
 };
 
 // 3. TABLA OFICIAL CERTIFICADA DE IPC MENSUAL (%) (INE / SII)

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { InputNumeroEvento } from './ui/NumeroCL';
 import { db } from '../lib/firebase';
 import { collection, getDocs, doc, setDoc, addDoc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore';
 import { Company, SiiFolioAuthorization, FolioUsageLog } from '../types';
@@ -490,25 +491,25 @@ export default function SiiFolioControlView({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Folio Inicial Autorizado *</label>
-                  <input
-                    type="number"
+                  <InputNumeroEvento
                     required
                     min={1}
                     value={startFolio}
                     onChange={e => setStartFolio(parseInt(e.target.value) || 1)}
                     className="w-full p-2 border border-slate-300 rounded-lg font-mono font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
+  decimales={4}
+/>
                 </div>
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Folio Final Autorizado *</label>
-                  <input
-                    type="number"
+                  <InputNumeroEvento
                     required
                     min={startFolio}
                     value={endFolio}
                     onChange={e => setEndFolio(parseInt(e.target.value) || startFolio)}
                     className="w-full p-2 border border-slate-300 rounded-lg font-mono font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
+  decimales={4}
+/>
                 </div>
               </div>
 

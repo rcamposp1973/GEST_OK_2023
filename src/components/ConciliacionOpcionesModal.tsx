@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { InputNumeroEvento } from './ui/NumeroCL';
 import { X } from 'lucide-react';
 
 export interface ConciliacionConfig {
@@ -65,14 +66,14 @@ export default function ConciliacionOpcionesModal({ isOpen, onClose, config, onS
             <p className="text-xs text-slate-500 mt-0.5 mb-2">
               Si el banco y las facturas difieren en hasta este monto, la diferencia va a la cuenta Ajuste por redondeo. Máximo ${TOLERANCIA_MAXIMA}; con 0 se exige el monto exacto.
             </p>
-            <input
-              type="number"
+            <InputNumeroEvento
               min={0}
               max={TOLERANCIA_MAXIMA}
               value={tolerancia}
               onChange={e => setTolerancia(e.target.value)}
               className="w-28 px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-            />
+  decimales={4}
+/>
             {!valida && <p className="text-xs text-rose-600 mt-1">Ingresa un número entre 0 y {TOLERANCIA_MAXIMA}.</p>}
           </div>
 

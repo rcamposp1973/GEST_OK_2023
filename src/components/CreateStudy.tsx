@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { InputNumeroEvento } from './ui/NumeroCL';
 import { provisionAuthUser } from '../utils/adminApi';
 import { db, auth } from '../lib/firebase';
 import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
@@ -363,29 +364,29 @@ export default function CreateStudy({ onSuccess }: CreateStudyProps) {
 
             <div>
               <label className="block font-semibold text-slate-700 mb-1">Cantidad Máxima de Empresas *</label>
-              <input
-                type="number"
+              <InputNumeroEvento
                 min="1"
                 max="9999"
                 value={maxCompanies}
                 onChange={(e) => setMaxCompanies(parseInt(e.target.value, 10) || 1)}
                 className="w-full p-2.5 border border-slate-300 rounded-lg bg-white font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none"
                 required
-              />
+  decimales={4}
+/>
               <p className="text-[11px] text-slate-500 mt-0.5">Cupo de sociedades/empresas que puede crear el estudio</p>
             </div>
 
             <div>
               <label className="block font-semibold text-slate-700 mb-1">Cantidad Máxima de Usuarios *</label>
-              <input
-                type="number"
+              <InputNumeroEvento
                 min="1"
                 max="9999"
                 value={maxUsers}
                 onChange={(e) => setMaxUsers(parseInt(e.target.value, 10) || 1)}
                 className="w-full p-2.5 border border-slate-300 rounded-lg bg-white font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none"
                 required
-              />
+  decimales={4}
+/>
               <p className="text-[11px] text-slate-500 mt-0.5">Cupo de contadores/analistas permitidos</p>
             </div>
 

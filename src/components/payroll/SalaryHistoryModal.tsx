@@ -1,5 +1,6 @@
 import { formatearRut } from '../../utils/rutFormato';
 import React, { useState } from 'react';
+import { InputNumeroEvento } from '../ui/NumeroCL';
 import { Employee, SalaryHistoryEntry } from '../../types';
 import { 
   X, Calendar, Plus, Clock, CheckCircle2, History, AlertCircle, 
@@ -202,15 +203,14 @@ export const SalaryHistoryModal: React.FC<SalaryHistoryModalProps> = ({
                   <label className="block text-xs font-bold text-slate-800 mb-1">
                     Nuevo Sueldo Base Mensual ($ CLP) *
                   </label>
-                  <input
-                    type="number"
+                  <InputNumeroEvento
                     min={0}
-                    step={1000}
                     value={newSalary}
                     onChange={(e) => setNewSalary(Number(e.target.value))}
                     className="w-full px-3 py-2 text-sm font-mono font-bold text-slate-900 bg-white border border-amber-300 rounded-xl focus:ring-2 focus:ring-amber-500"
                     required
-                  />
+  decimales={0}
+/>
                 </div>
 
                 <div>

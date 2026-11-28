@@ -137,15 +137,14 @@ export const WorkerMonthlyNovedadesModal: React.FC<WorkerMonthlyNovedadesModalPr
                 </label>
                 <div className="relative">
                   <span className="absolute left-3 top-2.5 text-xs font-bold text-slate-400">$</span>
-                  <input
-                    type="number"
+                  <InputNumeroEvento
                     min={0}
-                    step={1000}
                     value={formData.sueldoBaseOverride ?? employee.baseSalary}
                     onChange={(e) => setFormData({ ...formData, sueldoBaseOverride: Number(e.target.value) })}
                     className="w-full pl-8 pr-3 py-2 text-sm font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500"
                     required
-                  />
+  decimales={0}
+/>
                 </div>
                 <p className="text-[11px] text-slate-500 mt-1">
                   Sueldo pactado en ficha: ${employee.baseSalary?.toLocaleString('es-CL')} | Puedes variarlo libremente este mes sin alterar meses pasados.
@@ -178,14 +177,14 @@ export const WorkerMonthlyNovedadesModal: React.FC<WorkerMonthlyNovedadesModalPr
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   Días Trabajados (0 a 30)
                 </label>
-                <input
-                  type="number"
+                <InputNumeroEvento
                   min={0}
                   max={30}
                   value={formData.diasTrabajados ?? 30}
                   onChange={(e) => setFormData({ ...formData, diasTrabajados: Number(e.target.value) })}
                   className="w-full px-3 py-2 text-xs font-bold text-center text-slate-900 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500"
-                />
+  decimales={4}
+/>
               </div>
 
               <div>
@@ -193,8 +192,7 @@ export const WorkerMonthlyNovedadesModal: React.FC<WorkerMonthlyNovedadesModalPr
                   <HeartPulse className="w-3.5 h-3.5 text-rose-500" />
                   Días Licencia Médica
                 </label>
-                <input
-                  type="number"
+                <InputNumeroEvento
                   min={0}
                   max={30}
                   value={formData.diasLicencia ?? 0}
@@ -207,15 +205,15 @@ export const WorkerMonthlyNovedadesModal: React.FC<WorkerMonthlyNovedadesModalPr
                     }));
                   }}
                   className="w-full px-3 py-2 text-xs font-bold text-center text-rose-800 bg-white border border-rose-300 rounded-xl focus:ring-2 focus:ring-rose-500"
-                />
+  decimales={4}
+/>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   Días Inasistencia
                 </label>
-                <input
-                  type="number"
+                <InputNumeroEvento
                   min={0}
                   max={30}
                   value={formData.diasInasistencia ?? 0}
@@ -228,21 +226,22 @@ export const WorkerMonthlyNovedadesModal: React.FC<WorkerMonthlyNovedadesModalPr
                     }));
                   }}
                   className="w-full px-3 py-2 text-xs font-bold text-center text-slate-800 bg-white border border-slate-300 rounded-xl"
-                />
+  decimales={4}
+/>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   Horas Extras al 50%
                 </label>
-                <input
-                  type="number"
+                <InputNumeroEvento
                   min={0}
                   max={120}
                   value={formData.horasExtras50Qty ?? 0}
                   onChange={(e) => setFormData({ ...formData, horasExtras50Qty: Number(e.target.value) })}
                   className="w-full px-3 py-2 text-xs font-bold text-center text-slate-900 bg-white border border-slate-300 rounded-xl"
-                />
+  decimales={4}
+/>
               </div>
             </div>
           </div>
@@ -334,15 +333,14 @@ export const WorkerMonthlyNovedadesModal: React.FC<WorkerMonthlyNovedadesModalPr
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   Retención Judicial Pensión Alimentos ($)
                 </label>
-                <input
-                  type="number"
+                <InputNumeroEvento
                   min={0}
-                  step={1000}
                   value={formData.descuentoJudicialPensionAlimentos ?? 0}
                   onChange={(e) => setFormData({ ...formData, descuentoJudicialPensionAlimentos: Number(e.target.value) })}
                   className="w-full px-3 py-2 text-xs font-mono font-bold text-rose-800 bg-white border border-rose-300 rounded-xl focus:ring-2 focus:ring-rose-500"
                   placeholder="Por orden de Tribunal de Familia"
-                />
+  decimales={0}
+/>
                 <p className="text-[10px] text-slate-500 mt-0.5">
                   Descuento legal obligatorio sobre el alcance líquido.
                 </p>

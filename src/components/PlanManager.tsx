@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { InputNumeroEvento } from './ui/NumeroCL';
 import { db } from '../lib/firebase';
 import { collection, addDoc, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
 import { Plan } from '../types';
@@ -296,34 +297,33 @@ export default function PlanManager() {
               </div>
               <div>
                 <label className="block text-slate-600 font-semibold mb-1">Precio en UF + IVA</label>
-                <input 
-                  type="number" 
-                  step="0.1" 
+                <InputNumeroEvento 
                   value={priceUF} 
                   onChange={e => setPriceUF(Number(e.target.value))} 
                   className="p-2 border rounded-lg w-full outline-none focus:ring-2 focus:ring-indigo-500" 
-                  required 
-                />
+                  required
+  decimales={1}
+/>
               </div>
               <div>
                 <label className="block text-slate-600 font-semibold mb-1">Máx. Empresas</label>
-                <input 
-                  type="number" 
+                <InputNumeroEvento 
                   value={maxCompanies} 
                   onChange={e => setMaxCompanies(Number(e.target.value))} 
                   className="p-2 border rounded-lg w-full outline-none focus:ring-2 focus:ring-indigo-500" 
-                  required 
-                />
+                  required
+  decimales={4}
+/>
               </div>
               <div>
                 <label className="block text-slate-600 font-semibold mb-1">Máx. Usuarios</label>
-                <input 
-                  type="number" 
+                <InputNumeroEvento 
                   value={maxUsers} 
                   onChange={e => setMaxUsers(Number(e.target.value))} 
                   className="p-2 border rounded-lg w-full outline-none focus:ring-2 focus:ring-indigo-500" 
-                  required 
-                />
+                  required
+  decimales={4}
+/>
               </div>
             </div>
 

@@ -2,6 +2,7 @@ import DteEmitidosView from './DteEmitidosView';
 import SiiDirectoPrueba from './SiiDirectoPrueba';
 import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { InputNumeroEvento } from './ui/NumeroCL';
 import HomeModulesView from './HomeModulesView';
 import BuscadorComprobantesView from './BuscadorComprobantesView';
 import { db, auth } from '../lib/firebase';
@@ -8525,13 +8526,13 @@ export default function CompanyAccountingDashboard({
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs">
                       <div>
                         <label className="block font-semibold text-slate-700 mb-1">N° Comprobante *</label>
-                        <input
-                          type="number"
+                        <InputNumeroEvento
                           value={voucherForm.voucherNumber}
                           onChange={e => setVoucherForm({ ...voucherForm, voucherNumber: parseInt(e.target.value) || 1 })}
                           className="border border-slate-300 p-2 w-full rounded-lg font-mono font-bold bg-white focus:ring-2 focus:ring-indigo-500"
                           required
-                        />
+  decimales={4}
+/>
                       </div>
                       <div>
                         <label className="block font-semibold text-slate-700 mb-1">Fecha Emisión *</label>

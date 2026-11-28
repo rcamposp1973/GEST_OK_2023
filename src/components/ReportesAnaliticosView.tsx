@@ -2392,15 +2392,15 @@ export default function ReportesAnaliticosView({
                       <span className="text-xs font-bold text-slate-700">{MONTH_NAMES[m - 1]}:</span>
                       <div className="relative w-32">
                         <span className="absolute left-2 top-1.5 text-slate-400 text-xs">$</span>
-                        <input
-                          type="number"
+                        <InputNumeroEvento
                           value={budgetFormMonths[m] || ''}
                           onChange={(e) => {
                             const val = parseFloat(e.target.value) || 0;
                             setBudgetFormMonths(prev => ({ ...prev, [m]: val }));
                           }}
                           className="w-full text-right text-xs font-mono font-bold bg-white border border-slate-200 rounded-lg pl-5 pr-2 py-1 outline-hidden focus:border-indigo-500"
-                        />
+  decimales={4}
+/>
                       </div>
                     </div>
                   ))}

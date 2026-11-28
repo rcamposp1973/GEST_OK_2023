@@ -1,5 +1,6 @@
 import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useEffect, useMemo } from 'react';
+import { InputNumeroEvento } from './ui/NumeroCL';
 import { FormattedAmountInput } from './FormattedAmountInput';
 import {
   VoucherLine,
@@ -458,15 +459,14 @@ export default function VoucherLineDistributionModal({
                     {/* Percentage Input */}
                     <td className="p-2 text-right">
                       <div className="relative flex items-center">
-                        <input
-                          type="number"
-                          step="0.01"
+                        <InputNumeroEvento
                           min="0"
                           max="100"
                           value={sub.percentage}
                           onChange={e => handlePercentageChange(idx, parseFloat(e.target.value) || 0)}
                           className="border border-slate-300 p-1.5 w-full rounded text-xs text-right font-mono font-semibold focus:ring-1 focus:ring-indigo-500 pr-5"
-                        />
+  decimales={2}
+/>
                         <span className="absolute right-1.5 text-slate-400 text-[10px] font-bold">%</span>
                       </div>
                     </td>

@@ -58,7 +58,7 @@ export function generarArchivoPrevired105(slips: PayrollSlip[], employees: Emplo
     const ci = ley > 0 && regimen === 'AFP' && tipoTrab === '0' ? Math.round(base * 0.001) : 0;
     const seguroSocial = Math.max(0, ley - ci);
     const salud7 = Math.round(s.saludLegal7 || 0);
-    const ccafSalud = fonasa && ccaf !== '00' ? Math.round(base * 0.006) : 0; // 0,6% a la CCAF; 6,4% a Fonasa
+    const ccafSalud = fonasa && ccaf !== '00' ? Math.round(base * 0.042) : 0; // Previred: con CCAF, 4,2% a la CCAF y 2,8% a Fonasa
     const f: string[] = Array(105).fill('');
     const set = (i: number, v: string) => { f[i - 1] = v; };
     for (const i of [7, 15, 19, 20, 21, 22, 23, 24, 27, 28, 29, 30, 31, 32, 33, 34, 38, 39, 40, 42, 43, 44, 45, 47, 48, 49, 50, 55, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 96, 97, 98, 99, 100, 101, 102, 103]) set(i, '0');

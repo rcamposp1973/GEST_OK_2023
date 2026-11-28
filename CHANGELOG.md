@@ -9,6 +9,11 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.39.3 — 2026-11-28
+- Indicadores previsionales para TODO el sistema desde previred.com: el servidor lee la página oficial (UF al último día, UTM/UTA, topes AFP/IPS/AFC, rentas mínimas, tasas AFP, SIS, seguro social, AFC, asignación familiar) y los guarda en la colección global. Se actualiza solo cada día y cuando un mes no tiene indicadores; todas las empresas usan los mismos.
+- Prioridad: indicadores globales (Previred o corregidos a mano por el Super Admin, que la lectura automática no pisa) → ajuste de una empresa sólo si se fijó para ella.
+- Super Admin: botón "Traer de Previred (mes vigente)".
+
 ## 1.39.2 — 2026-11-28
 - Formato chileno (miles con punto, decimales con coma) en todos los casilleros numéricos del sistema: remuneraciones (incluidos los indicadores del mes y los parámetros de cada trabajador), ventas, compras, activo fijo, bancos y demás módulos. Sólo los años quedan sin separador.
 - Remuneraciones: la UF del mes es la oficial del ÚLTIMO DÍA del mes (la que usa Previred), sincronizada con el Banco Central/SII; ya no se usan valores estimados para meses sin publicar. Si la UF guardada para el mes no coincide con la oficial, se avisa con un botón para corregirla. "Restablecer oficiales" sincroniza antes de cargar.

@@ -70,6 +70,10 @@
     {
       "path": "/api/alertas",
       "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/previred/indicadores",
+      "schedule": "0 13 * * *"
     }
   ],
   "functions": {

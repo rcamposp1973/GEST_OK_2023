@@ -69,10 +69,25 @@ export const SuperAdminIndicatorsCenter: React.FC<SuperAdminIndicatorsCenterProp
     }));
   };
 
-  const handleLoadOfficialPreviredMayo2026 = () => {
-    // Una sola fuente de valores oficiales: el motor de remuneraciones (por período)
-    setPayrollParams({ ...getPrevisionalParametersForPeriod(period) });
-    setPreviredStatusMsg('Cargados los valores oficiales del sistema para el período ' + period + '. Revísalos contra la circular de Previred antes de guardar.');
+  /** Trae los indicadores publicados hoy en previred.com (mes vigente) y los guarda para todo el sistema. */
+  const handleLoadOfficialPreviredMayo2026 = async () => {
+    setLoadingPrevired(true);
+    try {
+      const r = await fetch('/api/previred/indicadores');
+      const d = await r.json().catch(() => null);
+      if (!d?.ok) { setPreviredStatusMsg(`No se pudo leer Previred: ${d?.error || r.status}`); return; }
+      const ind = d.indicadores;
+      const base = getPrevisionalParametersForPeriod(ind.period);
+      const [y, m] = String(ind.period).split('-').map(Number);
+      setSelectedYear(y); setSelectedMonth(m);
+      setPayrollParams({ ...base, period: ind.period, uf: ind.uf, utm: ind.utm, imm: ind.imm, topeImponibleAfpUf: ind.topeImponibleAfpUf, topeImponibleAfcUf: ind.topeImponibleAfcUf, tasaSisPercent: ind.tasaSisPercent,
+        afpCommissions: { ...base.afpCommissions, ...(ind.afpCommissions || {}) }, tramosAsignacionFamiliar: { ...base.tramosAsignacionFamiliar, ...(ind.tramosAsignacionFamiliar || {}) } });
+      setPreviredStatusMsg(d.guardado
+        ? `Indicadores de ${ind.period} leídos de previred.com y guardados para todo el sistema (UF al ${String(ind.ufFecha).split('-').reverse().join('-')}: $${Number(ind.uf).toLocaleString('es-CL', { minimumFractionDigits: 2 })}).`
+        : `Indicadores de ${ind.period} leídos de previred.com. ${d.motivo || ''}`);
+    } catch (e: any) {
+      setPreviredStatusMsg('No se pudo leer Previred: ' + (e?.message || e));
+    } finally { setLoadingPrevired(false); }
   };
 
   const handleSavePrevired = async () => {
@@ -82,6 +97,7 @@ export const SuperAdminIndicatorsCenter: React.FC<SuperAdminIndicatorsCenterProp
       await setDoc(doc(db, 'previsionalIndicators', period), {
         ...payrollParams,
         period,
+        fuente: 'manual',
         updatedAt: new Date().toISOString()
       }, { merge: true });
 
@@ -322,10 +338,10 @@ export const SuperAdminIndicatorsCenter: React.FC<SuperAdminIndicatorsCenterProp
                 type="button"
                 onClick={handleLoadOfficialPreviredMayo2026}
                 className="px-3 py-1.5 bg-slate-800 hover:bg-slate-750 text-indigo-300 hover:text-white rounded-xl text-xs font-bold border border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
-                title="Cargar valores oficiales según Circular Previred Mayo 2026"
+                title="Leer los indicadores vigentes publicados en previred.com y guardarlos para todo el sistema"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
-                <span>Cargar Previred Mayo 2026</span>
+                <span>Traer de Previred (mes vigente)</span>
               </button>
             </div>
           </div>

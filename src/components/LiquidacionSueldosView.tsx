@@ -173,6 +173,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
   const [isEditingPeriodIndicators, setIsEditingPeriodIndicators] = useState(false);
   const [indicatorFormData, setIndicatorFormData] = useState<PayrollParameters | null>(null);
   const [isSavingIndicators, setIsSavingIndicators] = useState(false);
+  const pedidoPrevired = React.useRef<Set<string>>(new Set());
 
   useEffect(() => {
     let isMounted = true;
@@ -185,15 +186,24 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
           } catch {}
         }
 
-        // 1. Buscar si la empresa tiene indicadores personalizados cargados por el administrador para este mes
-        let snap = await getDoc(doc(db, 'companies', companyId, 'previsionalIndicators', periodStr));
-        if (!snap.exists()) {
-          // 2. Si no, buscar si hay indicadores globales centralizados
-          snap = await getDoc(doc(db, 'previsionalIndicators', periodStr));
+        // Indicadores de TODO el sistema (Previred, colección global). Una empresa sólo los reemplaza si se fijó a mano para ella.
+        const base = getPrevisionalParametersForPeriod(periodStr);
+        const mezclar = (d: any): PayrollParameters => ({ ...base, ...d, period: periodStr,
+          afpCommissions: { ...base.afpCommissions, ...(d?.afpCommissions || {}) },
+          tramosAsignacionFamiliar: { ...base.tramosAsignacionFamiliar, ...(d?.tramosAsignacionFamiliar || {}) } });
+        let global = await getDoc(doc(db, 'previsionalIndicators', periodStr));
+        // Mes sin indicadores globales: se piden a Previred (el servidor los lee y los guarda para todo el sistema)
+        if (!global.exists() && !pedidoPrevired.current.has(periodStr)) {
+          pedidoPrevired.current.add(periodStr);
+          try { await fetch('/api/previred/indicadores'); global = await getDoc(doc(db, 'previsionalIndicators', periodStr)); } catch { /* sin conexión */ }
         }
+        let empresa: any = null;
+        try { const e = await getDoc(doc(db, 'companies', companyId, 'previsionalIndicators', periodStr)); empresa = e.exists() ? e.data() : null; } catch { /* sin permiso */ }
+        const elegido = empresa?.forzarEmpresa ? empresa : (global.exists() ? global.data() : empresa);
+        const snap = { exists: () => !!elegido, data: () => elegido };
 
         if (snap.exists() && isMounted) {
-          const data = snap.data() as PayrollParameters;
+          const data = mezclar(snap.data());
           setFirestorePrevisionalParams(data);
           try {
             localStorage.setItem(`gestok_previred_params_${companyId}_${periodStr}`, JSON.stringify(data));
@@ -484,9 +494,14 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
         period: periodStr
       };
 
-      // Guardar en la empresa para este período y en el registro central
-      await setDoc(doc(db, 'companies', companyId, 'previsionalIndicators', periodStr), toSave, { merge: true });
-      await setDoc(doc(db, 'previsionalIndicators', periodStr), toSave, { merge: true });
+      // Super Admin: corrige el mes para TODO el sistema (queda marcado a mano y la lectura automática de Previred no lo pisa).
+      // Otros usuarios: el ajuste queda sólo para esta empresa.
+      try {
+        await setDoc(doc(db, 'previsionalIndicators', periodStr), { ...toSave, fuente: 'manual', actualizadoPor: auth.currentUser?.email || '' }, { merge: true });
+      } catch {
+        await setDoc(doc(db, 'companies', companyId, 'previsionalIndicators', periodStr), { ...toSave, forzarEmpresa: true }, { merge: true });
+        alert('Tu usuario no puede cambiar los indicadores de todo el sistema: el ajuste quedó sólo para esta empresa.');
+      }
 
       setFirestorePrevisionalParams(toSave);
       try {

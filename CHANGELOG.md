@@ -9,6 +9,10 @@ Cada versión que pasa a producción queda marcada en GitHub (etiqueta `vX.Y.Z`)
 
 ---
 
+## 1.39.2 — 2026-11-28
+- Formato chileno (miles con punto, decimales con coma) en todos los casilleros numéricos del sistema: remuneraciones (incluidos los indicadores del mes y los parámetros de cada trabajador), ventas, compras, activo fijo, bancos y demás módulos. Sólo los años quedan sin separador.
+- Remuneraciones: la UF del mes es la oficial del ÚLTIMO DÍA del mes (la que usa Previred), sincronizada con el Banco Central/SII; ya no se usan valores estimados para meses sin publicar. Si la UF guardada para el mes no coincide con la oficial, se avisa con un botón para corregirla. "Restablecer oficiales" sincroniza antes de cargar.
+
 ## 1.39.1 — 2026-11-28
 - Remuneraciones: cada mes es independiente.
   - Las novedades del mes (sueldo del mes, días, horas extras, bonos, descuentos) se graban en la base del estudio y se ven en línea; si no se pueden grabar, se avisa (antes podían quedar sólo en el navegador). Se migran las novedades guardadas con la versión anterior.

@@ -537,13 +537,13 @@ export const ActivoFijoView: React.FC<ActivoFijoViewProps> = ({
               <div className="grid grid-cols-2 gap-3 bg-amber-50 p-3 rounded-xl border border-amber-200">
                 <div>
                   <label className="block font-bold text-amber-900 mb-1">Vida Útil Tributaria (Meses):</label>
-                  <input
-                    type="number"
+                  <InputNumeroEvento
                     placeholder="36"
                     value={editingAsset?.usefulLifeTributariaMonths || 36}
                     onChange={e => setEditingAsset(prev => ({ ...prev, usefulLifeTributariaMonths: Number(e.target.value) }))}
                     className="w-full border border-amber-300 rounded-lg p-2 bg-white font-bold"
-                  />
+  decimales={4}
+/>
                 </div>
                 <div>
                   <label className="block font-bold text-amber-900 mb-1">Tipo Depreciación Tributaria:</label>

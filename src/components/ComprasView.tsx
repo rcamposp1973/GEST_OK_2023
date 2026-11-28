@@ -633,7 +633,7 @@ function OrdenModal(p: ModalProps) {
                       <tr key={l.id} className="border-t border-slate-100">
                         <td className="py-1">{l.name}</td>
                         <td className="text-right">{cantidadPendiente(l)}</td>
-                        <td className="text-right"><input type="number" min={0} step="any" max={cantidadPendiente(l)} className={inputCls + ' text-right'} value={recQty[l.id] ?? ''} onChange={e => setRecQty({ ...recQty, [l.id]: Number(e.target.value) || 0 })} /></td>
+                        <td className="text-right"><InputNumeroEvento min={0} max={cantidadPendiente(l)} className={inputCls + ' text-right'} value={recQty[l.id] ?? ''} onChange={e => setRecQty({ ...recQty, [l.id]: Number(e.target.value) || 0 })} decimales={4} /></td>
                         <td className="text-right text-slate-500">{l.contabilizaEnRecepcion ? clp(montoRecepcionLinea(l, recQty[l.id] || 0)) : 'con factura'}</td>
                       </tr>
                     ))}

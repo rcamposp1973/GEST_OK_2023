@@ -2931,13 +2931,13 @@ export default function ConciliacionBancariaView({
             <label className="font-bold text-slate-700">Saldo Inicial Cartola ($):</label>
             <span className="text-[9px] text-indigo-600 font-bold uppercase">Mes Anterior</span>
           </div>
-          <input
-            type="number"
+          <InputNumeroEvento
             value={bankInitialBalanceInput}
             onChange={(e) => handleUpdateInitialBalance(Number(e.target.value))}
             className="w-full bg-white border border-indigo-300 rounded-md px-2.5 py-1.5 font-mono font-bold text-indigo-950 text-xs"
             title="Saldo del mes anterior para calcular el saldo acumulado del mes"
-          />
+  decimales={4}
+/>
           <div className="mt-1 text-[10px] text-slate-500 flex justify-between">
             <span>Saldo Anterior:</span>
             <span className="font-bold font-mono text-indigo-800">${bankInitialBalanceInput.toLocaleString('es-CL')}</span>

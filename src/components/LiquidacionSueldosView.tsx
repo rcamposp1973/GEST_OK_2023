@@ -2,6 +2,7 @@ import { formatearRut } from '../utils/rutFormato';
 import React, { useState, useMemo, useEffect } from 'react';
 import { generarArchivoPrevired105, NOMBRE_MUTUAL, NOMBRE_CCAF } from '../utils/previred105';
 import PreviredLibroView from './payroll/PreviredLibroView';
+import { InputNumeroEvento } from './ui/NumeroCL';
 import { db } from '../lib/firebase';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { auth } from '../lib/firebase';
@@ -24,7 +25,7 @@ import {
   DEFAULT_PAYROLL_CONCEPTS, getPrevisionalParametersForPeriod, getLegalWeeklyHours,
   calculatePayrollSlip, sueldoVigenteDelPeriodo, generatePreviredTxt, generateLrdCsv, MonthPayrollInput 
 } from '../utils/payrollCalculator';
-import { OFFICIAL_UF_MONTHLY_START, OFFICIAL_MONTHLY_UTM, syncOnlineChileanIndicators } from '../utils/chileanEconomicIndicators';
+import { OFFICIAL_UF_MONTHLY_START, OFFICIAL_MONTHLY_UTM, syncOnlineChileanIndicators, getOfficialUF } from '../utils/chileanEconomicIndicators';
 import { getNextPeriodStr, getPrevPeriodStr, getPeriodFormattedName } from '../utils/periodUtils';
 import { WorkerParametersModal } from './payroll/WorkerParametersModal';
 import { SalaryHistoryModal } from './payroll/SalaryHistoryModal';
@@ -248,6 +249,14 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
     }
   };
 
+  // Valores oficiales (UF diaria, UTM) sincronizados desde el servidor: al llegar, se recalculan los parámetros del mes
+  const [indicadoresSync, setIndicadoresSync] = useState(0);
+  useEffect(() => { let vivo = true; syncOnlineChileanIndicators().then(() => { if (vivo) setIndicadoresSync(v => v + 1); }).catch(() => {}); return () => { vivo = false; }; }, []);
+  const ufOficialFinMes = useMemo(() => {
+    const [yy, mm] = periodStr.split('-').map(Number);
+    return getOfficialUF(new Date(Date.UTC(yy, mm, 0)).toISOString().slice(0, 10));
+  }, [periodStr, indicadoresSync]);
+
   // Parámetros previsionales del período seleccionado (actualizados automáticamente con datos oficiales de Previred / SII o del Super Administrador)
   const periodParams: PayrollParameters = useMemo(() => {
     const base = firestorePrevisionalParams 
@@ -262,7 +271,7 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
       base.utm = liveUtmOverride;
     }
     return base;
-  }, [periodStr, firestorePrevisionalParams, liveUfOverride, liveUtmOverride]);
+  }, [periodStr, firestorePrevisionalParams, liveUfOverride, liveUtmOverride, indicadoresSync]);
 
   // --- Regla de Control de Períodos de Remuneraciones ---
   // 1. Obtener lista ordenada de períodos procesados y guardados en savedSlips (desde 2026 en adelante)
@@ -1599,39 +1608,38 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
                           </td>
 
                           <td className="py-2.5 px-2 text-center">
-                            <input
-                              type="number"
+                            <InputNumeroEvento
                               min={0}
                               max={30}
                               value={monthInputs[slip.employeeId]?.diasTrabajados ?? slip.diasTrabajados}
                               onChange={(e) => handleInputChange(slip.employeeId, 'diasTrabajados', Number(e.target.value))}
                               className="w-12 text-center py-1 border border-slate-300 rounded-md font-bold focus:ring-1 focus:ring-indigo-500 text-xs"
-                            />
+  decimales={4}
+/>
                           </td>
 
                           <td className="py-2.5 px-2 text-center">
-                            <input
-                              type="number"
+                            <InputNumeroEvento
                               min={0}
                               max={100}
                               value={monthInputs[slip.employeeId]?.horasExtras50Qty ?? slip.horasExtras50Qty}
                               onChange={(e) => handleInputChange(slip.employeeId, 'horasExtras50Qty', Number(e.target.value))}
                               className="w-12 text-center py-1 border border-slate-300 rounded-md focus:ring-1 focus:ring-indigo-500 text-xs"
-                            />
+  decimales={4}
+/>
                           </td>
 
                           <td className="py-2.5 px-3 text-right font-medium text-slate-800">
                             <div className="flex items-center justify-end gap-1">
                               <span className="text-[10px] text-slate-400 font-mono">$</span>
-                              <input
-                                type="number"
+                              <InputNumeroEvento
                                 min={0}
-                                step={1000}
                                 value={monthInputs[slip.employeeId]?.sueldoBaseOverride !== undefined ? monthInputs[slip.employeeId].sueldoBaseOverride : slip.sueldoBasePactado}
                                 onChange={(e) => handleInputChange(slip.employeeId, 'sueldoBaseOverride', Number(e.target.value))}
                                 className="w-24 text-right py-1 px-1.5 border border-slate-300 rounded-md font-mono font-bold text-slate-900 focus:ring-1 focus:ring-indigo-500 text-xs bg-white shadow-2xs"
                                 title="Renta / Sueldo Base pactado para este período. Si se modifica, afecta exclusivamente al mes en proceso sin alterar períodos históricos anteriores."
-                              />
+  decimales={0}
+/>
                             </div>
                             <div className="flex items-center justify-end gap-1 mt-0.5 flex-wrap">
                               {slip.sueldoBaseProporcional !== (monthInputs[slip.employeeId]?.sueldoBaseOverride ?? slip.sueldoBasePactado) && (
@@ -2504,7 +2512,17 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
               <p className="text-2xl font-bold font-mono text-emerald-700 mt-1">
                 ${periodParams.uf.toLocaleString('es-CL', { minimumFractionDigits: 2 })}
               </p>
-              <p className="text-[11px] text-slate-400 mt-1">Valor oficial inicio del período</p>
+              <p className="text-[11px] text-slate-400 mt-1">UF al último día del mes (Previred)</p>
+              {ufOficialFinMes > 0 && Math.abs(ufOficialFinMes - periodParams.uf) >= 0.01 && (
+                <div className="mt-2 text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1">
+                  La UF oficial al cierre del mes es ${ufOficialFinMes.toLocaleString('es-CL', { minimumFractionDigits: 2 })}.
+                  {firestorePrevisionalParams && <button type="button" className="ml-1 underline font-semibold" onClick={async () => {
+                    const corr = { ...periodParams, uf: ufOficialFinMes };
+                    try { await setDoc(doc(db, 'companies', companyId, 'previsionalIndicators', periodStr), corr, { merge: true }); } catch { /* sin permiso */ }
+                    setFirestorePrevisionalParams(corr);
+                  }}>Usar la oficial</button>}
+                </div>
+              )}
             </div>
 
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
@@ -3072,15 +3090,14 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
                     <label className="block text-xs font-bold text-slate-700 mb-1">
                       Sueldo Mínimo Legal (IMM / CLP) *
                     </label>
-                    <input
-                      type="number"
+                    <InputNumeroEvento
                       required
                       min={100000}
-                      step={1000}
                       value={indicatorFormData.imm}
                       onChange={(e) => setIndicatorFormData({ ...indicatorFormData, imm: Number(e.target.value) })}
                       className="w-full px-3 py-2 text-sm font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500"
-                    />
+  decimales={0}
+/>
                     <p className="text-[10px] text-slate-500 mt-0.5">Base gratificación Art. 50 (Tope $ {Math.round((4.75 * indicatorFormData.imm) / 12).toLocaleString('es-CL')})</p>
                   </div>
 
@@ -3088,31 +3105,29 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
                     <label className="block text-xs font-bold text-slate-700 mb-1">
                       Unidad de Fomento (UF / CLP) *
                     </label>
-                    <input
-                      type="number"
+                    <InputNumeroEvento
                       required
                       min={1000}
-                      step={0.01}
                       value={indicatorFormData.uf}
                       onChange={(e) => setIndicatorFormData({ ...indicatorFormData, uf: Number(e.target.value) })}
                       className="w-full px-3 py-2 text-sm font-mono font-bold text-emerald-800 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500"
-                    />
-                    <p className="text-[10px] text-slate-500 mt-0.5">Valor oficial inicio del período</p>
+  decimales={2}
+/>
+                    <p className="text-[10px] text-slate-500 mt-0.5">UF al último día del mes (Previred){ufOficialFinMes > 0 && Math.abs(ufOficialFinMes - (indicatorFormData.uf || 0)) >= 0.01 && <> · oficial: <button type="button" className="underline text-emerald-700" onClick={() => setIndicatorFormData({ ...indicatorFormData, uf: ufOficialFinMes })}>{ufOficialFinMes.toLocaleString('es-CL', { minimumFractionDigits: 2 })}</button></>}</p>
                   </div>
 
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1">
                       Unidad Tributaria Mensual (UTM / CLP) *
                     </label>
-                    <input
-                      type="number"
+                    <InputNumeroEvento
                       required
                       min={1000}
-                      step={1}
                       value={indicatorFormData.utm}
                       onChange={(e) => setIndicatorFormData({ ...indicatorFormData, utm: Number(e.target.value) })}
                       className="w-full px-3 py-2 text-sm font-mono font-bold text-indigo-800 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500"
-                    />
+  decimales={0}
+/>
                     <p className="text-[10px] text-slate-500 mt-0.5">Base Impuesto Único de Segunda Categoría</p>
                   </div>
                 </div>
@@ -3129,16 +3144,15 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
                     <label className="block text-xs font-bold text-slate-700 mb-1">
                       Tope AFP / Salud / SIS (UF)
                     </label>
-                    <input
-                      type="number"
+                    <InputNumeroEvento
                       required
                       min={50}
                       max={150}
-                      step={0.1}
                       value={indicatorFormData.topeImponibleAfpUf}
                       onChange={(e) => setIndicatorFormData({ ...indicatorFormData, topeImponibleAfpUf: Number(e.target.value) })}
                       className="w-full px-3 py-2 text-sm font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500"
-                    />
+  decimales={1}
+/>
                     <p className="text-[10px] text-slate-500 mt-0.5">Equivale a $ {Math.round(indicatorFormData.topeImponibleAfpUf * indicatorFormData.uf).toLocaleString('es-CL')} en pesos</p>
                   </div>
 
@@ -3146,16 +3160,15 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
                     <label className="block text-xs font-bold text-slate-700 mb-1">
                       Tope Seguro de Cesantía AFC (UF)
                     </label>
-                    <input
-                      type="number"
+                    <InputNumeroEvento
                       required
                       min={50}
                       max={200}
-                      step={0.1}
                       value={indicatorFormData.topeImponibleAfcUf}
                       onChange={(e) => setIndicatorFormData({ ...indicatorFormData, topeImponibleAfcUf: Number(e.target.value) })}
                       className="w-full px-3 py-2 text-sm font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500"
-                    />
+  decimales={1}
+/>
                     <p className="text-[10px] text-slate-500 mt-0.5">Equivale a $ {Math.round(indicatorFormData.topeImponibleAfcUf * indicatorFormData.uf).toLocaleString('es-CL')} en pesos</p>
                   </div>
                 </div>
@@ -3172,16 +3185,15 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
                     <label className="block text-xs font-bold text-slate-700 mb-1">
                       Seguro de Invalidez SIS (%)
                     </label>
-                    <input
-                      type="number"
+                    <InputNumeroEvento
                       required
                       min={0}
                       max={10}
-                      step={0.01}
                       value={indicatorFormData.tasaSisPercent}
                       onChange={(e) => setIndicatorFormData({ ...indicatorFormData, tasaSisPercent: Number(e.target.value) })}
                       className="w-full px-3 py-2 text-sm font-mono font-bold text-indigo-900 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500"
-                    />
+  decimales={2}
+/>
                     <p className="text-[10px] text-slate-500 mt-0.5">Aporte empleador sobre renta imponible AFP</p>
                   </div>
 
@@ -3189,16 +3201,15 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
                     <label className="block text-xs font-bold text-slate-700 mb-1">
                       Mutualidad + Ley SANNA (%)
                     </label>
-                    <input
-                      type="number"
+                    <InputNumeroEvento
                       required
                       min={0}
                       max={10}
-                      step={0.01}
                       value={indicatorFormData.tasaMutualPercent}
                       onChange={(e) => setIndicatorFormData({ ...indicatorFormData, tasaMutualPercent: Number(e.target.value) })}
                       className="w-full px-3 py-2 text-sm font-mono font-bold text-amber-900 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500"
-                    />
+  decimales={2}
+/>
                     <p className="text-[10px] text-slate-500 mt-0.5">Básica 0.90% + 0.03% SANNA + Adicional</p>
                   </div>
 
@@ -3206,15 +3217,14 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
                     <label className="block text-xs font-bold text-slate-700 mb-1">
                       Mayor Cotización Protección Social (%)
                     </label>
-                    <input
-                      type="number"
+                    <InputNumeroEvento
                       min={0}
                       max={10}
-                      step={0.01}
                       value={indicatorFormData.tasaReformaProteccionSocialPercent || 0}
                       onChange={(e) => setIndicatorFormData({ ...indicatorFormData, tasaReformaProteccionSocialPercent: Number(e.target.value) })}
                       className="w-full px-3 py-2 text-sm font-mono font-bold text-emerald-900 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500"
-                    />
+  decimales={2}
+/>
                     <p className="text-[10px] text-slate-500 mt-0.5">Reforma previsional / Mayor aporte legal si aplica</p>
                   </div>
                 </div>
@@ -3234,11 +3244,9 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
                         <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
                           {afpKey.toLowerCase()}
                         </label>
-                        <input
-                          type="number"
+                        <InputNumeroEvento
                           min={10}
                           max={25}
-                          step={0.01}
                           value={rate}
                           onChange={(e) => {
                             const val = Number(e.target.value);
@@ -3251,7 +3259,8 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
                             });
                           }}
                           className="w-full px-2 py-1 text-xs font-mono font-bold text-indigo-900 border border-slate-300 rounded-lg text-center"
-                        />
+  decimales={2}
+/>
                       </div>
                     ))}
                 </div>
@@ -3261,7 +3270,9 @@ export const LiquidacionSueldosView: React.FC<LiquidacionSueldosViewProps> = ({
               <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-200">
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={async () => {
+                    await syncOnlineChileanIndicators().catch(() => {});
+                    setIndicadoresSync(v => v + 1);
                     const official = getPrevisionalParametersForPeriod(periodStr);
                     setIndicatorFormData({ ...official });
                   }}

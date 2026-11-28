@@ -186,15 +186,14 @@ export const WorkerParametersModal: React.FC<WorkerParametersModalProps> = ({
                   </label>
                   <div className="relative">
                     <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">$</span>
-                    <input
-                      type="number"
+                    <InputNumeroEvento
                       min={0}
-                      step={1000}
                       value={formData.baseSalary || 0}
                       onChange={(e) => setFormData({ ...formData, baseSalary: Number(e.target.value) })}
                       className="w-full pl-8 pr-3 py-2 text-sm font-mono font-bold text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                       required
-                    />
+  decimales={0}
+/>
                   </div>
                   <p className="text-[11px] text-slate-500 mt-1">
                     Este valor regirá como sueldo base proporcional según los días trabajados en el mes.
@@ -222,14 +221,14 @@ export const WorkerParametersModal: React.FC<WorkerParametersModalProps> = ({
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     Jornada Semanal Pactada (Horas)
                   </label>
-                  <input
-                    type="number"
+                  <InputNumeroEvento
                     min={1}
                     max={45}
                     value={formData.workHoursPerWeek || getLegalWeeklyHours()}
                     onChange={(e) => setFormData({ ...formData, workHoursPerWeek: Number(e.target.value) })}
                     className="w-full px-3 py-2 text-xs font-semibold text-slate-800 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500"
-                  />
+  decimales={4}
+/>
                   <p className="text-[11px] text-slate-500 mt-1">
                     Utilizado como divisor legal para el cálculo del valor de la hora ordinaria y extra al 50%.
                   </p>
@@ -385,14 +384,14 @@ export const WorkerParametersModal: React.FC<WorkerParametersModalProps> = ({
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     Cargas Familiares Acreditadas
                   </label>
-                  <input
-                    type="number"
+                  <InputNumeroEvento
                     min={0}
                     max={20}
                     value={formData.cargasFamiliares || 0}
                     onChange={(e) => setFormData({ ...formData, cargasFamiliares: Number(e.target.value) })}
                     className="w-full px-3 py-2 text-xs font-semibold text-slate-800 border border-slate-300 rounded-xl"
-                  />
+  decimales={4}
+/>
                 </div>
 
                 <div>
@@ -502,14 +501,13 @@ export const WorkerParametersModal: React.FC<WorkerParametersModalProps> = ({
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     Cuota Mensual Préstamo Empresa ($ CLP)
                   </label>
-                  <input
-                    type="number"
+                  <InputNumeroEvento
                     min={0}
-                    step={1000}
                     value={formData.descuentoPrestamoCuota || 0}
                     onChange={(e) => setFormData({ ...formData, descuentoPrestamoCuota: Number(e.target.value) })}
                     className="w-full px-3 py-2 text-xs font-mono font-bold text-slate-900 border border-slate-300 rounded-xl"
-                  />
+  decimales={0}
+/>
                 </div>
 
                 <div className="md:col-span-2 p-3.5 bg-rose-50/60 border border-rose-200 rounded-xl space-y-3">

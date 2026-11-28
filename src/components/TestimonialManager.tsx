@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { InputNumeroEvento } from './ui/NumeroCL';
 import { db } from '../lib/firebase';
 import { 
   collection, 
@@ -413,14 +414,14 @@ export default function TestimonialManager() {
               <label className="block text-xs font-bold text-[#0D253D] mb-1.5">
                 Orden de Aparición en Diapositiva
               </label>
-              <input
-                type="number"
+              <InputNumeroEvento
                 min={1}
                 max={99}
                 value={order}
                 onChange={(e) => setOrder(Number(e.target.value))}
                 className="w-full bg-[#F8FAFC] border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-[#0D253D] focus:outline-none focus:border-[#533AFD] focus:bg-white font-mono"
-              />
+  decimales={4}
+/>
             </div>
           </div>
 

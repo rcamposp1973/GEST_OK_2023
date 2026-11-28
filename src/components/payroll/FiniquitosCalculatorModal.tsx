@@ -337,12 +337,12 @@ export const FiniquitosCalculatorModal: React.FC<FiniquitosCalculatorModalProps>
 
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
                   <span className="text-[11px] font-bold text-slate-700 block">Días Vacaciones Ya Tomadas:</span>
-                  <input
-                    type="number"
+                  <InputNumeroEvento
                     value={diasVacacionesHabiles}
                     onChange={e => setDiasVacacionesHabiles(Number(e.target.value))}
                     className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-bold text-slate-900"
-                  />
+  decimales={4}
+/>
                 </div>
                 {([
                   ['Otros haberes del finiquito ($)', otrosHaberes, setOtrosHaberes, true],
